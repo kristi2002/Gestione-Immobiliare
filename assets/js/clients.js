@@ -22,7 +22,7 @@
     const els = {};
 
     function init() {
-        els.tbody        = document.getElementById('clients-tbody');
+        els.grid         = document.getElementById('clients-grid');
         els.search       = document.getElementById('client-search');
         els.statusFilter = document.getElementById('client-status-filter');
         els.alert        = document.getElementById('clients-alert');
@@ -81,7 +81,7 @@
 
         const url = params.toString() ? `${API}?${params}` : API;
 
-        els.tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Caricamento...</td></tr>';
+        els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
 
         try {
             const res  = await fetch(url);
@@ -90,9 +90,9 @@
             if (!json.success) throw new Error(json.error);
 
             clients = json.data;
-            renderTable();
+            renderCards();
         } catch (err) {
-            els.tbody.innerHTML = `<tr><td colspan="8" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
+            els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
     }
 
@@ -121,45 +121,57 @@
     // Rendering
     // -------------------------------------------------------------------------
 
-    function renderTable() {
+    function renderCards() {
         if (clients.length === 0) {
-            els.tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Nessun proprietario trovato.</td></tr>';
+            els.grid.innerHTML = '<div class="entity-empty">Nessun proprietario trovato.</div>';
             return;
         }
 
-        els.tbody.innerHTML = clients.map(c => `
-            <tr>
-                <td data-label="Nome">${escapeHtml(c.name)}</td>
-                <td data-label="Cognome">${escapeHtml(c.surname)}</td>
-                <td data-label="Telefono">${c.phone ? escapeHtml(c.phone) : '<span class="text-muted">—</span>'}</td>
-                <td data-label="Email">${c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : '<span class="text-muted">—</span>'}</td>
-                <td data-label="Stato"><span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
-                <td data-label="Immobili">${c.property_count}</td>
-                <td data-label="Data creazione">${formatDate(c.creation_date)}</td>
-                <td class="col-actions" data-label="Azioni">
-                    <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni">✉️</button>
-                    <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia">🗑️</button>
-                </td>
-            </tr>
-        `).join('');
+        els.grid.innerHTML = clients.map(c => {
+            const initials = (c.name[0] || '') + (c.surname[0] || '');
+            const propLabel = c.property_count === 1 ? '1 immobile' : `${c.property_count} immobili`;
+            return `
+            <div class="entity-card">
+                <div class="entity-card__header">
+                    <div class="entity-card__avatar">${escapeHtml(initials.toUpperCase())}</div>
+                    <div class="entity-card__title-group">
+                        <div class="entity-card__name">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</div>
+                        <span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span>
+                    </div>
+                </div>
+                <div class="entity-card__body">
+                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon">📞</span>${escapeHtml(c.phone)}</div>` : ''}
+                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon">✉️</span><a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a></div>` : ''}
+                    ${!c.phone && !c.email ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
+                </div>
+                <div class="entity-card__footer">
+                    <div class="entity-card__stat">
+                        <span class="entity-card__stat-icon">🏢</span>
+                        <span class="entity-card__stat-label">${propLabel}</span>
+                    </div>
+                    <div class="entity-card__actions">
+                        <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni">✉️</button>
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia">🗑️</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
 
-        els.tbody.querySelectorAll('.btn-edit').forEach(btn => {
+        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 const client = clients.find(c => c.id == btn.dataset.id);
                 if (client) openModal(client);
             });
         });
 
-        els.tbody.querySelectorAll('.btn-comm').forEach(btn => {
+        els.grid.querySelectorAll('.btn-comm').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (window.App) {
-                    window.App.navigateTo('communications', { clientId: Number(btn.dataset.id) });
-                }
+                if (window.App) window.App.navigateTo('communications', { clientId: Number(btn.dataset.id) });
             });
         });
 
-        els.tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        els.grid.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', () => {
                 const client = clients.find(c => c.id == btn.dataset.id);
                 if (client) openDeleteModal(client.id, `${client.name} ${client.surname}`);

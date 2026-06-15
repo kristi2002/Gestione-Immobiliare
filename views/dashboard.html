@@ -1,12 +1,18 @@
 <div class="dashboard-view">
     <div class="dashboard-header">
-        <h2>Benvenuto, Admin</h2>
-        <p>Panoramica generale dell'agenzia immobiliare.</p>
+        <div>
+            <h2 id="dashboard-greeting">Benvenuto</h2>
+            <p id="dashboard-date" class="text-muted"></p>
+        </div>
+        <div class="dashboard-header__actions">
+            <a href="view.php?name=clients" class="btn btn--ghost btn--sm" data-view="clients">+ Proprietario</a>
+            <a href="view.php?name=properties" class="btn btn--primary btn--sm" data-view="properties">+ Immobile</a>
+        </div>
     </div>
 
     <div id="dashboard-error" class="alert alert--error" style="display:none;"></div>
 
-    <div class="stats-grid">
+    <div class="stats-grid stats-grid--6">
         <div class="stat-card">
             <div class="stat-icon stat-icon--clients">👥</div>
             <div class="stat-body">
@@ -21,16 +27,96 @@
             <div class="stat-body">
                 <div class="stat-label">Immobili</div>
                 <div class="stat-value loading" id="stat-properties">—</div>
-                <div class="stat-sub">Proprietà in gestione</div>
+                <div class="stat-sub">Totale in gestione</div>
             </div>
         </div>
 
         <div class="stat-card">
+            <div class="stat-icon stat-icon--available">✅</div>
+            <div class="stat-body">
+                <div class="stat-label">Disponibili</div>
+                <div class="stat-value loading" id="stat-available">—</div>
+                <div class="stat-sub">Liberi da affittare</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--rented">🔑</div>
+            <div class="stat-body">
+                <div class="stat-label">Affittati</div>
+                <div class="stat-value loading" id="stat-rented">—</div>
+                <div class="stat-sub">Contratti attivi</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--tenants">🧑‍🤝‍🧑</div>
+            <div class="stat-body">
+                <div class="stat-label">Inquilini</div>
+                <div class="stat-value loading" id="stat-tenants">—</div>
+                <div class="stat-sub">Locatari attivi</div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-card--alert" id="stat-card-overdue" style="display:none;">
+            <div class="stat-icon stat-icon--overdue">⚠️</div>
+            <div class="stat-body">
+                <div class="stat-label">Scaduti</div>
+                <div class="stat-value loading" id="stat-overdue">—</div>
+                <div class="stat-sub">Promemoria in ritardo</div>
+            </div>
+        </div>
+
+        <div class="stat-card" id="stat-card-reminders">
             <div class="stat-icon stat-icon--reminders">🔔</div>
             <div class="stat-body">
-                <div class="stat-label">Promemoria in scadenza</div>
+                <div class="stat-label">In scadenza</div>
                 <div class="stat-value loading" id="stat-reminders">—</div>
-                <div class="stat-sub">Nei prossimi 7 giorni</div>
+                <div class="stat-sub">Prossimi 7 giorni</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-bottom">
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h3>Prossimi promemoria</h3>
+                <a href="view.php?name=reminders" class="btn btn--ghost btn--sm" data-view="reminders">Vedi tutti →</a>
+            </div>
+            <div id="upcoming-reminders-list" class="upcoming-list">
+                <div class="upcoming-loading">Caricamento…</div>
+            </div>
+        </div>
+
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h3>Accesso rapido</h3>
+            </div>
+            <div class="quick-actions">
+                <a href="view.php?name=clients" class="quick-action" data-view="clients">
+                    <span class="quick-action__icon">👥</span>
+                    <span class="quick-action__label">Proprietari</span>
+                </a>
+                <a href="view.php?name=properties" class="quick-action" data-view="properties">
+                    <span class="quick-action__icon">🏢</span>
+                    <span class="quick-action__label">Immobili</span>
+                </a>
+                <a href="view.php?name=documents" class="quick-action" data-view="documents">
+                    <span class="quick-action__icon">📄</span>
+                    <span class="quick-action__label">Documenti</span>
+                </a>
+                <a href="view.php?name=communications" class="quick-action" data-view="communications">
+                    <span class="quick-action__icon">✉️</span>
+                    <span class="quick-action__label">Comunicazioni</span>
+                </a>
+                <a href="view.php?name=tenants" class="quick-action" data-view="tenants">
+                    <span class="quick-action__icon">🔑</span>
+                    <span class="quick-action__label">Inquilini</span>
+                </a>
+                <a href="view.php?name=reminders" class="quick-action" data-view="reminders">
+                    <span class="quick-action__icon">🔔</span>
+                    <span class="quick-action__label">Promemoria</span>
+                </a>
             </div>
         </div>
     </div>
@@ -42,41 +128,116 @@
 
     const API_URL = 'api/get_dashboard_stats.php';
 
+    const FREQ_LABELS = { once: 'Una volta', weekly: 'Settimanale', monthly: 'Mensile', yearly: 'Annuale' };
+
+    function setGreeting() {
+        const hour = new Date().getHours();
+        let greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+        document.getElementById('dashboard-greeting').textContent = greeting;
+        document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('it-IT', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function daysUntil(dateStr) {
+        const diff = Math.ceil((new Date(dateStr) - new Date()) / 86400000);
+        if (diff < 0) return `<span class="reminder-date--overdue">Scaduto da ${Math.abs(diff)} gg</span>`;
+        if (diff === 0) return `<span class="reminder-date--soon">Oggi</span>`;
+        if (diff === 1) return `<span class="reminder-date--soon">Domani</span>`;
+        if (diff <= 7) return `<span class="reminder-date--soon">Tra ${diff} giorni</span>`;
+        return formatDate(dateStr);
+    }
+
     async function loadDashboardStats() {
-        const clientsEl    = document.getElementById('stat-clients');
-        const propertiesEl = document.getElementById('stat-properties');
-        const remindersEl  = document.getElementById('stat-reminders');
-        const errorEl      = document.getElementById('dashboard-error');
+        const errorEl = document.getElementById('dashboard-error');
 
         try {
             const response = await fetch(API_URL);
-            const json     = await response.json();
+            const json = await response.json();
 
-            if (!json.success) {
-                throw new Error(json.error || 'Risposta API non valida');
+            if (!json.success) throw new Error(json.error || 'Risposta API non valida');
+
+            const d = json.data;
+
+            document.getElementById('stat-clients').textContent    = d.total_clients;
+            document.getElementById('stat-properties').textContent = d.total_properties;
+            document.getElementById('stat-available').textContent  = d.available_properties;
+            document.getElementById('stat-rented').textContent     = d.rented_properties;
+            document.getElementById('stat-tenants').textContent    = d.active_tenants;
+            document.getElementById('stat-reminders').textContent  = d.expiring_reminders;
+            document.getElementById('stat-overdue').textContent    = d.overdue_reminders;
+
+            document.querySelectorAll('.stat-value.loading').forEach(el => el.classList.remove('loading'));
+
+            if (d.overdue_reminders > 0) {
+                document.getElementById('stat-card-overdue').style.display = '';
+                document.getElementById('stat-card-reminders').style.display = 'none';
             }
 
-            const { total_clients, total_properties, expiring_reminders } = json.data;
-
-            clientsEl.textContent    = total_clients;
-            propertiesEl.textContent = total_properties;
-            remindersEl.textContent  = expiring_reminders;
-
-            clientsEl.classList.remove('loading');
-            propertiesEl.classList.remove('loading');
-            remindersEl.classList.remove('loading');
+            renderUpcoming(d.upcoming_reminders || []);
 
         } catch (err) {
             errorEl.style.display = 'block';
-            errorEl.textContent   = 'Errore nel caricamento delle statistiche: ' + err.message;
-
-            [clientsEl, propertiesEl, remindersEl].forEach(el => {
-                el.textContent = '!';
-                el.classList.remove('loading');
-            });
+            errorEl.textContent = 'Errore nel caricamento delle statistiche: ' + err.message;
+            document.querySelectorAll('.stat-value.loading').forEach(el => { el.textContent = '!'; el.classList.remove('loading'); });
         }
     }
 
+    function renderUpcoming(reminders) {
+        const container = document.getElementById('upcoming-reminders-list');
+
+        if (reminders.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="padding:16px 0;">Nessun promemoria in arrivo. Ottimo lavoro!</p>';
+            return;
+        }
+
+        container.innerHTML = reminders.map(r => {
+            const who = r.client_name ? `${escapeHtml(r.client_name)} ${escapeHtml(r.client_surname)}` : r.property_address ? escapeHtml(r.property_address) : '—';
+            return `
+            <div class="upcoming-item">
+                <div class="upcoming-item__icon">🔔</div>
+                <div class="upcoming-item__body">
+                    <div class="upcoming-item__title">${escapeHtml(r.title)}</div>
+                    <div class="upcoming-item__meta">${who} · ${FREQ_LABELS[r.frequency] || r.frequency}</div>
+                </div>
+                <div class="upcoming-item__date">${daysUntil(r.reminder_date)}</div>
+            </div>`;
+        }).join('');
+
+        // Make quick-action links use SPA navigation
+        document.querySelectorAll('.quick-action[data-view], .dashboard-header__actions a[data-view], #upcoming-reminders-list a[data-view]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                if (window.App) {
+                    e.preventDefault();
+                    window.App.navigateTo(link.dataset.view);
+                }
+            });
+        });
+    }
+
+    setGreeting();
     loadDashboardStats();
+
+    // Wire up quick actions and header buttons for SPA navigation
+    document.querySelectorAll('.quick-action[data-view], .dashboard-header__actions a[data-view]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            if (window.App) {
+                e.preventDefault();
+                window.App.navigateTo(link.dataset.view);
+            }
+        });
+    });
 })();
 </script>

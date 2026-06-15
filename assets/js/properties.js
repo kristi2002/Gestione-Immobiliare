@@ -31,7 +31,7 @@
     const els = {};
 
     function init() {
-        els.tbody          = document.getElementById('properties-tbody');
+        els.grid           = document.getElementById('properties-grid');
         els.search         = document.getElementById('property-search');
         els.clientFilter   = document.getElementById('property-client-filter');
         els.statusFilter   = document.getElementById('property-status-filter');
@@ -115,7 +115,7 @@
         if (status)   params.set('status', status);
 
         const url = params.toString() ? `${API}?${params}` : API;
-        els.tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Caricamento...</td></tr>';
+        els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
 
         try {
             const res  = await fetch(url);
@@ -123,9 +123,9 @@
             if (!json.success) throw new Error(json.error);
 
             properties = json.data;
-            renderTable();
+            renderCards();
         } catch (err) {
-            els.tbody.innerHTML = `<tr><td colspan="8" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
+            els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
     }
 
@@ -146,37 +146,54 @@
     // Rendering
     // -------------------------------------------------------------------------
 
-    function renderTable() {
+    function renderCards() {
         if (properties.length === 0) {
-            els.tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Nessun immobile trovato.</td></tr>';
+            els.grid.innerHTML = '<div class="entity-empty">Nessun immobile trovato.</div>';
             return;
         }
 
-        els.tbody.innerHTML = properties.map(p => `
-            <tr>
-                <td data-label="Indirizzo"><strong>${escapeHtml(p.address)}</strong></td>
-                <td data-label="Città">${escapeHtml(p.city)}${p.cap ? ' (' + escapeHtml(p.cap) + ')' : ''}</td>
-                <td data-label="Proprietario">${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</td>
-                <td data-label="mq">${p.sqm != null ? p.sqm : '<span class="text-muted">—</span>'}</td>
-                <td data-label="Stanze">${p.rooms != null ? p.rooms : '<span class="text-muted">—</span>'}</td>
-                <td data-label="Stato"><span class="badge badge--${p.status}">${STATUS_LABELS[p.status] || p.status}</span></td>
-                <td data-label="Media">${p.media_count || 0}</td>
-                <td class="col-actions" data-label="Azioni">
-                    <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
-                    <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
-                </td>
-            </tr>
-        `).join('');
+        els.grid.innerHTML = properties.map(p => {
+            const chips = [];
+            if (p.sqm != null)      chips.push(`<span class="prop-chip">📐 ${p.sqm} mq</span>`);
+            if (p.rooms != null)     chips.push(`<span class="prop-chip">🛏 ${p.rooms} stanze</span>`);
+            if (p.bathrooms != null) chips.push(`<span class="prop-chip">🚿 ${p.bathrooms} bagni</span>`);
+            const mediaLabel = (p.media_count || 0) === 1 ? '1 foto' : `${p.media_count || 0} foto`;
 
-        els.tbody.querySelectorAll('.btn-edit').forEach(btn => {
+            return `
+            <div class="entity-card entity-card--property">
+                <div class="entity-card__prop-header">
+                    <div class="entity-card__address">
+                        <div class="entity-card__street">${escapeHtml(p.address)}</div>
+                        <div class="entity-card__city text-muted">${escapeHtml(p.city)}${p.cap ? ' · ' + escapeHtml(p.cap) : ''}</div>
+                    </div>
+                    <span class="badge badge--${p.status}">${STATUS_LABELS[p.status] || p.status}</span>
+                </div>
+                <div class="entity-card__body">
+                    <div class="entity-card__info"><span class="entity-card__info-icon">👤</span>${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</div>
+                    ${chips.length ? `<div class="prop-chips">${chips.join('')}</div>` : ''}
+                </div>
+                <div class="entity-card__footer">
+                    <div class="entity-card__stat">
+                        <span class="entity-card__stat-icon">📷</span>
+                        <span class="entity-card__stat-label">${mediaLabel}</span>
+                    </div>
+                    <div class="entity-card__actions">
+                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 const prop = properties.find(p => p.id == btn.dataset.id);
                 if (prop) openModal(prop);
             });
         });
 
-        els.tbody.querySelectorAll('.btn-pdf').forEach(btn => {
+        els.grid.querySelectorAll('.btn-pdf').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const res = await fetch('api/generate_pdf.php', {
                     method: 'POST',
@@ -189,7 +206,7 @@
             });
         });
 
-        els.tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        els.grid.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', () => {
                 const prop = properties.find(p => p.id == btn.dataset.id);
                 if (prop) openDeleteModal(prop.id, `${prop.address}, ${prop.city}`);
