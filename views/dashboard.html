@@ -1,0 +1,82 @@
+<div class="dashboard-view">
+    <div class="dashboard-header">
+        <h2>Benvenuto, Admin</h2>
+        <p>Panoramica generale dell'agenzia immobiliare.</p>
+    </div>
+
+    <div id="dashboard-error" class="alert alert--error" style="display:none;"></div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--clients">👥</div>
+            <div class="stat-body">
+                <div class="stat-label">Proprietari</div>
+                <div class="stat-value loading" id="stat-clients">—</div>
+                <div class="stat-sub">Clienti registrati</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--properties">🏢</div>
+            <div class="stat-body">
+                <div class="stat-label">Immobili</div>
+                <div class="stat-value loading" id="stat-properties">—</div>
+                <div class="stat-sub">Proprietà in gestione</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--reminders">🔔</div>
+            <div class="stat-body">
+                <div class="stat-label">Promemoria in scadenza</div>
+                <div class="stat-value loading" id="stat-reminders">—</div>
+                <div class="stat-sub">Nei prossimi 7 giorni</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    const API_URL = 'api/get_dashboard_stats.php';
+
+    async function loadDashboardStats() {
+        const clientsEl    = document.getElementById('stat-clients');
+        const propertiesEl = document.getElementById('stat-properties');
+        const remindersEl  = document.getElementById('stat-reminders');
+        const errorEl      = document.getElementById('dashboard-error');
+
+        try {
+            const response = await fetch(API_URL);
+            const json     = await response.json();
+
+            if (!json.success) {
+                throw new Error(json.error || 'Risposta API non valida');
+            }
+
+            const { total_clients, total_properties, expiring_reminders } = json.data;
+
+            clientsEl.textContent    = total_clients;
+            propertiesEl.textContent = total_properties;
+            remindersEl.textContent  = expiring_reminders;
+
+            clientsEl.classList.remove('loading');
+            propertiesEl.classList.remove('loading');
+            remindersEl.classList.remove('loading');
+
+        } catch (err) {
+            errorEl.style.display = 'block';
+            errorEl.textContent   = 'Errore nel caricamento delle statistiche: ' + err.message;
+
+            [clientsEl, propertiesEl, remindersEl].forEach(el => {
+                el.textContent = '!';
+                el.classList.remove('loading');
+            });
+        }
+    }
+
+    loadDashboardStats();
+})();
+</script>

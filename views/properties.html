@@ -1,0 +1,181 @@
+<div class="properties-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Immobili</h2>
+            <p>Gestisci le proprietà, assegna i proprietari e carica la galleria multimediale.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-new-property">
+            + Nuovo Immobile
+        </button>
+    </div>
+
+    <div id="properties-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="property-search" class="form-input" placeholder="Cerca per indirizzo, città, proprietario…" autocomplete="off">
+        </div>
+        <select id="property-client-filter" class="form-select">
+            <option value="">Tutti i proprietari</option>
+        </select>
+        <select id="property-status-filter" class="form-select">
+            <option value="">Tutti (esclusi archiviati)</option>
+            <option value="available">Disponibili</option>
+            <option value="rented">Affittati</option>
+            <option value="sold">Venduti</option>
+            <option value="archived">Archiviati</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="properties-table">
+            <thead>
+                <tr>
+                    <th>Indirizzo</th>
+                    <th>Città</th>
+                    <th>Proprietario</th>
+                    <th>mq</th>
+                    <th>Stanze</th>
+                    <th>Stato</th>
+                    <th>Media</th>
+                    <th class="col-actions">Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="properties-tbody">
+                <tr>
+                    <td colspan="8" class="table-empty">Caricamento...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="property-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="property-modal-title">
+        <div class="modal-header">
+            <h3 id="property-modal-title">Nuovo Immobile</h3>
+            <button class="modal-close" id="property-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="property-form" class="modal-body">
+            <input type="hidden" id="property-id">
+
+            <fieldset class="form-section">
+                <legend>Proprietario e ubicazione</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="property-client">Proprietario <span class="required">*</span></label>
+                        <select id="property-client" class="form-select" required>
+                            <option value="">— Seleziona proprietario —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="property-status">Stato</label>
+                        <select id="property-status" class="form-select">
+                            <option value="available">Disponibile</option>
+                            <option value="rented">Affittato</option>
+                            <option value="sold">Venduto</option>
+                            <option value="archived">Archiviato</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="property-address">Indirizzo <span class="required">*</span></label>
+                    <input type="text" id="property-address" class="form-input" required maxlength="255">
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="property-city">Città <span class="required">*</span></label>
+                        <input type="text" id="property-city" class="form-input" required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="property-cap">CAP</label>
+                        <input type="text" id="property-cap" class="form-input" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="property-floor">Piano</label>
+                        <input type="text" id="property-floor" class="form-input" maxlength="20">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Caratteristiche</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="property-sqm">Metri quadri</label>
+                        <input type="number" id="property-sqm" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="property-rooms">Stanze</label>
+                        <input type="number" id="property-rooms" class="form-input" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="property-bathrooms">Bagni</label>
+                        <input type="number" id="property-bathrooms" class="form-input" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="property-description">Descrizione</label>
+                    <textarea id="property-description" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="property-features">Caratteristiche aggiuntive</label>
+                    <textarea id="property-features" class="form-textarea" rows="2" placeholder="Es. Balcone, garage, ascensore…"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="property-notes">Note interne</label>
+                    <textarea id="property-notes" class="form-textarea" rows="2"></textarea>
+                </div>
+            </fieldset>
+
+            <!-- Gallery section — visible only when editing -->
+            <fieldset class="form-section" id="gallery-section" hidden>
+                <legend>Galleria multimediale</legend>
+
+                <div class="gallery-upload">
+                    <select id="media-type" class="form-select gallery-upload__type">
+                        <option value="photo">Foto</option>
+                        <option value="video">Video</option>
+                        <option value="floor_plan">Planimetria</option>
+                    </select>
+                    <input type="file" id="media-file" class="gallery-upload__file">
+                    <button type="button" class="btn btn--ghost" id="btn-upload-media">Carica file</button>
+                </div>
+
+                <div id="gallery-grid" class="gallery-grid">
+                    <p class="text-muted gallery-empty">Nessun file caricato.</p>
+                </div>
+            </fieldset>
+
+            <p id="gallery-hint" class="gallery-hint text-muted">
+                Salva l'immobile per poter caricare foto, video e planimetrie.
+            </p>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="property-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="property-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Archive confirmation -->
+<div class="modal-overlay" id="property-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Archivia immobile</h3>
+            <button class="modal-close" id="property-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler archiviare <strong id="delete-property-label"></strong>?</p>
+            <p class="text-muted">L'immobile non verrà eliminato definitivamente.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="property-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="property-delete-confirm">Archivia</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/properties.js"></script>

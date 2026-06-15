@@ -1,0 +1,70 @@
+<div class="tenants-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Inquilini</h2>
+            <p>Gestisci conduttori, contratti e accesso al portale inquilino.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-new-tenant">+ Nuovo inquilino</button>
+    </div>
+
+    <div id="tenants-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <input type="search" id="tenant-search" class="form-input" placeholder="Cerca per nome, email o indirizzo…">
+    </div>
+
+    <div class="table-wrapper">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Immobile</th>
+                <th>Canone</th>
+                <th>Contratto</th>
+                <th>Portale</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tenants-tbody"></tbody>
+    </table>
+    </div>
+</div>
+
+<div class="modal-overlay" id="tenant-modal" hidden>
+    <div class="modal modal--lg">
+        <div class="modal-header">
+            <h3 id="tenant-modal-title">Nuovo inquilino</h3>
+            <button class="modal-close" id="tenant-modal-close">&times;</button>
+        </div>
+        <form id="tenant-form" class="modal-body">
+            <input type="hidden" id="tenant-id">
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Nome *</label><input type="text" id="tenant-name" class="form-input" required></div>
+                <div class="form-group"><label>Cognome *</label><input type="text" id="tenant-surname" class="form-input" required></div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Email *</label><input type="email" id="tenant-email" class="form-input" required></div>
+                <div class="form-group"><label>Telefono</label><input type="text" id="tenant-phone" class="form-input"></div>
+            </div>
+            <div class="form-group">
+                <label>Immobile *</label>
+                <select id="tenant-property" class="form-input" required></select>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group"><label>Inizio contratto</label><input type="date" id="tenant-lease-start" class="form-input"></div>
+                <div class="form-group"><label>Fine contratto</label><input type="date" id="tenant-lease-end" class="form-input"></div>
+                <div class="form-group"><label>Canone mensile (€)</label><input type="number" step="0.01" id="tenant-rent" class="form-input"></div>
+            </div>
+            <div class="form-group"><label>Password portale inquilino</label><input type="password" id="tenant-portal-pass" class="form-input" minlength="8" placeholder="Min. 8 caratteri (opzionale in modifica)"></div>
+            <div class="form-group"><label>Note</label><textarea id="tenant-notes" class="form-textarea" rows="2"></textarea></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="btn-pdf-contract">📄 Genera contratto PDF</button>
+                <button type="button" class="btn btn--ghost" id="tenant-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/tenants.js"></script>

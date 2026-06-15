@@ -1,0 +1,129 @@
+<div class="clients-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Proprietari</h2>
+            <p>Gestisci i clienti dell'agenzia e le loro informazioni di contatto.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-new-client">
+            + Nuovo Proprietario
+        </button>
+    </div>
+
+    <div id="clients-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="client-search" class="form-input" placeholder="Cerca per nome, email, telefono…" autocomplete="off">
+        </div>
+        <select id="client-status-filter" class="form-select">
+            <option value="">Tutti (esclusi archiviati)</option>
+            <option value="active">Attivi</option>
+            <option value="inactive">Inattivi</option>
+            <option value="archived">Archiviati</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="clients-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Cognome</th>
+                    <th>Telefono</th>
+                    <th>Email</th>
+                    <th>Stato</th>
+                    <th>Immobili</th>
+                    <th>Data creazione</th>
+                    <th class="col-actions">Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="clients-tbody">
+                <tr>
+                    <td colspan="8" class="table-empty">Caricamento...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="client-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-header">
+            <h3 id="modal-title">Nuovo Proprietario</h3>
+            <button class="modal-close" id="modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="client-form" class="modal-body">
+            <input type="hidden" id="client-id" name="id">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="client-name">Nome <span class="required">*</span></label>
+                    <input type="text" id="client-name" name="name" class="form-input" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="client-surname">Cognome <span class="required">*</span></label>
+                    <input type="text" id="client-surname" name="surname" class="form-input" required maxlength="100">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="client-phone">Telefono</label>
+                    <input type="tel" id="client-phone" name="phone" class="form-input" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label for="client-email">Email</label>
+                    <input type="email" id="client-email" name="email" class="form-input" maxlength="255">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="client-status">Stato</label>
+                <select id="client-status" name="status" class="form-select">
+                    <option value="active">Attivo</option>
+                    <option value="inactive">Inattivo</option>
+                    <option value="archived">Archiviato</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="client-notes">Note interne</label>
+                <textarea id="client-notes" name="internal_notes" class="form-textarea" rows="4"></textarea>
+            </div>
+
+            <fieldset class="form-section" id="client-comm-section" hidden>
+                <legend>Comunicazioni recenti</legend>
+                <div id="client-comm-history" class="client-comm-history">
+                    <p class="text-muted">Caricamento...</p>
+                </div>
+                <button type="button" class="btn btn--ghost" id="btn-open-chat">Apri conversazione completa →</button>
+            </fieldset>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal-overlay" id="delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Archivia proprietario</h3>
+            <button class="modal-close" id="delete-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler archiviare <strong id="delete-client-name"></strong>?</p>
+            <p class="text-muted">Il proprietario non verrà eliminato definitivamente, ma non apparirà più nell'elenco principale.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="delete-confirm">Archivia</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/clients.js"></script>

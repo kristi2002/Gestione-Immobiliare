@@ -1,0 +1,10 @@
+.env
+backups/
+uploads/properties/*
+uploads/documents/*
+uploads/social/*
+!uploads/properties/.gitkeep
+!uploads/documents/.gitkeep
+!uploads/branding/.gitkeep
+!uploads/documents/generated/.gitkeep
+.setup_complete

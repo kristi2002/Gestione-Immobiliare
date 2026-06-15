@@ -1,0 +1,172 @@
+<div class="settings-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Impostazioni</h2>
+            <p>Branding, email, WhatsApp, backup cloud, utenti e Meta.</p>
+        </div>
+    </div>
+
+    <div id="settings-alert" class="alert" style="display:none;"></div>
+
+    <div class="settings-tabs">
+        <button class="settings-tab settings-tab--active" data-tab="branding">Branding</button>
+        <button class="settings-tab" data-tab="mail">Email</button>
+        <button class="settings-tab" data-tab="whatsapp">WhatsApp</button>
+        <button class="settings-tab" data-tab="backup">Backup cloud</button>
+        <button class="settings-tab" data-tab="meta">Meta / Social</button>
+        <button class="settings-tab" data-tab="users" id="tab-users" style="display:none">Utenti</button>
+    </div>
+
+    <div class="settings-panel" id="panel-branding">
+        <form id="form-branding" class="card">
+            <h3>Branding agenzia</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nome agenzia</label>
+                    <input type="text" id="set-agency-name" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Sottotitolo</label>
+                    <input type="text" id="set-agency-tagline" class="form-input">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Telefono</label>
+                    <input type="text" id="set-agency-phone" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Indirizzo</label>
+                    <input type="text" id="set-agency-address" class="form-input">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Colore primario</label>
+                    <input type="color" id="set-primary-color" class="form-input" style="height:42px;padding:4px">
+                </div>
+                <div class="form-group">
+                    <label>Colore sidebar</label>
+                    <input type="color" id="set-sidebar-color" class="form-input" style="height:42px;padding:4px">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Logo</label>
+                <input type="file" id="set-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                <img id="set-logo-preview" src="" alt="" style="max-height:48px;margin-top:8px;display:none">
+            </div>
+            <button type="submit" class="btn btn--primary">Salva branding</button>
+        </form>
+    </div>
+
+    <div class="settings-panel" id="panel-mail" hidden>
+        <form id="form-mail" class="card">
+            <h3>Configurazione email (SMTP)</h3>
+            <label class="form-check"><input type="checkbox" id="set-mail-enabled"> Abilita invio email reale</label>
+            <div class="form-row form-row--2" style="margin-top:16px">
+                <div class="form-group"><label>Email agenzia</label><input type="email" id="set-agency-email" class="form-input"></div>
+                <div class="form-group"><label>Host SMTP</label><input type="text" id="set-smtp-host" class="form-input" placeholder="smtp.gmail.com"></div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group"><label>Porta</label><input type="number" id="set-smtp-port" class="form-input" value="587"></div>
+                <div class="form-group"><label>Utente SMTP</label><input type="text" id="set-smtp-user" class="form-input"></div>
+                <div class="form-group"><label>Password SMTP</label><input type="password" id="set-smtp-pass" class="form-input" autocomplete="off"></div>
+            </div>
+            <div class="form-group">
+                <label>Sicurezza</label>
+                <select id="set-smtp-secure" class="form-input"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="">Nessuna</option></select>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <button type="submit" class="btn btn--primary">Salva email</button>
+                <button type="button" class="btn btn--ghost" id="btn-test-email">Invia email di test</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="settings-panel" id="panel-whatsapp" hidden>
+        <form id="form-whatsapp" class="card">
+            <h3>WhatsApp (Twilio)</h3>
+            <p class="text-muted">Richiede account Twilio con WhatsApp Business API. Webhook: <code>api/whatsapp_webhook.php</code></p>
+            <label class="form-check"><input type="checkbox" id="set-wa-enabled"> Abilita WhatsApp</label>
+            <div class="form-group" style="margin-top:16px"><label>Account SID</label><input type="text" id="set-twilio-sid" class="form-input"></div>
+            <div class="form-group"><label>Auth Token</label><input type="password" id="set-twilio-token" class="form-input" autocomplete="off"></div>
+            <div class="form-group"><label>Numero WhatsApp (es. +14155238886)</label><input type="text" id="set-twilio-from" class="form-input"></div>
+            <button type="submit" class="btn btn--primary">Salva WhatsApp</button>
+        </form>
+    </div>
+
+    <div class="settings-panel" id="panel-backup" hidden>
+        <form id="form-backup" class="card">
+            <h3>Backup su cloud (S3-compatible)</h3>
+            <p class="text-muted">Compatibile con AWS S3, Backblaze B2, MinIO. I backup locali restano in <code>backups/</code>.</p>
+            <label class="form-check"><input type="checkbox" id="set-backup-enabled"> Abilita upload cloud dopo backup</label>
+            <div class="form-group" style="margin-top:16px"><label>Endpoint</label><input type="url" id="set-s3-endpoint" class="form-input" placeholder="https://s3.eu-central-1.amazonaws.com"></div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Bucket</label><input type="text" id="set-s3-bucket" class="form-input"></div>
+                <div class="form-group"><label>Regione</label><input type="text" id="set-s3-region" class="form-input" value="eu-central-1"></div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Access Key</label><input type="text" id="set-s3-key" class="form-input"></div>
+                <div class="form-group"><label>Secret Key</label><input type="password" id="set-s3-secret" class="form-input" autocomplete="off"></div>
+            </div>
+            <div class="form-group"><label>Prefisso cartella</label><input type="text" id="set-s3-prefix" class="form-input" value="gestionale-backups/"></div>
+            <button type="submit" class="btn btn--primary">Salva backup</button>
+        </form>
+    </div>
+
+    <div class="settings-panel" id="panel-meta" hidden>
+        <form id="form-meta" class="card">
+            <h3>Meta App (Facebook / Instagram OAuth)</h3>
+            <p class="text-muted">Crea un'app su <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a> e imposta redirect: <code id="meta-redirect-uri">—</code></p>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Meta App ID</label><input type="text" id="set-meta-app-id" class="form-input"></div>
+                <div class="form-group"><label>Meta App Secret</label><input type="password" id="set-meta-app-secret" class="form-input" autocomplete="off"></div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <button type="submit" class="btn btn--primary">Salva credenziali Meta</button>
+                <a href="meta_oauth.php" class="btn btn--ghost" id="btn-meta-oauth">Connetti Facebook / Instagram</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="settings-panel" id="panel-users" hidden>
+        <div class="card">
+            <div class="view-header" style="margin-bottom:16px">
+                <h3>Utenti amministratori</h3>
+                <button class="btn btn--primary btn--sm" id="btn-new-user">+ Nuovo utente</button>
+            </div>
+            <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Username</th><th>Email</th><th>Ruolo</th><th>Stato</th><th></th></tr></thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="user-modal" hidden>
+    <div class="modal modal--sm">
+        <div class="modal-header"><h3 id="user-modal-title">Nuovo utente</h3><button class="modal-close" id="user-modal-close">&times;</button></div>
+        <form id="user-form" class="modal-body">
+            <input type="hidden" id="user-id">
+            <div class="form-group"><label>Username</label><input type="text" id="user-username" class="form-input" required></div>
+            <div class="form-group"><label>Email</label><input type="email" id="user-email" class="form-input"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="user-password" class="form-input" minlength="8"></div>
+            <div class="form-group"><label>Ruolo</label>
+                <select id="user-role" class="form-input">
+                    <option value="admin">Admin</option>
+                    <option value="agent">Agente</option>
+                    <option value="readonly">Sola lettura</option>
+                    <option value="super_admin">Super admin</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="user-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/settings.js"></script>

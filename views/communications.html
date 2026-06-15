@@ -1,0 +1,67 @@
+<div class="communications-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Comunicazioni</h2>
+            <p>Storico email con i proprietari — interfaccia chat.</p>
+        </div>
+    </div>
+
+    <div id="comm-alert" class="alert" style="display:none;"></div>
+
+    <div class="chat-layout">
+        <!-- Client sidebar -->
+        <aside class="chat-sidebar">
+            <div class="chat-sidebar__search">
+                <input type="search" id="comm-client-search" class="form-input" placeholder="Cerca proprietario…" autocomplete="off">
+            </div>
+            <ul class="chat-client-list" id="chat-client-list">
+                <li class="chat-client-list__empty">Caricamento...</li>
+            </ul>
+        </aside>
+
+        <!-- Chat panel -->
+        <section class="chat-panel">
+            <div class="chat-panel__empty" id="chat-empty">
+                <span class="chat-panel__empty-icon">✉️</span>
+                <p>Seleziona un proprietario per visualizzare la conversazione.</p>
+            </div>
+
+            <div class="chat-panel__active" id="chat-active" hidden>
+                <header class="chat-header">
+                    <div class="chat-header__info">
+                        <h3 id="chat-client-name">—</h3>
+                        <span id="chat-client-email" class="text-muted">—</span>
+                    </div>
+                    <span class="badge badge--channel-email" id="chat-channel-badge">Email</span>
+                </header>
+
+                <div class="chat-messages" id="chat-messages"></div>
+
+                <footer class="chat-compose">
+                    <div class="chat-compose__tabs">
+                        <button type="button" class="chat-tab chat-tab--active" data-mode="send" data-channel="email" id="tab-send-email">📧 Email</button>
+                        <button type="button" class="chat-tab" data-mode="send" data-channel="whatsapp" id="tab-send-wa">💬 WhatsApp</button>
+                        <button type="button" class="chat-tab" data-mode="receive" id="tab-receive">Registra ricevuta</button>
+                    </div>
+
+                    <form id="chat-form">
+                        <div class="form-group">
+                            <label for="chat-subject">Oggetto</label>
+                            <input type="text" id="chat-subject" class="form-input" maxlength="255" placeholder="Oggetto dell'email">
+                        </div>
+                        <div class="form-group">
+                            <label for="chat-body">Messaggio <span class="required">*</span></label>
+                            <textarea id="chat-body" class="form-textarea chat-body-input" rows="3" required placeholder="Scrivi il messaggio…"></textarea>
+                        </div>
+                        <div class="chat-compose__actions">
+                            <span class="text-muted chat-compose__hint" id="compose-hint">Il messaggio verrà inviato e salvato nello storico.</span>
+                            <button type="submit" class="btn btn--primary" id="chat-submit">Invia</button>
+                        </div>
+                    </form>
+                </footer>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="assets/js/communications.js"></script>

@@ -1,0 +1,133 @@
+<div class="documents-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Documenti</h2>
+            <p>Carica, scarica e associa documenti a proprietari e immobili.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-upload-document">
+            + Carica Documento
+        </button>
+    </div>
+
+    <div id="documents-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="doc-search" class="form-input" placeholder="Cerca per titolo, file, proprietario, immobile…" autocomplete="off">
+        </div>
+        <select id="doc-type-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <option value="invoice">Fatture</option>
+            <option value="contract">Contratti</option>
+            <option value="id">Documenti identità</option>
+            <option value="other">Altro</option>
+        </select>
+        <select id="doc-client-filter" class="form-select">
+            <option value="">Tutti i proprietari</option>
+        </select>
+        <select id="doc-property-filter" class="form-select">
+            <option value="">Tutti gli immobili</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="documents-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Documento</th>
+                    <th>Proprietario</th>
+                    <th>Immobile</th>
+                    <th>Dimensione</th>
+                    <th>Data</th>
+                    <th class="col-actions">Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="documents-tbody">
+                <tr>
+                    <td colspan="7" class="table-empty">Caricamento...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Upload modal -->
+<div class="modal-overlay" id="doc-upload-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="doc-upload-title">
+        <div class="modal-header">
+            <h3 id="doc-upload-title">Carica Documento</h3>
+            <button class="modal-close" id="doc-upload-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="doc-upload-form" class="modal-body">
+            <div class="form-group">
+                <label for="doc-type">Tipo documento <span class="required">*</span></label>
+                <select id="doc-type" class="form-select" required>
+                    <option value="invoice">Fattura</option>
+                    <option value="contract">Contratto</option>
+                    <option value="id">Documento identità</option>
+                    <option value="other">Altro</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="doc-title">Titolo (opzionale)</label>
+                <input type="text" id="doc-title" class="form-input" maxlength="255" placeholder="Es. Mandato 2025, Fattura marzo…">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="doc-client">Proprietario</label>
+                    <select id="doc-client" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="doc-property">Immobile</label>
+                    <select id="doc-property" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+            </div>
+
+            <p class="form-hint text-muted">Associa il documento ad almeno un proprietario o un immobile.</p>
+
+            <div class="form-group">
+                <label for="doc-notes">Note</label>
+                <textarea id="doc-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="doc-file">File <span class="required">*</span></label>
+                <input type="file" id="doc-file" class="form-input" required
+                       accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.odt,.txt">
+                <span class="form-hint text-muted">PDF, immagini, Word o testo — max 25 MB</span>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="doc-upload-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="doc-upload-save">Carica</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete confirmation -->
+<div class="modal-overlay" id="doc-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Elimina documento</h3>
+            <button class="modal-close" id="doc-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler eliminare <strong id="delete-doc-label"></strong>?</p>
+            <p class="text-muted">Il file verrà rimosso definitivamente dal server.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="doc-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="doc-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/documents.js"></script>

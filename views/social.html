@@ -1,0 +1,158 @@
+<div class="social-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Social Media</h2>
+            <p>Pubblicazione programmata su Facebook e Instagram via Meta API.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-publish-scheduled">⚡ Pubblica programmati</button>
+            <button class="btn btn--primary" id="btn-new-post">+ Nuovo Post</button>
+        </div>
+    </div>
+
+    <div id="social-alert" class="alert" style="display:none;"></div>
+
+    <!-- Meta connection card -->
+    <div class="meta-card" id="meta-card">
+        <div class="meta-card__header">
+            <div>
+                <h3>Connessione Meta</h3>
+                <p class="text-muted">Configura le credenziali Facebook Page e Instagram Business.</p>
+            </div>
+            <span class="meta-status" id="meta-status-badge">—</span>
+        </div>
+
+        <form id="meta-settings-form" class="meta-card__body">
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="meta-app-id">Meta App ID</label>
+                    <input type="text" id="meta-app-id" class="form-input" placeholder="ID app da developers.facebook.com">
+                </div>
+                <div class="form-group">
+                    <label for="meta-page-id">Facebook Page ID</label>
+                    <input type="text" id="meta-page-id" class="form-input" placeholder="ID pagina Facebook">
+                </div>
+                <div class="form-group">
+                    <label for="meta-page-token">Page Access Token</label>
+                    <input type="password" id="meta-page-token" class="form-input" placeholder="Token di accesso pagina" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="meta-ig-id">Instagram Account ID</label>
+                    <input type="text" id="meta-ig-id" class="form-input" placeholder="ID account Instagram Business collegato">
+                </div>
+                <div class="form-group">
+                    <label for="meta-token-expires">Scadenza token</label>
+                    <input type="datetime-local" id="meta-token-expires" class="form-input">
+                </div>
+            </div>
+            <p class="form-hint text-muted">
+                Senza credenziali Meta, i post vengono salvati in modalità simulata (utile per sviluppo).
+                Per Instagram live, imposta anche <code>META_PUBLIC_BASE_URL</code> sul server (URL pubblico delle immagini).
+            </p>
+            <button type="submit" class="btn btn--primary" id="btn-save-meta">Salva connessione manuale</button>
+            <a href="meta_oauth.php" class="btn btn--ghost" style="margin-left:8px">🔗 Connetti con Facebook OAuth</a>
+        </form>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="post-search" class="form-input" placeholder="Cerca nei post o immobili…" autocomplete="off">
+        </div>
+        <select id="post-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="draft">Bozze</option>
+            <option value="scheduled" selected>Programmati</option>
+            <option value="published">Pubblicati</option>
+            <option value="failed">Falliti</option>
+        </select>
+        <select id="post-platform-filter" class="form-select">
+            <option value="">Tutte le piattaforme</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="both">Facebook + Instagram</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Didascalia</th>
+                    <th>Piattaforma</th>
+                    <th>Immobile</th>
+                    <th>Programmato</th>
+                    <th>Stato</th>
+                    <th class="col-actions">Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="posts-tbody">
+                <tr><td colspan="6" class="table-empty">Caricamento...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Post modal -->
+<div class="modal-overlay" id="post-modal" hidden>
+    <div class="modal modal--lg" role="dialog">
+        <div class="modal-header">
+            <h3 id="post-modal-title">Nuovo Post</h3>
+            <button class="modal-close" id="post-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="post-form" class="modal-body" enctype="multipart/form-data">
+            <input type="hidden" id="post-id">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="post-platform">Piattaforma</label>
+                    <select id="post-platform" class="form-select">
+                        <option value="both">Facebook + Instagram</option>
+                        <option value="facebook">Solo Facebook</option>
+                        <option value="instagram">Solo Instagram</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="post-property">Immobile collegato</label>
+                    <select id="post-property" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="post-caption">Didascalia <span class="required">*</span></label>
+                <textarea id="post-caption" class="form-textarea" rows="4" required maxlength="2200" placeholder="Testo del post…"></textarea>
+                <span class="form-hint text-muted">Max 2.200 caratteri (limite Instagram)</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="post-scheduled">Data pubblicazione <span class="required">*</span></label>
+                    <input type="datetime-local" id="post-scheduled" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="post-status">Stato</label>
+                    <select id="post-status" class="form-select">
+                        <option value="draft">Bozza</option>
+                        <option value="scheduled">Programmato</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="post-image">Immagine</label>
+                <input type="file" id="post-image" class="form-input" accept="image/jpeg,image/png,image/webp">
+                <div id="post-image-preview" class="post-image-preview" hidden></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="post-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="post-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/social.js"></script>

@@ -1,0 +1,19 @@
+# Gestionale Immobiliare — Apache security rules
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block web access to sensitive directories
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+    RewriteRule ^cron/ - [F,L]
+    RewriteRule ^backups/ - [F,L]
+</IfModule>
+
+<Files ".env">
+    Require all denied
+</Files>
+
+<Files ".setup_complete">
+    Require all denied
+</Files>
