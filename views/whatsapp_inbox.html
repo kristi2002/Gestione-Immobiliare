@@ -1,0 +1,205 @@
+<style>
+.wa-inbox-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    height: calc(100vh - 140px);
+    min-height: 500px;
+    border: 1px solid var(--color-border, #e0e0e0);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.wa-thread-list {
+    border-right: 1px solid var(--color-border, #e0e0e0);
+    overflow-y: auto;
+    background: var(--color-surface, #fff);
+}
+.wa-thread-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border, #f0f0f0);
+    transition: background 0.15s;
+}
+.wa-thread-item:hover, .wa-thread-item.active {
+    background: var(--color-surface-alt, #f5f7fa);
+}
+.wa-thread-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--color-primary, #3b82f6);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1rem;
+    flex-shrink: 0;
+}
+.wa-thread-info { flex: 1; min-width: 0; }
+.wa-thread-phone { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-thread-preview { font-size: 0.78rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-unread-badge {
+    background: #25d366;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 5px;
+    flex-shrink: 0;
+}
+.wa-chat-panel {
+    display: flex;
+    flex-direction: column;
+    background: #ece5dd;
+    overflow: hidden;
+}
+.wa-chat-header {
+    background: #075e54;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.wa-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.wa-bubble {
+    max-width: 70%;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    position: relative;
+    word-break: break-word;
+}
+.wa-bubble--in {
+    background: #fff;
+    align-self: flex-start;
+    border-top-left-radius: 0;
+}
+.wa-bubble--out {
+    background: #dcf8c6;
+    align-self: flex-end;
+    border-top-right-radius: 0;
+}
+.wa-bubble-time {
+    font-size: 0.68rem;
+    color: #999;
+    text-align: right;
+    margin-top: 3px;
+}
+.wa-reply-bar {
+    background: #fff;
+    padding: 0.75rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    border-top: 1px solid #ddd;
+    flex-shrink: 0;
+}
+.wa-reply-bar textarea {
+    flex: 1;
+    resize: none;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    max-height: 120px;
+    min-height: 40px;
+    font-family: inherit;
+}
+.wa-reply-bar textarea:focus { outline: none; border-color: #25d366; }
+.wa-send-btn {
+    background: #25d366;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.wa-send-btn:hover { background: #128c5e; }
+.wa-send-btn:disabled { background: #ccc; cursor: not-allowed; }
+.wa-empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 0.95rem;
+}
+</style>
+
+<div class="whatsapp-inbox-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>WhatsApp Inbox</h2>
+            <p>Conversazioni WhatsApp con clienti e inquilini.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-wa-conv">+ Nuova conversazione</button>
+        </div>
+    </div>
+
+    <div id="whatsapp-inbox-alert" class="alert" style="display:none;"></div>
+
+    <div class="wa-inbox-layout">
+        <!-- Left: thread list -->
+        <div class="wa-thread-list" id="wa-thread-list">
+            <div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>
+        </div>
+
+        <!-- Right: chat panel -->
+        <div class="wa-chat-panel" id="wa-chat-panel">
+            <div class="wa-empty-state" id="wa-empty-state">
+                Seleziona una conversazione
+            </div>
+            <div id="wa-active-chat" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden;">
+                <div class="wa-chat-header" id="wa-chat-header">—</div>
+                <div class="wa-chat-messages" id="wa-chat-messages"></div>
+                <div class="wa-reply-bar">
+                    <textarea id="wa-reply-text" placeholder="Scrivi un messaggio…" rows="1"></textarea>
+                    <button class="wa-send-btn" id="wa-send-btn" title="Invia">&#10148;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New conversation modal -->
+<div class="modal-overlay" id="wa-new-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="wa-new-title">
+        <div class="modal-header">
+            <h3 id="wa-new-title">Nuova conversazione</h3>
+            <button class="modal-close" id="wa-new-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="wa-new-phone">Numero di telefono <span class="required">*</span></label>
+                <input type="tel" id="wa-new-phone" class="form-input" placeholder="+39 333 1234567" required>
+            </div>
+            <div class="form-group">
+                <label for="wa-new-message">Messaggio <span class="required">*</span></label>
+                <textarea id="wa-new-message" class="form-textarea" rows="4" placeholder="Scrivi il primo messaggio…" required></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="wa-new-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="wa-new-send">Invia</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/whatsapp_inbox.js"></script>

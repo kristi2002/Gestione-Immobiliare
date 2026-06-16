@@ -1,0 +1,90 @@
+<div class="forecast-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Previsionale Ricavi</h2>
+            <p>Forecast ricavi, tasso di occupazione e insoluti.</p>
+        </div>
+        <div class="view-header__actions">
+            <div class="btn-group" style="display:flex;gap:0.5rem;" role="group" aria-label="Periodo">
+                <button type="button" class="btn btn--ghost forecast-period active" data-months="6">6 mesi</button>
+                <button type="button" class="btn btn--ghost forecast-period" data-months="12">12 mesi</button>
+                <button type="button" class="btn btn--ghost forecast-period" data-months="24">24 mesi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="forecast-alert" class="alert" style="display:none;"></div>
+
+    <div class="stats-grid" style="margin-bottom:1.5rem;">
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-expected-6m">—</div>
+            <div class="stat-card__label">Atteso prossimi 6 mesi</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-avg-occupancy">—</div>
+            <div class="stat-card__label">Tasso occupazione medio</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-overdue-total">—</div>
+            <div class="stat-card__label">Insoluti totali</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-top-property">—</div>
+            <div class="stat-card__label">Top immobile per reddito</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+        <div class="card" style="padding:1.25rem;">
+            <h3 style="margin:0 0 1rem;font-size:1rem;">Ricavi mensili — Atteso vs Confermato</h3>
+            <div style="position:relative;height:280px;">
+                <canvas id="chart-revenue"></canvas>
+            </div>
+        </div>
+        <div class="card" style="padding:1.25rem;">
+            <h3 style="margin:0 0 1rem;font-size:1rem;">Tasso di occupazione mensile</h3>
+            <div style="position:relative;height:280px;">
+                <canvas id="chart-occupancy"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+        <div>
+            <h3 style="margin:0 0 0.75rem;font-size:1rem;">Top 5 immobili per reddito (ultimi 12 mesi)</h3>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Immobile</th>
+                            <th>Reddito (12m)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecast-top-tbody">
+                        <tr><td colspan="2" class="text-muted" style="text-align:center;padding:1.5rem;">Caricamento…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <h3 style="margin:0 0 0.75rem;font-size:1rem;">Insoluti</h3>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Inquilino</th>
+                            <th>Immobile</th>
+                            <th>Importo</th>
+                            <th>Giorni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecast-overdue-tbody">
+                        <tr><td colspan="4" class="text-muted" style="text-align:center;padding:1.5rem;">Caricamento…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/forecast.js"></script>

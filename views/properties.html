@@ -5,6 +5,8 @@
             <p>Gestisci le proprietà, assegna i proprietari e carica la galleria multimediale.</p>
         </div>
         <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-compare-properties" hidden>📊 Confronta (<span id="compare-count">0</span>)</button>
+            <button class="btn btn--ghost" id="btn-portal-export" title="Esporta immobili per portali (JSON/XML)">🌐 Esporta portali</button>
             <button class="btn btn--ghost" id="btn-export-properties">⬇️ Esporta CSV</button>
             <button class="btn btn--ghost" id="btn-import-properties">⬆️ Importa CSV</button>
             <input type="file" id="import-properties-file" accept=".csv" hidden>
@@ -300,6 +302,43 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="import-modal-cancel">Annulla</button>
             <button type="button" class="btn btn--primary" id="import-confirm">Importa</button>
+        </div>
+    </div>
+</div>
+
+<!-- QR / Public link modal -->
+<div class="modal-overlay" id="property-qr-modal" hidden>
+    <div class="modal modal--sm">
+        <div class="modal-header">
+            <h3>Link pubblico &amp; QR Code</h3>
+            <button class="modal-close" id="property-qr-close">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align:center">
+            <p class="text-muted" id="qr-property-label" style="margin-bottom:12px"></p>
+            <img id="qr-img" src="" alt="QR Code" style="width:180px;height:180px;display:block;margin:0 auto 16px">
+            <div class="form-group">
+                <label>Link applicazione pubblica</label>
+                <div style="display:flex;gap:8px">
+                    <input type="text" id="qr-url" class="form-input" readonly style="flex:1">
+                    <button class="btn btn--ghost btn--sm" id="btn-copy-qr-url">Copia</button>
+                </div>
+            </div>
+            <a id="qr-download" download="qrcode.png" class="btn btn--ghost btn--sm" style="margin-top:8px">⬇️ Scarica QR</a>
+        </div>
+    </div>
+</div>
+
+<!-- Comparison modal -->
+<div class="modal-overlay" id="property-compare-modal" hidden>
+    <div class="modal modal--lg" style="max-width:900px">
+        <div class="modal-header">
+            <h3>Confronto immobili</h3>
+            <button class="modal-close" id="property-compare-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="compare-table-wrapper" class="table-wrapper">
+                <p class="text-muted">Caricamento confronto…</p>
+            </div>
         </div>
     </div>
 </div>

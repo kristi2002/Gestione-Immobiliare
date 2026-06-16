@@ -1,0 +1,83 @@
+<div class="surveys-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Sondaggi Inquilini</h2>
+            <p>Valutazioni e feedback di soddisfazione degli inquilini.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-survey-link">+ Crea link sondaggio</button>
+        </div>
+    </div>
+
+    <div id="surveys-alert" class="alert" style="display:none;"></div>
+
+    <div class="stats-grid" id="surveys-stats" style="margin-bottom:1.5rem;">
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-avg-global">—</div>
+            <div class="stat-card__label">Voto globale medio</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-avg-maintenance">—</div>
+            <div class="stat-card__label">Manutenzione media</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-avg-communication">—</div>
+            <div class="stat-card__label">Comunicazione media</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-total-surveys">—</div>
+            <div class="stat-card__label">Totale sondaggi</div>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Inquilino</th>
+                    <th>Immobile</th>
+                    <th>Voto globale</th>
+                    <th>Manutenzione</th>
+                    <th>Comunicazione</th>
+                    <th>Commento</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody id="surveys-tbody">
+                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="surveys-pagination" class="pagination-container"></div>
+</div>
+
+<!-- Create survey link modal -->
+<div class="modal-overlay" id="surveys-link-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="surveys-link-title">
+        <div class="modal-header">
+            <h3 id="surveys-link-title">Crea link sondaggio</h3>
+            <button class="modal-close" id="surveys-link-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="surveys-tenant-select">Inquilino <span class="required">*</span></label>
+                <select id="surveys-tenant-select" class="form-select" required>
+                    <option value="">— Seleziona inquilino —</option>
+                </select>
+            </div>
+            <div id="surveys-generated-link" style="display:none;margin-top:1rem;">
+                <label style="font-weight:600;display:block;margin-bottom:0.4rem;">Link generato:</label>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input type="text" id="surveys-link-url" class="form-input" readonly style="flex:1;font-size:0.85rem;">
+                    <button type="button" class="btn btn--ghost btn--sm" id="btn-copy-survey-link">Copia</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="surveys-link-cancel">Chiudi</button>
+            <button type="button" class="btn btn--primary" id="surveys-link-generate">Genera link</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/surveys.js"></script>

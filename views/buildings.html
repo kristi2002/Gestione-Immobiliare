@@ -1,0 +1,120 @@
+<div class="buildings-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Edifici / Complessi</h2>
+            <p>Gestisci gli edifici e i loro immobili collegati.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-building">+ Nuovo Edificio</button>
+        </div>
+    </div>
+
+    <div id="buildings-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="buildings-search" class="form-input" placeholder="Cerca per nome o indirizzo…" autocomplete="off">
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="buildings-table">
+            <thead>
+                <tr>
+                    <th style="width:2rem;"></th>
+                    <th>Nome edificio</th>
+                    <th>Indirizzo</th>
+                    <th>Città</th>
+                    <th>Unità totali</th>
+                    <th>Occupate</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="buildings-tbody">
+                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="buildings-pagination" class="pagination-container"></div>
+</div>
+
+<!-- New / Edit building modal -->
+<div class="modal-overlay" id="buildings-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="buildings-modal-title">
+        <div class="modal-header">
+            <h3 id="buildings-modal-title">Nuovo Edificio</h3>
+            <button class="modal-close" id="buildings-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="buildings-form" class="modal-body">
+            <input type="hidden" id="buildings-id" name="id">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="buildings-name">Nome edificio <span class="required">*</span></label>
+                    <input type="text" id="buildings-name" name="name" class="form-input" required maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label for="buildings-city">Città</label>
+                    <input type="text" id="buildings-city" name="city" class="form-input" maxlength="100">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="buildings-address">Indirizzo</label>
+                <input type="text" id="buildings-address" name="address" class="form-input" maxlength="255">
+            </div>
+            <div class="form-group">
+                <label for="buildings-total-units">Unità totali</label>
+                <input type="number" id="buildings-total-units" name="total_units" class="form-input" min="0">
+            </div>
+            <div class="form-group">
+                <label for="buildings-notes">Note</label>
+                <textarea id="buildings-notes" name="notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="buildings-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="buildings-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Link property modal -->
+<div class="modal-overlay" id="buildings-link-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="buildings-link-title">
+        <div class="modal-header">
+            <h3 id="buildings-link-title">Collega Immobile</h3>
+            <button class="modal-close" id="buildings-link-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="buildings-link-building-id">
+            <div class="form-group">
+                <label for="buildings-link-property-id">Seleziona immobile da collegare</label>
+                <select id="buildings-link-property-id" class="form-select">
+                    <option value="">— Seleziona —</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="buildings-link-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="buildings-link-confirm">Collega</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="buildings-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Elimina edificio</h3>
+            <button class="modal-close" id="buildings-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler eliminare <strong id="buildings-delete-name"></strong>?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="buildings-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="buildings-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/buildings.js"></script>

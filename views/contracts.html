@@ -130,4 +130,32 @@
     </div>
 </div>
 
+<!-- E-sign modal -->
+<div class="modal-overlay" id="esign-modal" hidden>
+    <div class="modal modal--sm">
+        <div class="modal-header">
+            <h3>Firma digitale</h3>
+            <button class="modal-close" id="esign-modal-close">&times;</button>
+        </div>
+        <form id="esign-form" class="modal-body">
+            <input type="hidden" id="esign-contract-id">
+            <p class="text-muted" style="margin-bottom:12px">Genera un link di firma da inviare al firmatario. Il link scade dopo 30 giorni.</p>
+            <div class="form-group"><label>Nome firmatario *</label><input type="text" id="esign-name" class="form-input" required></div>
+            <div class="form-group"><label>Email firmatario *</label><input type="email" id="esign-email" class="form-input" required></div>
+            <div id="esign-link-result" hidden style="margin-top:12px">
+                <label class="text-muted">Link di firma:</label>
+                <div style="display:flex;gap:8px;margin-top:6px">
+                    <input type="text" id="esign-link-url" class="form-input" readonly style="flex:1">
+                    <button type="button" class="btn btn--ghost btn--sm" id="btn-copy-esign">Copia</button>
+                </div>
+                <p class="text-muted" style="font-size:12px;margin-top:6px">Invia questo link al firmatario via email o WhatsApp.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="esign-modal-cancel">Chiudi</button>
+                <button type="submit" class="btn btn--primary" id="esign-modal-submit">Genera link</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="assets/js/contracts.js"></script>

@@ -13,6 +13,7 @@ mysql -u USER -p < database/migrations/phase8_production.sql
 mysql -u USER -p < database/migrations/phase9_features.sql
 mysql -u USER -p < database/migrations/phase11_features.sql
 mysql -u USER -p < database/migrations/phase12_features.sql
+mysql -u USER -p < database/migrations/phase15_new_features.sql
 ```
 
 **Fresh production database:** use `database/schema_production.sql` instead (no migrations needed).

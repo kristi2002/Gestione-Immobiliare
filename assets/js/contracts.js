@@ -8,6 +8,7 @@
     const PROPERTIES_API = 'api/properties.php';
     const TENANTS_API    = 'api/tenants.php';
     const CLIENTS_API    = 'api/clients.php';
+    const ESIGN_API      = 'api/esign.php';
 
     const TYPE_LABELS = {
         locazione:     'Locazione',
@@ -70,6 +71,14 @@
 
         els.modal.addEventListener('click', (e) => {
             if (e.target === els.modal) closeModal();
+        });
+
+        document.getElementById('esign-modal-close').addEventListener('click', closeEsignModal);
+        document.getElementById('esign-modal-cancel').addEventListener('click', closeEsignModal);
+        document.getElementById('esign-form').addEventListener('submit', generateEsignLink);
+        document.getElementById('btn-copy-esign').addEventListener('click', () => {
+            const url = document.getElementById('esign-link-url').value;
+            navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
         });
     }
 
@@ -165,6 +174,7 @@
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
                         ${advanceBtn}
+                        <button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale">✍️</button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina">🗑️</button>
                     </div>
@@ -188,6 +198,56 @@
                 if (confirm('Eliminare questo contratto?')) deleteContract(btn.dataset.id);
             });
         });
+
+        els.grid.querySelectorAll('.btn-esign').forEach(btn => {
+            btn.addEventListener('click', () => openEsignModal(btn.dataset.id));
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // E-signature
+    // -------------------------------------------------------------------------
+
+    function openEsignModal(contractId) {
+        document.getElementById('esign-contract-id').value = contractId;
+        document.getElementById('esign-name').value = '';
+        document.getElementById('esign-email').value = '';
+        document.getElementById('esign-link-result').hidden = true;
+        document.getElementById('esign-modal-submit').hidden = false;
+        document.getElementById('esign-modal').hidden = false;
+    }
+
+    function closeEsignModal() {
+        document.getElementById('esign-modal').hidden = true;
+    }
+
+    async function generateEsignLink(e) {
+        e.preventDefault();
+        const contractId = document.getElementById('esign-contract-id').value;
+        const signerName  = document.getElementById('esign-name').value.trim();
+        const signerEmail = document.getElementById('esign-email').value.trim();
+        const btn = document.getElementById('esign-modal-submit');
+        btn.disabled = true;
+        btn.textContent = 'Generazione…';
+        try {
+            const res  = await fetch(ESIGN_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contract_id: parseInt(contractId, 10), signer_name: signerName, signer_email: signerEmail }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
+            const signUrl = `${base}sign.php?token=${json.data.token}`;
+            document.getElementById('esign-link-url').value = signUrl;
+            document.getElementById('esign-link-result').hidden = false;
+            btn.hidden = true;
+            showAlert('Link di firma generato.', 'success');
+        } catch (err) {
+            showAlert(err.message, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Genera link';
+        }
     }
 
     function nextStatus(status) {

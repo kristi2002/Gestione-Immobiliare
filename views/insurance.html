@@ -1,0 +1,151 @@
+<div class="insurance-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Polizze Assicurative</h2>
+            <p>Gestisci le polizze assicurative degli immobili.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-insurance">+ Nuova Polizza</button>
+        </div>
+    </div>
+
+    <div id="insurance-alert" class="alert" style="display:none;"></div>
+
+    <div class="stats-grid" id="insurance-stats">
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-total-policies">—</div>
+            <div class="stat-card__label">Totale polizze</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-expiring-soon">—</div>
+            <div class="stat-card__label">In scadenza (30 gg)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-annual-cost">—</div>
+            <div class="stat-card__label">Costo annuale totale</div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="insurance-search" class="form-input" placeholder="Cerca per immobile o assicuratore…" autocomplete="off">
+        </div>
+        <select id="insurance-type-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <option value="incendio">Incendio</option>
+            <option value="furto">Furto</option>
+            <option value="responsabilita_civile">Responsabilità Civile</option>
+            <option value="multirischio">Multirischio</option>
+            <option value="vita">Vita</option>
+            <option value="altro">Altro</option>
+        </select>
+        <label class="form-check" style="white-space:nowrap;">
+            <input type="checkbox" id="insurance-expiring-toggle"> In scadenza presto
+        </label>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="insurance-table">
+            <thead>
+                <tr>
+                    <th>Immobile</th>
+                    <th>Proprietario</th>
+                    <th>Assicuratore</th>
+                    <th>N. Polizza</th>
+                    <th>Tipo</th>
+                    <th>Premio annuale</th>
+                    <th>Scadenza</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="insurance-tbody">
+                <tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="insurance-pagination" class="pagination-container"></div>
+</div>
+
+<!-- New / Edit modal -->
+<div class="modal-overlay" id="insurance-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="insurance-modal-title">
+        <div class="modal-header">
+            <h3 id="insurance-modal-title">Nuova Polizza</h3>
+            <button class="modal-close" id="insurance-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="insurance-form" class="modal-body">
+            <input type="hidden" id="insurance-id" name="id">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="insurance-property-id">Immobile <span class="required">*</span></label>
+                    <select id="insurance-property-id" name="property_id" class="form-select" required>
+                        <option value="">— Seleziona immobile —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="insurance-insurer">Assicuratore <span class="required">*</span></label>
+                    <input type="text" id="insurance-insurer" name="insurer_name" class="form-input" required maxlength="150">
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="insurance-policy-number">N. Polizza</label>
+                    <input type="text" id="insurance-policy-number" name="policy_number" class="form-input" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="insurance-type">Tipo polizza <span class="required">*</span></label>
+                    <select id="insurance-type" name="policy_type" class="form-select" required>
+                        <option value="">— Seleziona tipo —</option>
+                        <option value="incendio">Incendio</option>
+                        <option value="furto">Furto</option>
+                        <option value="responsabilita_civile">Responsabilità Civile</option>
+                        <option value="multirischio">Multirischio</option>
+                        <option value="vita">Vita</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="insurance-premium">Premio annuale (€)</label>
+                    <input type="number" id="insurance-premium" name="premium_annual" class="form-input" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="insurance-start-date">Data inizio</label>
+                    <input type="date" id="insurance-start-date" name="start_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="insurance-end-date">Data scadenza <span class="required">*</span></label>
+                    <input type="date" id="insurance-end-date" name="end_date" class="form-input" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="insurance-notes">Note</label>
+                <textarea id="insurance-notes" name="notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="insurance-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="insurance-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="insurance-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Elimina polizza</h3>
+            <button class="modal-close" id="insurance-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler eliminare la polizza <strong id="insurance-delete-name"></strong>?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="insurance-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="insurance-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/insurance.js"></script>

@@ -4,10 +4,12 @@
 (function () {
     'use strict';
 
-    const API         = 'api/properties.php';
-    const CLIENTS_API = 'api/clients.php';
-    const MEDIA_API   = 'api/property_media.php';
+    const API           = 'api/properties.php';
+    const CLIENTS_API   = 'api/clients.php';
+    const MEDIA_API     = 'api/property_media.php';
     const APPRAISAL_API = 'api/property_appraisals.php';
+    const COMPARE_API   = 'api/property_comparison.php';
+    const EXPORT_API    = 'api/property_export.php';
 
     const RATING_LABELS = {
         ottimo: 'Ottimo', buono: 'Buono', discreto: 'Discreto', da_ristrutturare: 'Da ristrutturare',
@@ -36,6 +38,7 @@
     let currentPage    = 1;
     const PAGE_LIMIT   = 25;
     let selectedIds    = new Set();
+    let compareIds     = new Set();
 
     const els = {};
 
@@ -82,6 +85,22 @@
         // CSV export / import
         document.getElementById('btn-export-properties').addEventListener('click', () => {
             window.open(`${API}?format=csv`, '_blank');
+        });
+        document.getElementById('btn-portal-export').addEventListener('click', () => {
+            const fmt = prompt('Formato esportazione portali:\n1 = JSON (Immobiliare.it)\n2 = XML (feed MLS)\nInserisci 1 o 2:', '1');
+            if (fmt === '1') window.open(`${EXPORT_API}?format=json`, '_blank');
+            else if (fmt === '2') window.open(`${EXPORT_API}?format=xml`, '_blank');
+        });
+        document.getElementById('btn-compare-properties').addEventListener('click', openCompareModal);
+        document.getElementById('property-qr-close').addEventListener('click', () => {
+            document.getElementById('property-qr-modal').hidden = true;
+        });
+        document.getElementById('property-compare-close').addEventListener('click', () => {
+            document.getElementById('property-compare-modal').hidden = true;
+        });
+        document.getElementById('btn-copy-qr-url').addEventListener('click', () => {
+            const url = document.getElementById('qr-url').value;
+            navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
         });
         document.getElementById('btn-import-properties').addEventListener('click', () => {
             document.getElementById('import-properties-file').click();
@@ -198,7 +217,12 @@
             if (p.sqm != null)      chips.push(`<span class="prop-chip">📐 ${p.sqm} mq</span>`);
             if (p.rooms != null)     chips.push(`<span class="prop-chip">🛏 ${p.rooms} stanze</span>`);
             if (p.bathrooms != null) chips.push(`<span class="prop-chip">🚿 ${p.bathrooms} bagni</span>`);
+            const roi = (p.price && p.price > 0 && p.monthly_rent)
+                ? ((parseFloat(p.monthly_rent) * 12 / parseFloat(p.price)) * 100).toFixed(1)
+                : null;
+            if (roi) chips.push(`<span class="prop-chip prop-chip--roi" title="ROI lordo annuo">📈 ${roi}% ROI</span>`);
             const mediaLabel = (p.media_count || 0) === 1 ? '1 foto' : `${p.media_count || 0} foto`;
+            const inCompare = compareIds.has(p.id);
 
             return `
             <div class="entity-card entity-card--property" data-id="${p.id}">
@@ -220,6 +244,8 @@
                         <span class="entity-card__stat-label">${mediaLabel}</span>
                     </div>
                     <div class="entity-card__actions">
+                        <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR">🔗</button>
+                        <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto">📊</button>
                         <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
                         <button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
@@ -269,7 +295,86 @@
             btn.addEventListener('click', () => openAppraisalModal(btn.dataset.id));
         });
 
+        els.grid.querySelectorAll('.btn-qr').forEach(btn => {
+            btn.addEventListener('click', () => openQrModal(parseInt(btn.dataset.id, 10), btn.dataset.address));
+        });
+
+        els.grid.querySelectorAll('.btn-compare-add').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.id, 10);
+                if (compareIds.has(id)) {
+                    compareIds.delete(id);
+                    btn.classList.replace('btn--primary', 'btn--ghost');
+                } else if (compareIds.size < 4) {
+                    compareIds.add(id);
+                    btn.classList.replace('btn--ghost', 'btn--primary');
+                } else {
+                    showAlert('Puoi confrontare al massimo 4 immobili.', 'error');
+                    return;
+                }
+                updateCompareButton();
+            });
+        });
+
         updateBulkToolbar();
+    }
+
+    function updateCompareButton() {
+        const btn = document.getElementById('btn-compare-properties');
+        btn.hidden = compareIds.size < 2;
+        document.getElementById('compare-count').textContent = compareIds.size;
+    }
+
+    function openQrModal(propertyId, address) {
+        const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
+        const url  = `${base}apply.php?property_id=${propertyId}`;
+        document.getElementById('qr-url').value = url;
+        document.getElementById('qr-property-label').textContent = address;
+        const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`;
+        document.getElementById('qr-img').src = qrSrc;
+        document.getElementById('qr-download').href = qrSrc;
+        document.getElementById('property-qr-modal').hidden = false;
+    }
+
+    async function openCompareModal() {
+        if (compareIds.size < 2) return;
+        document.getElementById('property-compare-modal').hidden = false;
+        const wrapper = document.getElementById('compare-table-wrapper');
+        wrapper.innerHTML = '<p class="text-muted">Caricamento confronto…</p>';
+        try {
+            const ids = [...compareIds].join(',');
+            const res  = await fetch(`${COMPARE_API}?ids=${ids}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const props = json.data;
+            const rows = [
+                ['Indirizzo',         p => `${p.address}, ${p.city}`],
+                ['Tipo',              p => p.property_type || '—'],
+                ['Superficie',        p => p.size_sqm ? p.size_sqm + ' mq' : '—'],
+                ['Stanze',            p => p.rooms ?? '—'],
+                ['Bagni',             p => p.bathrooms ?? '—'],
+                ['Piano',             p => p.floor ?? '—'],
+                ['Anno costruzione',  p => p.year_built ?? '—'],
+                ['Prezzo acquisto',   p => p.purchase_price ? '€ ' + Number(p.purchase_price).toLocaleString('it-IT') : '—'],
+                ['Valore attuale',    p => p.current_value ? '€ ' + Number(p.current_value).toLocaleString('it-IT') : '—'],
+                ['Canone mensile',    p => p.monthly_rent ? '€ ' + Number(p.monthly_rent).toFixed(2) : '—'],
+                ['Reddito 12m',       p => p.total_income_12m ? '€ ' + Number(p.total_income_12m).toLocaleString('it-IT') : '—'],
+                ['ROI lordo',         p => (p.purchase_price && p.monthly_rent) ? ((p.monthly_rent*12/p.purchase_price)*100).toFixed(1)+'%' : '—'],
+                ['Stato',             p => p.status ?? '—'],
+                ['Occupato',          p => p.occupancy_status ? 'Sì' : 'No'],
+            ];
+            const headerCells = props.map(p => `<th>${escapeHtml(p.address)}</th>`).join('');
+            const bodyRows = rows.map(([label, fn]) =>
+                `<tr><td><strong>${label}</strong></td>${props.map(p => `<td>${escapeHtml(String(fn(p)))}</td>`).join('')}</tr>`
+            ).join('');
+            wrapper.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>Caratteristica</th>${headerCells}</tr></thead>
+                    <tbody>${bodyRows}</tbody>
+                </table>`;
+        } catch (err) {
+            wrapper.innerHTML = `<p class="alert alert--error">${escapeHtml(err.message)}</p>`;
+        }
     }
 
     function updateBulkToolbar() {

@@ -1,0 +1,142 @@
+<div class="maintenance-workflow-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Gestione Manutenzione</h2>
+            <p>Traccia e gestisci le richieste di manutenzione degli inquilini.</p>
+        </div>
+        <div class="view-header__actions">
+            <div class="btn-group" style="display:flex;gap:0.5rem;">
+                <button type="button" class="btn btn--ghost mw-view-toggle active" data-view="table" title="Vista tabella">☰ Tabella</button>
+                <button type="button" class="btn btn--ghost mw-view-toggle" data-view="kanban" title="Vista kanban">▦ Kanban</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="maintenance-workflow-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <select id="mw-property-filter" class="form-select" style="max-width:240px;">
+            <option value="">Tutti gli immobili</option>
+        </select>
+        <select id="mw-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="aperta">Aperta</option>
+            <option value="in_lavorazione">In lavorazione</option>
+            <option value="completata">Completata</option>
+            <option value="chiusa">Chiusa</option>
+        </select>
+        <select id="mw-priority-filter" class="form-select">
+            <option value="">Tutte le priorità</option>
+            <option value="urgente">Urgente</option>
+            <option value="alta">Alta</option>
+            <option value="normale">Normale</option>
+            <option value="bassa">Bassa</option>
+        </select>
+    </div>
+
+    <!-- Table view -->
+    <div id="mw-table-view">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Inquilino</th>
+                        <th>Immobile</th>
+                        <th>Titolo</th>
+                        <th>Tipo</th>
+                        <th>Priorità</th>
+                        <th>Stato</th>
+                        <th>Fornitore</th>
+                        <th>Data apertura</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="mw-tbody">
+                    <tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="mw-pagination" class="pagination-container"></div>
+    </div>
+
+    <!-- Kanban view -->
+    <div id="mw-kanban-view" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1rem;">
+            <div class="mw-kanban-col" data-status="aperta">
+                <div class="mw-kanban-col-header" style="background:#3b82f6;color:#fff;padding:0.6rem 0.9rem;border-radius:6px 6px 0 0;font-weight:600;">
+                    Aperta <span class="mw-col-count" id="col-count-aperta">0</span>
+                </div>
+                <div class="mw-kanban-cards" id="kanban-aperta" style="background:var(--color-surface-alt,#f5f7fa);border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;padding:0.5rem;min-height:200px;display:flex;flex-direction:column;gap:0.5rem;"></div>
+            </div>
+            <div class="mw-kanban-col" data-status="in_lavorazione">
+                <div class="mw-kanban-col-header" style="background:#f59e0b;color:#fff;padding:0.6rem 0.9rem;border-radius:6px 6px 0 0;font-weight:600;">
+                    In lavorazione <span class="mw-col-count" id="col-count-in_lavorazione">0</span>
+                </div>
+                <div class="mw-kanban-cards" id="kanban-in_lavorazione" style="background:var(--color-surface-alt,#f5f7fa);border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;padding:0.5rem;min-height:200px;display:flex;flex-direction:column;gap:0.5rem;"></div>
+            </div>
+            <div class="mw-kanban-col" data-status="completata">
+                <div class="mw-kanban-col-header" style="background:#22c55e;color:#fff;padding:0.6rem 0.9rem;border-radius:6px 6px 0 0;font-weight:600;">
+                    Completata <span class="mw-col-count" id="col-count-completata">0</span>
+                </div>
+                <div class="mw-kanban-cards" id="kanban-completata" style="background:var(--color-surface-alt,#f5f7fa);border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;padding:0.5rem;min-height:200px;display:flex;flex-direction:column;gap:0.5rem;"></div>
+            </div>
+            <div class="mw-kanban-col" data-status="chiusa">
+                <div class="mw-kanban-col-header" style="background:#6b7280;color:#fff;padding:0.6rem 0.9rem;border-radius:6px 6px 0 0;font-weight:600;">
+                    Chiusa <span class="mw-col-count" id="col-count-chiusa">0</span>
+                </div>
+                <div class="mw-kanban-cards" id="kanban-chiusa" style="background:var(--color-surface-alt,#f5f7fa);border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;padding:0.5rem;min-height:200px;display:flex;flex-direction:column;gap:0.5rem;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign supplier modal -->
+<div class="modal-overlay" id="mw-supplier-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="mw-supplier-title">
+        <div class="modal-header">
+            <h3 id="mw-supplier-title">Assegna Fornitore</h3>
+            <button class="modal-close" id="mw-supplier-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="mw-supplier-request-id">
+            <div class="form-group">
+                <label for="mw-supplier-select">Fornitore</label>
+                <select id="mw-supplier-select" class="form-select">
+                    <option value="">— Nessun fornitore —</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="mw-supplier-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="mw-supplier-confirm">Assegna</button>
+        </div>
+    </div>
+</div>
+
+<!-- Change status modal -->
+<div class="modal-overlay" id="mw-status-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="mw-status-title">
+        <div class="modal-header">
+            <h3 id="mw-status-title">Cambia Stato</h3>
+            <button class="modal-close" id="mw-status-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="mw-status-request-id">
+            <div class="form-group">
+                <label for="mw-new-status">Nuovo stato</label>
+                <select id="mw-new-status" class="form-select">
+                    <option value="aperta">Aperta</option>
+                    <option value="in_lavorazione">In lavorazione</option>
+                    <option value="completata">Completata</option>
+                    <option value="chiusa">Chiusa</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="mw-status-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="mw-status-confirm">Salva</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/maintenance_workflow.js"></script>

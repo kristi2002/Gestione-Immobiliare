@@ -86,6 +86,39 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     <?php if (canAccessView('activity_log')): ?>
                     <li><a href="view.php?name=activity_log" class="nav-link" data-view="activity_log"><span class="nav-icon">📋</span><span class="nav-label">Log Attività</span></a></li>
                     <?php endif; ?>
+                    <?php if (canAccessView('buildings')): ?>
+                    <li><a href="view.php?name=buildings" class="nav-link" data-view="buildings"><span class="nav-icon">🏗️</span><span class="nav-label">Edifici</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('insurance')): ?>
+                    <li><a href="view.php?name=insurance" class="nav-link" data-view="insurance"><span class="nav-icon">🛡️</span><span class="nav-label">Assicurazioni</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('meters')): ?>
+                    <li><a href="view.php?name=meters" class="nav-link" data-view="meters"><span class="nav-icon">💡</span><span class="nav-label">Contatori</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('suppliers')): ?>
+                    <li><a href="view.php?name=suppliers" class="nav-link" data-view="suppliers"><span class="nav-icon">🔧</span><span class="nav-label">Fornitori</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('inventory')): ?>
+                    <li><a href="view.php?name=inventory" class="nav-link" data-view="inventory"><span class="nav-icon">📦</span><span class="nav-label">Inventario</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('commissions')): ?>
+                    <li><a href="view.php?name=commissions" class="nav-link" data-view="commissions"><span class="nav-icon">💼</span><span class="nav-label">Provvigioni</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('surveys')): ?>
+                    <li><a href="view.php?name=surveys" class="nav-link" data-view="surveys"><span class="nav-icon">⭐</span><span class="nav-label">Sondaggi</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('forecast')): ?>
+                    <li><a href="view.php?name=forecast" class="nav-link" data-view="forecast"><span class="nav-icon">📈</span><span class="nav-label">Previsioni</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('maintenance_workflow')): ?>
+                    <li><a href="view.php?name=maintenance_workflow" class="nav-link" data-view="maintenance_workflow"><span class="nav-icon">🔨</span><span class="nav-label">Manutenzione</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('whatsapp_inbox')): ?>
+                    <li><a href="view.php?name=whatsapp_inbox" class="nav-link" data-view="whatsapp_inbox"><span class="nav-icon">💬</span><span class="nav-label">WhatsApp Inbox</span></a></li>
+                    <?php endif; ?>
+                    <?php if (canAccessView('property_applications')): ?>
+                    <li><a href="view.php?name=property_applications" class="nav-link" data-view="property_applications"><span class="nav-icon">📋</span><span class="nav-label">Richieste</span></a></li>
+                    <?php endif; ?>
                     <?php if (canAccessView('settings')): ?>
                     <li><a href="view.php?name=settings" class="nav-link" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Impostazioni</span></a></li>
                     <?php endif; ?>

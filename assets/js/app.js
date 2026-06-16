@@ -55,6 +55,17 @@
             social:         'Social Media',
             activity_log:   'Log Attività',
             settings:       'Impostazioni',
+            buildings:             'Edifici',
+            insurance:             'Assicurazioni',
+            meters:                'Contatori',
+            suppliers:             'Fornitori',
+            inventory:             'Inventario',
+            commissions:           'Provvigioni',
+            surveys:               'Sondaggi',
+            forecast:              'Previsioni',
+            maintenance_workflow:  'Manutenzione',
+            whatsapp_inbox:        'WhatsApp Inbox',
+            property_applications: 'Richieste immobili',
         },
 
         init() {

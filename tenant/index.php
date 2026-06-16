@@ -65,6 +65,8 @@ $PAY_STATUS = [
     'cancelled' => 'Annullato',
 ];
 
+$stripeEnabled = !empty(getSetting('stripe_secret_key'));
+
 $branding    = getPublicBranding();
 $name        = $_SESSION['tenant_name'] ?? 'Inquilino';
 $agencyPhone = getSetting('agency_phone');
@@ -224,7 +226,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                         <div class="table-responsive">
                             <table class="data-table" style="width:100%;font-size:14px">
                                 <thead>
-                                    <tr><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Pagato il</th><th>Note</th></tr>
+                                    <tr><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Pagato il</th><th>Note</th><?php if ($stripeEnabled): ?><th></th><?php endif; ?></tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($payments as $pay): ?>
@@ -238,6 +240,15 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                                         </td>
                                         <td><?= $pay['paid_date'] ? date('d/m/Y', strtotime($pay['paid_date'])) : '—' ?></td>
                                         <td class="text-muted" style="font-size:12px"><?= tEsc($pay['notes'] ?? '') ?></td>
+                                        <td>
+                                            <?php if ($stripeEnabled && in_array($pay['status'], ['pending','late'])): ?>
+                                            <button class="btn btn--sm btn--primary btn-pay-stripe"
+                                                    data-payment-id="<?= (int)$pay['id'] ?>"
+                                                    data-amount="<?= tEsc($pay['amount']) ?>">
+                                                💳 Paga online
+                                            </button>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -418,6 +429,50 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                 btn.textContent = 'Invia richiesta';
             }
         });
+
+
+        // Stripe online payment
+        document.querySelectorAll('.btn-pay-stripe').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const paymentId = btn.dataset.paymentId;
+                btn.disabled = true;
+                btn.textContent = 'Caricamento…';
+                try {
+                    const res = await fetch('../api/stripe_checkout.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            payment_id: parseInt(paymentId, 10),
+                            success_url: window.location.href + '?paid=1',
+                            cancel_url:  window.location.href,
+                        }),
+                    });
+                    const json = await res.json();
+                    if (json.success && json.data.checkout_url) {
+                        window.location.href = json.data.checkout_url;
+                    } else {
+                        alert(json.error || 'Errore avvio pagamento.');
+                        btn.disabled = false;
+                        btn.textContent = '💳 Paga online';
+                    }
+                } catch (err) {
+                    alert('Errore di rete. Riprova.');
+                    btn.disabled = false;
+                    btn.textContent = '💳 Paga online';
+                }
+            });
+        });
+
+        <?php if (isset($_GET['paid'])): ?>
+        (function () {
+            const msg = document.createElement('div');
+            msg.className = 'alert alert--success';
+            msg.textContent = '✅ Pagamento ricevuto con successo. Grazie!';
+            msg.style.cssText = 'position:fixed;top:16px;right:16px;z-index:9999;max-width:320px';
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 6000);
+        })();
+        <?php endif; ?>
     })();
     </script>
 </body>

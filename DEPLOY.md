@@ -94,6 +94,9 @@ Data persists in Docker volumes (`db_data`, `uploads_data`). To wipe everything:
    | `DB_PASS` | DB password |
    | `ADMIN_USERNAME` | `admin` |
    | `ADMIN_PASSWORD` | Strong password for setup |
+   | `STRIPE_SECRET_KEY` | `sk_live_...` (optional — enables tenant online payments) |
+   | `STRIPE_PUBLISHABLE_KEY` | `pk_live_...` |
+   | `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe Dashboard → Webhooks) |
 
 5. Click **Apply** and wait for deploy (~5–10 min first build).
 
@@ -174,7 +177,7 @@ APP_URL=https://your-real-domain.com
 
 **Database migrations** — run ALL in order (they are idempotent):
 ```bash
-for f in 000_helpers phase3 phase4 phase5 phase6 phase7 phase8 phase9 phase10 phase11 phase12 phase13 phase14_email_templates; do
+for f in 000_helpers phase3 phase4 phase5 phase6 phase7 phase8 phase9 phase10 phase11 phase12 phase13 phase14_email_templates phase15_new_features; do
   mysql -u USER -p DBNAME < database/migrations/${f}.sql
 done
 ```

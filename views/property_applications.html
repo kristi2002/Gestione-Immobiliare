@@ -1,0 +1,78 @@
+<div class="property-applications-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Richieste di Locazione / Acquisto</h2>
+            <p>Candidature online ricevute per gli immobili.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-pa-refresh" title="Aggiorna">⟳ Aggiorna</button>
+        </div>
+    </div>
+
+    <div id="property-applications-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <select id="pa-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="new">Nuova</option>
+            <option value="contacted">Contattato</option>
+            <option value="approved">Approvato</option>
+            <option value="rejected">Rifiutato</option>
+        </select>
+        <select id="pa-type-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <option value="affitto">Affitto</option>
+            <option value="acquisto">Acquisto</option>
+        </select>
+        <div class="search-box">
+            <input type="search" id="pa-search" class="form-input" placeholder="Cerca per richiedente o email…" autocomplete="off">
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Proprietà</th>
+                    <th>Richiedente</th>
+                    <th>Email</th>
+                    <th>Telefono</th>
+                    <th>Tipo</th>
+                    <th>Data</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="pa-tbody">
+                <tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="pa-pagination" class="pagination-container"></div>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-overlay" id="pa-detail-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="pa-detail-title">
+        <div class="modal-header">
+            <h3 id="pa-detail-title">Dettaglio Richiesta</h3>
+            <button class="modal-close" id="pa-detail-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="pa-detail-body">
+            <!-- populated dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="pa-detail-cancel">Chiudi</button>
+            <button type="button" class="btn btn--ghost" id="pa-detail-convert-lead" style="color:var(--color-primary,#3b82f6);">Converti in Lead</button>
+            <select id="pa-detail-status-select" class="form-select" style="width:auto;">
+                <option value="new">Nuova</option>
+                <option value="contacted">Contattato</option>
+                <option value="approved">Approvato</option>
+                <option value="rejected">Rifiutato</option>
+            </select>
+            <button type="button" class="btn btn--primary" id="pa-detail-save-status">Salva stato</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/property_applications.js"></script>

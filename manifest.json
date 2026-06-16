@@ -1,10 +1,10 @@
 {
   "name": "Gestionale Immobiliare",
   "short_name": "Gestionale",
-  "description": "Gestione immobiliare per agenzie",
+  "description": "Gestione immobiliare professionale",
   "start_url": "/index.php",
   "display": "standalone",
-  "background_color": "#f1f5f9",
+  "background_color": "#1e293b",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "icons": [
@@ -20,5 +20,6 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["business", "productivity"]
 }

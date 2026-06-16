@@ -1,0 +1,129 @@
+<div class="inventory-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Inventario Immobili</h2>
+            <p>Gestisci l'inventario degli arredi e degli accessori per ogni immobile.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-print-inventory" style="display:none;">🖨️ Stampa report check-in</button>
+            <button class="btn btn--primary" id="btn-new-item" style="display:none;">+ Aggiungi articolo</button>
+        </div>
+    </div>
+
+    <div id="inventory-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar" style="margin-bottom:1rem;">
+        <div class="form-group" style="margin:0;max-width:320px;">
+            <label for="inventory-property-select" style="font-weight:600;">Seleziona immobile</label>
+            <select id="inventory-property-select" class="form-select">
+                <option value="">— Scegli un immobile —</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="inventory-placeholder" class="text-muted" style="padding:2rem;text-align:center;">
+        Seleziona un immobile per visualizzare l'inventario.
+    </div>
+
+    <div id="inventory-content" style="display:none;">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Articolo</th>
+                        <th>Categoria</th>
+                        <th>Quantità</th>
+                        <th>Condizione</th>
+                        <th>Note</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-tbody">
+                    <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="inventory-pagination" class="pagination-container"></div>
+    </div>
+</div>
+
+<!-- Add / Edit item modal -->
+<div class="modal-overlay" id="inventory-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="inventory-modal-title">
+        <div class="modal-header">
+            <h3 id="inventory-modal-title">Aggiungi Articolo</h3>
+            <button class="modal-close" id="inventory-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="inventory-form" class="modal-body">
+            <input type="hidden" id="inventory-id" name="id">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="inventory-item-name">Nome articolo <span class="required">*</span></label>
+                    <input type="text" id="inventory-item-name" name="item_name" class="form-input" required maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label for="inventory-category">Categoria</label>
+                    <select id="inventory-category" name="category" class="form-select">
+                        <option value="">— Seleziona —</option>
+                        <option value="cucina">Cucina</option>
+                        <option value="soggiorno">Soggiorno</option>
+                        <option value="camera">Camera da letto</option>
+                        <option value="bagno">Bagno</option>
+                        <option value="elettrodomestici">Elettrodomestici</option>
+                        <option value="elettronica">Elettronica</option>
+                        <option value="giardino">Giardino / Esterno</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="inventory-quantity">Quantità</label>
+                    <input type="number" id="inventory-quantity" name="quantity" class="form-input" min="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="inventory-check-in-date">Data check-in</label>
+                    <input type="date" id="inventory-check-in-date" name="check_in_date" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Condizione</label>
+                <div id="inventory-condition-stars" class="star-selector" style="display:flex;gap:6px;font-size:1.8rem;cursor:pointer;">
+                    <span class="star" data-value="1">☆</span>
+                    <span class="star" data-value="2">☆</span>
+                    <span class="star" data-value="3">☆</span>
+                    <span class="star" data-value="4">☆</span>
+                    <span class="star" data-value="5">☆</span>
+                </div>
+                <input type="hidden" id="inventory-condition" name="condition_rating" value="3">
+            </div>
+            <div class="form-group">
+                <label for="inventory-notes">Note</label>
+                <textarea id="inventory-notes" name="notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="inventory-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="inventory-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="inventory-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Elimina articolo</h3>
+            <button class="modal-close" id="inventory-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler eliminare <strong id="inventory-delete-name"></strong>?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="inventory-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="inventory-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/inventory.js"></script>

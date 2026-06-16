@@ -1,0 +1,122 @@
+<div class="suppliers-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Fornitori</h2>
+            <p>Rubrica fornitori e artigiani.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-supplier">+ Nuovo Fornitore</button>
+        </div>
+    </div>
+
+    <div id="suppliers-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="suppliers-search" class="form-input" placeholder="Cerca per nome…" autocomplete="off">
+        </div>
+        <select id="suppliers-category-filter" class="form-select">
+            <option value="">Tutte le categorie</option>
+            <option value="idraulico">Idraulico</option>
+            <option value="elettricista">Elettricista</option>
+            <option value="muratore">Muratore</option>
+            <option value="falegname">Falegname</option>
+            <option value="pulizie">Pulizie</option>
+            <option value="giardinaggio">Giardinaggio</option>
+            <option value="ascensore">Ascensore</option>
+            <option value="serrature">Serrature</option>
+            <option value="altro">Altro</option>
+        </select>
+    </div>
+
+    <div id="suppliers-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-top:1rem;">
+        <div class="text-muted" style="text-align:center;padding:2rem;grid-column:1/-1;">Caricamento…</div>
+    </div>
+    <div id="suppliers-pagination" class="pagination-container"></div>
+</div>
+
+<!-- New / Edit modal -->
+<div class="modal-overlay" id="suppliers-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="suppliers-modal-title">
+        <div class="modal-header">
+            <h3 id="suppliers-modal-title">Nuovo Fornitore</h3>
+            <button class="modal-close" id="suppliers-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="suppliers-form" class="modal-body">
+            <input type="hidden" id="suppliers-id" name="id">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="suppliers-name">Nome / Ragione sociale <span class="required">*</span></label>
+                    <input type="text" id="suppliers-name" name="name" class="form-input" required maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label for="suppliers-category">Categoria <span class="required">*</span></label>
+                    <select id="suppliers-category" name="category" class="form-select" required>
+                        <option value="">— Seleziona —</option>
+                        <option value="idraulico">Idraulico</option>
+                        <option value="elettricista">Elettricista</option>
+                        <option value="muratore">Muratore</option>
+                        <option value="falegname">Falegname</option>
+                        <option value="pulizie">Pulizie</option>
+                        <option value="giardinaggio">Giardinaggio</option>
+                        <option value="ascensore">Ascensore</option>
+                        <option value="serrature">Serrature</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="suppliers-phone">Telefono</label>
+                    <input type="tel" id="suppliers-phone" name="phone" class="form-input" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="suppliers-email">Email</label>
+                    <input type="email" id="suppliers-email" name="email" class="form-input" maxlength="255">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="suppliers-address">Indirizzo</label>
+                <input type="text" id="suppliers-address" name="address" class="form-input" maxlength="255">
+            </div>
+            <div class="form-group">
+                <label>Valutazione</label>
+                <div id="suppliers-star-selector" class="star-selector" style="display:flex;gap:6px;font-size:1.8rem;cursor:pointer;">
+                    <span class="star" data-value="1">☆</span>
+                    <span class="star" data-value="2">☆</span>
+                    <span class="star" data-value="3">☆</span>
+                    <span class="star" data-value="4">☆</span>
+                    <span class="star" data-value="5">☆</span>
+                </div>
+                <input type="hidden" id="suppliers-rating" name="rating" value="0">
+            </div>
+            <div class="form-group">
+                <label for="suppliers-notes">Note</label>
+                <textarea id="suppliers-notes" name="notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="suppliers-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="suppliers-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="suppliers-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Elimina fornitore</h3>
+            <button class="modal-close" id="suppliers-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler eliminare <strong id="suppliers-delete-name"></strong>?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="suppliers-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="suppliers-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/suppliers.js"></script>
