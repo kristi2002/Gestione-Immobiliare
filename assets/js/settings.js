@@ -4,8 +4,14 @@
     const API = 'api/settings.php';
     const USERS_API = 'api/admin_users.php';
     const LOGO_API = 'api/upload_logo.php';
+    const EMAIL_TPL_API = 'api/email_templates.php';
+    const BACKUP_API = 'api/backup_trigger.php';
     let settings = null;
     let isSuperAdmin = false;
+    let usersPage = 1;
+    const USERS_PAGE_LIMIT = 25;
+    let emailTplsPage = 1;
+    const EMAIL_TPLS_PAGE_LIMIT = 25;
 
     init();
 
@@ -14,6 +20,9 @@
         await loadSettings();
         bindForms();
         bindUsers();
+        bindEmailTemplates();
+        bind2fa();
+        render2fa();
         const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
         document.getElementById('meta-redirect-uri').textContent = base + 'meta_callback.php';
     }
@@ -25,6 +34,7 @@
                 tab.classList.add('settings-tab--active');
                 document.querySelectorAll('.settings-panel').forEach(p => p.hidden = true);
                 document.getElementById('panel-' + tab.dataset.tab).hidden = false;
+                if (tab.dataset.tab === 'email-templates') loadEmailTemplates();
             });
         });
     }
@@ -103,6 +113,7 @@
         document.getElementById('form-meta').addEventListener('submit', e => saveSection(e, 'meta', collectMeta));
         document.getElementById('btn-test-email').addEventListener('click', testEmail);
         document.getElementById('set-logo-file').addEventListener('change', uploadLogo);
+        document.getElementById('btn-backup-now').addEventListener('click', triggerBackup);
     }
 
     function collectBranding() {
@@ -210,11 +221,14 @@
     }
 
     async function loadUsers() {
-        const res = await fetch(USERS_API);
+        const params = new URLSearchParams({ page: usersPage, limit: USERS_PAGE_LIMIT });
+        const res = await fetch(`${USERS_API}?${params}`);
         const json = await res.json();
         if (!json.success) return;
+        const parsed = Pagination.parseResponse(json);
+        const users = parsed.items;
         const tbody = document.getElementById('users-tbody');
-        tbody.innerHTML = json.data.map(u => `
+        tbody.innerHTML = users.map(u => `
             <tr>
                 <td data-label="Username">${esc(u.username)}</td>
                 <td data-label="Email">${esc(u.email || '—')}</td>
@@ -223,8 +237,9 @@
                 <td class="col-actions" data-label="Azioni"><button class="btn btn--sm btn--ghost" data-edit-user="${u.id}">✏️</button></td>
             </tr>`).join('');
         tbody.querySelectorAll('[data-edit-user]').forEach(btn => {
-            btn.addEventListener('click', () => openUserModal(json.data.find(u => u.id == btn.dataset.editUser)));
+            btn.addEventListener('click', () => openUserModal(users.find(u => u.id == btn.dataset.editUser)));
         });
+        Pagination.render(document.getElementById('users-pagination'), parsed, (p) => { usersPage = p; loadUsers(); });
     }
 
     function openUserModal(user = null) {
@@ -261,6 +276,187 @@
             showAlert('Utente salvato.', 'success');
         } else {
             showAlert(json.error, 'error');
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 2FA
+    // -------------------------------------------------------------------------
+
+    let totpSecret = null;
+
+    function bind2fa() {
+        document.getElementById('btn-2fa-start').addEventListener('click', start2fa);
+        document.getElementById('btn-2fa-confirm').addEventListener('click', confirm2fa);
+        document.getElementById('btn-2fa-disable').addEventListener('click', disable2fa);
+    }
+
+    function render2fa() {
+        const enabled = !!(settings && settings.twofa && settings.twofa.enabled);
+        document.getElementById('totp-enabled-view').hidden = !enabled;
+        document.getElementById('totp-disabled-view').hidden = enabled;
+    }
+
+    async function start2fa() {
+        const res = await fetch(API + '?action=2fa_setup');
+        const json = await res.json();
+        if (!json.success) return showAlert(json.error, 'error');
+        totpSecret = json.data.secret;
+        document.getElementById('totp-qr').src = json.data.qr_image;
+        document.getElementById('totp-uri').textContent = json.data.otpauth;
+        document.getElementById('totp-setup-panel').hidden = false;
+        document.getElementById('totp-backup-panel').hidden = true;
+    }
+
+    async function confirm2fa() {
+        const code = document.getElementById('totp-verify-code').value.trim();
+        if (!totpSecret || !code) return showAlert('Inserisci il codice.', 'error');
+        const res = await fetch(API + '?action=2fa_enable', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret: totpSecret, code }),
+        });
+        const json = await res.json();
+        if (!json.success) return showAlert(json.error, 'error');
+        document.getElementById('totp-setup-panel').hidden = true;
+        document.getElementById('totp-backup-codes').textContent = json.data.backup_codes.join('\n');
+        document.getElementById('totp-backup-panel').hidden = false;
+        if (settings) settings.twofa = { enabled: true };
+        showAlert('2FA attivata.', 'success');
+        setTimeout(render2fa, 100);
+    }
+
+    async function disable2fa() {
+        const password = document.getElementById('totp-disable-pass').value;
+        if (!password) return showAlert('Inserisci la password.', 'error');
+        const res = await fetch(API + '?action=2fa_disable', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        const json = await res.json();
+        if (!json.success) return showAlert(json.error, 'error');
+        if (settings) settings.twofa = { enabled: false };
+        document.getElementById('totp-disable-pass').value = '';
+        render2fa();
+        showAlert('2FA disattivata.', 'success');
+    }
+
+    async function triggerBackup() {
+        const btn = document.getElementById('btn-backup-now');
+        btn.disabled = true;
+        btn.textContent = 'Backup in corso…';
+        try {
+            const res = await fetch(BACKUP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+            const json = await res.json();
+            if (json.success) {
+                showAlert(`Backup completato: ${json.data.filename} (${json.data.size_kb} KB)`, 'success');
+            } else {
+                showAlert(json.error || 'Errore backup.', 'error');
+            }
+        } catch (err) {
+            showAlert('Errore di rete durante il backup.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Backup ora';
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Email templates
+    // -------------------------------------------------------------------------
+
+    function bindEmailTemplates() {
+        document.getElementById('btn-new-email-tpl').addEventListener('click', () => openEmailTplModal());
+        document.getElementById('email-tpl-modal-close').addEventListener('click', closeEmailTplModal);
+        document.getElementById('email-tpl-modal-cancel').addEventListener('click', closeEmailTplModal);
+        document.getElementById('email-tpl-form').addEventListener('submit', saveEmailTemplate);
+    }
+
+    async function loadEmailTemplates() {
+        const params = new URLSearchParams({ page: emailTplsPage, limit: EMAIL_TPLS_PAGE_LIMIT });
+        const res = await fetch(`${EMAIL_TPL_API}?${params}`);
+        const json = await res.json();
+        if (!json.success) return;
+        const parsed = Pagination.parseResponse(json);
+        const items = parsed.items;
+        const tbody = document.getElementById('email-tpl-tbody');
+        const CATEGORY_LABELS = {
+            benvenuto: 'Benvenuto',
+            scadenza_affitto: 'Scad. affitto',
+            scadenza_contratto: 'Scad. contratto',
+            promemoria: 'Promemoria',
+            richiesta_documento: 'Richiesta doc.',
+            generico: 'Generico',
+        };
+        tbody.innerHTML = items.length
+            ? items.map(t => `
+                <tr>
+                    <td data-label="Nome">${esc(t.name)}</td>
+                    <td data-label="Categoria"><span class="badge">${esc(CATEGORY_LABELS[t.category] || t.category)}</span></td>
+                    <td data-label="Oggetto">${esc(t.subject)}</td>
+                    <td data-label="Attivo">${t.is_active ? '✅' : '—'}</td>
+                    <td class="col-actions"><button class="btn btn--sm btn--ghost" data-edit-tpl="${t.id}">✏️</button>
+                        <button class="btn btn--sm btn--ghost" data-del-tpl="${t.id}" style="color:var(--color-danger)">🗑️</button></td>
+                </tr>`).join('')
+            : '<tr><td colspan="5" class="text-muted">Nessun template.</td></tr>';
+
+        tbody.querySelectorAll('[data-edit-tpl]').forEach(btn => {
+            btn.addEventListener('click', () => openEmailTplModal(items.find(t => t.id == btn.dataset.editTpl)));
+        });
+        tbody.querySelectorAll('[data-del-tpl]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Eliminare questo template?')) return;
+                await fetch(`${EMAIL_TPL_API}?id=${btn.dataset.delTpl}`, { method: 'DELETE' });
+                await loadEmailTemplates();
+                showAlert('Template eliminato.', 'success');
+            });
+        });
+        Pagination.render(
+            document.getElementById('email-tpl-pagination'),
+            parsed,
+            (p) => { emailTplsPage = p; loadEmailTemplates(); }
+        );
+    }
+
+    function openEmailTplModal(tpl = null) {
+        document.getElementById('email-tpl-modal').hidden = false;
+        document.getElementById('email-tpl-id').value = tpl?.id || '';
+        document.getElementById('email-tpl-name').value = tpl?.name || '';
+        document.getElementById('email-tpl-category').value = tpl?.category || 'generico';
+        document.getElementById('email-tpl-subject').value = tpl?.subject || '';
+        document.getElementById('email-tpl-body').value = tpl?.body || '';
+        document.getElementById('email-tpl-vars').value = tpl?.variables || '';
+        document.getElementById('email-tpl-active').checked = tpl ? !!tpl.is_active : true;
+        document.getElementById('email-tpl-modal-title').textContent = tpl ? 'Modifica template email' : 'Nuovo template email';
+    }
+
+    function closeEmailTplModal() {
+        document.getElementById('email-tpl-modal').hidden = true;
+    }
+
+    async function saveEmailTemplate(e) {
+        e.preventDefault();
+        const id = document.getElementById('email-tpl-id').value;
+        const payload = {
+            name: document.getElementById('email-tpl-name').value,
+            category: document.getElementById('email-tpl-category').value,
+            subject: document.getElementById('email-tpl-subject').value,
+            body: document.getElementById('email-tpl-body').value,
+            variables: document.getElementById('email-tpl-vars').value,
+            is_active: document.getElementById('email-tpl-active').checked,
+        };
+        const url = id ? `${EMAIL_TPL_API}?id=${id}` : EMAIL_TPL_API;
+        const res = await fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+            closeEmailTplModal();
+            await loadEmailTemplates();
+            showAlert('Template salvato.', 'success');
+        } else {
+            showAlert(json.error || 'Errore salvataggio template.', 'error');
         }
     }
 

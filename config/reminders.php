@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mail.php';
+require_once __DIR__ . '/mail_html.php';
 
 const REMINDER_FREQUENCIES = ['once', 'weekly', 'monthly', 'yearly'];
 
@@ -48,14 +49,14 @@ function processSingleReminder(PDO $db, array $reminder): array
     if ($reminder['notify_admin']) {
         $subject = '[Promemoria] ' . $reminder['title'];
         $body    = buildAdminNotificationBody($reminder);
-        $result  = sendAdminEmail($subject, $body);
+        $result  = sendAdminEmail($subject, $body, wrapHtmlEmail($subject, $body));
         $actions['admin'] = $result['success'] ? 'sent' : 'failed';
     }
 
     if ($reminder['notify_client'] && !empty($reminder['client_email'])) {
         $subject = $reminder['email_subject'] ?: $reminder['title'];
         $body    = $reminder['email_body'] ?: buildDefaultClientEmailBody($reminder);
-        $result  = sendClientEmail($reminder['client_email'], $subject, $body);
+        $result  = sendHtmlEmail($reminder['client_email'], $subject, $body);
 
         if ($result['success']) {
             logClientNotification($db, $reminder, $subject, $body);

@@ -1,0 +1,109 @@
+<div class="expenses-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Spese</h2>
+            <p>Registra e monitora le spese per immobile, proprietario e categoria.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-new-expense">
+            + Nuova Spesa
+        </button>
+    </div>
+
+    <div id="expenses-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <select id="expense-property-filter" class="form-select">
+            <option value="">Tutti gli immobili</option>
+        </select>
+        <select id="expense-client-filter" class="form-select">
+            <option value="">Tutti i proprietari</option>
+        </select>
+        <select id="expense-category-filter" class="form-select">
+            <option value="">Tutte le categorie</option>
+            <option value="manutenzione">Manutenzione</option>
+            <option value="utenze">Utenze</option>
+            <option value="tasse">Tasse</option>
+            <option value="assicurazione">Assicurazione</option>
+            <option value="agenzia">Agenzia</option>
+            <option value="altro">Altro</option>
+        </select>
+        <input type="number" id="expense-year-filter" class="form-input" placeholder="Anno" min="2000" max="2100" style="max-width:120px">
+    </div>
+
+    <div id="expenses-grid" class="entity-grid">
+        <div class="entity-loading">Caricamento…</div>
+    </div>
+    <div id="expenses-pagination" class="pagination-container"></div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="expense-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="expense-modal-title">
+        <div class="modal-header">
+            <h3 id="expense-modal-title">Nuova Spesa</h3>
+            <button class="modal-close" id="expense-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="expense-form" class="modal-body">
+            <input type="hidden" id="expense-id">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="expense-category">Categoria</label>
+                    <select id="expense-category" class="form-select">
+                        <option value="manutenzione">Manutenzione</option>
+                        <option value="utenze">Utenze</option>
+                        <option value="tasse">Tasse</option>
+                        <option value="assicurazione">Assicurazione</option>
+                        <option value="agenzia">Agenzia</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="expense-amount">Importo (€) <span class="required">*</span></label>
+                    <input type="number" id="expense-amount" class="form-input" min="0" step="0.01" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="expense-description">Descrizione <span class="required">*</span></label>
+                <input type="text" id="expense-description" class="form-input" required maxlength="500">
+            </div>
+
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="expense-date">Data <span class="required">*</span></label>
+                    <input type="date" id="expense-date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="expense-property">Immobile</label>
+                    <select id="expense-property" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="expense-client">Proprietario</label>
+                    <select id="expense-client" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="expense-receipt">URL ricevuta</label>
+                <input type="text" id="expense-receipt" class="form-input" maxlength="500" placeholder="https://…">
+            </div>
+
+            <div class="form-group">
+                <label for="expense-notes">Note</label>
+                <textarea id="expense-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="expense-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="expense-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/expenses.js"></script>

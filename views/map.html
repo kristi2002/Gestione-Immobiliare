@@ -1,0 +1,22 @@
+<div class="map-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Mappa Immobili</h2>
+            <p>Visualizza la posizione geografica degli immobili.</p>
+        </div>
+        <button class="btn btn--ghost" id="btn-geocode" title="Geocodifica gli indirizzi mancanti">📍 Geocodifica indirizzi</button>
+        <button class="btn btn--ghost" id="btn-regeocode" title="Ricalcola coordinate per tutti gli immobili (sovrascrive quelle esistenti)">🔄 Rigeocodifica</button>
+    </div>
+
+    <div id="map-alert" class="alert" style="display:none;"></div>
+
+    <div class="map-legend">
+        <span><i class="map-dot map-dot--available"></i> Disponibile</span>
+        <span><i class="map-dot map-dot--rented"></i> Affittato</span>
+        <span><i class="map-dot map-dot--sold"></i> Venduto</span>
+    </div>
+
+    <div id="leaflet-map" class="leaflet-map"></div>
+</div>
+
+<script src="assets/js/map.js"></script>

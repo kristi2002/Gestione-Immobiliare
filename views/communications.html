@@ -17,6 +17,7 @@
             <ul class="chat-client-list" id="chat-client-list">
                 <li class="chat-client-list__empty">Caricamento...</li>
             </ul>
+            <div id="communications-pagination" class="pagination-container"></div>
         </aside>
 
         <!-- Chat panel -->
@@ -55,12 +56,38 @@
                         </div>
                         <div class="chat-compose__actions">
                             <span class="text-muted chat-compose__hint" id="compose-hint">Il messaggio verrà inviato e salvato nello storico.</span>
+                            <button type="button" class="btn btn--ghost" id="btn-use-template" hidden>📋 Usa template</button>
                             <button type="submit" class="btn btn--primary" id="chat-submit">Invia</button>
                         </div>
                     </form>
                 </footer>
             </div>
         </section>
+    </div>
+</div>
+
+<!-- WhatsApp template picker modal -->
+<div class="modal-overlay" id="wa-template-modal" hidden>
+    <div class="modal modal--lg" role="dialog">
+        <div class="modal-header">
+            <h3>Template WhatsApp</h3>
+            <button class="modal-close" id="wa-template-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="template-list" id="wa-template-list">Caricamento…</div>
+            <div id="wa-template-vars" hidden>
+                <h4 id="wa-template-selected-name"></h4>
+                <div id="wa-template-var-fields"></div>
+                <div class="form-group">
+                    <label>Anteprima</label>
+                    <textarea id="wa-template-preview" class="form-textarea" rows="4" readonly></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="wa-template-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="wa-template-apply" hidden>Inserisci nel messaggio</button>
+        </div>
     </div>
 </div>
 

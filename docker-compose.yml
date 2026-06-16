@@ -1,0 +1,63 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: gestione_immobiliare
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema_production.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: ${GESTIONALE_BUILD_CONTEXT:-.}
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env.docker
+    environment:
+      PORT: "8090"
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/var/www/html/uploads
+      - backups_data:/var/www/html/backups
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /var/www/html
+          ignore:
+            - .git/
+            - .claude/
+            - .cursor/
+            - docker/
+            - .env
+            - .env.*
+            - uploads/
+            - backups/
+            - database/
+            - docker-compose.yml
+            - render.yaml
+            - .dockerignore
+            - .gitignore
+            - .setup_complete
+        - action: rebuild
+          path: ./Dockerfile
+
+volumes:
+  db_data:
+  uploads_data:
+  backups_data:

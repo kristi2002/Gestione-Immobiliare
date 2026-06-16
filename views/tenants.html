@@ -13,10 +13,18 @@
         <input type="search" id="tenant-search" class="form-input" placeholder="Cerca per nome, email o indirizzo…">
     </div>
 
+    <div id="tenants-bulk-toolbar" class="bulk-toolbar" hidden>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="tenants-select-all"> Seleziona tutti</label>
+        <span id="tenants-bulk-count" class="text-muted">0 selezionati</span>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-tenants">🗑️ Archivia selezionati</button>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-tenants">⬇️ Esporta selezionati</button>
+    </div>
+
     <div class="table-wrapper">
     <table class="data-table">
         <thead>
             <tr>
+                <th style="width:36px"></th>
                 <th>Nome</th>
                 <th>Email</th>
                 <th>Immobile</th>
@@ -29,6 +37,7 @@
         <tbody id="tenants-tbody"></tbody>
     </table>
     </div>
+    <div id="tenants-pagination" class="pagination-container"></div>
 </div>
 
 <div class="modal-overlay" id="tenant-modal" hidden>
@@ -62,6 +71,21 @@
                 <button type="button" class="btn btn--ghost" id="btn-pdf-contract">📄 Genera contratto PDF</button>
                 <button type="button" class="btn btn--ghost" id="tenant-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="wa-send-modal" hidden>
+    <div class="modal modal--sm">
+        <div class="modal-header"><h3>Invia WhatsApp</h3><button class="modal-close" id="wa-send-modal-close">&times;</button></div>
+        <form id="wa-send-form" class="modal-body">
+            <input type="hidden" id="wa-send-tenant-id">
+            <div class="form-group"><label>Numero</label><input type="tel" id="wa-send-phone" class="form-input" required placeholder="+39..."></div>
+            <div class="form-group"><label>Messaggio</label><textarea id="wa-send-message" class="form-textarea" rows="5" required></textarea></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="wa-send-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Invia</button>
             </div>
         </form>
     </div>

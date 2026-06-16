@@ -5,13 +5,18 @@
     'use strict';
 
     const API = 'api/communications.php';
+    const TEMPLATES_API = 'api/whatsapp_templates.php';
 
+    let templates     = [];
+    let selectedTemplate = null;
     let clients       = [];
     let messages      = [];
     let selectedId    = null;
     let composeMode   = 'send'; // 'send' | 'receive'
     let sendChannel   = 'email'; // 'email' | 'whatsapp'
     let searchTimer   = null;
+    let currentPage   = 1;
+    const PAGE_LIMIT  = 25;
 
     const els = {};
 
@@ -27,6 +32,7 @@
         els.clientEmail   = document.getElementById('chat-client-email');
         els.composeHint   = document.getElementById('compose-hint');
         els.submitBtn     = document.getElementById('chat-submit');
+        els.pagination    = document.getElementById('communications-pagination');
 
         bindEvents();
         loadClientSummary().then(() => {
@@ -41,7 +47,7 @@
     function bindEvents() {
         els.clientSearch.addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(loadClientSummary, 300);
+            searchTimer = setTimeout(() => { currentPage = 1; loadClientSummary(); }, 300);
         });
 
         els.chatForm.addEventListener('submit', handleSubmit);
@@ -49,6 +55,11 @@
         document.getElementById('tab-send-email').addEventListener('click', () => setComposeMode('send', 'email'));
         document.getElementById('tab-send-wa').addEventListener('click', () => setComposeMode('send', 'whatsapp'));
         document.getElementById('tab-receive').addEventListener('click', () => setComposeMode('receive', 'email'));
+
+        document.getElementById('btn-use-template').addEventListener('click', openTemplateModal);
+        document.getElementById('wa-template-close').addEventListener('click', closeTemplateModal);
+        document.getElementById('wa-template-cancel').addEventListener('click', closeTemplateModal);
+        document.getElementById('wa-template-apply').addEventListener('click', applyTemplate);
     }
 
     function setComposeMode(mode, channel = 'email') {
@@ -62,6 +73,9 @@
 
         const subjectGroup = document.getElementById('chat-subject')?.closest('.form-group');
         if (subjectGroup) subjectGroup.style.display = (mode === 'send' && sendChannel === 'whatsapp') ? 'none' : '';
+
+        const tplBtn = document.getElementById('btn-use-template');
+        if (tplBtn) tplBtn.hidden = !(mode === 'send' && sendChannel === 'whatsapp');
 
         if (mode === 'send' && sendChannel === 'whatsapp') {
             els.composeHint.textContent = 'Il messaggio verrà inviato via WhatsApp (Twilio) e salvato nello storico.';
@@ -85,6 +99,8 @@
         const params = new URLSearchParams({ summary: '1' });
         const search = els.clientSearch.value.trim();
         if (search) params.set('search', search);
+        params.set('page', currentPage);
+        params.set('limit', PAGE_LIMIT);
 
         els.clientList.innerHTML = '<li class="chat-client-list__empty">Caricamento...</li>';
 
@@ -93,8 +109,10 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            clients = json.data;
+            const parsed = Pagination.parseResponse(json);
+            clients = parsed.items;
             renderClientList();
+            Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadClientSummary(); });
         } catch (err) {
             els.clientList.innerHTML = `<li class="chat-client-list__empty chat-client-list__error">${escapeHtml(err.message)}</li>`;
         }
@@ -290,6 +308,88 @@
         const div = document.createElement('div');
         div.textContent = String(str);
         return div.innerHTML;
+    }
+
+    // -------------------------------------------------------------------------
+    // WhatsApp templates
+    // -------------------------------------------------------------------------
+
+    async function openTemplateModal() {
+        selectedTemplate = null;
+        document.getElementById('wa-template-vars').hidden = true;
+        document.getElementById('wa-template-apply').hidden = true;
+        document.getElementById('wa-template-modal').hidden = false;
+        const list = document.getElementById('wa-template-list');
+        list.innerHTML = 'Caricamento…';
+        try {
+            const res = await fetch(`${TEMPLATES_API}?limit=500&page=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            templates = Pagination.parseResponse(json).items;
+            if (!templates.length) {
+                list.innerHTML = '<p class="text-muted">Nessun template configurato.</p>';
+                return;
+            }
+            list.innerHTML = templates.map(t => `
+                <div class="template-item" data-id="${t.id}">
+                    <strong>${escapeHtml(t.name)}</strong>
+                    <span class="badge">${escapeHtml(t.category)}</span>
+                    <div class="text-muted">${escapeHtml(truncate(t.body, 90))}</div>
+                </div>`).join('');
+            list.querySelectorAll('.template-item').forEach(item => {
+                item.addEventListener('click', () => selectTemplate(Number(item.dataset.id)));
+            });
+        } catch (err) {
+            list.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
+        }
+    }
+
+    function selectTemplate(id) {
+        selectedTemplate = templates.find(t => t.id == id);
+        if (!selectedTemplate) return;
+        document.querySelectorAll('.template-item').forEach(i =>
+            i.classList.toggle('template-item--active', i.dataset.id == id));
+
+        document.getElementById('wa-template-selected-name').textContent = selectedTemplate.name;
+        let vars = [];
+        try { vars = JSON.parse(selectedTemplate.variables || '[]'); } catch (e) { vars = []; }
+
+        const fields = document.getElementById('wa-template-var-fields');
+        const client = clients.find(c => c.id == selectedId);
+        fields.innerHTML = vars.map(v => {
+            let preset = '';
+            if (v === 'nome' && client) preset = `${client.name}`;
+            return `<div class="form-group"><label>${escapeHtml(v)}</label>
+                <input type="text" class="form-input wa-var-input" data-var="${escapeHtml(v)}" value="${escapeHtml(preset)}"></div>`;
+        }).join('');
+
+        document.getElementById('wa-template-vars').hidden = false;
+        document.getElementById('wa-template-apply').hidden = false;
+        updateTemplatePreview();
+        fields.querySelectorAll('.wa-var-input').forEach(inp => inp.addEventListener('input', updateTemplatePreview));
+    }
+
+    function fillTemplate() {
+        let body = selectedTemplate.body;
+        document.querySelectorAll('.wa-var-input').forEach(inp => {
+            const re = new RegExp('\\{\\{\\s*' + inp.dataset.var.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\}\\}', 'g');
+            body = body.replace(re, inp.value);
+        });
+        return body;
+    }
+
+    function updateTemplatePreview() {
+        document.getElementById('wa-template-preview').value = fillTemplate();
+    }
+
+    function applyTemplate() {
+        if (!selectedTemplate) return;
+        document.getElementById('chat-body').value = fillTemplate();
+        closeTemplateModal();
+    }
+
+    function closeTemplateModal() {
+        document.getElementById('wa-template-modal').hidden = true;
     }
 
     // Expose for client profile integration

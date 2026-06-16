@@ -7,14 +7,18 @@ const ADMIN_ROLES = ['super_admin', 'admin', 'agent', 'readonly'];
 
 const ROLE_PERMISSIONS = [
     'super_admin' => ['*'],
-    'admin'       => ['dashboard','clients','properties','documents','communications','reminders','social','tenants','settings','pdf'],
-    'agent'       => ['dashboard','clients','properties','documents','communications','reminders','tenants','pdf'],
-    'readonly'    => ['dashboard','clients','properties','documents','communications','reminders','social','tenants'],
+    'admin'       => ['dashboard','clients','leads','properties','contracts','documents','payments','expenses','invoices','communications','appointments','calendar','map','reminders','tenants','keys','agents','reports','social','settings','pdf'],
+    'agent'       => ['dashboard','clients','leads','properties','contracts','documents','payments','expenses','communications','appointments','calendar','map','reminders','tenants','keys','pdf'],
+    'readonly'    => ['dashboard','clients','leads','properties','contracts','documents','payments','expenses','communications','appointments','calendar','map','reminders','tenants'],
 ];
 
 const VIEW_MIN_ROLE = [
-    'settings' => 'super_admin',
-    'users'    => 'super_admin',
+    'settings'     => 'super_admin',
+    'users'        => 'super_admin',
+    'activity_log' => 'super_admin',
+    'reports'      => 'admin',
+    'agents'       => 'admin',
+    'invoices'     => 'admin',
 ];
 
 function getCurrentRole(): string

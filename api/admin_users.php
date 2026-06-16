@@ -39,10 +39,12 @@ try {
 
 function listUsers(PDO $db): void
 {
-    $rows = $db->query(
-        'SELECT id, username, email, role, is_active, created_at, updated_at FROM admin_users ORDER BY username'
-    )->fetchAll();
-    apiSuccess($rows);
+    $pagination = apiGetPagination();
+    $countSql = 'SELECT COUNT(*) FROM admin_users';
+    $dataSql = 'SELECT id, username, email, role, is_active, created_at, updated_at FROM admin_users ORDER BY username';
+
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, [], $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function getUser(PDO $db, int $id): void

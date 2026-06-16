@@ -14,6 +14,9 @@
         <button class="settings-tab" data-tab="whatsapp">WhatsApp</button>
         <button class="settings-tab" data-tab="backup">Backup cloud</button>
         <button class="settings-tab" data-tab="meta">Meta / Social</button>
+        <button class="settings-tab" data-tab="wa-templates">Template WhatsApp</button>
+        <button class="settings-tab" data-tab="email-templates">Template Email</button>
+        <button class="settings-tab" data-tab="security">Sicurezza 2FA</button>
         <button class="settings-tab" data-tab="users" id="tab-users" style="display:none">Utenti</button>
     </div>
 
@@ -110,7 +113,10 @@
                 <div class="form-group"><label>Secret Key</label><input type="password" id="set-s3-secret" class="form-input" autocomplete="off"></div>
             </div>
             <div class="form-group"><label>Prefisso cartella</label><input type="text" id="set-s3-prefix" class="form-input" value="gestionale-backups/"></div>
-            <button type="submit" class="btn btn--primary">Salva backup</button>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+                <button type="submit" class="btn btn--primary">Salva backup</button>
+                <button type="button" class="btn btn--ghost" id="btn-backup-now">💾 Backup ora</button>
+            </div>
         </form>
     </div>
 
@@ -129,6 +135,71 @@
         </form>
     </div>
 
+    <div class="settings-panel" id="panel-wa-templates" hidden>
+        <div class="card">
+            <div class="view-header" style="margin-bottom:16px">
+                <h3>Template WhatsApp</h3>
+                <button class="btn btn--primary btn--sm" id="btn-new-wa-template">+ Nuovo template</button>
+            </div>
+            <div class="template-list" id="wa-templates-admin-list">Caricamento…</div>
+            <div id="wa-templates-pagination" class="pagination-container"></div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="panel-email-templates" hidden>
+        <div class="card">
+            <div class="view-header" style="margin-bottom:16px">
+                <h3>Template Email</h3>
+                <button class="btn btn--primary btn--sm" id="btn-new-email-tpl">+ Nuovo template</button>
+            </div>
+            <div class="table-wrapper">
+            <table class="data-table" id="email-tpl-table">
+                <thead><tr><th>Nome</th><th>Categoria</th><th>Oggetto</th><th>Attivo</th><th></th></tr></thead>
+                <tbody id="email-tpl-tbody"><tr><td colspan="5" class="text-muted">Caricamento…</td></tr></tbody>
+            </table>
+            </div>
+            <div id="email-tpl-pagination" class="pagination-container"></div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="panel-security" hidden>
+        <div class="card totp-setup">
+            <h3>Autenticazione a due fattori (2FA)</h3>
+            <div id="totp-status"></div>
+
+            <div id="totp-disabled-view" hidden>
+                <p class="text-muted">Aggiungi un secondo livello di sicurezza al tuo account con un'app TOTP (Google Authenticator, Authy).</p>
+                <button class="btn btn--primary" id="btn-2fa-start">Attiva 2FA</button>
+
+                <div id="totp-setup-panel" hidden style="margin-top:16px">
+                    <p>Scansiona il QR code con Google Authenticator o Authy, oppure inserisci il codice manualmente.</p>
+                    <img id="totp-qr" src="" alt="QR Code 2FA" style="max-width:200px;display:block;margin:12px 0">
+                    <p class="text-muted">Codice manuale (otpauth URI):</p>
+                    <pre id="totp-uri" style="white-space:pre-wrap;word-break:break-all;background:var(--color-bg);padding:8px;border-radius:6px"></pre>
+                    <div class="form-group">
+                        <label for="totp-verify-code">Inserisci il codice a 6 cifre per confermare</label>
+                        <input type="text" id="totp-verify-code" class="form-input" inputmode="numeric" maxlength="6">
+                    </div>
+                    <button class="btn btn--primary" id="btn-2fa-confirm">Conferma e attiva</button>
+                </div>
+
+                <div id="totp-backup-panel" hidden style="margin-top:16px">
+                    <p><strong>Salva questi codici di backup.</strong> Ognuno è utilizzabile una sola volta se perdi l'app.</p>
+                    <pre id="totp-backup-codes" style="background:var(--color-bg);padding:8px;border-radius:6px"></pre>
+                </div>
+            </div>
+
+            <div id="totp-enabled-view" hidden>
+                <p class="alert alert--success" style="display:block">✅ La 2FA è attiva sul tuo account.</p>
+                <div class="form-group">
+                    <label for="totp-disable-pass">Per disattivare, inserisci la tua password</label>
+                    <input type="password" id="totp-disable-pass" class="form-input" autocomplete="off">
+                </div>
+                <button class="btn btn--danger" id="btn-2fa-disable">Disattiva 2FA</button>
+            </div>
+        </div>
+    </div>
+
     <div class="settings-panel" id="panel-users" hidden>
         <div class="card">
             <div class="view-header" style="margin-bottom:16px">
@@ -141,6 +212,7 @@
                 <tbody id="users-tbody"></tbody>
             </table>
             </div>
+            <div id="users-pagination" class="pagination-container"></div>
         </div>
     </div>
 </div>
@@ -169,4 +241,67 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="wa-tpl-modal" hidden>
+    <div class="modal modal--lg">
+        <div class="modal-header"><h3 id="wa-tpl-modal-title">Nuovo template</h3><button class="modal-close" id="wa-tpl-modal-close">&times;</button></div>
+        <form id="wa-tpl-form" class="modal-body">
+            <input type="hidden" id="wa-tpl-id">
+            <div class="form-row">
+                <div class="form-group"><label>Nome</label><input type="text" id="wa-tpl-name" class="form-input" required></div>
+                <div class="form-group"><label>Categoria</label>
+                    <select id="wa-tpl-category" class="form-select">
+                        <option value="benvenuto">Benvenuto</option>
+                        <option value="scadenza">Scadenza</option>
+                        <option value="pagamento">Pagamento</option>
+                        <option value="visita">Visita</option>
+                        <option value="generico">Generico</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Testo (usa <code>{{variabile}}</code> per i segnaposto)</label>
+                <textarea id="wa-tpl-body" class="form-textarea" rows="5" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="wa-tpl-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="email-tpl-modal" hidden>
+    <div class="modal modal--lg">
+        <div class="modal-header"><h3 id="email-tpl-modal-title">Nuovo template email</h3><button class="modal-close" id="email-tpl-modal-close">&times;</button></div>
+        <form id="email-tpl-form" class="modal-body">
+            <input type="hidden" id="email-tpl-id">
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Nome *</label><input type="text" id="email-tpl-name" class="form-input" required></div>
+                <div class="form-group"><label>Categoria</label>
+                    <select id="email-tpl-category" class="form-input">
+                        <option value="benvenuto">Benvenuto</option>
+                        <option value="scadenza_affitto">Scadenza affitto</option>
+                        <option value="scadenza_contratto">Scadenza contratto</option>
+                        <option value="promemoria">Promemoria</option>
+                        <option value="richiesta_documento">Richiesta documento</option>
+                        <option value="generico">Generico</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group"><label>Oggetto *</label><input type="text" id="email-tpl-subject" class="form-input" required></div>
+            <div class="form-group">
+                <label>Corpo email (usa <code>{{variabile}}</code> per i segnaposto)</label>
+                <textarea id="email-tpl-body" class="form-textarea" rows="8" required></textarea>
+            </div>
+            <div class="form-group"><label>Variabili disponibili (opzionale, separati da virgola)</label><input type="text" id="email-tpl-vars" class="form-input" placeholder="{{nome}},{{indirizzo}},{{canone}}"></div>
+            <label class="form-check" style="margin-top:8px"><input type="checkbox" id="email-tpl-active" checked> Attivo</label>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="email-tpl-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="assets/js/settings.js"></script>
+<script src="assets/js/whatsapp_templates.js"></script>

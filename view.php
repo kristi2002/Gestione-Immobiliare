@@ -5,7 +5,7 @@
 require_once __DIR__ . '/config/bootstrap.php';
 requireAuthWeb();
 
-$allowed = ['dashboard', 'clients', 'properties', 'documents', 'communications', 'reminders', 'social', 'tenants', 'settings'];
+$allowed = ['dashboard', 'clients', 'properties', 'contracts', 'documents', 'payments', 'expenses', 'invoices', 'communications', 'appointments', 'calendar', 'map', 'reminders', 'tenants', 'keys', 'agents', 'reports', 'social', 'activity_log', 'settings', 'leads'];
 $name    = basename($_GET['name'] ?? '');
 
 if (!in_array($name, $allowed, true)) {
@@ -16,6 +16,12 @@ if (!in_array($name, $allowed, true)) {
 if (!canAccessView($name)) {
     http_response_code(403);
     exit('Accesso negato.');
+}
+
+// Direct browser navigation loads the bare partial (no CSS/layout). Redirect into the SPA shell.
+if (($_SERVER['HTTP_X_APP_PARTIAL'] ?? '') !== '1') {
+    header('Location: index.php?view=' . urlencode($name));
+    exit;
 }
 
 $path = __DIR__ . '/views/' . $name . '.html';

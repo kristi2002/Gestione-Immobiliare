@@ -1,4 +1,5 @@
 .env
+.env.docker
 backups/
 uploads/properties/*
 uploads/documents/*

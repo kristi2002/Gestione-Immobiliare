@@ -1,0 +1,76 @@
+<div class="reports-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Report &amp; Statistiche</h2>
+            <p>Riepiloghi su immobili, incassi e spese. Esporta i dati in CSV.</p>
+        </div>
+        <div class="view-header__actions reports-toolbar">
+            <label for="report-year" class="reports-toolbar__label">Anno</label>
+            <input type="number" id="report-year" class="form-input reports-toolbar__year" min="2000" max="2100">
+        </div>
+    </div>
+
+    <div id="reports-alert" class="alert" style="display:none;"></div>
+
+    <div id="reports-kpi" class="reports-kpi" aria-live="polite">
+        <div class="reports-kpi__card">
+            <span class="reports-kpi__label">Immobili attivi</span>
+            <span class="reports-kpi__value" id="kpi-properties">—</span>
+        </div>
+        <div class="reports-kpi__card">
+            <span class="reports-kpi__label">Incassi attesi</span>
+            <span class="reports-kpi__value" id="kpi-expected">—</span>
+        </div>
+        <div class="reports-kpi__card reports-kpi__card--success">
+            <span class="reports-kpi__label">Incassato</span>
+            <span class="reports-kpi__value" id="kpi-collected">—</span>
+        </div>
+        <div class="reports-kpi__card">
+            <span class="reports-kpi__label">Spese totali</span>
+            <span class="reports-kpi__value" id="kpi-expenses">—</span>
+        </div>
+    </div>
+
+    <div class="reports-grid">
+        <div class="report-card report-card--wide" id="report-payments">
+            <div class="report-card__header">
+                <div class="report-card__title">
+                    <span class="report-card__icon">💶</span>
+                    <h3>Pagamenti mensili</h3>
+                </div>
+                <button class="btn btn--ghost btn--sm btn-export" data-type="payments">⬇️ Esporta CSV</button>
+            </div>
+            <div class="report-card__body" id="report-payments-body">
+                <p class="text-muted">Caricamento…</p>
+            </div>
+        </div>
+
+        <div class="report-card" id="report-properties">
+            <div class="report-card__header">
+                <div class="report-card__title">
+                    <span class="report-card__icon">🏢</span>
+                    <h3>Portafoglio immobili</h3>
+                </div>
+                <button class="btn btn--ghost btn--sm btn-export" data-type="properties">⬇️ Esporta CSV</button>
+            </div>
+            <div class="report-card__body" id="report-properties-body">
+                <p class="text-muted">Caricamento…</p>
+            </div>
+        </div>
+
+        <div class="report-card" id="report-expenses">
+            <div class="report-card__header">
+                <div class="report-card__title">
+                    <span class="report-card__icon">📉</span>
+                    <h3>Spese per categoria</h3>
+                </div>
+                <button class="btn btn--ghost btn--sm btn-export" data-type="expenses">⬇️ Esporta CSV</button>
+            </div>
+            <div class="report-card__body" id="report-expenses-body">
+                <p class="text-muted">Caricamento…</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/reports.js"></script>

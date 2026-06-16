@@ -1,0 +1,194 @@
+<div class="leads-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Leads</h2>
+            <p>Gestisci i potenziali clienti, abbina immobili e converti in proprietari.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-new-lead">+ Nuovo Lead</button>
+    </div>
+
+    <div id="leads-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="lead-search" class="form-input" placeholder="Cerca per nome, telefono, email…" autocomplete="off">
+        </div>
+        <select id="lead-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="new">Nuovo</option>
+            <option value="contacted">Contattato</option>
+            <option value="interested">Interessato</option>
+            <option value="negotiating">In trattativa</option>
+            <option value="converted">Convertito</option>
+            <option value="lost">Perso</option>
+        </select>
+        <select id="lead-interest-filter" class="form-select">
+            <option value="">Tutti gli interessi</option>
+            <option value="affitto">Affitto</option>
+            <option value="acquisto">Acquisto</option>
+            <option value="entrambi">Entrambi</option>
+        </select>
+    </div>
+
+    <div id="leads-bulk-toolbar" class="bulk-toolbar" hidden>
+        <label><input type="checkbox" id="leads-select-all"> Seleziona tutti</label>
+        <span id="leads-bulk-count" class="text-muted">0 selezionati</span>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-leads">Archivia</button>
+        <select id="bulk-assign-agent" class="form-select" style="max-width:180px">
+            <option value="">— Agente —</option>
+        </select>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-assign-leads">Riassegna</button>
+    </div>
+
+    <div id="leads-grid" class="entity-grid">
+        <div class="entity-loading">Caricamento…</div>
+    </div>
+    <div id="leads-pagination" class="pagination-container"></div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="lead-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="lead-modal-title">
+        <div class="modal-header">
+            <h3 id="lead-modal-title">Nuovo Lead</h3>
+            <button class="modal-close" id="lead-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="lead-form" class="modal-body">
+            <input type="hidden" id="lead-id">
+
+            <fieldset class="form-section">
+                <legend>Anagrafica</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lead-name">Nome <span class="required">*</span></label>
+                        <input type="text" id="lead-name" class="form-input" required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-surname">Cognome <span class="required">*</span></label>
+                        <input type="text" id="lead-surname" class="form-input" required maxlength="100">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lead-phone">Telefono</label>
+                        <input type="text" id="lead-phone" class="form-input" maxlength="30">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-email">Email</label>
+                        <input type="email" id="lead-email" class="form-input" maxlength="255">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Preferenze immobile</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="lead-interest">Interesse</label>
+                        <select id="lead-interest" class="form-select">
+                            <option value="affitto">Affitto</option>
+                            <option value="acquisto">Acquisto</option>
+                            <option value="entrambi">Entrambi</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-budget-min">Budget min (€)</label>
+                        <input type="number" id="lead-budget-min" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-budget-max">Budget max (€)</label>
+                        <input type="number" id="lead-budget-max" class="form-input" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="lead-city">Città preferita</label>
+                        <input type="text" id="lead-city" class="form-input" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-type">Tipo immobile</label>
+                        <select id="lead-type" class="form-select">
+                            <option value="">— Indifferente —</option>
+                            <option value="appartamento">Appartamento</option>
+                            <option value="villa">Villa</option>
+                            <option value="ufficio">Ufficio</option>
+                            <option value="negozio">Negozio</option>
+                            <option value="box">Box</option>
+                            <option value="terreno">Terreno</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-min-rooms">Stanze min</label>
+                        <input type="number" id="lead-min-rooms" class="form-input" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="lead-min-sqm">Metri quadri minimi</label>
+                    <input type="number" id="lead-min-sqm" class="form-input" min="0" step="0.01">
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Gestione</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="lead-status">Stato</label>
+                        <select id="lead-status" class="form-select">
+                            <option value="new">Nuovo</option>
+                            <option value="contacted">Contattato</option>
+                            <option value="interested">Interessato</option>
+                            <option value="negotiating">In trattativa</option>
+                            <option value="converted">Convertito</option>
+                            <option value="lost">Perso</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-source">Fonte</label>
+                        <select id="lead-source" class="form-select">
+                            <option value="telefono">Telefono</option>
+                            <option value="email">Email</option>
+                            <option value="web">Web</option>
+                            <option value="passaparola">Passaparola</option>
+                            <option value="social">Social</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-assigned">Agente assegnato</label>
+                        <select id="lead-assigned" class="form-select">
+                            <option value="">— Nessuno —</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="lead-notes">Note</label>
+                    <textarea id="lead-notes" class="form-textarea" rows="3"></textarea>
+                </div>
+            </fieldset>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="lead-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="lead-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Matches modal -->
+<div class="modal-overlay" id="lead-match-modal" hidden>
+    <div class="modal modal--lg" role="dialog">
+        <div class="modal-header">
+            <h3 id="lead-match-title">Immobili compatibili</h3>
+            <button class="modal-close" id="lead-match-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="lead-match-list" class="match-list"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="lead-match-ok">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/leads.js"></script>

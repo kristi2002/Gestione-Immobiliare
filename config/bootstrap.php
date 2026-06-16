@@ -37,4 +37,6 @@ if (FORCE_HTTPS && PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/csrf.php';
 initSession();
+initCsrfToken();

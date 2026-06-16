@@ -4,9 +4,12 @@
             <h2>Immobili</h2>
             <p>Gestisci le proprietà, assegna i proprietari e carica la galleria multimediale.</p>
         </div>
-        <button class="btn btn--primary" id="btn-new-property">
-            + Nuovo Immobile
-        </button>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-export-properties">⬇️ Esporta CSV</button>
+            <button class="btn btn--ghost" id="btn-import-properties">⬆️ Importa CSV</button>
+            <input type="file" id="import-properties-file" accept=".csv" hidden>
+            <button class="btn btn--primary" id="btn-new-property">+ Nuovo Immobile</button>
+        </div>
     </div>
 
     <div id="properties-alert" class="alert" style="display:none;"></div>
@@ -27,9 +30,21 @@
         </select>
     </div>
 
+    <div id="properties-bulk-toolbar" class="bulk-toolbar" hidden>
+        <label><input type="checkbox" id="properties-select-all"> Seleziona tutti</label>
+        <span id="properties-bulk-count" class="text-muted">0 selezionati</span>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-properties">Archivia</button>
+        <select id="bulk-assign-client" class="form-select" style="max-width:200px">
+            <option value="">— Proprietario —</option>
+        </select>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-assign-properties">Riassegna</button>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-properties">Esporta</button>
+    </div>
+
     <div id="properties-grid" class="entity-grid">
         <div class="entity-loading">Caricamento…</div>
     </div>
+    <div id="properties-pagination" class="pagination-container"></div>
 </div>
 
 <!-- Create / Edit modal -->
@@ -65,14 +80,18 @@
                     <label for="property-address">Indirizzo <span class="required">*</span></label>
                     <input type="text" id="property-address" class="form-input" required maxlength="255">
                 </div>
-                <div class="form-row form-row--3">
+                <div class="form-row form-row--4">
                     <div class="form-group">
                         <label for="property-city">Città <span class="required">*</span></label>
                         <input type="text" id="property-city" class="form-input" required maxlength="100">
                     </div>
                     <div class="form-group">
-                        <label for="property-cap">CAP</label>
-                        <input type="text" id="property-cap" class="form-input" maxlength="10">
+                        <label for="property-cap">CAP <span class="required">*</span></label>
+                        <input type="text" id="property-cap" class="form-input" required maxlength="10" placeholder="41121">
+                    </div>
+                    <div class="form-group">
+                        <label for="property-province">Provincia</label>
+                        <input type="text" id="property-province" class="form-input" maxlength="10" placeholder="MO">
                     </div>
                     <div class="form-group">
                         <label for="property-floor">Piano</label>
@@ -96,6 +115,34 @@
                         <label for="property-bathrooms">Bagni</label>
                         <input type="number" id="property-bathrooms" class="form-input" min="0" step="1">
                     </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="property-price">Prezzo (€)</label>
+                        <input type="number" id="property-price" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="property-price-type">Tipo prezzo</label>
+                        <select id="property-price-type" class="form-select">
+                            <option value="affitto">Affitto</option>
+                            <option value="vendita">Vendita</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="property-latitude">Coordinate</label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <input type="number" id="property-latitude" class="form-input" step="0.00000001" placeholder="Lat" style="flex:1;min-width:100px">
+                            <input type="number" id="property-longitude" class="form-input" step="0.00000001" placeholder="Lng" style="flex:1;min-width:100px">
+                            <button type="button" class="btn btn--ghost btn--sm" id="btn-property-geocode" title="Cerca coordinate da indirizzo, CAP e città">📍 Trova</button>
+                        </div>
+                        <p class="text-muted" style="font-size:12px;margin-top:6px">Formato consigliato: <strong>Via Emilia Est 123</strong>. Compila Città, CAP e Provincia (es. MO). Per precisione al civico, aggiungi <code>GOOGLE_GEOCODING_API_KEY</code> nel file .env.</p>
+                        <p id="property-geo-confidence" class="text-muted" style="font-size:12px;margin-top:4px;display:none"></p>
+                        <input type="hidden" id="property-geo-confidence-value">
+                    </div>
+                </div>
+                <div id="property-price-history-section" class="form-group" hidden>
+                    <label>Storico prezzi</label>
+                    <div id="property-price-history" class="price-history-list text-muted">Nessuna variazione registrata.</div>
                 </div>
                 <div class="form-group">
                     <label for="property-description">Descrizione</label>
@@ -135,6 +182,7 @@
             </p>
 
             <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="btn-property-mandato" hidden>📋 Mandato agenzia</button>
                 <button type="button" class="btn btn--ghost" id="property-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="property-modal-save">Salva</button>
             </div>
@@ -156,6 +204,102 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="property-delete-cancel">Annulla</button>
             <button type="button" class="btn btn--danger" id="property-delete-confirm">Archivia</button>
+        </div>
+    </div>
+</div>
+
+<!-- Appraisal modal -->
+<div class="modal-overlay appraisal-modal" id="appraisal-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="appraisal-modal-title">
+        <div class="modal-header">
+            <h3 id="appraisal-modal-title">Valutazione immobile</h3>
+            <button class="modal-close" id="appraisal-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <h4>Storico valutazioni</h4>
+            <div id="appraisal-history" class="appraisal-history">Caricamento…</div>
+
+            <form id="appraisal-form" style="margin-top:20px">
+                <input type="hidden" id="appraisal-property-id">
+                <fieldset class="form-section">
+                    <legend>Nuova valutazione</legend>
+                    <div class="form-row form-row--3">
+                        <div class="form-group">
+                            <label for="appraisal-value">Valore stimato (€) <span class="required">*</span></label>
+                            <input type="number" id="appraisal-value" class="form-input" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="appraisal-rent">Canone stimato (€)</label>
+                            <input type="number" id="appraisal-rent" class="form-input" min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="appraisal-condition">Stato</label>
+                            <select id="appraisal-condition" class="form-select">
+                                <option value="ottimo">Ottimo</option>
+                                <option value="buono" selected>Buono</option>
+                                <option value="discreto">Discreto</option>
+                                <option value="da_ristrutturare">Da ristrutturare</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="appraisal-date">Data valutazione</label>
+                        <input type="date" id="appraisal-date" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="appraisal-c1-addr">Comparabile 1 — indirizzo</label>
+                            <input type="text" id="appraisal-c1-addr" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="appraisal-c1-price">Comparabile 1 — prezzo (€)</label>
+                            <input type="number" id="appraisal-c1-price" class="form-input" min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="appraisal-c2-addr">Comparabile 2 — indirizzo</label>
+                            <input type="text" id="appraisal-c2-addr" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="appraisal-c2-price">Comparabile 2 — prezzo (€)</label>
+                            <input type="number" id="appraisal-c2-price" class="form-input" min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="appraisal-notes">Note</label>
+                        <textarea id="appraisal-notes" class="form-textarea" rows="2"></textarea>
+                    </div>
+                </fieldset>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" id="appraisal-modal-cancel">Chiudi</button>
+                    <button type="submit" class="btn btn--primary" id="appraisal-modal-save">Salva valutazione</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CSV import preview modal -->
+<div class="modal-overlay" id="import-modal" hidden>
+    <div class="modal modal--lg" role="dialog">
+        <div class="modal-header">
+            <h3>Importa CSV — Immobili</h3>
+            <button class="modal-close" id="import-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted">Colonne attese: indirizzo, citta, cap, tipo, prezzo, tipo_prezzo, mq, stanze, bagni, stato.</p>
+            <div class="form-group">
+                <label for="import-client">Assegna al proprietario <span class="required">*</span></label>
+                <select id="import-client" class="form-select"><option value="">— Seleziona —</option></select>
+            </div>
+            <p>Anteprima (prime 5 righe di <strong id="import-count">0</strong>):</p>
+            <div class="import-preview" id="import-preview"></div>
+            <div id="import-progress" class="text-muted" style="margin-top:12px"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="import-modal-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="import-confirm">Importa</button>
         </div>
     </div>
 </div>

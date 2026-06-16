@@ -1,0 +1,183 @@
+# Render Blueprint — Gestionale Immobiliare
+# Repo: https://github.com/kristi2002/Gestione-Immobiliare
+#
+# BEFORE DEPLOY:
+# 1. Provision a MySQL 8 database (Render does not offer MySQL — use PlanetScale, Aiven,
+#    DigitalOcean Managed MySQL, Railway, etc.) and set DB_* env vars in the Dashboard.
+# 2. Set APP_URL to your Render URL (e.g. https://gestionale-immobiliare.onrender.com)
+# 3. Generate strong APP_SECRET and CRON_SECRET
+# 4. Run setup once: visit /setup.php then set SETUP_ENABLED=false
+#
+# Apply: https://dashboard.render.com/blueprint/new?repo=https://github.com/kristi2002/Gestione-Immobiliare
+
+services:
+  - type: web
+    name: gestionale-immobiliare
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health.php
+    disk:
+      name: gestionale-uploads
+      mountPath: /var/www/html/uploads
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: FORCE_HTTPS
+        value: true
+      - key: SETUP_ENABLED
+        value: true
+      - key: SESSION_NAME
+        value: gestionale_session
+      - key: DB_CHARSET
+        value: utf8mb4
+      - key: MAIL_ENABLED
+        value: false
+      - key: BACKUP_CLOUD_ENABLED
+        value: true
+      - key: APP_URL
+        sync: false
+      - key: APP_SECRET
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  - type: cron
+    name: gestionale-reminders
+    runtime: docker
+    schedule: "*/15 * * * *"
+    dockerfilePath: ./Dockerfile
+    dockerCommand: php /var/www/html/cron/process_reminders.php
+    envVars:
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: APP_ENV
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_HOST
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_NAME
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_USER
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_PASS
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_CHARSET
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: MAIL_ENABLED
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: SMTP_HOST
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: SMTP_PORT
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: SMTP_USER
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: SMTP_PASS
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: SMTP_SECURE
+
+  - type: cron
+    name: gestionale-social
+    runtime: docker
+    schedule: "*/10 * * * *"
+    dockerfilePath: ./Dockerfile
+    dockerCommand: php /var/www/html/cron/publish_social_posts.php
+    envVars:
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_HOST
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_NAME
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_USER
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_PASS
+
+  - type: cron
+    name: gestionale-backup
+    runtime: docker
+    schedule: "0 3 * * *"
+    dockerfilePath: ./Dockerfile
+    dockerCommand: php /var/www/html/cron/backup_database.php
+    envVars:
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_HOST
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_NAME
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_USER
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: DB_PASS
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: BACKUP_CLOUD_ENABLED
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: BACKUP_S3_ENDPOINT
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: BACKUP_S3_BUCKET
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: BACKUP_S3_KEY
+      - fromService:
+          type: web
+          name: gestionale-immobiliare
+          envVarKey: BACKUP_S3_SECRET

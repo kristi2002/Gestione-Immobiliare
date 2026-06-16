@@ -6,6 +6,9 @@
 
     const API = 'api/clients.php';
     const COMM_API = 'api/communications.php';
+    const REPORT_API = 'api/generate_owner_report.php';
+
+    let importRows = [];
 
     const STATUS_LABELS = {
         active:   'Attivo',
@@ -17,9 +20,13 @@
     let deleteTargetId = null;
     let searchTimer   = null;
     let editingClientId = null;
+    let currentPage = 1;
+    const PAGE_LIMIT = 25;
 
     // DOM refs — populated on init
     const els = {};
+
+    let selectedIds = new Set();
 
     function init() {
         els.grid         = document.getElementById('clients-grid');
@@ -30,6 +37,7 @@
         els.deleteModal  = document.getElementById('delete-modal');
         els.form         = document.getElementById('client-form');
         els.modalTitle   = document.getElementById('modal-title');
+        els.pagination   = document.getElementById('clients-pagination');
 
         bindEvents();
         loadClients();
@@ -47,10 +55,21 @@
 
         els.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(loadClients, 300);
+            searchTimer = setTimeout(() => { currentPage = 1; loadClients(); }, 300);
         });
 
-        els.statusFilter.addEventListener('change', loadClients);
+        // Bulk toolbar
+        document.getElementById('clients-select-all')?.addEventListener('change', e => {
+            els.grid.querySelectorAll('.client-checkbox').forEach(cb => {
+                cb.checked = e.target.checked;
+                e.target.checked ? selectedIds.add(+cb.dataset.id) : selectedIds.delete(+cb.dataset.id);
+            });
+            updateBulkToolbar();
+        });
+        document.getElementById('bulk-archive-clients')?.addEventListener('click', bulkArchive);
+        document.getElementById('bulk-export-clients')?.addEventListener('click', bulkExport);
+
+        els.statusFilter.addEventListener('change', () => { currentPage = 1; loadClients(); });
 
         els.modal.addEventListener('click', (e) => {
             if (e.target === els.modal) closeModal();
@@ -65,6 +84,24 @@
                 window.App.navigateTo('communications', { clientId: editingClientId });
             }
         });
+
+        // CSV export / import
+        document.getElementById('btn-export-clients').addEventListener('click', () => {
+            window.open(`${API}?format=csv`, '_blank');
+        });
+        document.getElementById('btn-import-clients').addEventListener('click', () => {
+            document.getElementById('import-clients-file').click();
+        });
+        document.getElementById('import-clients-file').addEventListener('change', handleImportFile);
+        document.getElementById('import-modal-close').addEventListener('click', closeImportModal);
+        document.getElementById('import-modal-cancel').addEventListener('click', closeImportModal);
+        document.getElementById('import-confirm').addEventListener('click', confirmImport);
+
+        // Owner report
+        document.getElementById('btn-owner-report').addEventListener('click', openReportModal);
+        document.getElementById('report-modal-close').addEventListener('click', closeReportModal);
+        document.getElementById('report-cancel').addEventListener('click', closeReportModal);
+        document.getElementById('report-generate').addEventListener('click', generateReport);
     }
 
     // -------------------------------------------------------------------------
@@ -78,8 +115,10 @@
 
         if (search) params.set('search', search);
         if (status) params.set('status', status);
+        params.set('page', currentPage);
+        params.set('limit', PAGE_LIMIT);
 
-        const url = params.toString() ? `${API}?${params}` : API;
+        const url = `${API}?${params}`;
 
         els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
 
@@ -89,8 +128,14 @@
 
             if (!json.success) throw new Error(json.error);
 
-            clients = json.data;
+            if (typeof Pagination === 'undefined') {
+                throw new Error('Modulo paginazione non caricato. Ricarica la pagina (Ctrl+F5).');
+            }
+
+            const parsed = Pagination.parseResponse(json);
+            clients = parsed.items;
             renderCards();
+            Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadClients(); });
         } catch (err) {
             els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
@@ -122,17 +167,21 @@
     // -------------------------------------------------------------------------
 
     function renderCards() {
-        if (clients.length === 0) {
+        const list = Array.isArray(clients) ? clients : [];
+
+        if (list.length === 0) {
             els.grid.innerHTML = '<div class="entity-empty">Nessun proprietario trovato.</div>';
             return;
         }
 
-        els.grid.innerHTML = clients.map(c => {
-            const initials = (c.name[0] || '') + (c.surname[0] || '');
+        els.grid.innerHTML = list.map(c => {
+            const initials  = (c.name[0] || '') + (c.surname[0] || '');
             const propLabel = c.property_count === 1 ? '1 immobile' : `${c.property_count} immobili`;
+            const checked   = selectedIds.has(c.id) ? 'checked' : '';
             return `
-            <div class="entity-card">
+            <div class="entity-card" data-id="${c.id}">
                 <div class="entity-card__header">
+                    <input type="checkbox" class="client-checkbox entity-card__select" data-id="${c.id}" ${checked} title="Seleziona">
                     <div class="entity-card__avatar">${escapeHtml(initials.toUpperCase())}</div>
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</div>
@@ -158,6 +207,13 @@
             </div>`;
         }).join('');
 
+        els.grid.querySelectorAll('.client-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                cb.checked ? selectedIds.add(+cb.dataset.id) : selectedIds.delete(+cb.dataset.id);
+                updateBulkToolbar();
+            });
+        });
+
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 const client = clients.find(c => c.id == btn.dataset.id);
@@ -177,6 +233,38 @@
                 if (client) openDeleteModal(client.id, `${client.name} ${client.surname}`);
             });
         });
+
+        updateBulkToolbar();
+    }
+
+    function updateBulkToolbar() {
+        const toolbar = document.getElementById('clients-bulk-toolbar');
+        const countEl = document.getElementById('clients-bulk-count');
+        if (!toolbar) return;
+        const n = selectedIds.size;
+        toolbar.hidden = n === 0;
+        if (countEl) countEl.textContent = `${n} selezionat${n === 1 ? 'o' : 'i'}`;
+        const selectAll = document.getElementById('clients-select-all');
+        if (selectAll) selectAll.checked = n > 0 && n === clients.length;
+    }
+
+    async function bulkArchive() {
+        if (!selectedIds.size) return;
+        if (!confirm(`Archiviare ${selectedIds.size} proprietari selezionati?`)) return;
+        const ids = [...selectedIds];
+        const results = await Promise.allSettled(ids.map(id =>
+            fetch(`${API}?id=${id}`, { method: 'DELETE' }).then(r => r.json())
+        ));
+        const failed = results.filter(r => r.status === 'rejected' || !r.value?.success).length;
+        selectedIds.clear();
+        await loadClients();
+        showAlert(failed ? `Completato con ${failed} errori.` : `${ids.length} proprietari archiviati.`, failed ? 'error' : 'success');
+    }
+
+    function bulkExport() {
+        if (!selectedIds.size) return;
+        const ids = [...selectedIds].join(',');
+        window.open(`${API}?format=csv&ids=${ids}`, '_blank');
     }
 
     // -------------------------------------------------------------------------
@@ -188,9 +276,11 @@
         document.getElementById('client-id').value = '';
         editingClientId = null;
         document.getElementById('client-comm-section').hidden = true;
+        document.getElementById('btn-owner-report').hidden = true;
 
         if (client) {
             editingClientId = client.id;
+            document.getElementById('btn-owner-report').hidden = false;
             els.modalTitle.textContent = 'Modifica Proprietario';
             document.getElementById('client-id').value       = client.id;
             document.getElementById('client-name').value     = client.name;
@@ -343,8 +433,154 @@
 
     function escapeHtml(str) {
         const div = document.createElement('div');
-        div.textContent = str;
+        div.textContent = str == null ? '' : str;
         return div.innerHTML;
+    }
+
+    // -------------------------------------------------------------------------
+    // Owner report
+    // -------------------------------------------------------------------------
+
+    function openReportModal() {
+        if (!editingClientId) return;
+        document.getElementById('report-month').value = '';
+        document.getElementById('report-year').value = new Date().getFullYear();
+        document.getElementById('report-modal').hidden = false;
+    }
+    function closeReportModal() {
+        document.getElementById('report-modal').hidden = true;
+    }
+    async function generateReport() {
+        const btn = document.getElementById('report-generate');
+        btn.disabled = true; btn.textContent = 'Generazione...';
+        try {
+            const res = await fetch(REPORT_API, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    client_id: editingClientId,
+                    month: document.getElementById('report-month').value || null,
+                    year: document.getElementById('report-year').value,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            closeReportModal();
+            window.open(json.data.download, '_blank');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Genera PDF';
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CSV import
+    // -------------------------------------------------------------------------
+
+    function handleImportFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            importRows = parseCsv(ev.target.result);
+            e.target.value = '';
+            openImportModal();
+        };
+        reader.readAsText(file);
+    }
+
+    function openImportModal() {
+        document.getElementById('import-count').textContent = importRows.length;
+        document.getElementById('import-progress').textContent = '';
+        const container = document.getElementById('import-preview');
+        if (!importRows.length) {
+            container.innerHTML = '<p class="text-muted">Nessuna riga valida nel file.</p>';
+        } else {
+            const cols = Object.keys(importRows[0]);
+            const head = cols.map(c => `<th>${escapeHtml(c)}</th>`).join('');
+            const rows = importRows.slice(0, 5).map(r =>
+                `<tr>${cols.map(c => `<td>${escapeHtml(r[c] || '')}</td>`).join('')}</tr>`).join('');
+            container.innerHTML = `<table class="data-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+        }
+        document.getElementById('import-modal').hidden = false;
+    }
+
+    function closeImportModal() {
+        document.getElementById('import-modal').hidden = true;
+        importRows = [];
+    }
+
+    async function confirmImport() {
+        if (!importRows.length) { showAlert('Nessuna riga da importare.', 'error'); return; }
+        const btn = document.getElementById('import-confirm');
+        const progress = document.getElementById('import-progress');
+        btn.disabled = true;
+        progress.textContent = 'Importazione in corso…';
+        try {
+            const res = await fetch(`${API}?action=import`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows: importRows }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            progress.textContent = `Importati ${json.data.imported} proprietari.` +
+                (json.data.errors.length ? ` ${json.data.errors.length} errori.` : '');
+            showAlert(`Importati ${json.data.imported} proprietari.`, 'success');
+            loadClients();
+            setTimeout(closeImportModal, 1500);
+        } catch (err) {
+            progress.textContent = '';
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function parseCsv(text) {
+        const rows = [];
+        const lines = splitCsvLines(text);
+        if (!lines.length) return rows;
+        const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase());
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            const values = parseCsvLine(lines[i]);
+            const obj = {};
+            headers.forEach((h, idx) => { obj[h] = (values[idx] || '').trim(); });
+            rows.push(obj);
+        }
+        return rows;
+    }
+
+    function splitCsvLines(text) {
+        text = text.replace(/^﻿/, '');
+        const lines = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (ch === '"') inQuotes = !inQuotes;
+            if ((ch === '\n' || ch === '\r') && !inQuotes) {
+                if (ch === '\r' && text[i + 1] === '\n') i++;
+                lines.push(cur); cur = '';
+            } else { cur += ch; }
+        }
+        if (cur !== '') lines.push(cur);
+        return lines;
+    }
+
+    function parseCsvLine(line) {
+        const out = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+                else inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+                out.push(cur); cur = '';
+            } else { cur += ch; }
+        }
+        out.push(cur);
+        return out;
     }
 
     init();

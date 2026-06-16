@@ -6,9 +6,29 @@
 
 require_once __DIR__ . '/../config/bootstrap.php';
 
+// Allow admin, tenant, or owner sessions
+$isTenantPortal = false;
+$isOwnerPortal  = false;
 if (!isLoggedIn()) {
-    http_response_code(401);
-    exit('Autenticazione richiesta.');
+    // Check tenant session
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+    session_name(TENANT_SESSION_NAME);
+    session_set_cookie_params(['lifetime'=>0,'path'=>'/','httponly'=>true,'samesite'=>'Lax']);
+    @session_start();
+    if (isTenantLoggedIn()) {
+        $isTenantPortal = true;
+    } else {
+        session_write_close();
+        // Check owner session
+        session_name('gestionale_owner_session');
+        @session_start();
+        if (!empty($_SESSION['owner_client_id'])) {
+            $isOwnerPortal = true;
+        } else {
+            http_response_code(401);
+            exit('Autenticazione richiesta.');
+        }
+    }
 }
 
 require_once __DIR__ . '/../config/db.php';

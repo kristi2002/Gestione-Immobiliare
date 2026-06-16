@@ -55,34 +55,39 @@ try {
 
 function listPosts(PDO $db): void
 {
+    $pagination = apiGetPagination();
     $status   = trim($_GET['status'] ?? '');
     $platform = trim($_GET['platform'] ?? '');
     $search   = trim($_GET['search'] ?? '');
 
-    $sql = "SELECT sp.*, p.address AS property_address, p.city AS property_city
-            FROM social_posts sp
-            LEFT JOIN properties p ON p.id = sp.property_id
-            WHERE 1=1";
+    $where = 'WHERE 1=1';
     $params = [];
 
     if ($status !== '' && in_array($status, SOCIAL_STATUSES, true)) {
-        $sql .= ' AND sp.status = :status';
+        $where .= ' AND sp.status = :status';
         $params['status'] = $status;
     }
     if ($platform !== '' && in_array($platform, SOCIAL_PLATFORMS, true)) {
-        $sql .= ' AND sp.platform = :platform';
+        $where .= ' AND sp.platform = :platform';
         $params['platform'] = $platform;
     }
     if ($search !== '') {
-        $sql .= ' AND (sp.caption LIKE :search OR p.address LIKE :search OR p.city LIKE :search)';
+        $where .= ' AND (sp.caption LIKE :search OR p.address LIKE :search OR p.city LIKE :search)';
         $params['search'] = '%' . $search . '%';
     }
 
-    $sql .= ' ORDER BY sp.scheduled_at DESC';
+    $countSql = "SELECT COUNT(*) FROM social_posts sp
+            LEFT JOIN properties p ON p.id = sp.property_id
+            $where";
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    apiSuccess($stmt->fetchAll());
+    $dataSql = "SELECT sp.*, p.address AS property_address, p.city AS property_city
+            FROM social_posts sp
+            LEFT JOIN properties p ON p.id = sp.property_id
+            $where
+            ORDER BY sp.scheduled_at DESC";
+
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function getPost(PDO $db, int $id): void

@@ -4,9 +4,12 @@
             <h2>Proprietari</h2>
             <p>Gestisci i clienti dell'agenzia e le loro informazioni di contatto.</p>
         </div>
-        <button class="btn btn--primary" id="btn-new-client">
-            + Nuovo Proprietario
-        </button>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-export-clients">⬇️ Esporta CSV</button>
+            <button class="btn btn--ghost" id="btn-import-clients">⬆️ Importa CSV</button>
+            <input type="file" id="import-clients-file" accept=".csv" hidden>
+            <button class="btn btn--primary" id="btn-new-client">+ Nuovo Proprietario</button>
+        </div>
     </div>
 
     <div id="clients-alert" class="alert" style="display:none;"></div>
@@ -23,9 +26,17 @@
         </select>
     </div>
 
+    <div id="clients-bulk-toolbar" class="bulk-toolbar" hidden>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="clients-select-all"> Seleziona tutti</label>
+        <span id="clients-bulk-count" class="text-muted">0 selezionati</span>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-clients">🗑️ Archivia selezionati</button>
+        <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-clients">⬇️ Esporta selezionati</button>
+    </div>
+
     <div id="clients-grid" class="entity-grid">
         <div class="entity-loading">Caricamento…</div>
     </div>
+    <div id="clients-pagination" class="pagination-container"></div>
 </div>
 
 <!-- Create / Edit modal -->
@@ -83,10 +94,65 @@
             </fieldset>
 
             <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="btn-owner-report" hidden>📄 Genera Rendiconto</button>
                 <button type="button" class="btn btn--ghost" id="modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="modal-save">Salva</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Owner report modal -->
+<div class="modal-overlay" id="report-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Rendiconto proprietario</h3>
+            <button class="modal-close" id="report-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="report-month">Mese</label>
+                    <select id="report-month" class="form-select">
+                        <option value="">Anno intero</option>
+                        <option value="1">Gennaio</option><option value="2">Febbraio</option>
+                        <option value="3">Marzo</option><option value="4">Aprile</option>
+                        <option value="5">Maggio</option><option value="6">Giugno</option>
+                        <option value="7">Luglio</option><option value="8">Agosto</option>
+                        <option value="9">Settembre</option><option value="10">Ottobre</option>
+                        <option value="11">Novembre</option><option value="12">Dicembre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="report-year">Anno</label>
+                    <input type="number" id="report-year" class="form-input" min="2000" max="2100">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="report-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="report-generate">Genera PDF</button>
+        </div>
+    </div>
+</div>
+
+<!-- CSV import preview modal -->
+<div class="modal-overlay" id="import-modal" hidden>
+    <div class="modal modal--lg" role="dialog">
+        <div class="modal-header">
+            <h3>Importa CSV — Proprietari</h3>
+            <button class="modal-close" id="import-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted">Colonne attese: nome, cognome, telefono, email, stato.</p>
+            <p>Anteprima (prime 5 righe di <strong id="import-count">0</strong>):</p>
+            <div class="import-preview" id="import-preview"></div>
+            <div id="import-progress" class="text-muted" style="margin-top:12px"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="import-modal-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="import-confirm">Importa</button>
+        </div>
     </div>
 </div>
 
@@ -108,4 +174,4 @@
     </div>
 </div>
 
-<script src="assets/js/clients.js"></script>
+<script src="assets/js/clients.js?v=2"></script>

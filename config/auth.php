@@ -108,26 +108,51 @@ function requireTenantAuthApi(): void
     }
 }
 
-function attemptLogin(string $username, string $password): bool
+/**
+ * Verify credentials. Returns:
+ *  - 'ok'    → session established
+ *  - '2fa'   → credentials valid but 2FA required (pending session set)
+ *  - 'fail'  → invalid credentials
+ */
+function attemptLoginStep(string $username, string $password): string
 {
     require_once __DIR__ . '/db.php';
 
     $stmt = getDB()->prepare(
-        'SELECT id, username, password_hash, role, is_active FROM admin_users WHERE username = :username LIMIT 1'
+        'SELECT id, username, password_hash, role, is_active, totp_enabled
+         FROM admin_users WHERE username = :username LIMIT 1'
     );
     $stmt->execute(['username' => $username]);
     $user = $stmt->fetch();
 
     if (!$user || !(int) $user['is_active'] || !password_verify($password, $user['password_hash'])) {
-        return false;
+        return 'fail';
     }
 
-    session_regenerate_id(true);
-    $_SESSION['admin_id']       = (int) $user['id'];
-    $_SESSION['admin_username'] = $user['username'];
-    $_SESSION['admin_role']     = $user['role'] ?? 'admin';
+    if (!empty($user['totp_enabled'])) {
+        $_SESSION['_2fa_pending'] = (int) $user['id'];
+        return '2fa';
+    }
 
-    return true;
+    completeAdminLogin((int) $user['id'], $user['username'], $user['role'] ?? 'admin');
+    return 'ok';
+}
+
+function attemptLogin(string $username, string $password): bool
+{
+    return attemptLoginStep($username, $password) === 'ok';
+}
+
+/**
+ * Finalise the admin session (used after password and, where applicable, 2FA).
+ */
+function completeAdminLogin(int $id, string $username, string $role): void
+{
+    session_regenerate_id(true);
+    unset($_SESSION['_2fa_pending']);
+    $_SESSION['admin_id']       = $id;
+    $_SESSION['admin_username'] = $username;
+    $_SESSION['admin_role']     = $role;
 }
 
 function attemptTenantLogin(string $email, string $password): bool

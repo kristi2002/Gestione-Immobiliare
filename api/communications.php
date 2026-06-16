@@ -46,9 +46,20 @@ try {
 
 function listSummary(PDO $db): void
 {
+    $pagination = apiGetPagination();
     $search = trim($_GET['search'] ?? '');
 
-    $sql = "SELECT c.id, c.name, c.surname, c.email, c.phone,
+    $where = "WHERE c.status = 'active'";
+    $params = [];
+
+    if ($search !== '') {
+        $where .= ' AND (c.name LIKE :search OR c.surname LIKE :search OR c.email LIKE :search)';
+        $params['search'] = '%' . $search . '%';
+    }
+
+    $countSql = "SELECT COUNT(*) FROM clients c $where";
+
+    $dataSql = "SELECT c.id, c.name, c.surname, c.email, c.phone,
                    COUNT(cm.id) AS message_count,
                    MAX(cm.created_at) AS last_message_at,
                    (SELECT cm2.body FROM communications cm2
@@ -59,22 +70,12 @@ function listSummary(PDO $db): void
                     ORDER BY cm2.created_at DESC LIMIT 1) AS last_message_direction
             FROM clients c
             LEFT JOIN communications cm ON cm.client_id = c.id
-            WHERE c.status = 'active'";
+            $where
+            GROUP BY c.id
+            ORDER BY last_message_at DESC, c.surname ASC, c.name ASC";
 
-    $params = [];
-
-    if ($search !== '') {
-        $sql .= " AND (c.name LIKE :search OR c.surname LIKE :search OR c.email LIKE :search)";
-        $params['search'] = '%' . $search . '%';
-    }
-
-    $sql .= " GROUP BY c.id
-              ORDER BY last_message_at DESC, c.surname ASC, c.name ASC";
-
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-
-    apiSuccess($stmt->fetchAll());
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function listThread(PDO $db, int $clientId): void

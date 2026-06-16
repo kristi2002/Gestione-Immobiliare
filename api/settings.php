@@ -6,19 +6,31 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/../config/totp.php';
 
 apiHandleOptions();
 
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];
+    $action = trim($_GET['action'] ?? '');
 
-    if ($method === 'GET') {
+    if ($action === '2fa_setup' && $method === 'GET') {
+        twoFaSetup($db);
+    } elseif ($action === '2fa_enable' && $method === 'POST') {
+        requireWriteAccess();
+        twoFaEnable($db);
+    } elseif ($action === '2fa_disable' && $method === 'POST') {
+        requireWriteAccess();
+        twoFaDisable($db);
+    } elseif ($method === 'GET') {
         if (isset($_GET['public'])) {
             apiSuccess(getPublicBranding());
         }
         requireRole('super_admin', 'admin');
-        apiSuccess(publicSettingsPayload());
+        $payload = publicSettingsPayload();
+        $payload['twofa'] = twoFaStatus($db);
+        apiSuccess($payload);
     } elseif ($method === 'PUT') {
         requireRole('super_admin', 'admin');
         requireWriteAccess();
@@ -32,6 +44,79 @@ try {
     }
 } catch (PDOException $e) {
     apiError('Errore database.', 500);
+}
+
+// ---------------------------------------------------------------------------
+// 2FA (acts on the current logged-in admin)
+// ---------------------------------------------------------------------------
+
+function twoFaSetup(PDO $db): void
+{
+    $secret   = generateTotpSecret();
+    $username = getCurrentUsername();
+    $issuer   = getSetting('agency_name', 'Gestionale Immobiliare');
+    $uri      = generateQrCodeUrl($secret, $username, $issuer);
+
+    apiSuccess([
+        'secret'     => $secret,
+        'otpauth'    => $uri,
+        'qr_image'   => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . rawurlencode($uri),
+    ]);
+}
+
+function twoFaEnable(PDO $db): void
+{
+    $data   = apiGetJsonBody();
+    $secret = trim($data['secret'] ?? '');
+    $code   = trim($data['code'] ?? '');
+
+    if ($secret === '' || $code === '') {
+        apiError('Segreto e codice obbligatori.');
+    }
+    if (!verifyTotpCode($secret, $code)) {
+        apiError('Codice non valido. Riprova.');
+    }
+
+    $codes  = generateBackupCodes();
+    $hashed = array_map('hashBackupCode', $codes);
+
+    $stmt = $db->prepare(
+        'UPDATE admin_users SET totp_secret = :secret, totp_enabled = 1, totp_backup_codes = :codes WHERE id = :id'
+    );
+    $stmt->execute([
+        'secret' => $secret,
+        'codes'  => json_encode($hashed),
+        'id'     => getCurrentAdminId(),
+    ]);
+
+    apiSuccess(['enabled' => true, 'backup_codes' => $codes]);
+}
+
+function twoFaDisable(PDO $db): void
+{
+    $data     = apiGetJsonBody();
+    $password = $data['password'] ?? '';
+
+    $stmt = $db->prepare('SELECT password_hash FROM admin_users WHERE id = :id');
+    $stmt->execute(['id' => getCurrentAdminId()]);
+    $row = $stmt->fetch();
+
+    if (!$row || !password_verify($password, $row['password_hash'])) {
+        apiError('Password non corretta.');
+    }
+
+    $db->prepare(
+        'UPDATE admin_users SET totp_secret = NULL, totp_enabled = 0, totp_backup_codes = NULL WHERE id = :id'
+    )->execute(['id' => getCurrentAdminId()]);
+
+    apiSuccess(['enabled' => false]);
+}
+
+function twoFaStatus(PDO $db): array
+{
+    $stmt = $db->prepare('SELECT totp_enabled FROM admin_users WHERE id = :id');
+    $stmt->execute(['id' => getCurrentAdminId()]);
+    return ['enabled' => (bool) ($stmt->fetchColumn())];
 }
 
 function updateSettings(): void

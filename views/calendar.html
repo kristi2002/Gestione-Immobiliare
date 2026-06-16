@@ -1,0 +1,33 @@
+<div class="calendar-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Calendario</h2>
+            <p>Visualizza i promemoria del mese. Clicca un giorno per i dettagli.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost" id="cal-prev" title="Mese precedente">‹</button>
+            <span class="cal-title" id="cal-title">—</span>
+            <button class="btn btn--ghost" id="cal-next" title="Mese successivo">›</button>
+            <button class="btn btn--ghost" id="cal-today">Oggi</button>
+        </div>
+    </div>
+
+    <div id="calendar-alert" class="alert" style="display:none;"></div>
+
+    <div class="cal-layout">
+        <div class="cal-main">
+            <div class="cal-weekdays">
+                <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+            </div>
+            <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <aside class="cal-side" id="cal-side">
+            <h3 class="cal-side__title" id="cal-side-title">Seleziona un giorno</h3>
+            <div id="cal-side-events" class="cal-side__events">
+                <p class="text-muted">Clicca su un giorno del calendario per vedere i promemoria.</p>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script src="assets/js/calendar.js"></script>

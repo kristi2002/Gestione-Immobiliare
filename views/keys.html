@@ -1,0 +1,92 @@
+<div class="keys-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Gestione chiavi</h2>
+            <p>Traccia chi ha le chiavi di ogni immobile.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-key">+ Registra chiavi</button>
+        </div>
+    </div>
+
+    <div id="keys-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="key-search" class="form-input" placeholder="Cerca indirizzo o detentore…" autocomplete="off">
+        </div>
+        <select id="key-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="out">In possesso</option>
+            <option value="in_office">In ufficio</option>
+            <option value="lost">Smarrite</option>
+        </select>
+    </div>
+
+    <div id="keys-grid" class="entity-grid">
+        <div class="entity-loading">Caricamento…</div>
+    </div>
+    <div id="keys-pagination" class="pagination-container"></div>
+</div>
+
+<div class="modal-overlay" id="key-modal" hidden>
+    <div class="modal modal--md" role="dialog">
+        <div class="modal-header">
+            <h3 id="key-modal-title">Registra chiavi</h3>
+            <button class="modal-close" id="key-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="key-form" class="modal-body">
+            <input type="hidden" id="key-id">
+            <div class="form-group">
+                <label for="key-property">Immobile <span class="required">*</span></label>
+                <select id="key-property" class="form-select" required></select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="key-holder">Agente</label>
+                    <select id="key-holder" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="key-holder-name">Altro detentore</label>
+                    <input type="text" id="key-holder-name" class="form-input" placeholder="Se non è un agente">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="key-status">Stato</label>
+                    <select id="key-status" class="form-select">
+                        <option value="in_office">In ufficio</option>
+                        <option value="out">In possesso</option>
+                        <option value="lost">Smarrite</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="key-location">Ubicazione</label>
+                    <input type="text" id="key-location" class="form-input" placeholder="Cassetta, cassetto ufficio…">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="key-handed">Consegnate il</label>
+                    <input type="date" id="key-handed" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="key-returned">Restituite il</label>
+                    <input type="date" id="key-returned" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="key-notes">Note</label>
+                <textarea id="key-notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="key-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/keys.js"></script>

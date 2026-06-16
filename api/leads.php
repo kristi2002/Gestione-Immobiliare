@@ -1,0 +1,370 @@
+<?php
+/**
+ * Leads (Potenziali clienti) CRUD API.
+ *
+ * GET    /api/leads.php                       — list (status, interest_type, assigned_to, search)
+ * GET    /api/leads.php?id={id}               — single lead
+ * GET    /api/leads.php?action=match&lead_id= — matching property IDs
+ * POST   /api/leads.php                       — create
+ * POST   /api/leads.php?action=convert&id=    — convert to client
+ * PUT    /api/leads.php?id={id}               — update
+ * DELETE /api/leads.php?id={id}               — archive (status = lost)
+ */
+
+require_once __DIR__ . '/../config/api_bootstrap.php';
+
+apiHandleOptions();
+
+const LEAD_STATUSES   = ['new', 'contacted', 'interested', 'negotiating', 'converted', 'lost'];
+const LEAD_INTERESTS  = ['affitto', 'acquisto', 'entrambi'];
+const LEAD_SOURCES    = ['telefono', 'email', 'web', 'passaparola', 'social', 'altro'];
+const LEAD_PROP_TYPES = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
+
+try {
+    $db     = getDB();
+    $method = $_SERVER['REQUEST_METHOD'];
+    $action = trim($_GET['action'] ?? '');
+    $id     = isset($_GET['id']) ? (int) $_GET['id'] : null;
+
+    switch ($method) {
+        case 'GET':
+            if ($action === 'match') {
+                matchProperties($db, (int) ($_GET['lead_id'] ?? 0));
+            } elseif ($action === 'agents') {
+                $rows = $db->query("SELECT id, username FROM admin_users WHERE is_active = 1 AND role IN ('agent','admin','super_admin') ORDER BY username")->fetchAll();
+                apiSuccess($rows);
+            } elseif ($id) {
+                getLead($db, $id);
+            } else {
+                listLeads($db);
+            }
+            break;
+        case 'POST':
+            $postBody = apiGetJsonBody();
+            if ($action === 'convert') {
+                if (!$id) apiError('ID lead mancante.');
+                convertLead($db, $id);
+            } elseif ($action === 'bulk' || ($postBody['action'] ?? '') === 'bulk') {
+                bulkLeads($db);
+            } else {
+                createLead($db);
+            }
+            break;
+        case 'PUT':
+            if (!$id) apiError('ID lead mancante.');
+            updateLead($db, $id);
+            break;
+        case 'DELETE':
+            if (!$id) apiError('ID lead mancante.');
+            archiveLead($db, $id);
+            break;
+        default:
+            apiError('Metodo non consentito.', 405);
+    }
+} catch (PDOException $e) {
+    apiError('Errore database.', 500);
+}
+
+// ---------------------------------------------------------------------------
+// Handlers
+// ---------------------------------------------------------------------------
+
+function listLeads(PDO $db): void
+{
+    $pagination = apiGetPagination();
+    $search   = trim($_GET['search'] ?? '');
+    $status   = trim($_GET['status'] ?? '');
+    $interest = trim($_GET['interest_type'] ?? '');
+    $assigned = isset($_GET['assigned_to']) ? (int) $_GET['assigned_to'] : null;
+
+    $where = 'WHERE 1=1';
+    $params = [];
+
+    if ($search !== '') {
+        $where .= " AND (l.name LIKE :search OR l.surname LIKE :search
+                      OR l.phone LIKE :search OR l.email LIKE :search)";
+        $params['search'] = '%' . $search . '%';
+    }
+    if ($status !== '' && in_array($status, LEAD_STATUSES, true)) {
+        $where .= ' AND l.status = :status';
+        $params['status'] = $status;
+    }
+    if ($interest !== '' && in_array($interest, LEAD_INTERESTS, true)) {
+        $where .= ' AND l.interest_type = :interest';
+        $params['interest'] = $interest;
+    }
+    if ($assigned) {
+        $where .= ' AND l.assigned_to = :assigned';
+        $params['assigned'] = $assigned;
+    }
+
+    $countSql = "SELECT COUNT(*) FROM leads l $where";
+
+    $dataSql = "SELECT l.*, u.username AS agent_name
+            FROM leads l
+            LEFT JOIN admin_users u ON u.id = l.assigned_to
+            $where
+            ORDER BY l.created_at DESC";
+
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
+}
+
+function getLead(PDO $db, int $id): void
+{
+    $stmt = $db->prepare(
+        "SELECT l.*, u.username AS agent_name
+         FROM leads l
+         LEFT JOIN admin_users u ON u.id = l.assigned_to
+         WHERE l.id = :id"
+    );
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        apiError('Lead non trovato.', 404);
+    }
+    apiSuccess($row);
+}
+
+function createLead(PDO $db): void
+{
+    $validated = validateLeadInput(apiGetJsonBody());
+    $stmt = $db->prepare(
+        "INSERT INTO leads
+            (name, surname, phone, email, interest_type, budget_min, budget_max,
+             preferred_city, preferred_type, min_rooms, min_sqm, status, source,
+             assigned_to, notes)
+         VALUES
+            (:name, :surname, :phone, :email, :interest_type, :budget_min, :budget_max,
+             :preferred_city, :preferred_type, :min_rooms, :min_sqm, :status, :source,
+             :assigned_to, :notes)"
+    );
+    $stmt->execute($validated);
+    getLead($db, (int) $db->lastInsertId());
+}
+
+function updateLead(PDO $db, int $id): void
+{
+    if (!leadExists($db, $id)) {
+        apiError('Lead non trovato.', 404);
+    }
+    $validated = validateLeadInput(apiGetJsonBody());
+    $stmt = $db->prepare(
+        "UPDATE leads SET
+            name = :name, surname = :surname, phone = :phone, email = :email,
+            interest_type = :interest_type, budget_min = :budget_min, budget_max = :budget_max,
+            preferred_city = :preferred_city, preferred_type = :preferred_type,
+            min_rooms = :min_rooms, min_sqm = :min_sqm, status = :status, source = :source,
+            assigned_to = :assigned_to, notes = :notes
+         WHERE id = :id"
+    );
+    $stmt->execute(array_merge($validated, ['id' => $id]));
+    getLead($db, $id);
+}
+
+function archiveLead(PDO $db, int $id): void
+{
+    if (!leadExists($db, $id)) {
+        apiError('Lead non trovato.', 404);
+    }
+    $stmt = $db->prepare("UPDATE leads SET status = 'lost' WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    apiSuccess(['id' => $id, 'message' => 'Lead archiviato.']);
+}
+
+function bulkLeads(PDO $db): void
+{
+    $data = apiGetJsonBody();
+    $operation = trim($data['action'] ?? '');
+    if ($operation === 'bulk') {
+        $operation = trim($data['operation'] ?? '');
+    }
+    $ids = normalizeLeadBulkIds($data['ids'] ?? []);
+
+    if ($operation === 'archive') {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("UPDATE leads SET status = 'lost' WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        apiSuccess(['updated' => $stmt->rowCount(), 'action' => 'archive']);
+    } elseif ($operation === 'assign') {
+        $assignedTo = !empty($data['assigned_to']) ? (int) $data['assigned_to'] : 0;
+        if ($assignedTo <= 0) {
+            apiError('assigned_to obbligatorio per l\'assegnazione.');
+        }
+        $check = $db->prepare(
+            "SELECT id FROM admin_users WHERE id = :id AND is_active = 1
+             AND role IN ('agent','admin','super_admin')"
+        );
+        $check->execute(['id' => $assignedTo]);
+        if (!$check->fetch()) {
+            apiError('Agente non trovato o non attivo.');
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("UPDATE leads SET assigned_to = ? WHERE id IN ($placeholders)");
+        $stmt->execute(array_merge([$assignedTo], $ids));
+        apiSuccess(['updated' => $stmt->rowCount(), 'action' => 'assign', 'assigned_to' => $assignedTo]);
+    } else {
+        apiError('Azione bulk non valida. Usa: archive, assign.');
+    }
+}
+
+function normalizeLeadBulkIds(array $ids): array
+{
+    if (!is_array($ids) || empty($ids)) {
+        apiError('Nessun ID selezionato.');
+    }
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($id) => $id > 0)));
+    if (empty($ids)) {
+        apiError('ID non validi.');
+    }
+    return $ids;
+}
+
+function convertLead(PDO $db, int $id): void
+{
+    $stmt = $db->prepare("SELECT * FROM leads WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    $lead = $stmt->fetch();
+    if (!$lead) {
+        apiError('Lead non trovato.', 404);
+    }
+
+    $insert = $db->prepare(
+        "INSERT INTO clients (name, surname, phone, email, internal_notes, status)
+         VALUES (:name, :surname, :phone, :email, :notes, 'active')"
+    );
+    $insert->execute([
+        'name'    => $lead['name'],
+        'surname' => $lead['surname'],
+        'phone'   => $lead['phone'],
+        'email'   => $lead['email'],
+        'notes'   => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
+    ]);
+    $clientId = (int) $db->lastInsertId();
+
+    $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
+
+    apiSuccess(['lead_id' => $id, 'client_id' => $clientId, 'message' => 'Lead convertito in proprietario.']);
+}
+
+function matchProperties(PDO $db, int $leadId): void
+{
+    if ($leadId <= 0) {
+        apiError('lead_id mancante.');
+    }
+    $stmt = $db->prepare("SELECT * FROM leads WHERE id = :id");
+    $stmt->execute(['id' => $leadId]);
+    $lead = $stmt->fetch();
+    if (!$lead) {
+        apiError('Lead non trovato.', 404);
+    }
+
+    $sql = "SELECT p.id, p.address, p.city, p.price, p.price_type, p.rooms, p.sqm, p.status
+            FROM properties p
+            WHERE p.status NOT IN ('archived', 'sold')";
+    $params = [];
+
+    // interest_type -> price_type
+    if ($lead['interest_type'] === 'affitto') {
+        $sql .= " AND p.price_type = 'affitto'";
+    } elseif ($lead['interest_type'] === 'acquisto') {
+        $sql .= " AND p.price_type = 'vendita'";
+    }
+
+    if ($lead['budget_min'] !== null) {
+        $sql .= " AND (p.price IS NULL OR p.price >= :bmin)";
+        $params['bmin'] = $lead['budget_min'];
+    }
+    if ($lead['budget_max'] !== null) {
+        $sql .= " AND (p.price IS NULL OR p.price <= :bmax)";
+        $params['bmax'] = $lead['budget_max'];
+    }
+    if ($lead['preferred_city']) {
+        $sql .= " AND p.city LIKE :city";
+        $params['city'] = '%' . $lead['preferred_city'] . '%';
+    }
+    if ($lead['min_rooms'] !== null) {
+        $sql .= " AND (p.rooms IS NULL OR p.rooms >= :mrooms)";
+        $params['mrooms'] = $lead['min_rooms'];
+    }
+    if ($lead['min_sqm'] !== null) {
+        $sql .= " AND (p.sqm IS NULL OR p.sqm >= :msqm)";
+        $params['msqm'] = $lead['min_sqm'];
+    }
+
+    $sql .= " ORDER BY p.city ASC, p.address ASC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $matches = $stmt->fetchAll();
+
+    // Persist matches for reference.
+    $db->prepare("DELETE FROM lead_property_matches WHERE lead_id = :id")->execute(['id' => $leadId]);
+    if ($matches) {
+        $ins = $db->prepare("INSERT IGNORE INTO lead_property_matches (lead_id, property_id) VALUES (:lid, :pid)");
+        foreach ($matches as $m) {
+            $ins->execute(['lid' => $leadId, 'pid' => $m['id']]);
+        }
+    }
+
+    apiSuccess([
+        'lead_id'      => $leadId,
+        'property_ids' => array_map(fn($m) => (int) $m['id'], $matches),
+        'properties'   => $matches,
+    ]);
+}
+
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
+function validateLeadInput(array $data): array
+{
+    $name     = trim($data['name'] ?? '');
+    $surname  = trim($data['surname'] ?? '');
+    $phone    = trim($data['phone'] ?? '') ?: null;
+    $email    = trim($data['email'] ?? '') ?: null;
+    $interest = trim($data['interest_type'] ?? 'affitto');
+    $bmin     = isset($data['budget_min']) && $data['budget_min'] !== '' ? (float) $data['budget_min'] : null;
+    $bmax     = isset($data['budget_max']) && $data['budget_max'] !== '' ? (float) $data['budget_max'] : null;
+    $city     = trim($data['preferred_city'] ?? '') ?: null;
+    $ptype    = trim($data['preferred_type'] ?? '') ?: null;
+    $minRooms = isset($data['min_rooms']) && $data['min_rooms'] !== '' ? (int) $data['min_rooms'] : null;
+    $minSqm   = isset($data['min_sqm']) && $data['min_sqm'] !== '' ? (float) $data['min_sqm'] : null;
+    $status   = trim($data['status'] ?? 'new');
+    $source   = trim($data['source'] ?? 'altro');
+    $assigned = !empty($data['assigned_to']) ? (int) $data['assigned_to'] : null;
+    $notes    = trim($data['notes'] ?? '') ?: null;
+
+    if ($name === '')    apiError('Il nome è obbligatorio.');
+    if ($surname === '') apiError('Il cognome è obbligatorio.');
+    if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) apiError('Email non valida.');
+    if (!in_array($interest, LEAD_INTERESTS, true)) apiError('Tipo interesse non valido.');
+    if (!in_array($status, LEAD_STATUSES, true)) apiError('Stato non valido.');
+    if (!in_array($source, LEAD_SOURCES, true)) apiError('Fonte non valida.');
+    if ($ptype !== null && !in_array($ptype, LEAD_PROP_TYPES, true)) apiError('Tipo immobile non valido.');
+
+    return [
+        'name'           => $name,
+        'surname'        => $surname,
+        'phone'          => $phone,
+        'email'          => $email,
+        'interest_type'  => $interest,
+        'budget_min'     => $bmin,
+        'budget_max'     => $bmax,
+        'preferred_city' => $city,
+        'preferred_type' => $ptype,
+        'min_rooms'      => $minRooms,
+        'min_sqm'        => $minSqm,
+        'status'         => $status,
+        'source'         => $source,
+        'assigned_to'    => $assigned,
+        'notes'          => $notes,
+    ];
+}
+
+function leadExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM leads WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
+}

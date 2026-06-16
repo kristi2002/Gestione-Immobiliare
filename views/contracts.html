@@ -1,0 +1,133 @@
+<div class="contracts-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Contratti</h2>
+            <p>Gestisci il ciclo di vita dei contratti: bozza, invio, firma, scadenza.</p>
+        </div>
+        <button class="btn btn--primary" id="btn-new-contract">
+            + Nuovo Contratto
+        </button>
+    </div>
+
+    <div id="contracts-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <select id="contract-property-filter" class="form-select">
+            <option value="">Tutti gli immobili</option>
+        </select>
+        <select id="contract-type-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <option value="locazione">Locazione</option>
+            <option value="compravendita">Compravendita</option>
+            <option value="preliminare">Preliminare</option>
+            <option value="mandato">Mandato</option>
+            <option value="altro">Altro</option>
+        </select>
+        <select id="contract-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="draft">Bozza</option>
+            <option value="sent">Inviato</option>
+            <option value="signed">Firmato</option>
+            <option value="expired">Scaduto</option>
+            <option value="cancelled">Annullato</option>
+        </select>
+    </div>
+
+    <div id="contracts-grid" class="entity-grid">
+        <div class="entity-loading">Caricamento…</div>
+    </div>
+    <div id="contracts-pagination" class="pagination-container"></div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="contract-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="contract-modal-title">
+        <div class="modal-header">
+            <h3 id="contract-modal-title">Nuovo Contratto</h3>
+            <button class="modal-close" id="contract-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="contract-form" class="modal-body">
+            <input type="hidden" id="contract-id">
+
+            <div class="form-group">
+                <label for="contract-title">Titolo <span class="required">*</span></label>
+                <input type="text" id="contract-title" class="form-input" required maxlength="255">
+            </div>
+
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="contract-type">Tipo</label>
+                    <select id="contract-type" class="form-select">
+                        <option value="locazione">Locazione</option>
+                        <option value="compravendita">Compravendita</option>
+                        <option value="preliminare">Preliminare</option>
+                        <option value="mandato">Mandato</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="contract-status">Stato</label>
+                    <select id="contract-status" class="form-select">
+                        <option value="draft">Bozza</option>
+                        <option value="sent">Inviato</option>
+                        <option value="signed">Firmato</option>
+                        <option value="expired">Scaduto</option>
+                        <option value="cancelled">Annullato</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="contract-property">Immobile <span class="required">*</span></label>
+                    <select id="contract-property" class="form-select" required>
+                        <option value="">— Seleziona immobile —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="contract-tenant">Inquilino</label>
+                    <select id="contract-tenant" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="contract-client">Proprietario</label>
+                    <select id="contract-client" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row form-row--4">
+                <div class="form-group">
+                    <label for="contract-start">Inizio</label>
+                    <input type="date" id="contract-start" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="contract-end">Fine</label>
+                    <input type="date" id="contract-end" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="contract-rent">Canone (€)</label>
+                    <input type="number" id="contract-rent" class="form-input" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="contract-deposit">Deposito (€)</label>
+                    <input type="number" id="contract-deposit" class="form-input" min="0" step="0.01">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="contract-notes">Note</label>
+                <textarea id="contract-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="contract-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="contract-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/contracts.js"></script>

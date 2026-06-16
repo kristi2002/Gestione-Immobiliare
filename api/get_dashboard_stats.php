@@ -58,15 +58,48 @@ try {
     $upcomingStmt->execute();
     $upcomingReminders = $upcomingStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $soldProperties = (int) $db->query(
+        "SELECT COUNT(*) FROM properties WHERE status = 'sold'"
+    )->fetchColumn();
+
+    $totalLeads = (int) $db->query(
+        "SELECT COUNT(*) FROM leads WHERE status NOT IN ('lost','archived')"
+    )->fetchColumn();
+
+    // Monthly revenue: last 6 complete months + current month
+    $monthlyStmt = $db->prepare(
+        "SELECT DATE_FORMAT(due_date, '%Y-%m') AS ym,
+                COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END), 0) AS revenue,
+                COALESCE(SUM(amount), 0) AS expected
+         FROM payments
+         WHERE due_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
+           AND due_date <= LAST_DAY(CURDATE())
+         GROUP BY ym
+         ORDER BY ym ASC"
+    );
+    $monthlyStmt->execute();
+    $monthlyRevenue = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Pending payments due this month
+    $pendingThisMonth = (float) $db->query(
+        "SELECT COALESCE(SUM(amount),0) FROM payments
+         WHERE status IN('pending','late')
+           AND due_date BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())"
+    )->fetchColumn();
+
     apiSuccess([
         'total_clients'        => $totalClients,
         'total_properties'     => $totalProperties,
         'available_properties' => $availableProperties,
         'rented_properties'    => $rentedProperties,
+        'sold_properties'      => $soldProperties,
         'active_tenants'       => $activeTenants,
+        'total_leads'          => $totalLeads,
         'expiring_reminders'   => $expiringReminders,
         'overdue_reminders'    => $overdueReminders,
         'upcoming_reminders'   => $upcomingReminders,
+        'monthly_revenue'      => $monthlyRevenue,
+        'pending_this_month'   => $pendingThisMonth,
     ]);
 } catch (PDOException $e) {
     apiError('Unable to fetch dashboard statistics.', 500);

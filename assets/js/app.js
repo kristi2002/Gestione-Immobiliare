@@ -5,9 +5,19 @@
 (function () {
     'use strict';
 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
     const originalFetch = window.fetch.bind(window);
-    window.fetch = async function (url, options) {
-        const response = await originalFetch(url, options);
+    window.fetch = async function (url, options = {}) {
+        const opts = { ...options };
+        const method = (opts.method || 'GET').toUpperCase();
+        if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            opts.headers = new Headers(opts.headers || {});
+            if (!opts.headers.has('X-CSRF-Token')) {
+                opts.headers.set('X-CSRF-Token', csrfToken);
+            }
+        }
+        const response = await originalFetch(url, opts);
         if (response.status === 401 && !String(url).includes('login.php')) {
             window.location.href = 'login.php';
             throw new Error('Sessione scaduta');
@@ -20,17 +30,30 @@
         titleEl:    null,
         currentView: null,
         viewParams: {},
+        _viewToken: 0,
 
         /** Human-readable titles for each view */
         viewTitles: {
             dashboard:      'Dashboard',
             clients:        'Proprietari',
+            leads:          'Leads',
             properties:     'Immobili',
+            contracts:      'Contratti',
             documents:      'Documenti',
+            payments:       'Pagamenti',
+            expenses:       'Spese',
+            invoices:       'Fatture',
             communications: 'Comunicazioni',
+            appointments:   'Visite',
+            calendar:       'Calendario',
+            map:            'Mappa',
             reminders:      'Promemoria',
-            social:         'Social Media',
             tenants:        'Inquilini',
+            keys:           'Chiavi',
+            agents:         'Portafoglio agenti',
+            reports:        'Report',
+            social:         'Social Media',
+            activity_log:   'Log Attività',
             settings:       'Impostazioni',
         },
 
@@ -39,10 +62,15 @@
             this.titleEl   = document.getElementById('page-title');
 
             this.bindNavigation();
+            this.bindContentNavigation();
             this.bindSidebarToggle();
 
-            // Load dashboard on startup
-            this.loadView('view.php?name=dashboard', 'dashboard');
+            const startView = new URLSearchParams(window.location.search).get('view');
+            if (startView && this.viewTitles[startView]) {
+                this.navigateTo(startView);
+            } else {
+                this.loadView('view.php?name=dashboard', 'dashboard');
+            }
         },
 
         /** Intercept sidebar link clicks and load views via fetch */
@@ -60,6 +88,22 @@
                     this.loadView(href, view);
                     this.closeSidebar();
                 });
+            });
+        },
+
+        /** Intercept in-page links (dashboard quick actions, "Vedi tutti", etc.) */
+        bindContentNavigation() {
+            this.contentEl.addEventListener('click', (e) => {
+                const link = e.target.closest('a[data-view]');
+                if (!link || link.classList.contains('nav-link')) return;
+
+                e.preventDefault();
+                const view = link.dataset.view;
+                if (!view || view === this.currentView) return;
+
+                const navLink = document.querySelector(`.nav-link[data-view="${view}"]`);
+                if (navLink) this.setActiveNav(navLink);
+                this.loadView(link.getAttribute('href'), view);
             });
         },
 
@@ -104,6 +148,7 @@
          * Executes any <script> tags found in the loaded HTML.
          */
         async loadView(url, viewKey) {
+            const token = ++this._viewToken;
             this.currentView = viewKey;
             this.showLoading();
 
@@ -112,7 +157,9 @@
             }
 
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    headers: { 'X-App-Partial': '1' },
+                });
 
                 if (response.status === 401) {
                     window.location.href = 'login.php';
@@ -124,8 +171,12 @@
                 }
 
                 const html = await response.text();
+                if (token !== this._viewToken) return;
+
                 this.contentEl.innerHTML = html;
-                this.executeScripts(this.contentEl);
+                if (token !== this._viewToken) return;
+                this.injectStyles(this.contentEl);
+                await this.executeScripts(this.contentEl);
 
             } catch (err) {
                 this.contentEl.innerHTML = `
@@ -144,29 +195,62 @@
                 </div>`;
         },
 
-        /** Re-run inline scripts injected via innerHTML */
-        executeScripts(container) {
-            container.querySelectorAll('script').forEach(oldScript => {
-                const newScript = document.createElement('script');
-                if (oldScript.src) {
-                    newScript.src = oldScript.src;
-                } else {
-                    newScript.textContent = oldScript.textContent;
+        /** Move stylesheet links from partials into <head> (innerHTML does not load them). */
+        injectStyles(container) {
+            container.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href) return;
+
+                const already = [...document.querySelectorAll('link[rel="stylesheet"]')]
+                    .some(l => l.getAttribute('href') === href);
+
+                if (!already) {
+                    const el = document.createElement('link');
+                    el.rel = 'stylesheet';
+                    el.href = href;
+                    if (link.crossOrigin) el.crossOrigin = link.crossOrigin;
+                    document.head.appendChild(el);
                 }
-                oldScript.parentNode.replaceChild(newScript, oldScript);
+                link.remove();
             });
+        },
+
+        /** Load view scripts in order (external scripts must finish before the next runs). */
+        async executeScripts(container) {
+            const scripts = [...container.querySelectorAll('script')];
+
+            for (const oldScript of scripts) {
+                await new Promise((resolve, reject) => {
+                    const newScript = document.createElement('script');
+
+                    if (oldScript.src) {
+                        const src = oldScript.getAttribute('src');
+                        const bust = src.includes('?') ? '&' : '?';
+                        newScript.onload = () => resolve();
+                        newScript.onerror = () => reject(new Error(`Impossibile caricare: ${src}`));
+                        newScript.src = `${src}${bust}t=${Date.now()}`;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                        resolve();
+                    }
+                });
+            }
         },
 
         /** Navigate to a view programmatically (e.g. from client profile) */
         navigateTo(viewKey, params = {}) {
             this.viewParams = params;
             const link = document.querySelector(`.nav-link[data-view="${viewKey}"]`);
-            if (!link) return;
+            const href = link
+                ? link.getAttribute('href')
+                : `view.php?name=${encodeURIComponent(viewKey)}`;
 
-            if (viewKey !== this.currentView) {
+            if (link && viewKey !== this.currentView) {
                 this.setActiveNav(link);
             }
-            this.loadView(link.getAttribute('href'), viewKey);
+            this.loadView(href, viewKey);
         },
     };
 

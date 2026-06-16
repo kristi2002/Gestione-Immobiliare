@@ -54,49 +54,65 @@ try {
 
 function listReminders(PDO $db): void
 {
+    $pagination = apiGetPagination();
     $search   = trim($_GET['search'] ?? '');
     $status   = trim($_GET['status'] ?? '');
     $frequency = trim($_GET['frequency'] ?? '');
     $dueSoon  = isset($_GET['due_soon']) ? (int) $_GET['due_soon'] : null;
+    $from     = trim($_GET['from'] ?? '');
+    $to       = trim($_GET['to'] ?? '');
 
-    $sql = "SELECT r.*, c.name AS client_name, c.surname AS client_surname,
-                   p.address AS property_address, p.city AS property_city
-            FROM reminders r
-            LEFT JOIN clients c ON c.id = r.client_id
-            LEFT JOIN properties p ON p.id = r.property_id
-            WHERE 1=1";
-
+    $where = 'WHERE 1=1';
     $params = [];
 
     if ($search !== '') {
-        $sql .= " AND (r.title LIKE :search OR r.description LIKE :search
+        $where .= " AND (r.title LIKE :search OR r.description LIKE :search
                       OR c.name LIKE :search OR c.surname LIKE :search
                       OR p.address LIKE :search)";
         $params['search'] = '%' . $search . '%';
     }
 
     if ($status !== '' && in_array($status, REMINDER_STATUSES, true)) {
-        $sql .= " AND r.status = :status";
+        $where .= ' AND r.status = :status';
         $params['status'] = $status;
     }
 
     if ($frequency !== '' && in_array($frequency, REMINDER_FREQUENCIES, true)) {
-        $sql .= " AND r.frequency = :frequency";
+        $where .= ' AND r.frequency = :frequency';
         $params['frequency'] = $frequency;
     }
 
     if ($dueSoon !== null && $dueSoon > 0) {
-        $sql .= " AND r.status = 'pending'
+        $where .= " AND r.status = 'pending'
                   AND r.reminder_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL :days DAY)";
         $params['days'] = $dueSoon;
     }
 
-    $sql .= " ORDER BY r.reminder_date ASC";
+    if ($from !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
+        $where .= ' AND r.reminder_date >= :from';
+        $params['from'] = $from . ' 00:00:00';
+    }
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+    if ($to !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
+        $where .= ' AND r.reminder_date <= :to';
+        $params['to'] = $to . ' 23:59:59';
+    }
 
-    apiSuccess($stmt->fetchAll());
+    $countSql = "SELECT COUNT(*) FROM reminders r
+            LEFT JOIN clients c ON c.id = r.client_id
+            LEFT JOIN properties p ON p.id = r.property_id
+            $where";
+
+    $dataSql = "SELECT r.*, c.name AS client_name, c.surname AS client_surname,
+                   p.address AS property_address, p.city AS property_city
+            FROM reminders r
+            LEFT JOIN clients c ON c.id = r.client_id
+            LEFT JOIN properties p ON p.id = r.property_id
+            $where
+            ORDER BY r.reminder_date ASC";
+
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function getReminder(PDO $db, int $id): void

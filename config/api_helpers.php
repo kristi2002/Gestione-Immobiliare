@@ -21,7 +21,7 @@ function apiHeaders(): void
     }
 
     header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, X-Cron-Secret');
+    header('Access-Control-Allow-Headers: Content-Type, X-Cron-Secret, X-CSRF-Token');
 }
 
 function apiHandleOptions(): void
@@ -57,13 +57,21 @@ function apiError(string $message, int $code = 400): void
 
 function apiGetJsonBody(): array
 {
+    static $cached = null;
+
+    if ($cached !== null) {
+        return $cached;
+    }
+
     $raw = file_get_contents('php://input');
     if ($raw === false || $raw === '') {
-        return [];
+        $cached = [];
+        return $cached;
     }
 
     $data = json_decode($raw, true);
-    return is_array($data) ? $data : [];
+    $cached = is_array($data) ? $data : [];
+    return $cached;
 }
 
 function apiRequireMethod(string ...$methods): void

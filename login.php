@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/bootstrap.php';
+require_once __DIR__ . '/config/login_throttle.php';
 
 if (isLoggedIn()) {
     header('Location: index.php');
@@ -9,16 +10,30 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    if ($username === '' || $password === '') {
-        $error = 'Inserisci username e password.';
-    } elseif (attemptLogin($username, $password)) {
-        header('Location: index.php');
-        exit;
+    if (isLoginLocked()) {
+        $error = loginLockoutMessage();
     } else {
-        $error = 'Credenziali non valide.';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
+
+        if ($username === '' || $password === '') {
+            $error = 'Inserisci username e password.';
+            recordLoginAttempt(false);
+        } else {
+            $step = attemptLoginStep($username, $password);
+            if ($step === 'ok') {
+                recordLoginAttempt(true);
+                header('Location: index.php');
+                exit;
+            } elseif ($step === '2fa') {
+                recordLoginAttempt(true);
+                header('Location: login_2fa.php');
+                exit;
+            } else {
+                recordLoginAttempt(false);
+                $error = 'Credenziali non valide.';
+            }
+        }
     }
 }
 

@@ -89,6 +89,68 @@ function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): arra
     return savePdf($db, 'report', 'Scheda immobile #' . $propertyId, $lines, (int) $property['client_id'], $propertyId, null, $adminId);
 }
 
+function generateMandatoPdf(PDO $db, array $params, int $adminId): array
+{
+    $clientId   = (int) ($params['client_id'] ?? 0);
+    $propertyId = (int) ($params['property_id'] ?? 0);
+
+    $client   = $clientId ? fetchRow($db, 'clients', $clientId) : null;
+    $property = $propertyId ? fetchRow($db, 'properties', $propertyId) : null;
+
+    if (!$client || !$property) {
+        return ['success' => false, 'error' => 'Proprietario e immobile obbligatori per il mandato.'];
+    }
+
+    $agency    = getSetting('agency_name', 'Gestionale Immobiliare');
+    $agencyAddr = getSetting('agency_address', '');
+    $agencyPhone = getSetting('agency_phone', '');
+    $commission = $params['commission_pct'] ?? getSetting('default_commission_pct', '3');
+    $mandateType = ($property['price_type'] ?? 'vendita') === 'affitto' ? 'locazione' : 'vendita';
+    $price     = $property['price'] ?? '—';
+    $title     = 'Mandato di agenzia — ' . $mandateType;
+
+    $lines = [
+        strtoupper($agency),
+        $agencyAddr,
+        $agencyPhone ? 'Tel: ' . $agencyPhone : '',
+        '',
+        'MANDATO DI AGENZIA IMMOBILIARE',
+        'Oggetto: incarico di ' . $mandateType,
+        str_repeat('-', 60),
+        'Data: ' . date('d/m/Y'),
+        '',
+        'IL MANDANTE (proprietario)',
+        $client['name'] . ' ' . $client['surname'],
+        $client['email'] ?? '',
+        $client['phone'] ?? '',
+        '',
+        'L\'IMMOBILE',
+        $property['address'] . ', ' . $property['city'] . ' ' . ($property['cap'] ?? ''),
+        'Superficie: ' . ($property['sqm'] ?? '—') . ' mq',
+        'Prezzo richiesto: EUR ' . $price . ' (' . ($property['price_type'] ?? 'vendita') . ')',
+        '',
+        'L\'INCARICATO (agenzia)',
+        $agency,
+        '',
+        'CLAUSOLE',
+        '1. Il Mandante conferisce all\'Agenzia mandato esclusivo/non esclusivo di promuovere',
+        '   la ' . $mandateType . ' dell\'immobile sopra descritto.',
+        '2. Durata del mandato: 12 mesi dalla data di sottoscrizione, rinnovabile.',
+        '3. Provvigione dovuta all\'Agenzia in caso di conclusione dell\'affare: ' . $commission . '%.',
+        '4. Il Mandante dichiara di essere legittimo proprietario dell\'immobile.',
+        '5. Documentazione catastale e conformità urbanistica: da esibire su richiesta.',
+        '',
+        'Il presente mandato è redatto ai sensi della normativa vigente in materia',
+        'di intermediazione immobiliare (D.Lgs. 122/2005 e s.m.i.).',
+        '',
+        'Firma del Mandante: _________________________    Data: ___/___/______',
+        '',
+        'Firma dell\'Agenzia: _________________________    Data: ___/___/______',
+    ];
+
+    return savePdf($db, 'mandato', $title, $lines, $clientId, $propertyId, null, $adminId);
+}
+
 function savePdf(PDO $db, string $type, string $title, array $lines, ?int $clientId, ?int $propertyId, ?int $tenantId, int $adminId): array
 {
     $dir = dirname(__DIR__) . '/uploads/documents/generated';

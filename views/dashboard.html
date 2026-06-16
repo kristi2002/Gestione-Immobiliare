@@ -12,7 +12,7 @@
 
     <div id="dashboard-error" class="alert alert--error" style="display:none;"></div>
 
-    <div class="stats-grid stats-grid--6">
+    <div class="stats-grid stats-grid--8">
         <div class="stat-card">
             <div class="stat-icon stat-icon--clients">👥</div>
             <div class="stat-body">
@@ -21,7 +21,6 @@
                 <div class="stat-sub">Clienti registrati</div>
             </div>
         </div>
-
         <div class="stat-card">
             <div class="stat-icon stat-icon--properties">🏢</div>
             <div class="stat-body">
@@ -30,7 +29,6 @@
                 <div class="stat-sub">Totale in gestione</div>
             </div>
         </div>
-
         <div class="stat-card">
             <div class="stat-icon stat-icon--available">✅</div>
             <div class="stat-body">
@@ -39,7 +37,6 @@
                 <div class="stat-sub">Liberi da affittare</div>
             </div>
         </div>
-
         <div class="stat-card">
             <div class="stat-icon stat-icon--rented">🔑</div>
             <div class="stat-body">
@@ -48,7 +45,6 @@
                 <div class="stat-sub">Contratti attivi</div>
             </div>
         </div>
-
         <div class="stat-card">
             <div class="stat-icon stat-icon--tenants">🧑‍🤝‍🧑</div>
             <div class="stat-body">
@@ -57,8 +53,15 @@
                 <div class="stat-sub">Locatari attivi</div>
             </div>
         </div>
-
-        <div class="stat-card stat-card--alert" id="stat-card-overdue" style="display:none;">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed">🎯</div>
+            <div class="stat-body">
+                <div class="stat-label">Leads attivi</div>
+                <div class="stat-value loading" id="stat-leads">—</div>
+                <div class="stat-sub">Potenziali clienti</div>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-card-overdue" style="display:none;">
             <div class="stat-icon stat-icon--overdue">⚠️</div>
             <div class="stat-body">
                 <div class="stat-label">Scaduti</div>
@@ -66,13 +69,34 @@
                 <div class="stat-sub">Promemoria in ritardo</div>
             </div>
         </div>
-
         <div class="stat-card" id="stat-card-reminders">
             <div class="stat-icon stat-icon--reminders">🔔</div>
             <div class="stat-body">
                 <div class="stat-label">In scadenza</div>
                 <div class="stat-value loading" id="stat-reminders">—</div>
                 <div class="stat-sub">Prossimi 7 giorni</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics charts -->
+    <div class="dashboard-charts">
+        <div class="chart-card card">
+            <div class="chart-card__header">
+                <h3>Entrate mensili</h3>
+                <span class="text-muted" id="chart-pending-label"></span>
+            </div>
+            <div class="chart-container">
+                <canvas id="chart-revenue"></canvas>
+            </div>
+        </div>
+        <div class="chart-card card">
+            <div class="chart-card__header">
+                <h3>Stato immobili</h3>
+                <span class="text-muted">Situazione attuale</span>
+            </div>
+            <div class="chart-container chart-container--doughnut">
+                <canvas id="chart-occupancy"></canvas>
             </div>
         </div>
     </div>
@@ -101,13 +125,21 @@
                     <span class="quick-action__icon">🏢</span>
                     <span class="quick-action__label">Immobili</span>
                 </a>
+                <a href="view.php?name=leads" class="quick-action" data-view="leads">
+                    <span class="quick-action__icon">🎯</span>
+                    <span class="quick-action__label">Leads</span>
+                </a>
+                <a href="view.php?name=contracts" class="quick-action" data-view="contracts">
+                    <span class="quick-action__icon">📝</span>
+                    <span class="quick-action__label">Contratti</span>
+                </a>
+                <a href="view.php?name=payments" class="quick-action" data-view="payments">
+                    <span class="quick-action__icon">💶</span>
+                    <span class="quick-action__label">Pagamenti</span>
+                </a>
                 <a href="view.php?name=documents" class="quick-action" data-view="documents">
                     <span class="quick-action__icon">📄</span>
                     <span class="quick-action__label">Documenti</span>
-                </a>
-                <a href="view.php?name=communications" class="quick-action" data-view="communications">
-                    <span class="quick-action__icon">✉️</span>
-                    <span class="quick-action__label">Comunicazioni</span>
                 </a>
                 <a href="view.php?name=tenants" class="quick-action" data-view="tenants">
                     <span class="quick-action__icon">🔑</span>
@@ -127,19 +159,20 @@
     'use strict';
 
     const API_URL = 'api/get_dashboard_stats.php';
-
     const FREQ_LABELS = { once: 'Una volta', weekly: 'Settimanale', monthly: 'Mensile', yearly: 'Annuale' };
+    let revenueChart = null;
+    let occupancyChart = null;
 
     function setGreeting() {
         const hour = new Date().getHours();
-        let greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+        const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
         document.getElementById('dashboard-greeting').textContent = greeting;
         document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('it-IT', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
         });
     }
 
-    function escapeHtml(str) {
+    function esc(str) {
         if (!str) return '';
         const d = document.createElement('div');
         d.textContent = str;
@@ -160,15 +193,99 @@
         return formatDate(dateStr);
     }
 
+    function fmtCurrency(v) {
+        return '€ ' + Number(v).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function renderCharts(d) {
+        if (typeof Chart === 'undefined') return;
+
+        // Monthly revenue bar chart
+        const ctx1 = document.getElementById('chart-revenue');
+        if (ctx1) {
+            const rows = d.monthly_revenue || [];
+            const labels = rows.map(r => {
+                const [y, m] = r.ym.split('-');
+                return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
+            });
+
+            if (revenueChart) revenueChart.destroy();
+            revenueChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Incassato',
+                            data: rows.map(r => parseFloat(r.revenue)),
+                            backgroundColor: 'rgba(37,99,235,0.75)',
+                            borderRadius: 4,
+                        },
+                        {
+                            label: 'Da incassare',
+                            data: rows.map(r => parseFloat(r.expected) - parseFloat(r.revenue)),
+                            backgroundColor: 'rgba(220,38,38,0.35)',
+                            borderRadius: 4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'bottom' } },
+                    scales: {
+                        x: { stacked: true },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: { callback: v => '€' + v.toLocaleString('it-IT') },
+                        },
+                    },
+                },
+            });
+        }
+
+        // Occupancy doughnut chart
+        const ctx2 = document.getElementById('chart-occupancy');
+        if (ctx2) {
+            const avail  = d.available_properties || 0;
+            const rented = d.rented_properties || 0;
+            const sold   = d.sold_properties || 0;
+
+            if (occupancyChart) occupancyChart.destroy();
+            occupancyChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Disponibili', 'Affittati', 'Venduti'],
+                    datasets: [{
+                        data: [avail, rented, sold],
+                        backgroundColor: ['#16a34a', '#2563eb', '#7c3aed'],
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    cutout: '65%',
+                },
+            });
+        }
+
+        // Pending label
+        if (d.pending_this_month > 0) {
+            const el = document.getElementById('chart-pending-label');
+            if (el) el.textContent = fmtCurrency(d.pending_this_month) + ' da incassare questo mese';
+        }
+    }
+
     async function loadDashboardStats() {
         const errorEl = document.getElementById('dashboard-error');
-
         try {
             const response = await fetch(API_URL);
             const json = await response.json();
-
             if (!json.success) throw new Error(json.error || 'Risposta API non valida');
-
             const d = json.data;
 
             document.getElementById('stat-clients').textContent    = d.total_clients;
@@ -176,6 +293,7 @@
             document.getElementById('stat-available').textContent  = d.available_properties;
             document.getElementById('stat-rented').textContent     = d.rented_properties;
             document.getElementById('stat-tenants').textContent    = d.active_tenants;
+            document.getElementById('stat-leads').textContent      = d.total_leads;
             document.getElementById('stat-reminders').textContent  = d.expiring_reminders;
             document.getElementById('stat-overdue').textContent    = d.overdue_reminders;
 
@@ -187,57 +305,47 @@
             }
 
             renderUpcoming(d.upcoming_reminders || []);
+            renderCharts(d);
 
         } catch (err) {
             errorEl.style.display = 'block';
-            errorEl.textContent = 'Errore nel caricamento delle statistiche: ' + err.message;
+            errorEl.textContent = 'Errore nel caricamento: ' + err.message;
             document.querySelectorAll('.stat-value.loading').forEach(el => { el.textContent = '!'; el.classList.remove('loading'); });
         }
     }
 
     function renderUpcoming(reminders) {
         const container = document.getElementById('upcoming-reminders-list');
-
         if (reminders.length === 0) {
-            container.innerHTML = '<p class="text-muted" style="padding:16px 0;">Nessun promemoria in arrivo. Ottimo lavoro!</p>';
+            container.innerHTML = '<p class="text-muted" style="padding:16px 0;">Nessun promemoria in arrivo.</p>';
             return;
         }
-
         container.innerHTML = reminders.map(r => {
-            const who = r.client_name ? `${escapeHtml(r.client_name)} ${escapeHtml(r.client_surname)}` : r.property_address ? escapeHtml(r.property_address) : '—';
+            const who = r.client_name
+                ? `${esc(r.client_name)} ${esc(r.client_surname)}`
+                : r.property_address ? esc(r.property_address) : '—';
             return `
             <div class="upcoming-item">
                 <div class="upcoming-item__icon">🔔</div>
                 <div class="upcoming-item__body">
-                    <div class="upcoming-item__title">${escapeHtml(r.title)}</div>
+                    <div class="upcoming-item__title">${esc(r.title)}</div>
                     <div class="upcoming-item__meta">${who} · ${FREQ_LABELS[r.frequency] || r.frequency}</div>
                 </div>
                 <div class="upcoming-item__date">${daysUntil(r.reminder_date)}</div>
             </div>`;
         }).join('');
+    }
 
-        // Make quick-action links use SPA navigation
-        document.querySelectorAll('.quick-action[data-view], .dashboard-header__actions a[data-view], #upcoming-reminders-list a[data-view]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                if (window.App) {
-                    e.preventDefault();
-                    window.App.navigateTo(link.dataset.view);
-                }
+    function bindSpaLinks() {
+        document.querySelectorAll('[data-view]').forEach(link => {
+            link.addEventListener('click', e => {
+                if (window.App) { e.preventDefault(); window.App.navigateTo(link.dataset.view); }
             });
         });
     }
 
     setGreeting();
-    loadDashboardStats();
-
-    // Wire up quick actions and header buttons for SPA navigation
-    document.querySelectorAll('.quick-action[data-view], .dashboard-header__actions a[data-view]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            if (window.App) {
-                e.preventDefault();
-                window.App.navigateTo(link.dataset.view);
-            }
-        });
-    });
+    loadDashboardStats().then(bindSpaLinks);
+    bindSpaLinks();
 })();
 </script>

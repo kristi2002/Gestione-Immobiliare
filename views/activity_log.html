@@ -1,0 +1,46 @@
+<div class="activity-log-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Log Attività</h2>
+            <p>Traccia delle operazioni effettuate dagli amministratori.</p>
+        </div>
+    </div>
+
+    <div id="log-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <select id="log-action-filter" class="form-select">
+            <option value="">Tutte le azioni</option>
+            <option value="create">Creazione</option>
+            <option value="update">Modifica</option>
+            <option value="delete">Eliminazione</option>
+            <option value="login">Accesso</option>
+            <option value="logout">Uscita</option>
+        </select>
+        <input type="text" id="log-entity-filter" class="form-input" placeholder="Tipo entità (es. client)" style="max-width:200px">
+        <input type="date" id="log-from-filter" class="form-input" style="max-width:160px">
+        <input type="date" id="log-to-filter" class="form-input" style="max-width:160px">
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="log-table">
+            <thead>
+                <tr>
+                    <th>Data/Ora</th>
+                    <th>Utente</th>
+                    <th>Azione</th>
+                    <th>Entità</th>
+                    <th>Descrizione</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody id="log-tbody">
+                <tr><td colspan="6" class="table-empty">Caricamento...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="log-pagination" id="log-pagination"></div>
+</div>
+
+<script src="assets/js/activity_log.js"></script>

@@ -34,20 +34,27 @@ try {
 
 function listTenants(PDO $db): void
 {
+    $pagination = apiGetPagination();
     $search = trim($_GET['search'] ?? '');
-    $sql = "SELECT t.*, p.address AS property_address, p.city AS property_city
-            FROM tenants t
-            INNER JOIN properties p ON p.id = t.property_id
-            WHERE t.status != 'archived'";
+    $where = "WHERE t.status != 'archived'";
     $params = [];
     if ($search !== '') {
-        $sql .= " AND (t.name LIKE :s OR t.surname LIKE :s OR t.email LIKE :s OR p.address LIKE :s)";
+        $where .= ' AND (t.name LIKE :s OR t.surname LIKE :s OR t.email LIKE :s OR p.address LIKE :s)';
         $params['s'] = '%' . $search . '%';
     }
-    $sql .= ' ORDER BY t.surname, t.name';
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    apiSuccess($stmt->fetchAll());
+
+    $countSql = "SELECT COUNT(*) FROM tenants t
+            INNER JOIN properties p ON p.id = t.property_id
+            $where";
+
+    $dataSql = "SELECT t.*, p.address AS property_address, p.city AS property_city
+            FROM tenants t
+            INNER JOIN properties p ON p.id = t.property_id
+            $where
+            ORDER BY t.surname, t.name";
+
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function getTenant(PDO $db, int $id): void
@@ -99,6 +106,7 @@ function createTenant(PDO $db): void
         createTenantPortalUser($tenantId, $password);
     }
 
+    logActivity('create', 'tenant', $tenantId, 'Inquilino creato: ' . $name . ' ' . $surname);
     getTenant($db, $tenantId);
 }
 
@@ -127,12 +135,14 @@ function updateTenant(PDO $db, int $id): void
         createTenantPortalUser($id, $data['portal_password']);
     }
 
+    logActivity('update', 'tenant', $id, 'Inquilino aggiornato #' . $id);
     getTenant($db, $id);
 }
 
 function archiveTenant(PDO $db, int $id): void
 {
     $db->prepare("UPDATE tenants SET status = 'archived' WHERE id = :id")->execute(['id' => $id]);
+    logActivity('delete', 'tenant', $id, 'Inquilino archiviato #' . $id);
     apiSuccess(['archived' => true]);
 }
 

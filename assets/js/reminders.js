@@ -26,6 +26,8 @@
     let clients    = [];
     let properties = [];
     let searchTimer = null;
+    let currentPage = 1;
+    const PAGE_LIMIT = 25;
 
     const els = {};
 
@@ -43,12 +45,16 @@
         els.propertySelect = document.getElementById('reminder-property');
         els.notifyClient   = document.getElementById('reminder-notify-client');
         els.clientEmailFields = document.getElementById('client-email-fields');
+        els.pagination        = document.getElementById('reminders-pagination');
 
         bindEvents();
         loadClients()
             .then(() => loadProperties())
             .then(() => loadReminders())
-            .catch(err => showAlert('Errore inizializzazione: ' + err.message, 'error'));
+            .catch(err => {
+                if (!els.alert?.isConnected) return;
+                showAlert('Errore inizializzazione: ' + err.message, 'error');
+            });
     }
 
     function bindEvents() {
@@ -63,11 +69,11 @@
 
         els.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(loadReminders, 300);
+            searchTimer = setTimeout(() => { currentPage = 1; loadReminders(); }, 300);
         });
 
         [els.statusFilter, els.frequencyFilter, els.dueFilter].forEach(el => {
-            el.addEventListener('change', loadReminders);
+            el.addEventListener('change', () => { currentPage = 1; loadReminders(); });
         });
 
         els.modal.addEventListener('click', (e) => {
@@ -84,11 +90,7 @@
     // -------------------------------------------------------------------------
 
     async function loadClients() {
-        const res  = await fetch(`${CLIENTS_API}?status=active`);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-
-        clients = json.data;
+        clients = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
         const opts = clients.map(c =>
             `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`
         ).join('');
@@ -96,10 +98,7 @@
     }
 
     async function loadProperties() {
-        const res  = await fetch(PROPERTIES_API);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        properties = json.data;
+        properties = await Pagination.fetchList(PROPERTIES_API);
         updatePropertySelect(els.clientSelect.value);
     }
 
@@ -134,8 +133,10 @@
         if (status)    params.set('status', status);
         if (frequency) params.set('frequency', frequency);
         if (dueSoon)   params.set('due_soon', dueSoon);
+        params.set('page', currentPage);
+        params.set('limit', PAGE_LIMIT);
 
-        const url = params.toString() ? `${API}?${params}` : API;
+        const url = `${API}?${params}`;
         els.tbody.innerHTML = '<tr><td colspan="7" class="table-empty">Caricamento...</td></tr>';
 
         try {
@@ -143,8 +144,10 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            reminders = json.data;
+            const parsed = Pagination.parseResponse(json);
+            reminders = parsed.items;
             renderTable();
+            Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadReminders(); });
         } catch (err) {
             els.tbody.innerHTML = `<tr><td colspan="7" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
         }

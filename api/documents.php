@@ -58,24 +58,17 @@ try {
 
 function listDocuments(PDO $db): void
 {
+    $pagination = apiGetPagination();
     $search     = trim($_GET['search'] ?? '');
     $docType    = trim($_GET['doc_type'] ?? '');
     $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
 
-    $sql = "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id,
-                   d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
-                   c.name AS client_name, c.surname AS client_surname,
-                   p.address AS property_address, p.city AS property_city
-            FROM documents d
-            LEFT JOIN clients c ON c.id = d.client_id
-            LEFT JOIN properties p ON p.id = d.property_id
-            WHERE 1=1";
-
+    $where = 'WHERE 1=1';
     $params = [];
 
     if ($search !== '') {
-        $sql .= " AND (d.title LIKE :search OR d.original_name LIKE :search
+        $where .= " AND (d.title LIKE :search OR d.original_name LIKE :search
                       OR d.notes LIKE :search
                       OR c.name LIKE :search OR c.surname LIKE :search
                       OR p.address LIKE :search OR p.city LIKE :search)";
@@ -83,31 +76,42 @@ function listDocuments(PDO $db): void
     }
 
     if ($docType !== '' && in_array($docType, DOC_TYPES, true)) {
-        $sql .= " AND d.doc_type = :doc_type";
+        $where .= ' AND d.doc_type = :doc_type';
         $params['doc_type'] = $docType;
     }
 
     if ($clientId) {
-        $sql .= " AND d.client_id = :client_id";
+        $where .= ' AND d.client_id = :client_id';
         $params['client_id'] = $clientId;
     }
 
     if ($propertyId) {
-        $sql .= " AND d.property_id = :property_id";
+        $where .= ' AND d.property_id = :property_id';
         $params['property_id'] = $propertyId;
     }
 
-    $sql .= " ORDER BY d.created_at DESC";
+    $countSql = "SELECT COUNT(*) FROM documents d
+            LEFT JOIN clients c ON c.id = d.client_id
+            LEFT JOIN properties p ON p.id = d.property_id
+            $where";
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+    $dataSql = "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id,
+                   d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
+                   c.name AS client_name, c.surname AS client_surname,
+                   p.address AS property_address, p.city AS property_city
+            FROM documents d
+            LEFT JOIN clients c ON c.id = d.client_id
+            LEFT JOIN properties p ON p.id = d.property_id
+            $where
+            ORDER BY d.created_at DESC";
 
-    $items = $stmt->fetchAll();
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+
     foreach ($items as &$item) {
         $item['download_url'] = 'api/download_document.php?id=' . $item['id'];
     }
 
-    apiSuccess($items);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function getDocument(PDO $db, int $id): void

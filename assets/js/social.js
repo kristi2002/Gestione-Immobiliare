@@ -25,6 +25,8 @@
     let posts      = [];
     let properties = [];
     let searchTimer = null;
+    let currentPage = 1;
+    const PAGE_LIMIT = 25;
 
     const els = {};
 
@@ -41,12 +43,16 @@
         els.metaForm       = document.getElementById('meta-settings-form');
         els.metaBadge      = document.getElementById('meta-status-badge');
         els.imagePreview   = document.getElementById('post-image-preview');
+        els.pagination     = document.getElementById('social-pagination');
 
         bindEvents();
         loadSettings();
         loadProperties()
             .then(() => loadPosts())
-            .catch(err => showAlert('Errore inizializzazione: ' + err.message, 'error'));
+            .catch(err => {
+                if (!els.alert?.isConnected) return;
+                showAlert('Errore inizializzazione: ' + err.message, 'error');
+            });
     }
 
     function bindEvents() {
@@ -60,11 +66,11 @@
 
         els.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(loadPosts, 300);
+            searchTimer = setTimeout(() => { currentPage = 1; loadPosts(); }, 300);
         });
 
-        els.statusFilter.addEventListener('change', loadPosts);
-        els.platformFilter.addEventListener('change', loadPosts);
+        els.statusFilter.addEventListener('change', () => { currentPage = 1; loadPosts(); });
+        els.platformFilter.addEventListener('change', () => { currentPage = 1; loadPosts(); });
 
         document.getElementById('post-image').addEventListener('change', previewImage);
 
@@ -144,11 +150,7 @@
     // -------------------------------------------------------------------------
 
     async function loadProperties() {
-        const res  = await fetch(PROPERTIES_API);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-
-        properties = json.data;
+        properties = await Pagination.fetchList(PROPERTIES_API);
         const opts = properties.map(p =>
             `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
         ).join('');
@@ -164,8 +166,10 @@
         if (search)   params.set('search', search);
         if (status)   params.set('status', status);
         if (platform) params.set('platform', platform);
+        params.set('page', currentPage);
+        params.set('limit', PAGE_LIMIT);
 
-        const url = params.toString() ? `${POSTS_API}?${params}` : POSTS_API;
+        const url = `${POSTS_API}?${params}`;
         els.tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Caricamento...</td></tr>';
 
         try {
@@ -173,8 +177,10 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            posts = json.data;
+            const parsed = Pagination.parseResponse(json);
+            posts = parsed.items;
             renderTable();
+            Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadPosts(); });
         } catch (err) {
             els.tbody.innerHTML = `<tr><td colspan="6" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
         }

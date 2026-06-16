@@ -20,6 +20,8 @@
     let properties     = [];
     let deleteTargetId = null;
     let searchTimer    = null;
+    let currentPage    = 1;
+    const PAGE_LIMIT   = 25;
 
     const els = {};
 
@@ -35,12 +37,16 @@
         els.uploadForm      = document.getElementById('doc-upload-form');
         els.clientSelect    = document.getElementById('doc-client');
         els.propertySelect  = document.getElementById('doc-property');
+        els.pagination      = document.getElementById('documents-pagination');
 
         bindEvents();
         loadClients()
             .then(() => loadProperties())
             .then(() => loadDocuments())
-            .catch(err => showAlert('Errore inizializzazione: ' + err.message, 'error'));
+            .catch(err => {
+                if (!els.alert?.isConnected) return;
+                showAlert('Errore inizializzazione: ' + err.message, 'error');
+            });
     }
 
     function bindEvents() {
@@ -55,15 +61,16 @@
 
         els.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(loadDocuments, 300);
+            searchTimer = setTimeout(() => { currentPage = 1; loadDocuments(); }, 300);
         });
 
-        els.typeFilter.addEventListener('change', loadDocuments);
+        els.typeFilter.addEventListener('change', () => { currentPage = 1; loadDocuments(); });
         els.clientFilter.addEventListener('change', () => {
             updatePropertyFilterOptions(els.clientFilter.value);
+            currentPage = 1;
             loadDocuments();
         });
-        els.propertyFilter.addEventListener('change', loadDocuments);
+        els.propertyFilter.addEventListener('change', () => { currentPage = 1; loadDocuments(); });
 
         els.clientSelect.addEventListener('change', () => {
             updatePropertySelectOptions(els.clientSelect.value);
@@ -82,11 +89,7 @@
     // -------------------------------------------------------------------------
 
     async function loadClients() {
-        const res  = await fetch(`${CLIENTS_API}?status=active`);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-
-        clients = json.data;
+        clients = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
         const opts = clients.map(c =>
             `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`
         ).join('');
@@ -96,15 +99,10 @@
     }
 
     async function loadProperties(clientId = null) {
-        const url = clientId
-            ? `${PROPERTIES_API}?client_id=${clientId}`
-            : PROPERTIES_API;
+        const params = { limit: '500', page: '1' };
+        if (clientId) params.client_id = clientId;
 
-        const res  = await fetch(url);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-
-        properties = json.data;
+        properties = await Pagination.fetchList(PROPERTIES_API, params);
         updatePropertyFilterOptions(els.clientFilter.value);
         updatePropertySelectOptions(els.clientSelect.value);
     }
@@ -162,8 +160,10 @@
         if (docType)    params.set('doc_type', docType);
         if (clientId)   params.set('client_id', clientId);
         if (propertyId) params.set('property_id', propertyId);
+        params.set('page', currentPage);
+        params.set('limit', PAGE_LIMIT);
 
-        const url = params.toString() ? `${API}?${params}` : API;
+        const url = `${API}?${params}`;
         els.tbody.innerHTML = '<tr><td colspan="7" class="table-empty">Caricamento...</td></tr>';
 
         try {
@@ -171,8 +171,10 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            documents = json.data;
+            const parsed = Pagination.parseResponse(json);
+            documents = parsed.items;
             renderTable();
+            Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadDocuments(); });
         } catch (err) {
             els.tbody.innerHTML = `<tr><td colspan="7" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
         }

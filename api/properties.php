@@ -22,10 +22,20 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['format'] ?? '') === 'csv') {
+                exportPropertiesCsv($db);
+            }
             $id ? getProperty($db, $id) : listProperties($db);
             break;
         case 'POST':
-            createProperty($db);
+            $postBody = apiGetJsonBody();
+            if (($_GET['action'] ?? '') === 'import') {
+                importProperties($db);
+            } elseif (($_GET['action'] ?? '') === 'bulk' || ($postBody['action'] ?? '') === 'bulk') {
+                bulkProperties($db);
+            } else {
+                createProperty($db);
+            }
             break;
         case 'PUT':
             if (!$id) {
@@ -52,48 +62,52 @@ try {
 
 function listProperties(PDO $db): void
 {
+    $pagination = apiGetPagination(25, 500);
     $search   = trim($_GET['search'] ?? '');
     $status   = trim($_GET['status'] ?? '');
     $clientId = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
 
-    $sql = "SELECT p.id, p.client_id, p.address, p.city, p.cap, p.sqm,
-                   p.rooms, p.bathrooms, p.floor, p.description,
-                   p.additional_features, p.internal_notes, p.status,
-                   p.created_at,
-                   c.name AS client_name, c.surname AS client_surname,
-                   COUNT(m.id) AS media_count
-            FROM properties p
-            INNER JOIN clients c ON c.id = p.client_id
-            LEFT JOIN property_media m ON m.property_id = p.id
-            WHERE 1=1";
-
+    $where = 'WHERE 1=1';
     $params = [];
 
     if ($search !== '') {
-        $sql .= " AND (p.address LIKE :search OR p.city LIKE :search
+        $where .= " AND (p.address LIKE :search OR p.city LIKE :search
                       OR p.cap LIKE :search OR p.description LIKE :search
                       OR c.name LIKE :search OR c.surname LIKE :search)";
         $params['search'] = '%' . $search . '%';
     }
 
     if ($status !== '' && in_array($status, PROPERTY_STATUSES, true)) {
-        $sql .= " AND p.status = :status";
+        $where .= ' AND p.status = :status';
         $params['status'] = $status;
     } else {
-        $sql .= " AND p.status != 'archived'";
+        $where .= " AND p.status != 'archived'";
     }
 
     if ($clientId) {
-        $sql .= " AND p.client_id = :client_id";
+        $where .= ' AND p.client_id = :client_id';
         $params['client_id'] = $clientId;
     }
 
-    $sql .= " GROUP BY p.id ORDER BY p.city ASC, p.address ASC";
+    $countSql = "SELECT COUNT(*) FROM properties p
+            INNER JOIN clients c ON c.id = p.client_id
+            $where";
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+    $dataSql = "SELECT p.id, p.client_id, p.address, p.city, p.cap, p.province, p.sqm,
+                   p.rooms, p.bathrooms, p.floor, p.description,
+                   p.additional_features, p.internal_notes, p.status,
+                   p.price, p.price_type, p.latitude, p.longitude, p.geo_confidence,
+                   p.created_at,
+                   c.name AS client_name, c.surname AS client_surname,
+                   COUNT(m.id) AS media_count
+            FROM properties p
+            INNER JOIN clients c ON c.id = p.client_id
+            LEFT JOIN property_media m ON m.property_id = p.id
+            $where
+            GROUP BY p.id ORDER BY p.city ASC, p.address ASC";
 
-    apiSuccess($stmt->fetchAll());
+    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
+    apiPaginatedSuccess($items, $total, $pagination);
 }
 
 function getProperty(PDO $db, int $id): void
@@ -114,6 +128,18 @@ function getProperty(PDO $db, int $id): void
         apiError('Immobile non trovato.', 404);
     }
 
+    $histStmt = $db->prepare(
+        "SELECT h.old_price, h.new_price, h.old_price_type, h.new_price_type,
+                h.changed_at, u.username AS changed_by_name
+         FROM property_price_history h
+         LEFT JOIN admin_users u ON u.id = h.changed_by
+         WHERE h.property_id = :id
+         ORDER BY h.changed_at DESC
+         LIMIT 10"
+    );
+    $histStmt->execute(['id' => $id]);
+    $property['price_history'] = $histStmt->fetchAll();
+
     apiSuccess($property);
 }
 
@@ -124,11 +150,13 @@ function createProperty(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO properties
-            (client_id, address, city, cap, sqm, rooms, bathrooms, floor,
-             description, additional_features, internal_notes, status)
+            (client_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
+             description, additional_features, internal_notes, status,
+             price, price_type, latitude, longitude, geo_confidence)
          VALUES
-            (:client_id, :address, :city, :cap, :sqm, :rooms, :bathrooms, :floor,
-             :description, :additional_features, :internal_notes, :status)"
+            (:client_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
+             :description, :additional_features, :internal_notes, :status,
+             :price, :price_type, :latitude, :longitude, :geo_confidence)"
     );
     $stmt->execute($validated);
 
@@ -138,19 +166,45 @@ function createProperty(PDO $db): void
 
 function updateProperty(PDO $db, int $id): void
 {
-    if (!fetchPropertyById($db, $id)) {
+    $stmt = $db->prepare('SELECT price, price_type FROM properties WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
         apiError('Immobile non trovato.', 404);
     }
 
     $data      = apiGetJsonBody();
     $validated = validatePropertyInput($db, $data);
 
+    $oldPrice = $existing['price'] !== null ? (string) $existing['price'] : null;
+    $newPrice = $validated['price'] !== null ? (string) $validated['price'] : null;
+    $priceChanged = $oldPrice !== $newPrice
+        || ($existing['price_type'] ?? '') !== ($validated['price_type'] ?? '');
+
+    if ($priceChanged) {
+        $hist = $db->prepare(
+            'INSERT INTO property_price_history
+             (property_id, old_price, new_price, old_price_type, new_price_type, changed_by)
+             VALUES (:property_id, :old_price, :new_price, :old_price_type, :new_price_type, :changed_by)'
+        );
+        $hist->execute([
+            'property_id'    => $id,
+            'old_price'      => $existing['price'],
+            'new_price'      => $validated['price'],
+            'old_price_type' => $existing['price_type'],
+            'new_price_type' => $validated['price_type'],
+            'changed_by'     => getCurrentAdminId(),
+        ]);
+    }
+
     $stmt = $db->prepare(
         "UPDATE properties
          SET client_id = :client_id, address = :address, city = :city, cap = :cap,
-             sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
+             province = :province, sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
              description = :description, additional_features = :additional_features,
-             internal_notes = :internal_notes, status = :status
+             internal_notes = :internal_notes, status = :status,
+             price = :price, price_type = :price_type,
+             latitude = :latitude, longitude = :longitude, geo_confidence = :geo_confidence
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -170,6 +224,51 @@ function deleteProperty(PDO $db, int $id): void
     apiSuccess(['id' => $id, 'message' => 'Immobile archiviato.']);
 }
 
+function bulkProperties(PDO $db): void
+{
+    $data = apiGetJsonBody();
+    $operation = trim($data['action'] ?? '');
+    if ($operation === 'bulk') {
+        $operation = trim($data['operation'] ?? '');
+    }
+    $ids = normalizeBulkIds($data['ids'] ?? []);
+
+    if ($operation === 'archive') {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("UPDATE properties SET status = 'archived' WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        apiSuccess(['updated' => $stmt->rowCount(), 'action' => 'archive']);
+    } elseif ($operation === 'assign') {
+        $clientId = !empty($data['client_id']) ? (int) $data['client_id'] : 0;
+        if ($clientId <= 0) {
+            apiError('client_id obbligatorio per la riassegnazione.');
+        }
+        $check = $db->prepare("SELECT id FROM clients WHERE id = :id AND status != 'archived'");
+        $check->execute(['id' => $clientId]);
+        if (!$check->fetch()) {
+            apiError('Proprietario non trovato o archiviato.');
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("UPDATE properties SET client_id = ? WHERE id IN ($placeholders)");
+        $stmt->execute(array_merge([$clientId], $ids));
+        apiSuccess(['updated' => $stmt->rowCount(), 'action' => 'assign', 'client_id' => $clientId]);
+    } else {
+        apiError('Azione bulk non valida. Usa: archive, assign.');
+    }
+}
+
+function normalizeBulkIds(array $ids): array
+{
+    if (!is_array($ids) || empty($ids)) {
+        apiError('Nessun ID selezionato.');
+    }
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($id) => $id > 0)));
+    if (empty($ids)) {
+        apiError('ID non validi.');
+    }
+    return $ids;
+}
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -180,6 +279,7 @@ function validatePropertyInput(PDO $db, array $data): array
     $address   = trim($data['address'] ?? '');
     $city      = trim($data['city'] ?? '');
     $cap       = trim($data['cap'] ?? '') ?: null;
+    $province  = trim($data['province'] ?? '') ?: null;
     $sqm       = isset($data['sqm']) && $data['sqm'] !== '' ? (float) $data['sqm'] : null;
     $rooms     = isset($data['rooms']) && $data['rooms'] !== '' ? (int) $data['rooms'] : null;
     $bathrooms = isset($data['bathrooms']) && $data['bathrooms'] !== '' ? (int) $data['bathrooms'] : null;
@@ -188,6 +288,14 @@ function validatePropertyInput(PDO $db, array $data): array
     $features  = trim($data['additional_features'] ?? '') ?: null;
     $notes     = trim($data['internal_notes'] ?? '') ?: null;
     $status    = trim($data['status'] ?? 'available');
+    $price     = isset($data['price']) && $data['price'] !== '' ? (float) $data['price'] : null;
+    $priceType = trim($data['price_type'] ?? 'affitto');
+    $latitude  = isset($data['latitude']) && $data['latitude'] !== '' ? (float) $data['latitude'] : null;
+    $longitude = isset($data['longitude']) && $data['longitude'] !== '' ? (float) $data['longitude'] : null;
+    $geoConf   = trim($data['geo_confidence'] ?? '') ?: null;
+    if ($geoConf !== null && !in_array($geoConf, ['exact', 'street', 'cap_area'], true)) {
+        $geoConf = null;
+    }
 
     if ($clientId <= 0) {
         apiError('Seleziona un proprietario.');
@@ -200,6 +308,9 @@ function validatePropertyInput(PDO $db, array $data): array
     }
     if (!in_array($status, PROPERTY_STATUSES, true)) {
         apiError('Stato non valido.');
+    }
+    if (!in_array($priceType, ['affitto', 'vendita'], true)) {
+        apiError('Tipo prezzo non valido.');
     }
     if ($sqm !== null && $sqm < 0) {
         apiError('I metri quadri non possono essere negativi.');
@@ -222,6 +333,7 @@ function validatePropertyInput(PDO $db, array $data): array
         'address'             => $address,
         'city'                => $city,
         'cap'                 => $cap,
+        'province'            => $province,
         'sqm'                 => $sqm,
         'rooms'               => $rooms,
         'bathrooms'           => $bathrooms,
@@ -230,6 +342,11 @@ function validatePropertyInput(PDO $db, array $data): array
         'additional_features' => $features,
         'internal_notes'      => $notes,
         'status'              => $status,
+        'price'               => $price,
+        'price_type'          => $priceType,
+        'latitude'            => $latitude,
+        'longitude'           => $longitude,
+        'geo_confidence'      => $geoConf,
     ];
 }
 
@@ -239,4 +356,95 @@ function fetchPropertyById(PDO $db, int $id): ?array
     $stmt->execute(['id' => $id]);
     $row = $stmt->fetch();
     return $row ?: null;
+}
+
+// ---------------------------------------------------------------------------
+// CSV export / import
+// ---------------------------------------------------------------------------
+
+function exportPropertiesCsv(PDO $db): void
+{
+    $rows = $db->query(
+        "SELECT p.address, p.city, p.cap, p.sqm, p.rooms, p.bathrooms,
+                p.price, p.price_type, p.status,
+                c.name AS client_name, c.surname AS client_surname
+         FROM properties p
+         INNER JOIN clients c ON c.id = p.client_id
+         WHERE p.status != 'archived'
+         ORDER BY p.city ASC, p.address ASC"
+    )->fetchAll();
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="immobili_' . date('Ymd') . '.csv"');
+
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['indirizzo', 'citta', 'cap', 'mq', 'stanze', 'bagni', 'prezzo', 'tipo_prezzo', 'stato', 'proprietario']);
+    foreach ($rows as $r) {
+        fputcsv($out, [
+            $r['address'], $r['city'], $r['cap'], $r['sqm'], $r['rooms'], $r['bathrooms'],
+            $r['price'], $r['price_type'], $r['status'],
+            trim($r['client_surname'] . ' ' . $r['client_name']),
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
+function importProperties(PDO $db): void
+{
+    $data     = apiGetJsonBody();
+    $rows     = $data['rows'] ?? [];
+    $clientId = (int) ($data['client_id'] ?? 0);
+
+    if (!is_array($rows) || empty($rows)) {
+        apiError('Nessuna riga da importare.');
+    }
+    if ($clientId <= 0) {
+        apiError('Seleziona un proprietario per le righe importate.');
+    }
+
+    $check = $db->prepare("SELECT id FROM clients WHERE id = :id AND status != 'archived'");
+    $check->execute(['id' => $clientId]);
+    if (!$check->fetch()) {
+        apiError('Proprietario non valido.');
+    }
+
+    $imported = 0;
+    $errors   = [];
+    $stmt = $db->prepare(
+        "INSERT INTO properties
+            (client_id, address, city, cap, sqm, rooms, bathrooms, status, price, price_type)
+         VALUES
+            (:client_id, :address, :city, :cap, :sqm, :rooms, :bathrooms, :status, :price, :price_type)"
+    );
+
+    foreach ($rows as $i => $row) {
+        $address = trim((string) ($row['indirizzo'] ?? ''));
+        $city    = trim((string) ($row['citta'] ?? ''));
+        if ($address === '' || $city === '') {
+            $errors[] = 'Riga ' . ($i + 1) . ': indirizzo/città mancante.';
+            continue;
+        }
+        $status    = trim((string) ($row['stato'] ?? 'available'));
+        $priceType = trim((string) ($row['tipo_prezzo'] ?? 'affitto'));
+        if (!in_array($status, PROPERTY_STATUSES, true))    $status = 'available';
+        if (!in_array($priceType, ['affitto', 'vendita'], true)) $priceType = 'affitto';
+
+        $stmt->execute([
+            'client_id'  => $clientId,
+            'address'    => $address,
+            'city'       => $city,
+            'cap'        => trim((string) ($row['cap'] ?? '')) ?: null,
+            'sqm'        => ($row['mq'] ?? '') !== '' ? (float) $row['mq'] : null,
+            'rooms'      => ($row['stanze'] ?? '') !== '' ? (int) $row['stanze'] : null,
+            'bathrooms'  => ($row['bagni'] ?? '') !== '' ? (int) $row['bagni'] : null,
+            'status'     => $status,
+            'price'      => ($row['prezzo'] ?? '') !== '' ? (float) $row['prezzo'] : null,
+            'price_type' => $priceType,
+        ]);
+        $imported++;
+    }
+
+    apiSuccess(['imported' => $imported, 'errors' => $errors]);
 }

@@ -29,6 +29,8 @@ try {
             apiError('property_id obbligatorio per report.');
         }
         $result = generatePropertyReportPdf(getDB(), $propertyId, getCurrentAdminId());
+    } elseif ($type === 'mandato') {
+        $result = generateMandatoPdf(getDB(), $data, getCurrentAdminId());
     } else {
         apiError('Tipo PDF non valido.');
     }

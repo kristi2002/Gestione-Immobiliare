@@ -5,7 +5,7 @@
 
 require_once __DIR__ . '/settings.php';
 
-function sendClientEmail(string $to, string $subject, string $body): array
+function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null): array
 {
     $cfg = getMailConfig();
 
@@ -18,31 +18,36 @@ function sendClientEmail(string $to, string $subject, string $body): array
     }
 
     if ($cfg['smtp_host'] !== '') {
-        return sendViaSmtp($to, $subject, $body, $cfg);
+        return sendViaSmtp($to, $subject, $body, $cfg, $htmlBody);
     }
 
     $from = $cfg['agency_name'] . ' <' . $cfg['agency_email'] . '>';
-    $headers = [
-        'From: ' . $from,
-        'Reply-To: ' . $cfg['agency_email'],
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-    ];
+    $headers = ['From: ' . $from, 'Reply-To: ' . $cfg['agency_email'], 'MIME-Version: 1.0'];
 
-    $sent = @mail($to, $subject, $body, implode("\r\n", $headers));
+    if ($htmlBody !== null) {
+        $boundary = 'b_' . uniqid();
+        $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+        $message = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{$body}\r\n"
+            . "--{$boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{$htmlBody}\r\n--{$boundary}--";
+    } else {
+        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        $message = $body;
+    }
+
+    $sent = @mail($to, $subject, $message, implode("\r\n", $headers));
 
     return $sent
         ? ['success' => true, 'status' => 'sent', 'external_id' => 'mail-' . uniqid(), 'error' => null]
         : ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'Invio email fallito.'];
 }
 
-function sendAdminEmail(string $subject, string $body): array
+function sendAdminEmail(string $subject, string $body, ?string $htmlBody = null): array
 {
     $cfg = getMailConfig();
-    return sendClientEmail($cfg['agency_email'], $subject, $body);
+    return sendClientEmail($cfg['agency_email'], $subject, $body, $htmlBody);
 }
 
-function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null): array
+function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null): array
 {
     $cfg ??= getMailConfig();
 
@@ -106,8 +111,19 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
     $message .= "To: <{$to}>\r\n";
     $message .= "Subject: {$subject}\r\n";
     $message .= "MIME-Version: 1.0\r\n";
-    $message .= "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
-    $message .= str_replace(["\r\n.", "\n."], ["\r\n..", "\n.."], $body) . "\r\n.\r\n";
+
+    if ($htmlBody !== null) {
+        $boundary = 'b_' . uniqid();
+        $message .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n\r\n";
+        $message .= "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n";
+        $message .= str_replace(["\r\n.", "\n."], ["\r\n..", "\n.."], $body) . "\r\n";
+        $message .= "--{$boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n";
+        $message .= $htmlBody . "\r\n";
+        $message .= "--{$boundary}--\r\n.\r\n";
+    } else {
+        $message .= "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
+        $message .= str_replace(["\r\n.", "\n."], ["\r\n..", "\n.."], $body) . "\r\n.\r\n";
+    }
 
     fwrite($socket, $message);
     $read();
