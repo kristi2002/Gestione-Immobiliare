@@ -92,7 +92,7 @@
             <div class="entity-card">
                 <div class="entity-card__header">
                     <strong>🔑 ${escapeHtml(k.address)}, ${escapeHtml(k.city)}</strong>
-                    <span class="badge">${STATUS_LABELS[k.status] || k.status}</span>
+                    <span class="badge badge--key-${k.status}">${STATUS_LABELS[k.status] || k.status}</span>
                 </div>
                 <div class="entity-card__body">
                     <div class="entity-card__info">Detentore: ${escapeHtml(k.holder_username || k.holder_name || '—')}</div>

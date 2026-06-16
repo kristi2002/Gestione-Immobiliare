@@ -33,8 +33,17 @@ function apiHandleOptions(): void
     }
 }
 
+function apiDiscardBufferedOutput(): void
+{
+    // Drop any stray output (PHP warnings/notices) captured before the JSON body.
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+}
+
 function apiSuccess(mixed $data = null, int $code = 200): void
 {
+    apiDiscardBufferedOutput();
     apiHeaders();
     http_response_code($code);
     echo json_encode([
@@ -46,6 +55,7 @@ function apiSuccess(mixed $data = null, int $code = 200): void
 
 function apiError(string $message, int $code = 400): void
 {
+    apiDiscardBufferedOutput();
     apiHeaders();
     http_response_code($code);
     echo json_encode([

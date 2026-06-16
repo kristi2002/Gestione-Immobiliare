@@ -42,48 +42,57 @@ try {
         apiError('Fattura non trovata.', 404);
     }
 
-    $agencyName    = getSetting('agency_name', 'Gestionale Immobiliare');
-    $agencyAddress = getSetting('agency_address', '');
-    $agencyPhone   = getSetting('agency_phone', '');
-    $agencyEmail   = getSetting('agency_email', '');
-
     $billTo = $inv['client_id']
         ? trim($inv['client_name'] . ' ' . $inv['client_surname'])
         : ($inv['lead_id'] ? trim($inv['lead_name'] . ' ' . $inv['lead_surname']) : 'Cliente');
 
-    $lines = [
-        strtoupper($agencyName),
-        $agencyAddress ?: '',
-        trim(($agencyPhone ? 'Tel: ' . $agencyPhone : '') . ($agencyEmail ? '  Email: ' . $agencyEmail : '')),
-        str_repeat('-', 60),
-        'FATTURA ' . $inv['invoice_number'],
-        'Data emissione: ' . formatDateIt($inv['issue_date']),
-        $inv['due_date'] ? 'Scadenza: ' . formatDateIt($inv['due_date']) : '',
-        '',
-        'INTESTATARIO',
-        $billTo,
-        '',
-        'DESCRIZIONE',
-        wordwrap($inv['description'], 70, "\n", true),
-        '',
-        str_repeat('-', 60),
-        'Imponibile:   EUR ' . number_format((float) $inv['amount'], 2, ',', '.'),
-        'IVA (' . rtrim(rtrim($inv['vat_rate'], '0'), '.') . '%): EUR ' . number_format((float) $inv['vat_amount'], 2, ',', '.'),
-        'TOTALE:       EUR ' . number_format((float) $inv['total'], 2, ',', '.'),
-        str_repeat('-', 60),
-        '',
-        'Stato: ' . strtoupper($inv['status']),
-        $inv['notes'] ? 'Note: ' . wordwrap($inv['notes'], 70, "\n", true) : '',
-        '',
-        'Generato il ' . date('d/m/Y H:i'),
+    $statusLabels = [
+        'draft' => 'Bozza', 'sent' => 'Inviata', 'paid' => 'Pagata',
+        'overdue' => 'Scaduta', 'cancelled' => 'Annullata',
     ];
-    $lines = array_values(array_filter($lines, fn($l) => $l !== ''));
 
-    $result = savePdf(
+    $vatRate = rtrim(rtrim((string) $inv['vat_rate'], '0'), '.');
+
+    $blocks = [
+        ['type' => 'kv', 'pairs' => [
+            ['Numero fattura', $inv['invoice_number']],
+            ['Stato',          $statusLabels[$inv['status']] ?? ucfirst((string) $inv['status'])],
+            ['Data emissione', formatDateIt($inv['issue_date'])],
+            ['Scadenza',       $inv['due_date'] ? formatDateIt($inv['due_date']) : '—'],
+        ]],
+        ['type' => 'h2', 'text' => 'Intestatario'],
+        ['type' => 'kv', 'pairs' => [
+            ['Cliente',  $billTo],
+            ['Email',    $inv['client_email'] ?? '—'],
+            ['Telefono', $inv['client_phone'] ?? '—'],
+        ]],
+        ['type' => 'h2', 'text' => 'Descrizione'],
+        ['type' => 'paragraph', 'text' => $inv['description'] ?: '—'],
+        ['type' => 'h2', 'text' => 'Importi'],
+        ['type' => 'table', 'columns' => [
+            ['label' => 'Voce', 'width' => 0.7],
+            ['label' => 'Importo', 'width' => 0.3, 'align' => 'right'],
+        ], 'rows' => [
+            ['Imponibile', '€ ' . number_format((float) $inv['amount'], 2, ',', '.')],
+            ['IVA (' . $vatRate . '%)', '€ ' . number_format((float) $inv['vat_amount'], 2, ',', '.')],
+        ], 'totalLabel' => 'Totale documento', 'totalValue' => '€ ' . number_format((float) $inv['total'], 2, ',', '.')],
+    ];
+
+    if (!empty($inv['notes'])) {
+        $blocks[] = ['type' => 'h2', 'text' => 'Note'];
+        $blocks[] = ['type' => 'paragraph', 'text' => $inv['notes']];
+    }
+
+    $title = 'Fattura ' . $inv['invoice_number'];
+    $pdf   = SimplePdf::fromBlocks($title, $blocks, pdfDocOpts($title, [
+        'meta' => 'N. ' . $inv['invoice_number'],
+    ]));
+
+    $result = persistPdf(
         $db,
         'invoice',
-        'Fattura ' . $inv['invoice_number'],
-        $lines,
+        $title,
+        $pdf,
         $inv['client_id'] ? (int) $inv['client_id'] : null,
         null,
         null,

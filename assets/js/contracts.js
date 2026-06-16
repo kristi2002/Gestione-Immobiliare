@@ -160,7 +160,7 @@
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">${escapeHtml(c.title)}</div>
                         <div class="contract-card__badges">
-                            <span class="badge badge--contract-type">${TYPE_LABELS[c.contract_type] || c.contract_type}</span>
+                            <span class="badge badge--contract-type badge--contract-type-${c.contract_type}">${TYPE_LABELS[c.contract_type] || c.contract_type}</span>
                             <span class="badge badge--contract-${c.status}">${STATUS_LABELS[c.status] || c.status}</span>
                         </div>
                     </div>
@@ -194,8 +194,8 @@
         });
 
         els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (confirm('Eliminare questo contratto?')) deleteContract(btn.dataset.id);
+            btn.addEventListener('click', async () => {
+                if (await confirmDialog('Vuoi eliminare questo contratto?', { title: 'Elimina contratto' })) deleteContract(btn.dataset.id);
             });
         });
 

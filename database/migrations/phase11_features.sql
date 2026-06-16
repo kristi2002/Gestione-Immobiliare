@@ -75,25 +75,25 @@ CREATE TABLE IF NOT EXISTS whatsapp_templates (
 
 INSERT INTO whatsapp_templates (name, category, body, variables)
 SELECT 'Benvenuto inquilino', 'benvenuto',
-       'Gentile {{nome}}, benvenuto/a in {{indirizzo}}. Siamo a disposizione per qualsiasi necessità. Cordiali saluti, {{agenzia}}',
+       'Gentile {{nome}}, le diamo il benvenuto nell''immobile in {{indirizzo}}. Per qualsiasi necessità siamo a disposizione. Cordiali saluti, {{agenzia}}',
        '["nome","indirizzo","agenzia"]'
 WHERE NOT EXISTS (SELECT 1 FROM whatsapp_templates WHERE name = 'Benvenuto inquilino');
 
 INSERT INTO whatsapp_templates (name, category, body, variables)
 SELECT 'Scadenza contratto', 'scadenza',
-       'Gentile {{nome}}, la informiamo che il contratto relativo all''immobile in {{indirizzo}} scadrà il {{data_scadenza}}. La contatteremo presto per discutere il rinnovo. Cordiali saluti, {{agenzia}}',
+       'Gentile {{nome}}, le informiamo che il contratto dell''immobile in {{indirizzo}} scadrà il {{data_scadenza}}. La contatteremo per valutare il rinnovo. Cordiali saluti, {{agenzia}}',
        '["nome","indirizzo","data_scadenza","agenzia"]'
 WHERE NOT EXISTS (SELECT 1 FROM whatsapp_templates WHERE name = 'Scadenza contratto');
 
 INSERT INTO whatsapp_templates (name, category, body, variables)
 SELECT 'Sollecito pagamento', 'pagamento',
-       'Gentile {{nome}}, la informiamo che il pagamento del canone di {{importo}}€ per {{mese}} non risulta ancora pervenuto. La preghiamo di provvedere al più presto. Cordiali saluti, {{agenzia}}',
+       'Gentile {{nome}}, le segnaliamo che il canone di € {{importo}} relativo a {{mese}} non risulta ancora pervenuto. La preghiamo di provvedere al più presto. Cordiali saluti, {{agenzia}}',
        '["nome","importo","mese","agenzia"]'
 WHERE NOT EXISTS (SELECT 1 FROM whatsapp_templates WHERE name = 'Sollecito pagamento');
 
 INSERT INTO whatsapp_templates (name, category, body, variables)
 SELECT 'Conferma visita', 'visita',
-       'Gentile {{nome}}, confermiamo la visita all''immobile in {{indirizzo}} per il giorno {{data}} alle ore {{ora}}. Cordiali saluti, {{agenzia}}',
+       'Gentile {{nome}}, confermiamo la visita all''immobile in {{indirizzo}} il {{data}} alle ore {{ora}}. Cordiali saluti, {{agenzia}}',
        '["nome","indirizzo","data","ora","agenzia"]'
 WHERE NOT EXISTS (SELECT 1 FROM whatsapp_templates WHERE name = 'Conferma visita');
 

@@ -27,7 +27,19 @@
         photo:      'Foto',
         video:      'Video',
         floor_plan: 'Planimetria',
+        house_map:  'Cartina casa',
+        attachment: 'Allegato',
     };
+
+    const MEDIA_ACCEPT = {
+        photo:      'image/jpeg,image/png,image/webp,image/gif',
+        video:      'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov',
+        floor_plan: 'image/jpeg,image/png,image/webp,application/pdf',
+        house_map:  'image/jpeg,image/png,image/webp,application/pdf',
+        attachment: 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf,.doc,.docx',
+    };
+
+    const COVER_MEDIA_TYPES = new Set(['photo', 'floor_plan', 'house_map']);
 
     let properties     = [];
     let clients        = [];
@@ -62,78 +74,126 @@
         els.selectAll      = document.getElementById('properties-select-all');
         els.bulkAssignClient = document.getElementById('bulk-assign-client');
 
+        if (!els.grid || !els.form) return;
+
+        ensureLightbox();
         bindEvents();
         loadClients().then(() => {
             loadProperties();
         });
     }
 
-    function bindEvents() {
-        document.getElementById('btn-new-property').addEventListener('click', () => openModal());
-        document.getElementById('property-modal-close').addEventListener('click', closeModal);
-        document.getElementById('property-modal-cancel').addEventListener('click', closeModal);
-        document.getElementById('btn-property-mandato').addEventListener('click', generateMandato);
-        document.getElementById('property-delete-close').addEventListener('click', closeDeleteModal);
-        document.getElementById('property-delete-cancel').addEventListener('click', closeDeleteModal);
-        document.getElementById('property-delete-confirm').addEventListener('click', confirmDelete);
-        document.getElementById('btn-upload-media').addEventListener('click', uploadMedia);
+    function bindClick(id, handler) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', handler);
+    }
 
-        document.getElementById('btn-property-geocode').addEventListener('click', geocodeFromForm);
+    function bindChange(id, handler) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', handler);
+    }
+
+    function ensureLightbox() {
+        if (document.getElementById('media-lightbox')) return;
+
+        const box = document.createElement('div');
+        box.className = 'media-lightbox';
+        box.id = 'media-lightbox';
+        box.hidden = true;
+        box.innerHTML = `
+            <button type="button" class="media-lightbox__close" id="media-lightbox-close" aria-label="Chiudi">&times;</button>
+            <div class="media-lightbox__content" id="media-lightbox-content"></div>
+            <p class="media-lightbox__caption" id="media-lightbox-caption"></p>`;
+        document.body.appendChild(box);
+    }
+
+    function bindEvents() {
+        bindClick('btn-new-property', () => openModal());
+        bindClick('property-modal-close', closeModal);
+        bindClick('property-modal-cancel', closeModal);
+        bindClick('btn-property-mandato', generateMandato);
+        bindClick('property-delete-close', closeDeleteModal);
+        bindClick('property-delete-cancel', closeDeleteModal);
+        bindClick('property-delete-confirm', confirmDelete);
+        bindClick('btn-upload-media', uploadMedia);
+        bindChange('media-type', updateMediaFileAccept);
+        bindClick('media-lightbox-close', closeLightbox);
+        const lightbox = document.getElementById('media-lightbox');
+        if (lightbox) {
+            lightbox.addEventListener('click', (e) => {
+                if (e.target.id === 'media-lightbox') closeLightbox();
+            });
+        }
+
+        bindClick('btn-property-geocode', geocodeFromForm);
 
         els.form.addEventListener('submit', handleFormSubmit);
 
         // CSV export / import
-        document.getElementById('btn-export-properties').addEventListener('click', () => {
+        bindClick('btn-export-properties', () => {
             window.open(`${API}?format=csv`, '_blank');
         });
-        document.getElementById('btn-portal-export').addEventListener('click', () => {
+        bindClick('btn-portal-export', () => {
             const fmt = prompt('Formato esportazione portali:\n1 = JSON (Immobiliare.it)\n2 = XML (feed MLS)\nInserisci 1 o 2:', '1');
             if (fmt === '1') window.open(`${EXPORT_API}?format=json`, '_blank');
             else if (fmt === '2') window.open(`${EXPORT_API}?format=xml`, '_blank');
         });
-        document.getElementById('btn-compare-properties').addEventListener('click', openCompareModal);
-        document.getElementById('property-qr-close').addEventListener('click', () => {
-            document.getElementById('property-qr-modal').hidden = true;
+        bindClick('btn-compare-properties', openCompareModal);
+        bindClick('property-qr-close', () => {
+            const modal = document.getElementById('property-qr-modal');
+            if (modal) modal.hidden = true;
         });
-        document.getElementById('property-compare-close').addEventListener('click', () => {
-            document.getElementById('property-compare-modal').hidden = true;
+        bindClick('property-compare-close', () => {
+            const modal = document.getElementById('property-compare-modal');
+            if (modal) modal.hidden = true;
         });
-        document.getElementById('btn-copy-qr-url').addEventListener('click', () => {
-            const url = document.getElementById('qr-url').value;
-            navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
+        bindClick('btn-copy-qr-url', () => {
+            const url = document.getElementById('qr-url')?.value;
+            if (url) navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
         });
-        document.getElementById('btn-import-properties').addEventListener('click', () => {
-            document.getElementById('import-properties-file').click();
+        bindClick('btn-import-properties', () => {
+            document.getElementById('import-properties-file')?.click();
         });
-        document.getElementById('import-properties-file').addEventListener('change', handleImportFile);
-        document.getElementById('import-modal-close').addEventListener('click', closeImportModal);
-        document.getElementById('import-modal-cancel').addEventListener('click', closeImportModal);
-        document.getElementById('import-confirm').addEventListener('click', confirmImport);
+        bindChange('import-properties-file', handleImportFile);
+        bindClick('import-modal-close', closeImportModal);
+        bindClick('import-modal-cancel', closeImportModal);
+        bindClick('import-confirm', confirmImport);
 
         // Appraisal modal
-        document.getElementById('appraisal-modal-close').addEventListener('click', closeAppraisalModal);
-        document.getElementById('appraisal-modal-cancel').addEventListener('click', closeAppraisalModal);
-        document.getElementById('appraisal-form').addEventListener('submit', saveAppraisal);
+        bindClick('appraisal-modal-close', closeAppraisalModal);
+        bindClick('appraisal-modal-cancel', closeAppraisalModal);
+        const appraisalForm = document.getElementById('appraisal-form');
+        if (appraisalForm) appraisalForm.addEventListener('submit', saveAppraisal);
 
-        document.getElementById('bulk-archive-properties').addEventListener('click', () => bulkAction('archive'));
-        document.getElementById('bulk-assign-properties').addEventListener('click', () => bulkAction('assign'));
-        document.getElementById('bulk-export-properties').addEventListener('click', bulkExport);
-        els.selectAll.addEventListener('change', toggleSelectAll);
+        bindClick('bulk-archive-properties', () => bulkAction('archive'));
+        bindClick('bulk-assign-properties', () => bulkAction('assign'));
+        bindClick('bulk-export-properties', bulkExport);
+        if (els.selectAll) els.selectAll.addEventListener('change', toggleSelectAll);
 
-        els.search.addEventListener('input', () => {
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => { currentPage = 1; loadProperties(); }, 300);
-        });
+        if (els.search) {
+            els.search.addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => { currentPage = 1; loadProperties(); }, 300);
+            });
+        }
 
-        els.clientFilter.addEventListener('change', () => { currentPage = 1; loadProperties(); });
-        els.statusFilter.addEventListener('change', () => { currentPage = 1; loadProperties(); });
+        if (els.clientFilter) {
+            els.clientFilter.addEventListener('change', () => { currentPage = 1; loadProperties(); });
+        }
+        if (els.statusFilter) {
+            els.statusFilter.addEventListener('change', () => { currentPage = 1; loadProperties(); });
+        }
 
-        els.modal.addEventListener('click', (e) => {
-            if (e.target === els.modal) closeModal();
-        });
-        els.deleteModal.addEventListener('click', (e) => {
-            if (e.target === els.deleteModal) closeDeleteModal();
-        });
+        if (els.modal) {
+            els.modal.addEventListener('click', (e) => {
+                if (e.target === els.modal) closeModal();
+            });
+        }
+        if (els.deleteModal) {
+            els.deleteModal.addEventListener('click', (e) => {
+                if (e.target === els.deleteModal) closeDeleteModal();
+            });
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -221,18 +281,31 @@
                 ? ((parseFloat(p.monthly_rent) * 12 / parseFloat(p.price)) * 100).toFixed(1)
                 : null;
             if (roi) chips.push(`<span class="prop-chip prop-chip--roi" title="ROI lordo annuo">📈 ${roi}% ROI</span>`);
-            const mediaLabel = (p.media_count || 0) === 1 ? '1 foto' : `${p.media_count || 0} foto`;
+            const photoCount = parseInt(p.photo_count, 10) || 0;
+            const mediaTotal = parseInt(p.media_count, 10) || 0;
+            const mediaLabel = photoCount === 1
+                ? '1 foto'
+                : `${photoCount} foto`;
+            const filesLabel = mediaTotal > photoCount
+                ? ` · ${mediaTotal} file totali`
+                : '';
             const inCompare = compareIds.has(p.id);
+            const coverHtml = p.cover_url
+                ? `<img src="${escapeHtml(mediaUrl(p.cover_url))}" alt="Anteprima ${escapeHtml(p.address)}" class="entity-card__cover-img" loading="lazy">`
+                : `<div class="entity-card__cover-placeholder" aria-hidden="true"><span class="entity-card__cover-icon">🏠</span><span>Nessuna foto</span></div>`;
 
             return `
-            <div class="entity-card entity-card--property" data-id="${p.id}">
+            <div class="entity-card entity-card--property entity-card--clickable" data-id="${p.id}" tabindex="0" role="button" aria-label="Apri scheda ${escapeHtml(p.address)}">
+                <div class="entity-card__cover">
+                    ${coverHtml}
+                    <label class="entity-card__cover-select" title="Seleziona"><input type="checkbox" class="prop-bulk-cb" data-id="${p.id}" ${selectedIds.has(p.id) ? 'checked' : ''}></label>
+                    <span class="badge badge--${p.status} entity-card__cover-badge">${STATUS_LABELS[p.status] || p.status}</span>
+                </div>
                 <div class="entity-card__prop-header">
-                    <label class="entity-card__select"><input type="checkbox" class="prop-bulk-cb" data-id="${p.id}" ${selectedIds.has(p.id) ? 'checked' : ''}></label>
                     <div class="entity-card__address">
                         <div class="entity-card__street">${escapeHtml(p.address)}</div>
                         <div class="entity-card__city text-muted">${escapeHtml(p.city)}${p.cap ? ' · ' + escapeHtml(p.cap) : ''}</div>
                     </div>
-                    <span class="badge badge--${p.status}">${STATUS_LABELS[p.status] || p.status}</span>
                 </div>
                 <div class="entity-card__body">
                     <div class="entity-card__info"><span class="entity-card__info-icon">👤</span>${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</div>
@@ -241,14 +314,14 @@
                 <div class="entity-card__footer">
                     <div class="entity-card__stat">
                         <span class="entity-card__stat-icon">📷</span>
-                        <span class="entity-card__stat-label">${mediaLabel}</span>
+                        <span class="entity-card__stat-label">${mediaLabel}${filesLabel}</span>
                     </div>
                     <div class="entity-card__actions">
                         <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR">🔗</button>
                         <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto">📊</button>
                         <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
                         <button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica scheda">✏️</button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
                     </div>
                 </div>
@@ -256,6 +329,7 @@
         }).join('');
 
         els.grid.querySelectorAll('.prop-bulk-cb').forEach(cb => {
+            cb.addEventListener('click', (e) => e.stopPropagation());
             cb.addEventListener('change', () => {
                 const id = parseInt(cb.dataset.id, 10);
                 if (cb.checked) selectedIds.add(id);
@@ -264,15 +338,32 @@
             });
         });
 
+        els.grid.querySelectorAll('.entity-card--property').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, input, label, a')) return;
+                const prop = properties.find(p => p.id == card.dataset.id);
+                if (prop) openModal(prop);
+            });
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const prop = properties.find(p => p.id == card.dataset.id);
+                    if (prop) openModal(prop);
+                }
+            });
+        });
+
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const prop = properties.find(p => p.id == btn.dataset.id);
                 if (prop) openModal(prop);
             });
         });
 
         els.grid.querySelectorAll('.btn-pdf').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const res = await fetch('api/generate_pdf.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -285,22 +376,30 @@
         });
 
         els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const prop = properties.find(p => p.id == btn.dataset.id);
                 if (prop) openDeleteModal(prop.id, `${prop.address}, ${prop.city}`);
             });
         });
 
         els.grid.querySelectorAll('.btn-appraisal').forEach(btn => {
-            btn.addEventListener('click', () => openAppraisalModal(btn.dataset.id));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openAppraisalModal(btn.dataset.id);
+            });
         });
 
         els.grid.querySelectorAll('.btn-qr').forEach(btn => {
-            btn.addEventListener('click', () => openQrModal(parseInt(btn.dataset.id, 10), btn.dataset.address));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openQrModal(parseInt(btn.dataset.id, 10), btn.dataset.address);
+            });
         });
 
         els.grid.querySelectorAll('.btn-compare-add').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = parseInt(btn.dataset.id, 10);
                 if (compareIds.has(id)) {
                     compareIds.delete(id);
@@ -346,7 +445,8 @@
             const res  = await fetch(`${COMPARE_API}?ids=${ids}`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            const props = json.data;
+            const props = Array.isArray(json.data) ? json.data : (json.data?.properties || []);
+            if (!props.length) throw new Error('Nessun immobile da confrontare.');
             const rows = [
                 ['Indirizzo',         p => `${p.address}, ${p.city}`],
                 ['Tipo',              p => p.property_type || '—'],
@@ -361,7 +461,7 @@
                 ['Reddito 12m',       p => p.total_income_12m ? '€ ' + Number(p.total_income_12m).toLocaleString('it-IT') : '—'],
                 ['ROI lordo',         p => (p.purchase_price && p.monthly_rent) ? ((p.monthly_rent*12/p.purchase_price)*100).toFixed(1)+'%' : '—'],
                 ['Stato',             p => p.status ?? '—'],
-                ['Occupato',          p => p.occupancy_status ? 'Sì' : 'No'],
+                ['Occupato',          p => p.occupancy_status === 'occupied' ? 'Sì' : 'No'],
             ];
             const headerCells = props.map(p => `<th>${escapeHtml(p.address)}</th>`).join('');
             const bodyRows = rows.map(([label, fn]) =>
@@ -397,7 +497,7 @@
     async function bulkAction(operation) {
         const ids = [...selectedIds];
         if (!ids.length) return;
-        if (operation === 'archive' && !confirm(`Archiviare ${ids.length} immobil${ids.length === 1 ? 'e' : 'i'}?`)) return;
+        if (operation === 'archive' && !await confirmDialog(`Vuoi archiviare ${ids.length} immobil${ids.length === 1 ? 'e' : 'i'}?`, { title: 'Archivia immobili', confirmText: 'Archivia' })) return;
 
         const body = { action: 'bulk', operation, ids };
         if (operation === 'assign') {
@@ -466,42 +566,159 @@
         else alert(json.error || 'Errore generazione mandato');
     }
 
+    function mediaUrl(path) {
+        if (!path) return '';
+        if (/^https?:\/\//i.test(path) || path.startsWith('/')) return path;
+        return '/' + String(path).replace(/^\.\//, '');
+    }
+
+    function isVideoMedia(m) {
+        return (m.mime_type && m.mime_type.startsWith('video/')) || m.media_type === 'video';
+    }
+
+    function isImageMedia(m) {
+        return (m.mime_type && m.mime_type.startsWith('image/'))
+            || ['photo', 'floor_plan', 'house_map'].includes(m.media_type);
+    }
+
     function renderGallery() {
         if (currentMedia.length === 0) {
-            els.galleryGrid.innerHTML = '<p class="text-muted gallery-empty">Nessun file caricato.</p>';
+            els.galleryGrid.innerHTML = '<p class="text-muted gallery-empty">Nessun file caricato. Usa il form sopra per aggiungere foto, video, planimetrie, cartine o allegati.</p>';
             return;
         }
 
-        els.galleryGrid.innerHTML = currentMedia.map(m => {
-            const isImage = m.mime_type && m.mime_type.startsWith('image/');
-            const isVideo = m.mime_type && m.mime_type.startsWith('video/');
-            const isPdf   = m.mime_type === 'application/pdf';
+        const groups = {};
+        currentMedia.forEach(m => {
+            const key = m.media_type || 'attachment';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(m);
+        });
 
-            let preview;
-            if (isImage) {
-                preview = `<img src="${escapeHtml(m.url)}" alt="${escapeHtml(m.original_name)}" class="gallery-item__img">`;
-            } else if (isVideo) {
-                preview = `<video src="${escapeHtml(m.url)}" class="gallery-item__video" controls></video>`;
-            } else if (isPdf) {
-                preview = `<div class="gallery-item__doc">📄 PDF</div>`;
-            } else {
-                preview = `<div class="gallery-item__doc">📎 File</div>`;
-            }
-
-            return `
-                <div class="gallery-item" data-id="${m.id}">
-                    ${preview}
-                    <div class="gallery-item__meta">
-                        <span class="gallery-item__type">${MEDIA_LABELS[m.media_type] || m.media_type}</span>
-                        <span class="gallery-item__name" title="${escapeHtml(m.original_name)}">${escapeHtml(truncate(m.original_name, 20))}</span>
-                    </div>
-                    <button type="button" class="gallery-item__delete btn-delete-media" data-id="${m.id}" title="Elimina">&times;</button>
-                </div>`;
-        }).join('');
+        const order = ['photo', 'video', 'floor_plan', 'house_map', 'attachment'];
+        els.galleryGrid.innerHTML = order.filter(t => groups[t]?.length).map(type => `
+            <div class="gallery-section">
+                <h4 class="gallery-section__title">${escapeHtml(MEDIA_LABELS[type] || type)} (${groups[type].length})</h4>
+                <div class="gallery-section__grid">
+                    ${groups[type].map(m => renderGalleryItem(m)).join('')}
+                </div>
+            </div>
+        `).join('');
 
         els.galleryGrid.querySelectorAll('.btn-delete-media').forEach(btn => {
-            btn.addEventListener('click', () => deleteMedia(btn.dataset.id));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteMedia(btn.dataset.id);
+            });
         });
+
+        els.galleryGrid.querySelectorAll('.btn-set-cover').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setCoverMedia(btn.dataset.id);
+            });
+        });
+
+        els.galleryGrid.querySelectorAll('.gallery-item__preview').forEach(el => {
+            el.addEventListener('click', () => {
+                const item = currentMedia.find(m => m.id == el.closest('.gallery-item')?.dataset.id);
+                if (item) openLightbox(item);
+            });
+        });
+    }
+
+    function renderGalleryItem(m) {
+        const url = mediaUrl(m.url);
+        const isImage = isImageMedia(m) && m.mime_type !== 'application/pdf';
+        const isVideo = isVideoMedia(m);
+        const isPdf   = m.mime_type === 'application/pdf';
+        const canCover = COVER_MEDIA_TYPES.has(m.media_type) && isImage && !isVideo;
+
+        let preview;
+        if (isVideo) {
+            preview = `<video src="${escapeHtml(url)}" class="gallery-item__video" muted playsinline preload="metadata"></video><span class="gallery-item__play">▶</span>`;
+        } else if (isImage) {
+            preview = `<img src="${escapeHtml(url)}" alt="${escapeHtml(m.original_name)}" class="gallery-item__img">`;
+        } else if (isPdf) {
+            preview = `<div class="gallery-item__doc">📄 PDF</div>`;
+        } else {
+            preview = `<div class="gallery-item__doc">📎 File</div>`;
+        }
+
+        return `
+            <div class="gallery-item${m.is_cover ? ' gallery-item--cover' : ''}" data-id="${m.id}">
+                <div class="gallery-item__preview" role="button" tabindex="0" title="Visualizza">
+                    ${preview}
+                    ${m.is_cover ? '<span class="gallery-item__cover-badge">Anteprima</span>' : ''}
+                </div>
+                <div class="gallery-item__meta">
+                    <span class="gallery-item__type">${MEDIA_LABELS[m.media_type] || m.media_type}</span>
+                    <span class="gallery-item__name" title="${escapeHtml(m.original_name)}">${escapeHtml(truncate(m.original_name, 22))}</span>
+                </div>
+                <div class="gallery-item__actions">
+                    ${canCover && !m.is_cover ? `<button type="button" class="btn btn--xs btn--ghost btn-set-cover" data-id="${m.id}" title="Usa come anteprima card">⭐ Anteprima</button>` : ''}
+                    ${isVideo || isPdf || (!isImage && !isVideo) ? `<a href="${escapeHtml(url)}" class="btn btn--xs btn--ghost" target="_blank" rel="noopener"${isVideo || isPdf ? ' download' : ''}>${isVideo ? 'Apri' : 'Scarica'}</a>` : ''}
+                    <button type="button" class="gallery-item__delete btn-delete-media" data-id="${m.id}" title="Elimina">&times;</button>
+                </div>
+            </div>`;
+    }
+
+    function updateMediaFileAccept() {
+        const type = document.getElementById('media-type').value;
+        document.getElementById('media-file').accept = MEDIA_ACCEPT[type] || '';
+    }
+
+    function openLightbox(item) {
+        ensureLightbox();
+        const box = document.getElementById('media-lightbox');
+        const content = document.getElementById('media-lightbox-content');
+        const caption = document.getElementById('media-lightbox-caption');
+        const url = mediaUrl(item.url);
+        const isImage = isImageMedia(item) && item.mime_type !== 'application/pdf';
+        const isVideo = isVideoMedia(item);
+
+        if (isVideo) {
+            const type = item.mime_type || 'video/mp4';
+            content.innerHTML = `<video src="${escapeHtml(url)}" controls autoplay playsinline preload="metadata"><source src="${escapeHtml(url)}" type="${escapeHtml(type)}"></video>`;
+        } else if (isImage) {
+            content.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(item.original_name)}">`;
+        } else if (item.mime_type === 'application/pdf') {
+            content.innerHTML = `<iframe src="${escapeHtml(url)}" title="${escapeHtml(item.original_name)}"></iframe>`;
+        } else {
+            content.innerHTML = `<p class="text-muted">Anteprima non disponibile. <a href="${escapeHtml(url)}" target="_blank" rel="noopener">Apri il file</a></p>`;
+        }
+
+        caption.textContent = `${MEDIA_LABELS[item.media_type] || item.media_type} — ${item.original_name}`;
+        box.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        const box = document.getElementById('media-lightbox');
+        if (!box) return;
+        box.hidden = true;
+        const content = document.getElementById('media-lightbox-content');
+        if (content) content.innerHTML = '';
+        document.body.style.overflow = '';
+    }
+
+    async function setCoverMedia(mediaId) {
+        if (!editingId) return;
+
+        try {
+            const res = await fetch(`${MEDIA_API}?action=set_cover`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ property_id: editingId, media_id: parseInt(mediaId, 10) }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            await loadMedia(editingId);
+            loadProperties();
+            showAlert('Anteprima card aggiornata.', 'success');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -554,6 +771,7 @@
 
             els.gallerySection.hidden = false;
             els.galleryHint.hidden    = true;
+            updateMediaFileAccept();
             loadMedia(property.id);
         } else {
             els.modalTitle.textContent = 'Nuovo Immobile';
@@ -561,6 +779,7 @@
             els.gallerySection.hidden = true;
             els.galleryHint.hidden    = false;
             els.galleryGrid.innerHTML = '';
+            updateMediaFileAccept();
         }
 
         els.modal.hidden = false;
@@ -591,6 +810,7 @@
     function closeModal() {
         els.modal.hidden = true;
         editingId = null;
+        closeLightbox();
     }
 
     function openDeleteModal(id, label) {
@@ -644,17 +864,15 @@
     }
 
     function showGeoConfidence(confidence, source = '') {
+        const valueEl = document.getElementById('property-geo-confidence-value');
+        if (valueEl) valueEl.value = confidence || '';
+
+        // The confidence note is intentionally not shown in the form.
         const el = document.getElementById('property-geo-confidence');
-        if (!el) return;
-        if (!confidence) {
+        if (el) {
+            el.textContent = '';
             el.style.display = 'none';
-            document.getElementById('property-geo-confidence-value').value = '';
-            return;
         }
-        const label = (typeof Geocode !== 'undefined' && Geocode.CONFIDENCE_LABELS[confidence]) || confidence;
-        el.textContent = source ? `${label} · fonte: ${source}` : label;
-        el.style.display = 'block';
-        document.getElementById('property-geo-confidence-value').value = confidence;
     }
 
     async function handleFormSubmit(e) {
@@ -668,15 +886,24 @@
         saveBtn.textContent = 'Salvataggio...';
 
         try {
-            await saveProperty(data, id || null);
+            const saved = await saveProperty(data, id || null);
+            const wasNew = !id;
 
-            closeModal();
-            showAlert(
-                id ? 'Immobile salvato con successo.' : 'Immobile creato. Modificalo per caricare foto e documenti.',
-                'success'
-            );
-
-            loadProperties();
+            if (wasNew) {
+                editingId = saved.id;
+                document.getElementById('property-id').value = saved.id;
+                els.modalTitle.textContent = 'Modifica Immobile — carica la galleria';
+                els.gallerySection.hidden = false;
+                els.galleryHint.hidden = true;
+                document.getElementById('btn-property-mandato').hidden = false;
+                updateMediaFileAccept();
+                showAlert('Immobile creato. Ora puoi caricare foto, video e allegati nella galleria.', 'success');
+                loadProperties();
+            } else {
+                closeModal();
+                showAlert('Immobile salvato con successo.', 'success');
+                loadProperties();
+            }
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
@@ -788,7 +1015,7 @@
     }
 
     async function deleteMedia(mediaId) {
-        if (!confirm('Eliminare questo file?')) return;
+        if (!await confirmDialog('Vuoi eliminare questo file dalla galleria?', { title: 'Elimina file' })) return;
 
         try {
             const res  = await fetch(`${MEDIA_API}?id=${mediaId}`, { method: 'DELETE' });
@@ -909,7 +1136,7 @@
     }
 
     async function deleteAppraisal(id, propertyId) {
-        if (!confirm('Eliminare questa valutazione?')) return;
+        if (!await confirmDialog('Vuoi eliminare questa valutazione?', { title: 'Elimina valutazione' })) return;
         try {
             const res = await fetch(`${APPRAISAL_API}?id=${id}`, { method: 'DELETE' });
             const json = await res.json();

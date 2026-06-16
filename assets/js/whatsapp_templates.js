@@ -105,7 +105,7 @@
     }
 
     async function del(id) {
-        if (!confirm('Eliminare questo template?')) return;
+        if (!await confirmDialog('Vuoi eliminare questo template?', { title: 'Elimina template' })) return;
         try {
             const res = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
             const json = await res.json();

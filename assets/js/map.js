@@ -35,8 +35,8 @@
 
         els.geocodeBtn.addEventListener('click', () => geocodeBatch(false));
         if (els.regeocodeBtn) {
-            els.regeocodeBtn.addEventListener('click', () => {
-                if (confirm('Ricalcolare le coordinate di tutti gli immobili? Le posizioni attuali verranno sostituite.')) {
+            els.regeocodeBtn.addEventListener('click', async () => {
+                if (await confirmDialog('Vuoi ricalcolare le coordinate di tutti gli immobili? Le posizioni attuali verranno sostituite.', { title: 'Ricalcola coordinate', confirmText: 'Ricalcola', danger: false, icon: '📍' })) {
                     geocodeBatch(true);
                 }
             });

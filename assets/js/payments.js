@@ -159,8 +159,8 @@
         });
 
         els.grid.querySelectorAll('.btn-cancel').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (confirm('Annullare questo pagamento?')) cancelPayment(btn.dataset.id);
+            btn.addEventListener('click', async () => {
+                if (await confirmDialog('Vuoi annullare questo pagamento?', { title: 'Annulla pagamento', confirmText: 'Annulla pagamento', cancelText: 'Indietro' })) cancelPayment(btn.dataset.id);
             });
         });
     }

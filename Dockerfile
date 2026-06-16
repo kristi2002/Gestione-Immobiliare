@@ -8,6 +8,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
+RUN { \
+        echo 'upload_max_filesize = 25M'; \
+        echo 'post_max_size = 26M'; \
+        echo 'max_execution_time = 120'; \
+    } > /usr/local/etc/php/conf.d/uploads.ini
+
 WORKDIR /var/www/html
 
 # Baked into image (avoids OneDrive reparse-point issues on docker/* files during COPY)

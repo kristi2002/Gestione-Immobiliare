@@ -3,4 +3,12 @@
     Require all denied
 </FilesMatch>
 
+AddType video/mp4 .mp4 .m4v
+AddType video/webm .webm
+AddType video/quicktime .mov .qt
+
+<IfModule mod_headers.c>
+    Header set Accept-Ranges bytes
+</IfModule>
+
 Options -Indexes

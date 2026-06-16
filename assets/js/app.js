@@ -188,6 +188,9 @@
                 if (token !== this._viewToken) return;
                 this.injectStyles(this.contentEl);
                 await this.executeScripts(this.contentEl);
+                if (window.FilterBar) {
+                    FilterBar.setupIn(this.contentEl);
+                }
 
             } catch (err) {
                 this.contentEl.innerHTML = `
@@ -208,17 +211,28 @@
 
         /** Move stylesheet links from partials into <head> (innerHTML does not load them). */
         injectStyles(container) {
+            const normalizeHref = (href) => {
+                if (!href) return '';
+                try {
+                    return new URL(href, window.location.href).pathname;
+                } catch {
+                    return href.split('?')[0];
+                }
+            };
+
             container.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
                 const href = link.getAttribute('href');
                 if (!href) return;
 
+                const hrefPath = normalizeHref(href);
                 const already = [...document.querySelectorAll('link[rel="stylesheet"]')]
-                    .some(l => l.getAttribute('href') === href);
+                    .some(l => normalizeHref(l.getAttribute('href')) === hrefPath);
 
                 if (!already) {
                     const el = document.createElement('link');
                     el.rel = 'stylesheet';
-                    el.href = href;
+                    const bust = href.includes('?') ? '&' : '?';
+                    el.href = `${href}${bust}v=${Date.now()}`;
                     if (link.crossOrigin) el.crossOrigin = link.crossOrigin;
                     document.head.appendChild(el);
                 }

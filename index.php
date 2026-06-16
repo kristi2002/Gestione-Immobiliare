@@ -17,7 +17,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
     <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_color'] ?? '#2563eb', ENT_QUOTES, 'UTF-8') ?>">
     <link rel="manifest" href="manifest.json">
     <title><?= htmlspecialchars($agencyName) ?></title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="stylesheet" href="branding.css.php">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
@@ -161,12 +161,26 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="assets/js/geocode.js"></script>
-    <script src="assets/js/pagination.js"></script>
-    <script src="assets/js/app.js"></script>
+    <script src="assets/js/confirm.js?v=<?= @filemtime(__DIR__ . '/assets/js/confirm.js') ?: time() ?>"></script>
+    <script src="assets/js/pagination.js?v=<?= @filemtime(__DIR__ . '/assets/js/pagination.js') ?: time() ?>"></script>
+    <script src="assets/js/filters.js?v=<?= @filemtime(__DIR__ . '/assets/js/filters.js') ?: time() ?>"></script>
+    <script src="assets/js/app.js?v=<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
     <script src="assets/js/notifications.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+        // Auto-reload once when an UPDATED service worker takes control, so stale
+        // cached CSS/JS from a previous version is replaced without a manual hard refresh.
+        // Skip the reload on the very first install (no previous controller).
+        const hadController = !!navigator.serviceWorker.controller;
+        let swReloaded = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (swReloaded || !hadController) return;
+            swReloaded = true;
+            window.location.reload();
+        });
+        navigator.serviceWorker.register('sw.js')
+            .then((reg) => { reg.update(); })
+            .catch(() => {});
     }
     </script>
 </body>

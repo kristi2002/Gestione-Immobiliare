@@ -112,7 +112,7 @@ function createPost(PDO $db): void
 {
     $data      = parsePostInput();
     $validated = validatePostInput($data);
-    $imagePath = handleImageUpload($_FILES['image'] ?? null);
+    $imagePath = resolvePostImage($db, $_FILES['image'] ?? null, $data, $validated['property_id']);
 
     $stmt = $db->prepare(
         "INSERT INTO social_posts
@@ -144,6 +144,14 @@ function updatePost(PDO $db, int $id): void
             unlink(__DIR__ . '/../' . $imagePath);
         }
         $imagePath = handleImageUpload($_FILES['image']);
+    } elseif (!empty($data['property_media_id'])) {
+        $copied = copyPropertyMediaImage($db, (int) $data['property_media_id'], $validated['property_id']);
+        if ($copied) {
+            if ($imagePath && file_exists(__DIR__ . '/../' . $imagePath)) {
+                unlink(__DIR__ . '/../' . $imagePath);
+            }
+            $imagePath = $copied;
+        }
     }
 
     applyPostUpdate($db, $id, $validated, $imagePath);
@@ -292,6 +300,61 @@ function handleImageUpload(?array $file): ?string
 
     if (!move_uploaded_file($file['tmp_name'], $dest)) {
         apiError('Errore salvataggio immagine.', 500);
+    }
+
+    return 'uploads/social/' . date('Y/m') . '/' . $filename;
+}
+
+function resolvePostImage(PDO $db, ?array $file, array $data, ?int $propertyId): ?string
+{
+    if (!empty($file) && $file['error'] === UPLOAD_ERR_OK) {
+        return handleImageUpload($file);
+    }
+
+    if (!empty($data['property_media_id'])) {
+        return copyPropertyMediaImage($db, (int) $data['property_media_id'], $propertyId);
+    }
+
+    return null;
+}
+
+function copyPropertyMediaImage(PDO $db, int $mediaId, ?int $propertyId): ?string
+{
+    if ($mediaId <= 0) {
+        return null;
+    }
+
+    $sql = 'SELECT file_path, mime_type, property_id FROM property_media WHERE id = :id';
+    $params = ['id' => $mediaId];
+    if ($propertyId) {
+        $sql .= ' AND property_id = :property_id';
+        $params['property_id'] = $propertyId;
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $media = $stmt->fetch();
+
+    if (!$media || strpos((string) $media['mime_type'], 'image/') !== 0) {
+        apiError('Immagine immobile non valida.');
+    }
+
+    $source = __DIR__ . '/../' . $media['file_path'];
+    if (!file_exists($source)) {
+        apiError('File immagine non trovato.');
+    }
+
+    $dir = __DIR__ . '/../uploads/social/' . date('Y/m');
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        apiError('Impossibile creare cartella upload.', 500);
+    }
+
+    $ext = pathinfo($media['file_path'], PATHINFO_EXTENSION);
+    $filename = uniqid('social_', true) . ($ext ? '.' . strtolower($ext) : '');
+    $dest = $dir . '/' . $filename;
+
+    if (!copy($source, $dest)) {
+        apiError('Errore copia immagine dall\'immobile.', 500);
     }
 
     return 'uploads/social/' . date('Y/m') . '/' . $filename;

@@ -404,7 +404,7 @@
         });
         tbody.querySelectorAll('[data-del-tpl]').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('Eliminare questo template?')) return;
+                if (!await confirmDialog('Vuoi eliminare questo template?', { title: 'Elimina template' })) return;
                 await fetch(`${EMAIL_TPL_API}?id=${btn.dataset.delTpl}`, { method: 'DELETE' });
                 await loadEmailTemplates();
                 showAlert('Template eliminato.', 'success');

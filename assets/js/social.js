@@ -8,6 +8,7 @@
     const SETTINGS_API = 'api/social_settings.php';
     const PUBLISH_API  = 'api/publish_social_posts.php';
     const PROPERTIES_API = 'api/properties.php';
+    const MEDIA_API    = 'api/property_media.php';
 
     const PLATFORM_LABELS = {
         facebook:  'Facebook',
@@ -73,6 +74,7 @@
         els.platformFilter.addEventListener('change', () => { currentPage = 1; loadPosts(); });
 
         document.getElementById('post-image').addEventListener('change', previewImage);
+        document.getElementById('post-property').addEventListener('change', onPropertyChange);
 
         els.modal.addEventListener('click', (e) => {
             if (e.target === els.modal) closeModal();
@@ -229,8 +231,8 @@
         });
 
         els.tbody.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (confirm('Eliminare questo post?')) deletePost(btn.dataset.id);
+            btn.addEventListener('click', async () => {
+                if (await confirmDialog('Vuoi eliminare questo post?', { title: 'Elimina post' })) deletePost(btn.dataset.id);
             });
         });
 
@@ -246,8 +248,10 @@
     function openModal(post = null) {
         els.form.reset();
         document.getElementById('post-id').value = '';
+        document.getElementById('post-property-media-id').value = '';
         els.imagePreview.hidden = true;
         els.imagePreview.innerHTML = '';
+        clearPropertyPhotoPicker();
 
         if (post) {
             els.modalTitle.textContent = 'Modifica Post';
@@ -262,6 +266,7 @@
                 els.imagePreview.hidden = false;
                 els.imagePreview.innerHTML = `<img src="${escapeHtml(post.image_path)}" alt="Anteprima">`;
             }
+            if (post.property_id) loadPropertyPhotos(post.property_id);
         } else {
             els.modalTitle.textContent = 'Nuovo Post';
             const tomorrow = new Date();
@@ -275,6 +280,61 @@
         document.getElementById('post-caption').focus();
     }
 
+    function clearPropertyPhotoPicker() {
+        document.getElementById('post-property-photos-group').hidden = true;
+        document.getElementById('post-property-photos').innerHTML = '';
+    }
+
+    async function onPropertyChange() {
+        document.getElementById('post-property-media-id').value = '';
+        const propertyId = document.getElementById('post-property').value;
+        if (!propertyId) {
+            clearPropertyPhotoPicker();
+            return;
+        }
+        await loadPropertyPhotos(propertyId);
+    }
+
+    async function loadPropertyPhotos(propertyId) {
+        const group = document.getElementById('post-property-photos-group');
+        const container = document.getElementById('post-property-photos');
+        group.hidden = false;
+        container.innerHTML = '<p class="text-muted">Caricamento foto immobile…</p>';
+
+        try {
+            const res = await fetch(`${MEDIA_API}?property_id=${propertyId}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            const photos = (json.data || []).filter(m => m.mime_type && m.mime_type.startsWith('image/'));
+            if (!photos.length) {
+                container.innerHTML = '<p class="text-muted">Nessuna foto in galleria per questo immobile. Caricala dalla scheda Immobili.</p>';
+                return;
+            }
+
+            container.innerHTML = photos.map(p => `
+                <button type="button" class="property-photo-picker__item" data-id="${p.id}" data-url="${escapeHtml(p.url)}" title="${escapeHtml(p.original_name)}">
+                    <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.original_name)}" loading="lazy">
+                </button>
+            `).join('');
+
+            container.querySelectorAll('.property-photo-picker__item').forEach(btn => {
+                btn.addEventListener('click', () => selectPropertyPhoto(btn));
+            });
+        } catch (err) {
+            container.innerHTML = `<p class="text-muted">${escapeHtml(err.message)}</p>`;
+        }
+    }
+
+    function selectPropertyPhoto(btn) {
+        document.querySelectorAll('.property-photo-picker__item').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('post-property-media-id').value = btn.dataset.id;
+        document.getElementById('post-image').value = '';
+        els.imagePreview.hidden = false;
+        els.imagePreview.innerHTML = `<img src="${escapeHtml(btn.dataset.url)}" alt="Anteprima da immobile">`;
+    }
+
     function closeModal() {
         els.modal.hidden = true;
     }
@@ -285,6 +345,8 @@
             els.imagePreview.hidden = true;
             return;
         }
+        document.getElementById('post-property-media-id').value = '';
+        document.querySelectorAll('.property-photo-picker__item').forEach(b => b.classList.remove('selected'));
         const url = URL.createObjectURL(file);
         els.imagePreview.hidden = false;
         els.imagePreview.innerHTML = `<img src="${url}" alt="Anteprima">`;
@@ -303,6 +365,9 @@
 
         const imageFile = document.getElementById('post-image').files[0];
         if (imageFile) formData.append('image', imageFile);
+
+        const propertyMediaId = document.getElementById('post-property-media-id').value;
+        if (propertyMediaId) formData.append('property_media_id', propertyMediaId);
 
         const btn = document.getElementById('post-modal-save');
         btn.disabled = true;
@@ -341,7 +406,7 @@
     }
 
     async function publishNow(id) {
-        if (!confirm('Pubblicare questo post adesso?')) return;
+        if (!await confirmDialog('Vuoi pubblicare questo post adesso?', { title: 'Pubblica post', confirmText: 'Pubblica', danger: false })) return;
 
         try {
             const res  = await fetch(`${POSTS_API}?id=${id}&action=publish`, { method: 'PATCH' });

@@ -5,7 +5,7 @@
             <p id="dashboard-date" class="text-muted"></p>
         </div>
         <div class="dashboard-header__actions">
-            <a href="view.php?name=clients" class="btn btn--ghost btn--sm" data-view="clients">+ Proprietario</a>
+            <a href="view.php?name=clients" class="btn btn--outline-primary btn--sm" data-view="clients">+ Proprietario</a>
             <a href="view.php?name=properties" class="btn btn--primary btn--sm" data-view="properties">+ Immobile</a>
         </div>
     </div>
@@ -43,6 +43,14 @@
                 <div class="stat-label">Affittati</div>
                 <div class="stat-value loading" id="stat-rented">—</div>
                 <div class="stat-sub">Contratti attivi</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--sold">🏷️</div>
+            <div class="stat-body">
+                <div class="stat-label">Venduti</div>
+                <div class="stat-value loading" id="stat-sold">—</div>
+                <div class="stat-sub">Immobili venduti</div>
             </div>
         </div>
         <div class="stat-card">
@@ -115,40 +123,28 @@
         <div class="dashboard-section">
             <div class="section-header">
                 <h3>Accesso rapido</h3>
+                <button type="button" class="btn btn--ghost btn--sm" id="quick-actions-customize">⚙️ Personalizza</button>
             </div>
-            <div class="quick-actions">
-                <a href="view.php?name=clients" class="quick-action" data-view="clients">
-                    <span class="quick-action__icon">👥</span>
-                    <span class="quick-action__label">Proprietari</span>
-                </a>
-                <a href="view.php?name=properties" class="quick-action" data-view="properties">
-                    <span class="quick-action__icon">🏢</span>
-                    <span class="quick-action__label">Immobili</span>
-                </a>
-                <a href="view.php?name=leads" class="quick-action" data-view="leads">
-                    <span class="quick-action__icon">🎯</span>
-                    <span class="quick-action__label">Leads</span>
-                </a>
-                <a href="view.php?name=contracts" class="quick-action" data-view="contracts">
-                    <span class="quick-action__icon">📝</span>
-                    <span class="quick-action__label">Contratti</span>
-                </a>
-                <a href="view.php?name=payments" class="quick-action" data-view="payments">
-                    <span class="quick-action__icon">💶</span>
-                    <span class="quick-action__label">Pagamenti</span>
-                </a>
-                <a href="view.php?name=documents" class="quick-action" data-view="documents">
-                    <span class="quick-action__icon">📄</span>
-                    <span class="quick-action__label">Documenti</span>
-                </a>
-                <a href="view.php?name=tenants" class="quick-action" data-view="tenants">
-                    <span class="quick-action__icon">🔑</span>
-                    <span class="quick-action__label">Inquilini</span>
-                </a>
-                <a href="view.php?name=reminders" class="quick-action" data-view="reminders">
-                    <span class="quick-action__icon">🔔</span>
-                    <span class="quick-action__label">Promemoria</span>
-                </a>
+            <div class="quick-actions" id="quick-actions">
+                <div class="upcoming-loading" style="grid-column:1/-1;padding:16px;">Caricamento…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customize quick access modal -->
+    <div class="modal-overlay" id="quick-actions-modal" hidden>
+        <div class="modal modal--lg">
+            <div class="modal-header">
+                <h3>Personalizza accesso rapido</h3>
+                <button type="button" class="modal-close" id="quick-actions-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted" style="margin-bottom:14px;">Scegli fino a <strong>9</strong> collegamenti da mostrare nella dashboard. <span id="quick-actions-count">0/9</span></p>
+                <div class="ql-picker" id="quick-actions-picker"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="quick-actions-cancel">Annulla</button>
+                <button type="button" class="btn btn--primary" id="quick-actions-save">Salva</button>
             </div>
         </div>
     </div>
@@ -292,6 +288,7 @@
             document.getElementById('stat-properties').textContent = d.total_properties;
             document.getElementById('stat-available').textContent  = d.available_properties;
             document.getElementById('stat-rented').textContent     = d.rented_properties;
+            document.getElementById('stat-sold').textContent       = d.sold_properties;
             document.getElementById('stat-tenants').textContent    = d.active_tenants;
             document.getElementById('stat-leads').textContent      = d.total_leads;
             document.getElementById('stat-reminders').textContent  = d.expiring_reminders;
@@ -344,8 +341,148 @@
         });
     }
 
+    // -------------------------------------------------------------------------
+    // Quick access (customizable)
+    // -------------------------------------------------------------------------
+
+    const PREFS_API = 'api/dashboard_prefs.php';
+    const QUICK_MAX = 9;
+    const DEFAULT_LINKS = ['clients', 'properties', 'leads', 'contracts', 'payments', 'documents', 'tenants', 'reminders'];
+
+    // Build the catalog from the sidebar nav: this is exactly what the current
+    // user is allowed to access (icon + label included), minus the dashboard itself.
+    function buildCatalog() {
+        const catalog = [];
+        document.querySelectorAll('.sidebar-nav .nav-link[data-view]').forEach(link => {
+            const view = link.dataset.view;
+            if (!view || view === 'dashboard') return;
+            const icon  = link.querySelector('.nav-icon')?.textContent?.trim() || '🔗';
+            const label = link.querySelector('.nav-label')?.textContent?.trim() || view;
+            catalog.push({ view, icon, label });
+        });
+        return catalog;
+    }
+
+    function catalogMap() {
+        const map = {};
+        buildCatalog().forEach(item => { map[item.view] = item; });
+        return map;
+    }
+
+    let quickLinks = DEFAULT_LINKS.slice();
+
+    function renderQuickActions() {
+        const container = document.getElementById('quick-actions');
+        if (!container) return;
+        const map = catalogMap();
+        // Keep only links the user can access; fall back to defaults if empty.
+        let links = quickLinks.filter(v => map[v]);
+        if (!links.length) links = DEFAULT_LINKS.filter(v => map[v]);
+
+        container.innerHTML = links.map(v => {
+            const item = map[v];
+            return `<a href="view.php?name=${item.view}" class="quick-action" data-view="${item.view}">
+                <span class="quick-action__icon">${item.icon}</span>
+                <span class="quick-action__label">${esc(item.label)}</span>
+            </a>`;
+        }).join('');
+
+        container.querySelectorAll('[data-view]').forEach(link => {
+            link.addEventListener('click', e => {
+                if (window.App) { e.preventDefault(); window.App.navigateTo(link.dataset.view); }
+            });
+        });
+    }
+
+    async function loadQuickLinks() {
+        try {
+            const res  = await fetch(PREFS_API);
+            const json = await res.json();
+            if (json.success && Array.isArray(json.data.quick_links) && json.data.quick_links.length) {
+                quickLinks = json.data.quick_links;
+            }
+        } catch (_) { /* use defaults */ }
+        renderQuickActions();
+    }
+
+    function updatePickerCount() {
+        const checked = document.querySelectorAll('#quick-actions-picker input:checked').length;
+        const el = document.getElementById('quick-actions-count');
+        if (el) el.textContent = `${checked}/${QUICK_MAX}`;
+    }
+
+    function openCustomizeModal() {
+        const picker = document.getElementById('quick-actions-picker');
+        const selected = new Set(quickLinks);
+        picker.innerHTML = buildCatalog().map(item => `
+            <label class="ql-option">
+                <input type="checkbox" value="${item.view}" ${selected.has(item.view) ? 'checked' : ''}>
+                <span class="ql-option__icon">${item.icon}</span>
+                <span class="ql-option__label">${esc(item.label)}</span>
+            </label>`).join('');
+
+        picker.querySelectorAll('input').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const checked = picker.querySelectorAll('input:checked').length;
+                if (checked > QUICK_MAX) {
+                    cb.checked = false;
+                    return;
+                }
+                cb.closest('.ql-option').classList.toggle('ql-option--on', cb.checked);
+                updatePickerCount();
+            });
+            cb.closest('.ql-option').classList.toggle('ql-option--on', cb.checked);
+        });
+
+        updatePickerCount();
+        document.getElementById('quick-actions-modal').hidden = false;
+    }
+
+    function closeCustomizeModal() {
+        document.getElementById('quick-actions-modal').hidden = true;
+    }
+
+    async function saveQuickLinks() {
+        const picker = document.getElementById('quick-actions-picker');
+        const chosen = [...picker.querySelectorAll('input:checked')].map(cb => cb.value).slice(0, QUICK_MAX);
+        const saveBtn = document.getElementById('quick-actions-save');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Salvataggio...';
+        try {
+            const res = await fetch(PREFS_API, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quick_links: chosen }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            quickLinks = json.data.quick_links.length ? json.data.quick_links : DEFAULT_LINKS.slice();
+            renderQuickActions();
+            closeCustomizeModal();
+        } catch (err) {
+            const errorEl = document.getElementById('dashboard-error');
+            errorEl.style.display = 'block';
+            errorEl.textContent = 'Impossibile salvare l\'accesso rapido: ' + err.message;
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Salva';
+        }
+    }
+
+    function bindCustomize() {
+        document.getElementById('quick-actions-customize')?.addEventListener('click', openCustomizeModal);
+        document.getElementById('quick-actions-modal-close')?.addEventListener('click', closeCustomizeModal);
+        document.getElementById('quick-actions-cancel')?.addEventListener('click', closeCustomizeModal);
+        document.getElementById('quick-actions-save')?.addEventListener('click', saveQuickLinks);
+        document.getElementById('quick-actions-modal')?.addEventListener('click', e => {
+            if (e.target.id === 'quick-actions-modal') closeCustomizeModal();
+        });
+    }
+
     setGreeting();
     loadDashboardStats().then(bindSpaLinks);
     bindSpaLinks();
+    bindCustomize();
+    loadQuickLinks();
 })();
 </script>

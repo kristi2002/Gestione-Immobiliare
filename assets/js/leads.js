@@ -183,7 +183,7 @@
     async function bulkAction(operation) {
         const ids = [...selectedIds];
         if (!ids.length) return;
-        if (operation === 'archive' && !confirm(`Archiviare ${ids.length} lead?`)) return;
+        if (operation === 'archive' && !await confirmDialog(`Vuoi archiviare ${ids.length} lead?`, { title: 'Archivia lead', confirmText: 'Archivia' })) return;
 
         const body = { action: 'bulk', operation, ids };
         if (operation === 'assign') {
@@ -311,7 +311,7 @@
     }
 
     async function convertLead(id) {
-        if (!confirm('Convertire questo lead in proprietario?')) return;
+        if (!await confirmDialog('Vuoi convertire questo lead in proprietario?', { title: 'Converti lead', confirmText: 'Converti', danger: false, icon: '👤' })) return;
         try {
             const res = await fetch(`${API}?action=convert&id=${id}`, { method: 'POST' });
             const json = await res.json();
@@ -322,7 +322,7 @@
     }
 
     async function archiveLead(id) {
-        if (!confirm('Archiviare questo lead (segna come perso)?')) return;
+        if (!await confirmDialog('Vuoi archiviare questo lead (segnandolo come perso)?', { title: 'Archivia lead', confirmText: 'Archivia' })) return;
         try {
             const res = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
             const json = await res.json();

@@ -220,7 +220,7 @@
     }
 
     async function deleteAppointment(id) {
-        if (!confirm('Eliminare questa visita?')) return;
+        if (!await confirmDialog('Vuoi eliminare questa visita?', { title: 'Elimina visita' })) return;
         try {
             const res = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
             const json = await res.json();

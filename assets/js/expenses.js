@@ -129,11 +129,11 @@
                 : (e.client_surname ? `${escapeHtml(e.client_surname)} ${escapeHtml(e.client_name)}` : null);
 
             return `
-            <div class="entity-card expense-card">
+            <div class="entity-card expense-card expense-card--${e.category}">
                 <div class="entity-card__header">
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">€ ${formatPrice(e.amount)}</div>
-                        <span class="badge badge--expense-${e.category}">${CATEGORY_LABELS[e.category] || e.category}</span>
+                        <span class="badge badge--expense badge--expense-${e.category}">${CATEGORY_LABELS[e.category] || e.category}</span>
                     </div>
                 </div>
                 <div class="entity-card__body">
@@ -159,8 +159,8 @@
         });
 
         els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (confirm('Eliminare questa spesa?')) deleteExpense(btn.dataset.id);
+            btn.addEventListener('click', async () => {
+                if (await confirmDialog('Vuoi eliminare questa spesa?', { title: 'Elimina spesa' })) deleteExpense(btn.dataset.id);
             });
         });
     }

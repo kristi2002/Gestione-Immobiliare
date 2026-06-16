@@ -214,7 +214,7 @@
     }
 
     async function deleteInvoice(id) {
-        if (!confirm('Eliminare questa bozza di fattura?')) return;
+        if (!await confirmDialog('Vuoi eliminare questa bozza di fattura?', { title: 'Elimina fattura' })) return;
         try {
             const res = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
             const json = await res.json();

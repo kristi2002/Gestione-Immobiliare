@@ -97,9 +97,21 @@ function listProperties(PDO $db): void
                    p.rooms, p.bathrooms, p.floor, p.description,
                    p.additional_features, p.internal_notes, p.status,
                    p.price, p.price_type, p.latitude, p.longitude, p.geo_confidence,
-                   p.created_at,
+                   p.cover_media_id, p.created_at,
                    c.name AS client_name, c.surname AS client_surname,
-                   COUNT(m.id) AS media_count
+                   COUNT(m.id) AS media_count,
+                   SUM(CASE WHEN m.media_type = 'photo' THEN 1 ELSE 0 END) AS photo_count,
+                   COALESCE(
+                       (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                       (SELECT fm.file_path FROM property_media fm
+                        WHERE fm.property_id = p.id
+                          AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
+                          AND fm.mime_type LIKE 'image/%'
+                        ORDER BY fm.sort_order ASC, fm.created_at ASC LIMIT 1),
+                       (SELECT im.file_path FROM property_media im
+                        WHERE im.property_id = p.id AND im.mime_type LIKE 'image/%'
+                        ORDER BY im.sort_order ASC, im.created_at ASC LIMIT 1)
+                   ) AS cover_url
             FROM properties p
             INNER JOIN clients c ON c.id = p.client_id
             LEFT JOIN property_media m ON m.property_id = p.id
@@ -114,7 +126,16 @@ function getProperty(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
         "SELECT p.*, c.name AS client_name, c.surname AS client_surname,
-                COUNT(m.id) AS media_count
+                COUNT(m.id) AS media_count,
+                SUM(CASE WHEN m.media_type = 'photo' THEN 1 ELSE 0 END) AS photo_count,
+                COALESCE(
+                    (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                    (SELECT fm.file_path FROM property_media fm
+                     WHERE fm.property_id = p.id
+                       AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
+                       AND fm.mime_type LIKE 'image/%'
+                     ORDER BY fm.sort_order ASC, fm.created_at ASC LIMIT 1)
+                ) AS cover_url
          FROM properties p
          INNER JOIN clients c ON c.id = p.client_id
          LEFT JOIN property_media m ON m.property_id = p.id
@@ -176,10 +197,19 @@ function updateProperty(PDO $db, int $id): void
     $data      = apiGetJsonBody();
     $validated = validatePropertyInput($db, $data);
 
-    $oldPrice = $existing['price'] !== null ? (string) $existing['price'] : null;
-    $newPrice = $validated['price'] !== null ? (string) $validated['price'] : null;
-    $priceChanged = $oldPrice !== $newPrice
-        || ($existing['price_type'] ?? '') !== ($validated['price_type'] ?? '');
+    // Compare numerically — the DB stores DECIMAL (e.g. "1413.00") while the
+    // submitted value is a float, so a string compare would always differ.
+    $oldPriceNum = $existing['price'] !== null ? (float) $existing['price'] : null;
+    $newPriceNum = $validated['price'] !== null ? (float) $validated['price'] : null;
+
+    $priceValueChanged = (($oldPriceNum === null) !== ($newPriceNum === null))
+        || ($oldPriceNum !== null && $newPriceNum !== null && abs($oldPriceNum - $newPriceNum) >= 0.005);
+
+    $typeChanged = (string) ($existing['price_type'] ?? '') !== (string) ($validated['price_type'] ?? '');
+
+    // Only log a price-type change when an actual price exists (avoids empty noise rows).
+    $priceChanged = $priceValueChanged
+        || ($typeChanged && ($oldPriceNum !== null || $newPriceNum !== null));
 
     if ($priceChanged) {
         $hist = $db->prepare(

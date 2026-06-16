@@ -218,8 +218,8 @@
         });
 
         els.tbody.querySelectorAll('.btn-cancel').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (confirm('Annullare questo promemoria?')) {
+            btn.addEventListener('click', async () => {
+                if (await confirmDialog('Vuoi annullare questo promemoria?', { title: 'Annulla promemoria', confirmText: 'Annulla promemoria', cancelText: 'Indietro' })) {
                     patchReminder(btn.dataset.id, 'cancel');
                 }
             });

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS properties (
     additional_features   TEXT         DEFAULT NULL,
     internal_notes        TEXT         DEFAULT NULL,
     status                ENUM('available', 'rented', 'sold', 'archived') NOT NULL DEFAULT 'available',
+    cover_media_id        INT UNSIGNED DEFAULT NULL,
     created_at            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -53,7 +54,8 @@ CREATE TABLE IF NOT EXISTS properties (
 
     INDEX idx_properties_client (client_id),
     INDEX idx_properties_city (city),
-    INDEX idx_properties_status (status)
+    INDEX idx_properties_status (status),
+    INDEX idx_properties_cover_media (cover_media_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
@@ -62,7 +64,7 @@ CREATE TABLE IF NOT EXISTS properties (
 CREATE TABLE IF NOT EXISTS property_media (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     property_id     INT UNSIGNED NOT NULL,
-    media_type      ENUM('photo', 'video', 'floor_plan') NOT NULL DEFAULT 'photo',
+    media_type      ENUM('photo', 'video', 'floor_plan', 'house_map', 'attachment') NOT NULL DEFAULT 'photo',
     file_path       VARCHAR(500) NOT NULL,
     original_name   VARCHAR(255) NOT NULL,
     mime_type       VARCHAR(100) DEFAULT NULL,
@@ -78,6 +80,12 @@ CREATE TABLE IF NOT EXISTS property_media (
     INDEX idx_media_property (property_id),
     INDEX idx_media_type (media_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE properties
+    ADD CONSTRAINT fk_properties_cover_media
+        FOREIGN KEY (cover_media_id) REFERENCES property_media(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE;
 
 -- ---------------------------------------------------------------------------
 -- Documents (Documenti) — Phase 4

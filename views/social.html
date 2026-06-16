@@ -146,6 +146,13 @@
                 <label for="post-image">Immagine</label>
                 <input type="file" id="post-image" class="form-input" accept="image/jpeg,image/png,image/webp">
                 <div id="post-image-preview" class="post-image-preview" hidden></div>
+                <input type="hidden" id="post-property-media-id" value="">
+            </div>
+
+            <div class="form-group" id="post-property-photos-group" hidden>
+                <label>Seleziona immagine dall'immobile</label>
+                <p class="text-muted form-hint">Scegli una foto dalla galleria dell'immobile collegato (come richiesto per i post social).</p>
+                <div id="post-property-photos" class="property-photo-picker"></div>
             </div>
 
             <div class="modal-footer">

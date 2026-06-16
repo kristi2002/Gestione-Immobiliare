@@ -250,7 +250,7 @@
 
     async function bulkArchive() {
         if (!selectedIds.size) return;
-        if (!confirm(`Archiviare ${selectedIds.size} proprietari selezionati?`)) return;
+        if (!await confirmDialog(`Vuoi archiviare ${selectedIds.size} proprietari selezionati?`, { title: 'Archivia proprietari', confirmText: 'Archivia' })) return;
         const ids = [...selectedIds];
         const results = await Promise.allSettled(ids.map(id =>
             fetch(`${API}?id=${id}`, { method: 'DELETE' }).then(r => r.json())

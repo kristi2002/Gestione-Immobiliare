@@ -5,6 +5,7 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../lib/SimplePdf.php';
+require_once __DIR__ . '/../config/pdf.php';
 
 initOwnerSession();
 requireOwnerAuth();
@@ -63,53 +64,63 @@ $agencyAddress = getSetting('agency_address', '');
 $paidTotal    = array_sum(array_column(array_filter($payments, fn($p) => $p['status'] === 'paid'), 'amount'));
 $pendingTotal = array_sum(array_column(array_filter($payments, fn($p) => in_array($p['status'], ['pending','late'])), 'amount'));
 
-$lines = [
-    strtoupper($agencyName),
-    $agencyAddress ?: '',
-    str_repeat('-', 60),
-    'RENDICONTO PROPRIETARIO',
-    'Periodo: ' . $periodLabel,
-    '',
-    'PROPRIETARIO',
-    trim($client['name'] . ' ' . $client['surname']),
-    $client['email'] ?? '',
-    '',
-    'IMMOBILI IN GESTIONE',
+$statusProp = [
+    'available' => 'Disponibile', 'rented' => 'Affittato',
+    'sold' => 'Venduto', 'archived' => 'Archiviato',
+];
+$statusPay = [
+    'paid' => 'Pagato', 'pending' => 'In attesa', 'late' => 'In ritardo',
+    'cancelled' => 'Annullato',
 ];
 
-$totalRent = 0.0;
+$propRows = [];
 foreach ($properties as $p) {
     $rent = ($p['price_type'] === 'affitto' && $p['price'] !== null) ? (float) $p['price'] : 0.0;
-    $totalRent += $rent;
-    $lines[] = '- ' . $p['address'] . ', ' . $p['city']
-        . ' (' . $p['status'] . ')'
-        . ($rent > 0 ? ' — Canone: EUR ' . number_format($rent, 2, ',', '.') : '');
+    $propRows[] = [
+        $p['address'],
+        $p['city'],
+        $statusProp[$p['status']] ?? $p['status'],
+        $rent > 0 ? '€ ' . number_format($rent, 2, ',', '.') : '—',
+    ];
 }
 
-if (!$properties) $lines[] = 'Nessun immobile attivo.';
-
-$lines[] = '';
-$lines[] = 'PAGAMENTI NEL PERIODO';
+$payRows = [];
 foreach ($payments as $pay) {
-    $lines[] = '- ' . date('d/m/Y', strtotime($pay['due_date']))
-        . ' | ' . $pay['address']
-        . ' | EUR ' . number_format((float)$pay['amount'], 2, ',', '.')
-        . ' [' . $pay['status'] . ']';
+    $payRows[] = [
+        date('d/m/Y', strtotime($pay['due_date'])),
+        $pay['address'],
+        '€ ' . number_format((float) $pay['amount'], 2, ',', '.'),
+        $statusPay[$pay['status']] ?? $pay['status'],
+    ];
 }
-if (!$payments) $lines[] = 'Nessun pagamento nel periodo.';
 
-$lines[] = '';
-$lines[] = str_repeat('-', 60);
-$lines[] = 'RIEPILOGO ECONOMICO';
-$lines[] = 'Totale incassato: EUR '   . number_format($paidTotal,    2, ',', '.');
-$lines[] = 'Totale da incassare: EUR ' . number_format($pendingTotal, 2, ',', '.');
-$lines[] = str_repeat('-', 60);
-$lines[] = 'Generato il ' . date('d/m/Y H:i');
+$blocks = [
+    ['type' => 'h2', 'text' => 'Proprietario'],
+    ['type' => 'kv', 'pairs' => [
+        ['Nominativo', trim($client['name'] . ' ' . $client['surname'])],
+        ['Email',      $client['email'] ?? '—'],
+        ['Periodo',    $periodLabel],
+    ]],
+    ['type' => 'h2', 'text' => 'Immobili in gestione'],
+    ['type' => 'table', 'columns' => [
+        ['label' => 'Indirizzo', 'width' => 0.42],
+        ['label' => 'Città', 'width' => 0.24],
+        ['label' => 'Stato', 'width' => 0.18],
+        ['label' => 'Canone', 'width' => 0.16, 'align' => 'right'],
+    ], 'rows' => $propRows, 'empty' => 'Nessun immobile attivo.'],
+    ['type' => 'h2', 'text' => 'Pagamenti nel periodo'],
+    ['type' => 'table', 'columns' => [
+        ['label' => 'Scadenza', 'width' => 0.2],
+        ['label' => 'Immobile', 'width' => 0.44],
+        ['label' => 'Importo', 'width' => 0.2, 'align' => 'right'],
+        ['label' => 'Stato', 'width' => 0.16],
+    ], 'rows' => $payRows, 'empty' => 'Nessun pagamento nel periodo.'],
+    ['type' => 'h2', 'text' => 'Riepilogo economico'],
+    ['type' => 'price', 'label' => 'Totale incassato nel periodo', 'value' => '€ ' . number_format($paidTotal, 2, ',', '.'), 'note' => 'Da incassare: € ' . number_format($pendingTotal, 2, ',', '.')],
+];
 
-$lines = array_values(array_filter($lines, fn($l) => trim($l) !== ''));
-
-$title = 'Rendiconto_' . $client['surname'] . '_' . $periodLabel;
-$pdf   = SimplePdf::fromText($title, $lines, $agencyName);
+$title = 'Rendiconto ' . trim($client['name'] . ' ' . $client['surname']) . ' — ' . $periodLabel;
+$pdf   = SimplePdf::fromBlocks($title, $blocks, pdfDocOpts('Rendiconto Proprietario — ' . $periodLabel));
 $bytes = $pdf->output();
 
 $filename = 'rendiconto_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $client['surname']) . '_' . $periodLabel . '.pdf';

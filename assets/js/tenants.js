@@ -113,7 +113,8 @@
     }
 
     async function bulkArchive() {
-        if (!selectedIds.size || !confirm(`Archiviare ${selectedIds.size} inquilin${selectedIds.size === 1 ? 'o' : 'i'}?`)) return;
+        if (!selectedIds.size) return;
+        if (!await confirmDialog(`Vuoi archiviare ${selectedIds.size} inquilin${selectedIds.size === 1 ? 'o' : 'i'}?`, { title: 'Archivia inquilini', confirmText: 'Archivia' })) return;
         await Promise.all([...selectedIds].map(id =>
             fetch(`${API}?id=${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
         ));

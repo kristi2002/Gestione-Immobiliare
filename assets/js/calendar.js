@@ -61,10 +61,12 @@
         const to = `${viewYear}-${pad(viewMonth + 1)}-${pad(lastDay)}`;
 
         try {
-            const res  = await fetch(`${API}?from=${from}&to=${to}`);
+            const res  = await fetch(`${API}?from=${from}&to=${to}&page=1&limit=500`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            events = json.data;
+            events = typeof Pagination !== 'undefined'
+                ? Pagination.parseResponse(json).items
+                : (Array.isArray(json.data) ? json.data : (json.data?.items || []));
             renderGrid();
         } catch (err) {
             showAlert(err.message, 'error');
@@ -83,7 +85,8 @@
             (byDay[key] = byDay[key] || []).push(ev);
         });
 
-        const todayKey = new Date().toISOString().slice(0, 10);
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
         let html = '';
 
         for (let i = 0; i < offset; i++) {

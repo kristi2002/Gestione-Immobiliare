@@ -5,7 +5,13 @@
 require_once __DIR__ . '/config/bootstrap.php';
 requireAuthWeb();
 
-$allowed = ['dashboard', 'clients', 'properties', 'contracts', 'documents', 'payments', 'expenses', 'invoices', 'communications', 'appointments', 'calendar', 'map', 'reminders', 'tenants', 'keys', 'agents', 'reports', 'social', 'activity_log', 'settings', 'leads'];
+$allowed = [
+    'dashboard', 'clients', 'leads', 'properties', 'contracts', 'documents', 'payments', 'expenses',
+    'invoices', 'communications', 'appointments', 'calendar', 'map', 'reminders', 'tenants', 'keys',
+    'agents', 'reports', 'social', 'activity_log', 'settings',
+    'buildings', 'insurance', 'meters', 'suppliers', 'inventory', 'commissions', 'surveys', 'forecast',
+    'maintenance_workflow', 'whatsapp_inbox', 'property_applications',
+];
 $name    = basename($_GET['name'] ?? '');
 
 if (!in_array($name, $allowed, true)) {

@@ -5,10 +5,10 @@
             <p>Gestisci le proprietà, assegna i proprietari e carica la galleria multimediale.</p>
         </div>
         <div class="view-header__actions">
-            <button class="btn btn--ghost" id="btn-compare-properties" hidden>📊 Confronta (<span id="compare-count">0</span>)</button>
-            <button class="btn btn--ghost" id="btn-portal-export" title="Esporta immobili per portali (JSON/XML)">🌐 Esporta portali</button>
-            <button class="btn btn--ghost" id="btn-export-properties">⬇️ Esporta CSV</button>
-            <button class="btn btn--ghost" id="btn-import-properties">⬆️ Importa CSV</button>
+            <button class="btn btn--compare" id="btn-compare-properties" hidden>📊 Confronta (<span id="compare-count">0</span>)</button>
+            <button class="btn btn--portal" id="btn-portal-export" title="Esporta immobili per portali (JSON/XML)">🌐 Esporta portali</button>
+            <button class="btn btn--export" id="btn-export-properties">⬇️ Esporta CSV</button>
+            <button class="btn btn--import" id="btn-import-properties">⬆️ Importa CSV</button>
             <input type="file" id="import-properties-file" accept=".csv" hidden>
             <button class="btn btn--primary" id="btn-new-property">+ Nuovo Immobile</button>
         </div>
@@ -43,7 +43,7 @@
         <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-properties">Esporta</button>
     </div>
 
-    <div id="properties-grid" class="entity-grid">
+    <div id="properties-grid" class="entity-grid entity-grid--wide">
         <div class="entity-loading">Caricamento…</div>
     </div>
     <div id="properties-pagination" class="pagination-container"></div>
@@ -137,7 +137,6 @@
                             <input type="number" id="property-longitude" class="form-input" step="0.00000001" placeholder="Lng" style="flex:1;min-width:100px">
                             <button type="button" class="btn btn--ghost btn--sm" id="btn-property-geocode" title="Cerca coordinate da indirizzo, CAP e città">📍 Trova</button>
                         </div>
-                        <p class="text-muted" style="font-size:12px;margin-top:6px">Formato consigliato: <strong>Via Emilia Est 123</strong>. Compila Città, CAP e Provincia (es. MO). Per precisione al civico, aggiungi <code>GOOGLE_GEOCODING_API_KEY</code> nel file .env.</p>
                         <p id="property-geo-confidence" class="text-muted" style="font-size:12px;margin-top:4px;display:none"></p>
                         <input type="hidden" id="property-geo-confidence-value">
                     </div>
@@ -163,12 +162,15 @@
             <!-- Gallery section — visible only when editing -->
             <fieldset class="form-section" id="gallery-section" hidden>
                 <legend>Galleria multimediale</legend>
+                <p class="text-muted gallery-hint-inline">Carica foto, video, planimetrie, cartine e altri allegati. Clicca su un'immagine per ingrandirla.</p>
 
                 <div class="gallery-upload">
                     <select id="media-type" class="form-select gallery-upload__type">
                         <option value="photo">Foto</option>
                         <option value="video">Video</option>
                         <option value="floor_plan">Planimetria</option>
+                        <option value="house_map">Cartina della casa</option>
+                        <option value="attachment">Altro allegato</option>
                     </select>
                     <input type="file" id="media-file" class="gallery-upload__file">
                     <button type="button" class="btn btn--ghost" id="btn-upload-media">Carica file</button>
@@ -180,7 +182,7 @@
             </fieldset>
 
             <p id="gallery-hint" class="gallery-hint text-muted">
-                Salva l'immobile per poter caricare foto, video e planimetrie.
+                Salva l'immobile per poter caricare foto, video, planimetrie, cartine e allegati.
             </p>
 
             <div class="modal-footer">
@@ -341,6 +343,13 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Media lightbox -->
+<div class="media-lightbox" id="media-lightbox" hidden>
+    <button type="button" class="media-lightbox__close" id="media-lightbox-close" aria-label="Chiudi">&times;</button>
+    <div class="media-lightbox__content" id="media-lightbox-content"></div>
+    <p class="media-lightbox__caption" id="media-lightbox-caption"></p>
 </div>
 
 <script src="assets/js/properties.js"></script>

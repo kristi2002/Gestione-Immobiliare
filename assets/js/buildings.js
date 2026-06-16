@@ -190,7 +190,7 @@
 
             container.querySelectorAll('[data-prop]').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    if (!confirm('Scollegare questo immobile dall\'edificio?')) return;
+                    if (!await confirmDialog('Vuoi scollegare questo immobile dall\'edificio?', { title: 'Scollega immobile', confirmText: 'Scollega', danger: false, icon: '🔗' })) return;
                     try {
                         const r = await fetch(`${API}?action=unlink`, {
                             method: 'POST',
