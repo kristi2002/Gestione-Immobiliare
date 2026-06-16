@@ -57,6 +57,21 @@ services:
         - action: rebuild
           path: ./Dockerfile
 
+  # --- NGROK SERVICE ADDED HERE ---
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "http"
+      - "app:8090"
+      - "--pooling-enabled"
+    environment:
+      NGROK_AUTHTOKEN: "3FEPAeDI1sUN5MVMSKFnwjgzaL3_5TY347LpqDDFFbc83fp1S"
+    ports:
+      - "4040:4040" # Local dashboard to get your public link
+    depends_on:
+      - app
+
 volumes:
   db_data:
   uploads_data:

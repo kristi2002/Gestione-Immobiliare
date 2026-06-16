@@ -71,7 +71,16 @@ function listMeterReadings(PDO $db): void
 
     $countSql = "SELECT COUNT(*) FROM meter_readings mr $where";
 
-    $dataSql = "SELECT mr.*, p.address AS property_address, p.city AS property_city
+    $dataSql = "SELECT mr.*,
+                   p.address AS property_address, p.city AS property_city,
+                   ROUND(mr.reading_value - COALESCE((
+                       SELECT prev.reading_value FROM meter_readings prev
+                       WHERE prev.property_id = mr.property_id
+                         AND prev.meter_type  = mr.meter_type
+                         AND prev.id          < mr.id
+                       ORDER BY prev.reading_date DESC, prev.id DESC
+                       LIMIT 1
+                   ), mr.reading_value), 2) AS consumption
             FROM meter_readings mr
             LEFT JOIN properties p ON p.id = mr.property_id
             $where

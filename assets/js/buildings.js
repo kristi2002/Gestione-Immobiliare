@@ -99,7 +99,7 @@
                 <td>${esc(b.address || '—')}</td>
                 <td>${esc(b.city || '—')}</td>
                 <td>${esc(b.total_units ?? '—')}</td>
-                <td>${esc(b.occupied_units ?? '—')}</td>
+                <td>${esc(b.occupancy_count ?? '—')}</td>
                 <td style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-b-edit" data-id="${b.id}" title="Modifica">✏️</button>
                     <button class="btn btn--sm btn--ghost btn-b-del" data-id="${b.id}" data-name="${esc(b.name)}" title="Elimina">🗑️</button>

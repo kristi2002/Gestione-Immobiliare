@@ -2125,10 +2125,11 @@ body.nav-open {
 
     .table-wrapper .data-table tbody tr {
         display: block;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         padding: 14px 16px;
         background: var(--color-surface);
         border: 1px solid var(--color-border);
+        overflow: hidden;
         border-radius: var(--radius);
         box-shadow: var(--shadow);
     }
@@ -2142,9 +2143,12 @@ body.nav-open {
         justify-content: space-between;
         align-items: flex-start;
         gap: 12px;
-        padding: 7px 0;
+        padding: 8px 0;
         border: none;
         text-align: right;
+        min-width: 0;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
 
     .table-wrapper .data-table td::before {
@@ -2155,7 +2159,8 @@ body.nav-open {
         letter-spacing: 0.04em;
         color: var(--color-text-muted);
         text-align: left;
-        flex: 0 0 42%;
+        flex: 0 0 38%;
+        word-break: normal;
     }
 
     .table-wrapper .data-table td.table-empty,
@@ -2207,7 +2212,8 @@ body.nav-open {
 
     .chat-sidebar {
         width: 100%;
-        max-height: 200px;
+        max-height: 42vh;
+        min-height: 180px;
         border-right: none;
         border-bottom: 1px solid var(--color-border);
     }
@@ -4328,4 +4334,387 @@ body.nav-open {
     .profile-hero__actions { align-self: stretch; }
     .chat-bubble { max-width: 88%; }
     .profile-tab { padding: 10px 14px; font-size: 13px; }
+}
+
+/* ==========================================================================
+   BUTTON SYSTEM — visual polish (tactile, semantic, accessible)
+   Appended last so these rules win the cascade cleanly.
+   ========================================================================== */
+
+/* ── Base: add depth + lift to every button ─────────────────────────────── */
+.btn {
+    box-shadow: 0 1px 2px rgba(15,23,42,.07), 0 1px 1px rgba(15,23,42,.04);
+    transition:
+        background   .15s ease,
+        border-color .15s ease,
+        color        .15s ease,
+        box-shadow   .15s ease,
+        transform    .12s ease;
+    letter-spacing: .01em;
+}
+.btn:not(:disabled):hover  { transform: translateY(-1px); }
+.btn:not(:disabled):active { transform: translateY(0) scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
+
+/* Keyboard focus ring */
+.btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(37,99,235,.18);
+}
+
+/* ── Primary: gradient + coloured shadow ────────────────────────────────── */
+.btn--primary {
+    background: linear-gradient(160deg, #4f8ef7 0%, var(--color-primary-dark) 100%);
+    border-color: var(--color-primary-dark);
+    box-shadow: 0 2px 8px rgba(37,99,235,.32), 0 1px 2px rgba(15,23,42,.08);
+    text-shadow: 0 1px 1px rgba(0,0,0,.14);
+}
+.btn--primary:not(:disabled):hover {
+    background: linear-gradient(160deg, var(--color-primary) 0%, #1a3fc5 100%);
+    box-shadow: 0 4px 16px rgba(37,99,235,.40), 0 2px 4px rgba(15,23,42,.08);
+}
+.btn--primary:not(:disabled):active {
+    box-shadow: 0 1px 4px rgba(37,99,235,.30);
+}
+
+/* ── Ghost: visible white card instead of completely transparent ─────────── */
+.btn--ghost {
+    background: #ffffff;
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
+    box-shadow: 0 1px 3px rgba(15,23,42,.08), 0 1px 1px rgba(15,23,42,.04);
+}
+.btn--ghost:not(:disabled):hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+    box-shadow: 0 3px 10px rgba(37,99,235,.16);
+}
+.btn--ghost:not(:disabled):active {
+    background: #dbeafe;
+    border-color: var(--color-primary);
+    box-shadow: 0 1px 3px rgba(37,99,235,.20);
+}
+
+/* Small ghost buttons (table action icons) — start subtle, pop on hover */
+.btn--sm.btn--ghost {
+    background: var(--color-surface-muted);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+    box-shadow: 0 1px 2px rgba(15,23,42,.06);
+}
+.btn--sm.btn--ghost:not(:disabled):hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+    box-shadow: 0 2px 8px rgba(37,99,235,.15);
+}
+
+/* Destructive table actions — red on hover (matched via title) */
+.btn--sm.btn--ghost[title*="Elimina"]:not(:disabled):hover,
+.btn--sm.btn--ghost[title*="elimina"]:not(:disabled):hover,
+.btn--sm.btn--ghost[title*="Archivia"]:not(:disabled):hover,
+.btn--sm.btn--ghost[title*="archivia"]:not(:disabled):hover,
+.btn--sm.btn--ghost[title*="Rimuovi"]:not(:disabled):hover,
+.btn--sm.btn--ghost[title*="Cancella"]:not(:disabled):hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: var(--color-danger);
+    box-shadow: 0 2px 8px rgba(220,38,38,.14);
+}
+
+/* ── Danger: gradient + red shadow ─────────────────────────────────────── */
+.btn--danger {
+    background: linear-gradient(160deg, #f87171 0%, var(--color-danger) 100%);
+    border-color: var(--color-danger);
+    box-shadow: 0 2px 8px rgba(220,38,38,.30), 0 1px 2px rgba(15,23,42,.08);
+    text-shadow: 0 1px 1px rgba(0,0,0,.14);
+}
+.btn--danger:not(:disabled):hover {
+    background: linear-gradient(160deg, var(--color-danger) 0%, #b91c1c 100%);
+    box-shadow: 0 4px 16px rgba(220,38,38,.38);
+}
+.btn--danger:not(:disabled):active {
+    box-shadow: 0 1px 4px rgba(220,38,38,.28);
+}
+
+/* ── Outline primary ────────────────────────────────────────────────────── */
+.btn--outline-primary {
+    box-shadow: 0 1px 3px rgba(37,99,235,.12);
+}
+.btn--outline-primary:not(:disabled):hover {
+    box-shadow: 0 3px 10px rgba(37,99,235,.24);
+}
+
+/* ── Semantic colour variants — add shadow + lift on hover ──────────────── */
+.btn--export:not(:disabled):hover {
+    box-shadow: 0 3px 10px rgba(4,120,87,.22);
+}
+.btn--import:not(:disabled):hover {
+    box-shadow: 0 3px 10px rgba(29,78,216,.22);
+}
+.btn--compare:not(:disabled):hover {
+    box-shadow: 0 3px 10px rgba(67,56,202,.22);
+}
+.btn--portal:not(:disabled):hover {
+    box-shadow: 0 3px 10px rgba(14,116,144,.22);
+}
+
+/* Clear filters button: already has red colours, add lift */
+.btn-clear-filters {
+    box-shadow: 0 1px 3px rgba(220,38,38,.14);
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+                box-shadow .15s ease, transform .12s ease;
+}
+.btn-clear-filters:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(220,38,38,.28);
+}
+
+/* ── XS buttons (gallery, inline) ──────────────────────────────────────── */
+.btn--xs {
+    box-shadow: 0 1px 2px rgba(15,23,42,.06);
+}
+.btn--xs:not(:disabled):hover { transform: translateY(-1px); }
+
+/* ── Modal close × ─────────────────────────────────────────────────────── */
+.modal-close {
+    transition: background .15s ease, color .15s ease, transform .12s ease;
+    border-radius: var(--radius-sm);
+}
+.modal-close:hover {
+    background: #fee2e2;
+    color: var(--color-danger);
+    transform: scale(1.12);
+}
+.modal-close:active {
+    background: #fecaca;
+    transform: scale(.96);
+}
+
+/* ── Gallery delete button ──────────────────────────────────────────────── */
+.gallery-item__delete {
+    transition: background .15s ease, color .15s ease, border-color .15s ease,
+                transform .12s ease, box-shadow .15s ease;
+}
+.gallery-item__delete:hover {
+    background: var(--color-danger);
+    color: #fff;
+    border-color: var(--color-danger);
+    transform: scale(1.08);
+    box-shadow: 0 2px 8px rgba(220,38,38,.30);
+}
+
+/* ── Notification bell ──────────────────────────────────────────────────── */
+.notif-bell {
+    transition: background .15s ease, transform .12s ease;
+}
+.notif-bell:hover { transform: scale(1.1) rotate(-8deg); }
+.notif-bell:active { transform: scale(.95); }
+
+/* ── Settings tabs ──────────────────────────────────────────────────────── */
+.settings-tab {
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+                box-shadow .15s ease, transform .12s ease;
+    box-shadow: 0 1px 2px rgba(15,23,42,.06);
+}
+.settings-tab:not(.settings-tab--active):hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37,99,235,.14);
+}
+.settings-tab--active {
+    box-shadow: 0 2px 8px rgba(37,99,235,.28);
+}
+
+/* ── Profile / client-profile tabs ─────────────────────────────────────── */
+.profile-tab {
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+                box-shadow .15s ease, transform .12s ease;
+    box-shadow: 0 1px 2px rgba(15,23,42,.06);
+}
+.profile-tab:not(.active):hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37,99,235,.14);
+}
+.profile-tab.active {
+    box-shadow: 0 2px 8px rgba(37,99,235,.24);
+}
+
+/* ── Kanban / view-toggle buttons ───────────────────────────────────────── */
+.mw-view-toggle {
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+                box-shadow .15s ease, transform .12s ease;
+    box-shadow: 0 1px 2px rgba(15,23,42,.07);
+}
+.mw-view-toggle:not(.active):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(15,23,42,.12);
+}
+.mw-view-toggle.active {
+    box-shadow: 0 2px 8px rgba(37,99,235,.22);
+}
+
+/* ── Commissions tabs ───────────────────────────────────────────────────── */
+.comm-tab {
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+                box-shadow .15s ease, transform .12s ease;
+    box-shadow: 0 1px 2px rgba(15,23,42,.06);
+}
+.comm-tab:not(.active):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(15,23,42,.12);
+}
+.comm-tab.active {
+    box-shadow: 0 2px 8px rgba(37,99,235,.22);
+}
+
+/* ===== Mobile table card overrides ======================================== */
+@media (max-width: 768px) {
+
+    /* Hide unlabelled cells (checkbox / select-all columns) */
+    .table-wrapper .data-table td:not([data-label]) {
+        display: none;
+    }
+
+    /* Force ALL content in cards to wrap — overrides the many white-space:nowrap rules */
+    .table-wrapper .data-table td,
+    .table-wrapper .data-table td * {
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+    }
+
+    /* Buttons/links stay on one line */
+    .table-wrapper .data-table td button,
+    .table-wrapper .data-table td a.btn {
+        white-space: nowrap !important;
+        word-break: keep-all;
+    }
+
+    /* Badge text stays compact */
+    .table-wrapper .data-table td .badge {
+        white-space: nowrap !important;
+        display: inline-block;
+    }
+
+    /* code tags can break anywhere */
+    .table-wrapper .data-table td code {
+        word-break: break-all;
+    }
+
+    /* First labelled cell = card title row */
+    .table-wrapper .data-table tbody tr > td[data-label]:first-of-type {
+        padding-bottom: 10px;
+        margin-bottom: 2px;
+        border-bottom: 1px solid var(--color-border-muted, #f0f4f8);
+        font-weight: 600;
+    }
+
+    /* ── Per-view column pruning: hide less-useful columns on small screens ── */
+
+    /* Documents: hide size & property (keep tipo, name, owner, date, actions) */
+    .documents-view .table-wrapper td[data-label="Dimensione"],
+    .documents-view .table-wrapper td[data-label="Immobile"] {
+        display: none;
+    }
+
+    /* Tenants: hide portal & contract dates (keep name, email, property, rent, actions) */
+    .tenants-view .table-wrapper td[data-label="Contratto"],
+    .tenants-view .table-wrapper td[data-label="Portale"] {
+        display: none;
+    }
+
+    /* Reminders: hide frequency (keep title, date, status, client, actions) */
+    .reminders-view .table-wrapper td[data-label="Frequenza"],
+    .reminders-view .table-wrapper td[data-label="Ripetizione"] {
+        display: none;
+    }
+
+    /* Commissions: hide percentage (keep agent, type, amount, contract, date, status) */
+    .commissions-view .table-wrapper td[data-label="%"],
+    .commissions-view .table-wrapper td[data-label="Percentuale"] {
+        display: none;
+    }
+
+    /* Payments: hide notes */
+    .payments-view .table-wrapper td[data-label="Note"] {
+        display: none;
+    }
+
+    /* Invoices: hide notes */
+    .invoices-view .table-wrapper td[data-label="Note"] {
+        display: none;
+    }
+}
+
+/* ===== Collapsible filter bars ============================================ */
+.toolbar,
+.reports-toolbar,
+.filter-bar {
+    overflow: hidden;
+    transition:
+        max-height .3s cubic-bezier(.4,0,.2,1),
+        opacity    .22s ease,
+        padding    .3s  cubic-bezier(.4,0,.2,1),
+        margin     .3s  cubic-bezier(.4,0,.2,1);
+}
+.toolbar:not(.is-open),
+.reports-toolbar:not(.is-open),
+.filter-bar:not(.is-open) {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+.toolbar.is-open,
+.reports-toolbar.is-open,
+.filter-bar.is-open {
+    max-height: 600px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Toggle button */
+.toolbar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.7rem 1.1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-primary, #2563eb);
+    background: var(--surface-muted, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.toolbar-toggle:hover {
+    background: var(--color-primary-light, #eff6ff);
+    border-color: var(--color-primary, #2563eb);
+    box-shadow: 0 1px 4px rgba(37,99,235,.14);
+}
+.toolbar-toggle .toggle-icon {
+    display: inline-block;
+    font-style: normal;
+    font-size: 0.7rem;
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    line-height: 1;
+}
+.toolbar-toggle[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
 }

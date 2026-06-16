@@ -103,7 +103,7 @@
         }
 
         els.tbody.innerHTML = items.map(c => {
-            const agentName = c.agent_name || `#${c.agent_id}`;
+            const agentName = c.agent_username || c.agent_name || `#${c.admin_user_id || c.agent_id}`;
             const statusLabel = STATUS_LABELS[c.status] || c.status;
             const statusColor = STATUS_COLORS[c.status] || '#333';
             const isPending   = c.status === 'pending';
@@ -113,7 +113,7 @@
                 <td><span class="badge">${esc(c.commission_type || '—')}</span></td>
                 <td><strong>${fmt(c.amount)}</strong></td>
                 <td>${c.percentage != null ? esc(c.percentage) + '%' : '—'}</td>
-                <td>${c.contract_id ? `<code>${esc(c.contract_id)}</code>` : '<span class="text-muted">—</span>'}</td>
+                <td>${c.contract_title ? esc(c.contract_title) : (c.contract_id ? `<code>#${esc(c.contract_id)}</code>` : '<span class="text-muted">—</span>')}</td>
                 <td>${formatDate(c.due_date)}</td>
                 <td><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
                 <td style="white-space:nowrap;">
@@ -152,9 +152,9 @@
         btn.disabled = true; btn.textContent = '…';
         try {
             const res  = await fetch(`${API}?id=${id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString().substring(0, 10) }),
+                body: JSON.stringify({}),
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
@@ -173,7 +173,7 @@
 
         if (item) {
             document.getElementById('commissions-id').value          = item.id;
-            document.getElementById('commissions-agent-id').value    = item.agent_id || '';
+            document.getElementById('commissions-agent-id').value    = item.admin_user_id || item.agent_id || '';
             document.getElementById('commissions-type').value        = item.commission_type || '';
             document.getElementById('commissions-amount').value      = item.amount || '';
             document.getElementById('commissions-percentage').value  = item.percentage || '';
@@ -196,7 +196,7 @@
         btn.disabled = true; btn.textContent = 'Salvataggio…';
 
         const data = {
-            agent_id:        document.getElementById('commissions-agent-id').value,
+            admin_user_id:   document.getElementById('commissions-agent-id').value,
             commission_type: document.getElementById('commissions-type').value,
             amount:          parseFloat(document.getElementById('commissions-amount').value) || 0,
             percentage:      document.getElementById('commissions-percentage').value || null,

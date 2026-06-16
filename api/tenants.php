@@ -47,7 +47,8 @@ function listTenants(PDO $db): void
             INNER JOIN properties p ON p.id = t.property_id
             $where";
 
-    $dataSql = "SELECT t.*, p.address AS property_address, p.city AS property_city
+    $dataSql = "SELECT t.*, p.address AS property_address, p.city AS property_city,
+                   IF((SELECT COUNT(*) FROM tenant_users tu WHERE tu.tenant_id = t.id) > 0, 1, 0) AS has_portal_access
             FROM tenants t
             INNER JOIN properties p ON p.id = t.property_id
             $where

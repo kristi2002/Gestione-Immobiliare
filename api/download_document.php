@@ -62,7 +62,7 @@ try {
     $filename = $doc['original_name'];
 
     header('Content-Type: ' . $mime);
-    header('Content-Disposition: attachment; filename="' . rawurlencode($filename) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+    header('Content-Disposition: attachment; filename="' . str_replace(['"', '\\'], ['', ''], $filename) . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
     header('Content-Length: ' . filesize($fullPath));
     header('Cache-Control: no-cache, must-revalidate');
     header('Pragma: no-cache');

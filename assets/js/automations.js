@@ -19,7 +19,7 @@
     const STATUS_LABELS = {
         pending:   'Attiva',
         completed: 'Completata',
-        cancelled: 'Annullata',
+        cancelled: 'In pausa',
     };
 
     let automations = [];

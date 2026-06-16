@@ -200,7 +200,7 @@
                     <td data-label="Tipo"><span class="badge badge--doc-${d.doc_type}">${DOC_TYPE_LABELS[d.doc_type] || d.doc_type}</span></td>
                     <td data-label="Documento">
                         <span class="doc-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
-                        ${d.title ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
+                        ${d.title && d.title !== d.original_name ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
                     </td>
                     <td data-label="Proprietario">${clientLabel ? escapeHtml(clientLabel) : '<span class="text-muted">—</span>'}</td>
                     <td data-label="Immobile">${propertyLabelText ? escapeHtml(propertyLabelText) : '<span class="text-muted">—</span>'}</td>

@@ -116,7 +116,7 @@
         const priority = els.priorityFilter.value;
 
         if (prop)     params.set('property_id', prop);
-        if (status)   params.set('status', status);
+        if (status)   params.set('maintenance_status', status);
         if (priority) params.set('priority', priority);
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
@@ -149,13 +149,13 @@
         }
 
         els.tbody.innerHTML = items.map(r => {
-            const status       = r.status || 'aperta';
+            const status       = r.maintenance_status || 'aperta';
             const statusLabel  = STATUS_LABELS[status] || status;
             const statusColor  = STATUS_COLORS[status] || '#333';
             const priority     = r.priority || 'normale';
             const priorityColor = PRIORITY_COLORS[priority] || 'inherit';
             const supplierName = r.supplier_name || r.assigned_supplier || '—';
-            const tenantName   = r.tenant_name || extractTenantFromNote(r.note) || '—';
+            const tenantName   = r.tenant_name || extractTenantFromNote(r.description) || '—';
 
             return `<tr>
                 <td>${esc(tenantName)}</td>
@@ -170,7 +170,7 @@
                 <td>${formatDate(r.created_at || r.due_date)}</td>
                 <td style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore">🔧 Fornitore</button>
-                    <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(status)}" title="Cambia stato">↻ Stato</button>
+                    <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" title="Cambia stato">↻ Stato</button>
                 </td>
             </tr>`;
         }).join('');
@@ -188,7 +188,7 @@
         const cols = ['aperta', 'in_lavorazione', 'completata', 'chiusa'];
 
         cols.forEach(status => {
-            const colItems = items.filter(r => (r.status || 'aperta') === status);
+            const colItems = items.filter(r => (r.maintenance_status || 'aperta') === status);
             const container = document.getElementById(`kanban-${status}`);
             const countEl   = document.getElementById(`col-count-${status}`);
             if (countEl) countEl.textContent = colItems.length;
@@ -202,8 +202,8 @@
             container.innerHTML = colItems.map(r => {
                 const priority     = r.priority || 'normale';
                 const priorityColor = PRIORITY_COLORS[priority] || 'inherit';
-                const tenantName   = r.tenant_name || extractTenantFromNote(r.note) || '—';
-                const title        = r.title || (r.note ? r.note.substring(0, 60) : '—');
+                const tenantName   = r.tenant_name || extractTenantFromNote(r.description) || '—';
+                const title        = r.title || (r.description ? r.description.substring(0, 60) : '—');
 
                 return `<div class="card" style="padding:0.75rem;font-size:0.85rem;cursor:default;" data-id="${r.id}">
                     <div style="font-weight:600;margin-bottom:4px;">${esc(title)}</div>
@@ -213,7 +213,7 @@
                         <span style="color:${priorityColor};font-weight:600;font-size:0.75rem;">${esc(priority.toUpperCase())}</span>
                         <div style="display:flex;gap:4px;">
                             <button class="btn btn--sm btn--ghost btn-k-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" style="font-size:0.7rem;padding:2px 6px;" title="Fornitore">🔧</button>
-                            <button class="btn btn--sm btn--ghost btn-k-status" data-id="${r.id}" data-status="${esc(r.status || 'aperta')}" style="font-size:0.7rem;padding:2px 6px;" title="Stato">↻</button>
+                            <button class="btn btn--sm btn--ghost btn-k-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" style="font-size:0.7rem;padding:2px 6px;" title="Stato">↻</button>
                         </div>
                     </div>
                 </div>`;
@@ -252,8 +252,8 @@
         const supplier = suppliers.find(s => String(s.id) === String(supplierId));
 
         try {
-            const res  = await fetch(`${API}?id=${requestId}`, {
-                method: 'PUT',
+            const res  = await fetch(`${API}?id=${requestId}&action=assign_supplier`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     supplier_id:   supplierId || null,
@@ -287,8 +287,8 @@
         btn.disabled = true; btn.textContent = 'Salvataggio…';
 
         try {
-            const res  = await fetch(`${API}?id=${requestId}`, {
-                method: 'PUT',
+            const res  = await fetch(`${API}?id=${requestId}&action=maintenance_status`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus }),
             });

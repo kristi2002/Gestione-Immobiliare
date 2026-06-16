@@ -72,78 +72,76 @@ try {
     $invStmt->execute(['cid' => $clientId, 'start' => $periodStart, 'end' => $periodEnd]);
     $invoices = $invStmt->fetchAll();
 
-    $agencyName    = getSetting('agency_name', 'Gestionale Immobiliare');
-    $agencyAddress = getSetting('agency_address', '');
+    // Build property rows
+    $totalRent    = 0.0;
+    $propPairs    = [];
+    $statusLabels = ['available' => 'Disponibile', 'rented' => 'Affittato', 'sold' => 'Venduto'];
 
-    $lines = [
-        strtoupper($agencyName),
-        $agencyAddress ?: '',
-        str_repeat('-', 60),
-        'RENDICONTO PROPRIETARIO',
-        'Periodo: ' . $periodLabel,
-        '',
-        'PROPRIETARIO',
-        trim($client['name'] . ' ' . $client['surname']),
-        $client['email'] ?? '',
-        '',
-        'IMMOBILI',
-    ];
-
-    $totalRent = 0.0;
-    if ($properties) {
-        foreach ($properties as $p) {
-            $rent = $p['price_type'] === 'affitto' && $p['price'] !== null ? (float) $p['price'] : 0.0;
-            $totalRent += $rent;
-            $lines[] = '- ' . $p['address'] . ', ' . $p['city']
-                . ' (' . $p['status'] . ')'
-                . ($rent > 0 ? ' — Canone: EUR ' . number_format($rent, 2, ',', '.') : '');
-        }
-    } else {
-        $lines[] = 'Nessun immobile attivo.';
+    foreach ($properties as $p) {
+        $rent        = $p['price_type'] === 'affitto' && $p['price'] !== null ? (float) $p['price'] : 0.0;
+        $totalRent  += $rent;
+        $statusLabel = $statusLabels[$p['status']] ?? ucfirst($p['status']);
+        $rentText    = $rent > 0 ? '€ ' . number_format($rent, 2, ',', '.') . ' / mese' : '—';
+        $propPairs[] = [
+            $p['address'] . ', ' . $p['city'] . ' (' . $statusLabel . ')',
+            $rentText,
+        ];
     }
 
-    $lines[] = '';
-    $lines[] = 'CANONE MENSILE TOTALE: EUR ' . number_format($totalRent, 2, ',', '.');
-    $lines[] = '';
-    $lines[] = 'FATTURE AGENZIA NEL PERIODO';
-
+    // Build invoice rows
     $totalInvoiced = 0.0;
-    if ($invoices) {
-        foreach ($invoices as $i) {
-            $totalInvoiced += (float) $i['total'];
-            $lines[] = '- ' . $i['invoice_number'] . ' (' . formatDateIt($i['issue_date']) . '): EUR '
-                . number_format((float) $i['total'], 2, ',', '.') . ' [' . $i['status'] . ']';
-        }
-    } else {
-        $lines[] = 'Nessuna fattura nel periodo.';
+    $invPairs      = [];
+    foreach ($invoices as $i) {
+        $totalInvoiced += (float) $i['total'];
+        $invPairs[]     = [
+            ($i['invoice_number'] ?? '—') . ' — ' . formatDateIt($i['issue_date']),
+            '€ ' . number_format((float) $i['total'], 2, ',', '.') . ' [' . ucfirst($i['status'] ?? '') . ']',
+        ];
     }
 
     $multiplier   = $month !== null ? 1 : 12;
     $grossRent    = $totalRent * $multiplier;
     $netEstimated = $grossRent - $totalInvoiced;
+    $rentNote     = $month !== null ? 'Canone mensile' : 'Canone annuo stimato (×12 mesi)';
 
-    $lines[] = '';
-    $lines[] = str_repeat('-', 60);
-    $lines[] = 'RIEPILOGO ECONOMICO';
-    $lines[] = 'Canone lordo periodo: EUR ' . number_format($grossRent, 2, ',', '.');
-    $lines[] = 'Costi agenzia (fatture): EUR ' . number_format($totalInvoiced, 2, ',', '.');
-    $lines[] = 'Netto stimato: EUR ' . number_format($netEstimated, 2, ',', '.');
-    $lines[] = str_repeat('-', 60);
-    $lines[] = '';
-    $lines[] = 'Generato il ' . date('d/m/Y H:i');
+    $docTitle = 'Rendiconto ' . trim($client['surname'] . ' ' . $client['name']) . ' — ' . $periodLabel;
 
-    $lines = array_values(array_filter($lines, fn($l) => $l !== ''));
+    $blocks = [
+        ['type' => 'h2',  'text'  => 'Proprietario'],
+        ['type' => 'kv',  'pairs' => [
+            ['Nominativo', trim($client['name'] . ' ' . $client['surname'])],
+            ['Email',      $client['email'] ?: '—'],
+            ['Telefono',   $client['phone'] ?: '—'],
+            ['Periodo',    $periodLabel],
+        ]],
 
-    $result = savePdf(
-        $db,
-        'report',
-        'Rendiconto ' . $client['surname'] . ' ' . $periodLabel,
-        $lines,
-        $clientId,
-        null,
-        null,
-        getCurrentAdminId()
-    );
+        ['type' => 'h2', 'text' => 'Immobili'],
+        $propPairs
+            ? ['type' => 'kv', 'pairs' => $propPairs]
+            : ['type' => 'paragraph', 'text' => 'Nessun immobile attivo nel periodo.'],
+
+        ['type' => 'h2', 'text' => 'Fatture agenzia nel periodo'],
+        $invPairs
+            ? ['type' => 'kv', 'pairs' => $invPairs]
+            : ['type' => 'paragraph', 'text' => 'Nessuna fattura nel periodo.'],
+
+        ['type' => 'divider'],
+        ['type' => 'h2',   'text'  => 'Riepilogo economico'],
+        ['type' => 'price', 'label' => $rentNote,
+                            'value' => '€ ' . number_format($grossRent, 2, ',', '.'),
+                            'note'  => 'Lordo'],
+        ['type' => 'kv',   'pairs' => [
+            ['Costi agenzia (fatture)', '€ ' . number_format($totalInvoiced, 2, ',', '.')],
+            ['Netto stimato',           '€ ' . number_format($netEstimated,  2, ',', '.')],
+        ]],
+        ['type' => 'spacer', 'height' => 4],
+        ['type' => 'paragraph', 'text' =>
+            'Documento generato automaticamente il ' . date('d/m/Y \a\l\l\e H:i') . '. ' .
+            'I valori sono indicativi e basati sui dati presenti nel gestionale alla data di generazione.'],
+    ];
+
+    $pdf    = SimplePdf::fromBlocks($docTitle, $blocks, pdfDocOpts($docTitle, ['meta' => $periodLabel]));
+    $result = persistPdf($db, 'report', $docTitle, $pdf, $clientId, null, null, getCurrentAdminId());
 
     apiSuccess($result);
 } catch (Throwable $e) {

@@ -111,11 +111,36 @@
         bar.appendChild(controls);
     }
 
+    function setupCollapsible(bar) {
+        if (bar.classList.contains('chat-sidebar__search')) return;
+        if (bar.dataset.collapsibleBound === '1') return;
+        bar.dataset.collapsibleBound = '1';
+
+        const storageKey = 'filterBar:' + (bar.id || [...bar.classList].join('.'));
+        const wasOpen = sessionStorage.getItem(storageKey) === 'true';
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'toolbar-toggle';
+        toggle.setAttribute('aria-expanded', String(wasOpen));
+        toggle.innerHTML = '<span>Filtri</span><span class="toggle-icon">▼</span>';
+        bar.parentNode.insertBefore(toggle, bar);
+
+        if (wasOpen) bar.classList.add('is-open');
+
+        toggle.addEventListener('click', () => {
+            const open = bar.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', String(open));
+            sessionStorage.setItem(storageKey, String(open));
+        });
+    }
+
     function setupBar(bar) {
         if (!hasFilters(bar)) return;
         if (bar.dataset.filterBarBound === '1') return;
         bar.dataset.filterBarBound = '1';
 
+        setupCollapsible(bar);
         ensureLayout(bar);
 
         const controls = bar.querySelector('.filter-bar__controls');

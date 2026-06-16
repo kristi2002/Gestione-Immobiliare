@@ -116,7 +116,7 @@
 
             return `<tr class="${rowClass}">
                 <td>${esc(p.property_address || p.property_title || `#${p.property_id}`)}</td>
-                <td>${esc(p.owner_name || '—')}</td>
+                <td>${esc(p.client_surname && p.client_name ? `${p.client_surname} ${p.client_name}` : (p.client_surname || p.client_name || '—'))}</td>
                 <td>${esc(p.insurer_name)}</td>
                 <td>${esc(p.policy_number || '—')}</td>
                 <td><span class="badge">${esc(p.policy_type || '—')}</span></td>

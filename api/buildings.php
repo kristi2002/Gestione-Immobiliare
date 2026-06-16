@@ -73,11 +73,9 @@ function listBuildings(PDO $db): void
     $dataSql = "SELECT b.*,
                    COUNT(DISTINCT bp.property_id) AS unit_count,
                    COUNT(DISTINCT CASE WHEN EXISTS (
-                       SELECT 1 FROM contracts ct
-                       WHERE ct.property_id = bp.property_id
-                         AND ct.status = 'signed'
-                         AND ct.start_date <= CURDATE()
-                         AND (ct.end_date IS NULL OR ct.end_date >= CURDATE())
+                       SELECT 1 FROM tenants tn
+                       WHERE tn.property_id = bp.property_id
+                         AND tn.status = 'active'
                    ) THEN bp.property_id END) AS occupancy_count
             FROM buildings b
             LEFT JOIN building_properties bp ON bp.building_id = b.id

@@ -57,6 +57,8 @@ function listApplications(PDO $db): void
     $pagination  = apiGetPagination();
     $propertyId  = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $status      = trim($_GET['status'] ?? '');
+    $type        = trim($_GET['type'] ?? '');
+    $search      = trim($_GET['search'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
@@ -69,8 +71,16 @@ function listApplications(PDO $db): void
         $where .= ' AND pa.status = :status';
         $params[':status'] = $status;
     }
+    if ($type && in_array($type, APP_TYPES, true)) {
+        $where .= ' AND pa.application_type = :type';
+        $params[':type'] = $type;
+    }
+    if ($search !== '') {
+        $where .= " AND (pa.applicant_name LIKE :search OR pa.applicant_email LIKE :search OR pa.applicant_phone LIKE :search OR pr.address LIKE :search)";
+        $params[':search'] = '%' . $search . '%';
+    }
 
-    $countSql = "SELECT COUNT(*) FROM property_applications pa {$where}";
+    $countSql = "SELECT COUNT(*) FROM property_applications pa LEFT JOIN properties pr ON pr.id = pa.property_id {$where}";
 
     $dataSql = "SELECT pa.*,
                        pr.address AS property_address,

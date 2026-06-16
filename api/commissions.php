@@ -15,7 +15,7 @@ apiHandleOptions();
 
 requireRole('admin', 'super_admin');
 
-const COMMISSION_TYPES    = ['vendita', 'locazione', 'gestione'];
+const COMMISSION_TYPES    = ['vendita', 'locazione', 'affitto', 'gestione', 'altro'];
 const COMMISSION_STATUSES = ['pending', 'paid'];
 
 try {
@@ -39,6 +39,10 @@ try {
         case 'PUT':
             if (!$id) apiError('ID commissione mancante.');
             updateCommission($db, $id);
+            break;
+        case 'PATCH':
+            if (!$id) apiError('ID commissione mancante.');
+            markCommissionPaid($db, $id);
             break;
         case 'DELETE':
             if (!$id) apiError('ID commissione mancante.');
@@ -78,11 +82,13 @@ function listCommissions(PDO $db): void
     $dataSql = "SELECT ac.*,
                    au.username AS agent_username,
                    p.address AS property_address, p.city AS property_city,
-                   c.name AS client_name, c.surname AS client_surname
+                   c.name AS client_name, c.surname AS client_surname,
+                   ct.title AS contract_title, ct.contract_type
             FROM agent_commissions ac
             LEFT JOIN admin_users au ON au.id = ac.admin_user_id
             LEFT JOIN properties p ON p.id = ac.property_id
             LEFT JOIN clients c ON c.id = ac.client_id
+            LEFT JOIN contracts ct ON ct.id = ac.contract_id
             $where
             ORDER BY ac.created_at DESC";
 
@@ -118,11 +124,13 @@ function getCommission(PDO $db, int $id): void
         "SELECT ac.*,
                 au.username AS agent_username,
                 p.address AS property_address, p.city AS property_city,
-                c.name AS client_name, c.surname AS client_surname
+                c.name AS client_name, c.surname AS client_surname,
+                ct.title AS contract_title, ct.contract_type
          FROM agent_commissions ac
          LEFT JOIN admin_users au ON au.id = ac.admin_user_id
          LEFT JOIN properties p ON p.id = ac.property_id
          LEFT JOIN clients c ON c.id = ac.client_id
+         LEFT JOIN contracts ct ON ct.id = ac.contract_id
          WHERE ac.id = :id"
     );
     $stmt->execute(['id' => $id]);
@@ -216,6 +224,19 @@ function deleteCommission(PDO $db, int $id): void
 
     logActivity('delete', 'commission', $id, 'Commissione eliminata #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Commissione eliminata.']);
+}
+
+function markCommissionPaid(PDO $db, int $id): void
+{
+    $stmt = $db->prepare("SELECT id FROM agent_commissions WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    if (!$stmt->fetch()) apiError('Commissione non trovata.', 404);
+
+    $db->prepare(
+        "UPDATE agent_commissions SET status = 'paid', paid_at = COALESCE(paid_at, NOW()) WHERE id = :id"
+    )->execute(['id' => $id]);
+
+    getCommission($db, $id);
 }
 
 // ---------------------------------------------------------------------------

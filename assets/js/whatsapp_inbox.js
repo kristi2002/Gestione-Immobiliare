@@ -18,6 +18,9 @@
         els.emptyState  = document.getElementById('wa-empty-state');
         els.activeChat  = document.getElementById('wa-active-chat');
         els.chatHeader  = document.getElementById('wa-chat-header');
+        els.chatName    = document.getElementById('wa-chat-name');
+        els.chatSub     = document.getElementById('wa-chat-sub');
+        els.chatAvatar  = document.getElementById('wa-chat-avatar');
         els.chatMsgs    = document.getElementById('wa-chat-messages');
         els.replyText   = document.getElementById('wa-reply-text');
         els.sendBtn     = document.getElementById('wa-send-btn');
@@ -62,9 +65,14 @@
     }
 
     async function loadThreads(silent = false) {
-        if (!silent) els.threadList.innerHTML = '<div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>';
+        if (!silent) {
+            const hdr = els.threadList.querySelector('.wa-thread-list-header');
+            els.threadList.innerHTML = '';
+            if (hdr) els.threadList.appendChild(hdr);
+            els.threadList.insertAdjacentHTML('beforeend', '<div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>');
+        }
         try {
-            const res  = await fetch(`${INBOX_API}?action=threads`);
+            const res  = await fetch(`${INBOX_API}?threads=1`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             threads = json.data || [];
@@ -77,29 +85,41 @@
     }
 
     function renderThreads() {
+        const header = els.threadList.querySelector('.wa-thread-list-header');
         if (!threads.length) {
-            els.threadList.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.9rem;">Nessuna conversazione.</div>';
+            els.threadList.innerHTML = '';
+            if (header) els.threadList.appendChild(header);
+            els.threadList.insertAdjacentHTML('beforeend', '<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">Nessuna conversazione.</div>');
             return;
         }
 
-        els.threadList.innerHTML = threads.map(t => {
-            const initials = (t.phone || '?').replace(/\D/g, '').slice(-2);
+        const items = threads.map(t => {
+            const name     = t.contact_name || t.phone || '?';
+            const initials = name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
             const isActive = t.phone === activePhone;
             const unread   = parseInt(t.unread_count) || 0;
             const preview  = t.last_message
-                ? (t.last_message.length > 40 ? t.last_message.substring(0, 40) + '…' : t.last_message)
+                ? (t.last_message.length > 45 ? t.last_message.substring(0, 45) + '…' : t.last_message)
                 : '';
+            const timeStr  = t.last_at ? formatTime(t.last_at) : '';
 
             return `<div class="wa-thread-item${isActive ? ' active' : ''}" data-phone="${esc(t.phone)}">
                 <div class="wa-thread-avatar">${esc(initials)}</div>
                 <div class="wa-thread-info">
-                    <div class="wa-thread-phone">${esc(t.phone)}</div>
-                    ${t.contact_name ? `<div class="wa-thread-preview" style="color:#555;font-weight:500;">${esc(t.contact_name)}</div>` : ''}
+                    <div class="wa-thread-name">${esc(name)}</div>
+                    ${t.contact_name ? `<div class="wa-thread-phone">${esc(t.phone)}</div>` : ''}
                     <div class="wa-thread-preview">${esc(preview)}</div>
                 </div>
-                ${unread ? `<div class="wa-unread-badge">${unread}</div>` : ''}
+                <div class="wa-thread-meta">
+                    ${timeStr ? `<div class="wa-thread-time">${esc(timeStr)}</div>` : ''}
+                    ${unread ? `<div class="wa-unread-badge">${unread}</div>` : ''}
+                </div>
             </div>`;
         }).join('');
+
+        els.threadList.innerHTML = '';
+        if (header) els.threadList.appendChild(header);
+        els.threadList.insertAdjacentHTML('beforeend', items);
 
         els.threadList.querySelectorAll('.wa-thread-item').forEach(item => {
             item.addEventListener('click', () => openThread(item.dataset.phone));
@@ -112,12 +132,14 @@
 
         els.emptyState.style.display  = 'none';
         els.activeChat.style.display  = 'flex';
-        els.chatHeader.textContent    = phone;
 
         const thread = threads.find(t => t.phone === phone);
-        if (thread?.contact_name) {
-            els.chatHeader.textContent = `${thread.contact_name} (${phone})`;
-        }
+        const name   = thread?.contact_name || phone;
+        const initials = name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
+
+        els.chatName.textContent   = name;
+        els.chatSub.textContent    = thread?.contact_name ? phone : '';
+        els.chatAvatar.textContent = initials;
 
         await loadMessages(phone);
         await markRead(phone);
@@ -126,11 +148,11 @@
     async function loadMessages(phone, silent = false) {
         if (!silent) els.chatMsgs.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Caricamento…</div>';
         try {
-            const res  = await fetch(`${INBOX_API}?action=messages&phone=${encodeURIComponent(phone)}`);
+            const res  = await fetch(`${INBOX_API}?thread=${encodeURIComponent(phone)}`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            const messages  = json.data || [];
+            const messages  = json.data?.items ?? json.data ?? [];
             const wasBottom = isNearBottom();
 
             els.chatMsgs.innerHTML = messages.map(m => {
@@ -152,10 +174,8 @@
 
     async function markRead(phone) {
         try {
-            await fetch(`${INBOX_API}?action=mark_read`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone }),
+            await fetch(`${INBOX_API}?phone=${encodeURIComponent(phone)}`, {
+                method: 'PATCH',
             });
             // Update local thread unread count
             const t = threads.find(t => t.phone === phone);

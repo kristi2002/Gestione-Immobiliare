@@ -101,13 +101,13 @@
             const statusLabel = STATUS_LABELS[a.status] || a.status || '—';
             const statusColor = STATUS_COLORS[a.status] || '#333';
             const propLabel   = a.property_address || a.property_title || `#${a.property_id}`;
-            const applicant   = `${a.first_name || ''} ${a.last_name || ''}`.trim() || a.name || '—';
+            const applicant   = a.applicant_name || `${a.first_name || ''} ${a.last_name || ''}`.trim() || a.name || '—';
 
             return `<tr>
                 <td>${esc(propLabel)}</td>
                 <td><strong>${esc(applicant)}</strong></td>
-                <td>${a.email ? `<a href="mailto:${esc(a.email)}">${esc(a.email)}</a>` : '—'}</td>
-                <td>${esc(a.phone || '—')}</td>
+                <td>${a.applicant_email ? `<a href="mailto:${esc(a.applicant_email)}">${esc(a.applicant_email)}</a>` : '—'}</td>
+                <td>${esc(a.applicant_phone || '—')}</td>
                 <td><span class="badge">${esc(a.application_type || a.type || '—')}</span></td>
                 <td>${formatDate(a.created_at || a.submitted_at)}</td>
                 <td><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
@@ -138,7 +138,7 @@
 
     function openDetail(item) {
         activeItem = item;
-        const applicant = `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || '—';
+        const applicant = item.applicant_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.name || '—';
         document.getElementById('pa-detail-title').textContent = `Richiesta di ${applicant}`;
         document.getElementById('pa-detail-status-select').value = item.status || 'new';
 
@@ -158,11 +158,11 @@
             <div class="form-row form-row--2" style="margin-bottom:1rem;">
                 <div>
                     <p class="text-muted" style="margin:0 0 2px;font-size:0.8rem;">EMAIL</p>
-                    <p style="margin:0;">${item.email ? `<a href="mailto:${esc(item.email)}">${esc(item.email)}</a>` : '—'}</p>
+                    <p style="margin:0;">${item.applicant_email ? `<a href="mailto:${esc(item.applicant_email)}">${esc(item.applicant_email)}</a>` : '—'}</p>
                 </div>
                 <div>
                     <p class="text-muted" style="margin:0 0 2px;font-size:0.8rem;">TELEFONO</p>
-                    <p style="margin:0;">${esc(item.phone || '—')}</p>
+                    <p style="margin:0;">${esc(item.applicant_phone || '—')}</p>
                 </div>
             </div>
             <div class="form-row form-row--2" style="margin-bottom:1rem;">
@@ -228,16 +228,20 @@
         const btn = document.getElementById('pa-detail-convert-lead');
         if (btn) { btn.disabled = true; btn.textContent = 'Conversione…'; }
 
-        const applicant = `${activeItem.first_name || ''} ${activeItem.last_name || ''}`.trim() || activeItem.name || '';
+        const applicant = activeItem.applicant_name || `${activeItem.first_name || ''} ${activeItem.last_name || ''}`.trim() || activeItem.name || '';
+        const nameParts = applicant.trim().split(/\s+/);
+        const firstName = nameParts[0] || applicant;
+        const lastName  = nameParts.slice(1).join(' ') || '-';
 
         try {
             const res  = await fetch(LEADS_API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name:        applicant,
-                    email:       activeItem.email || '',
-                    phone:       activeItem.phone || '',
+                    name:        firstName,
+                    surname:     lastName,
+                    email:       activeItem.applicant_email || '',
+                    phone:       activeItem.applicant_phone || '',
                     property_id: activeItem.property_id || null,
                     source:      'application',
                     notes:       `Convertito da richiesta #${activeItem.id}`,

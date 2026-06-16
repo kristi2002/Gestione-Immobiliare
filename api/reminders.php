@@ -61,7 +61,12 @@ function listReminders(PDO $db): void
     $dueSoon  = isset($_GET['due_soon']) ? (int) $_GET['due_soon'] : null;
     $from     = trim($_GET['from'] ?? '');
     $to       = trim($_GET['to'] ?? '');
-    $filterClientId = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
+    $filterClientId  = isset($_GET['client_id'])   ? (int) $_GET['client_id']   : null;
+    $filterPropertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $notifyClient    = isset($_GET['notify_client']) ? (int) $_GET['notify_client'] : null;
+    $maintenanceOnly = !empty($_GET['type']) && $_GET['type'] === 'maintenance';
+    $filterPriority  = trim($_GET['priority'] ?? '');
+    $filterMStatus   = trim($_GET['maintenance_status'] ?? '');
 
     $where = 'WHERE 1=1';
     $params = [];
@@ -103,6 +108,23 @@ function listReminders(PDO $db): void
         $where .= ' AND r.client_id = :filter_client_id';
         $params['filter_client_id'] = $filterClientId;
     }
+    if ($filterPropertyId) {
+        $where .= ' AND r.property_id = :filter_property_id';
+        $params['filter_property_id'] = $filterPropertyId;
+    }
+    if ($notifyClient !== null) {
+        $where .= ' AND r.notify_client = :notify_client';
+        $params['notify_client'] = $notifyClient;
+    }
+    // $maintenanceOnly: reserved for future use when maintenance reminders get a dedicated flag
+    if ($filterPriority !== '') {
+        $where .= ' AND r.priority = :priority';
+        $params['priority'] = $filterPriority;
+    }
+    if ($filterMStatus !== '') {
+        $where .= ' AND r.maintenance_status = :m_status';
+        $params['m_status'] = $filterMStatus;
+    }
 
     $countSql = "SELECT COUNT(*) FROM reminders r
             LEFT JOIN clients c ON c.id = r.client_id
@@ -110,10 +132,12 @@ function listReminders(PDO $db): void
             $where";
 
     $dataSql = "SELECT r.*, c.name AS client_name, c.surname AS client_surname,
-                   p.address AS property_address, p.city AS property_city
+                   p.address AS property_address, p.city AS property_city,
+                   COALESCE(r.tenant_name, CONCAT(tn.name, ' ', tn.surname)) AS tenant_name
             FROM reminders r
             LEFT JOIN clients c ON c.id = r.client_id
             LEFT JOIN properties p ON p.id = r.property_id
+            LEFT JOIN tenants tn ON tn.property_id = r.property_id AND tn.status != 'archived'
             $where
             ORDER BY r.reminder_date ASC";
 
@@ -193,8 +217,33 @@ function patchReminder(PDO $db, int $id): void
     $action = trim($_GET['action'] ?? '');
     $map    = ['complete' => 'completed', 'cancel' => 'cancelled', 'reopen' => 'pending'];
 
+    // Supplier assignment (maintenance workflow)
+    if ($action === 'assign_supplier') {
+        $data        = apiGetJsonBody();
+        $supplierId  = !empty($data['supplier_id'])   ? (int) $data['supplier_id']        : null;
+        $supplierName = trim($data['supplier_name'] ?? '') ?: null;
+        $stmt = $db->prepare("UPDATE reminders SET supplier_id = :sid, supplier_name = :sname WHERE id = :id");
+        $stmt->execute(['sid' => $supplierId, 'sname' => $supplierName, 'id' => $id]);
+        getReminder($db, $id);
+        return;
+    }
+
+    // Maintenance status (aperta / in_lavorazione / completata / chiusa)
+    if ($action === 'maintenance_status') {
+        $data      = apiGetJsonBody();
+        $newStatus = trim($data['status'] ?? '');
+        $allowed   = ['aperta', 'in_lavorazione', 'completata', 'chiusa'];
+        if (!in_array($newStatus, $allowed, true)) {
+            apiError('Stato manutenzione non valido.');
+        }
+        $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms WHERE id = :id");
+        $stmt->execute(['ms' => $newStatus, 'id' => $id]);
+        getReminder($db, $id);
+        return;
+    }
+
     if (!isset($map[$action])) {
-        apiError('Azione non valida. Usa: complete, cancel, reopen.');
+        apiError('Azione non valida. Usa: complete, cancel, reopen, assign_supplier, maintenance_status.');
     }
 
     $stmt = $db->prepare("UPDATE reminders SET status = :status WHERE id = :id");
