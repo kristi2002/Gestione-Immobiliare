@@ -27,6 +27,8 @@ $branding = getPublicBranding();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portale Proprietario — <?= htmlspecialchars($branding['agency_name']) ?></title>
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../favicon.png">
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
         .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg); padding: 24px; }

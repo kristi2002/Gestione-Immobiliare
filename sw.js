@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestionale-v14';
+const CACHE_NAME = 'gestionale-v15';
 
 // Only static assets that always return 200 (no auth redirects).
 const PRECACHE_URLS = [
