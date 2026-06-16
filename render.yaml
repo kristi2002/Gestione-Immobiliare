@@ -39,6 +39,24 @@ services:
         value: false
       - key: BACKUP_CLOUD_ENABLED
         value: true
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: BACKUP_S3_ENDPOINT
+        sync: false
+      - key: BACKUP_S3_BUCKET
+        sync: false
+      - key: BACKUP_S3_KEY
+        sync: false
+      - key: BACKUP_S3_SECRET
+        sync: false
       - key: APP_URL
         sync: false
       - key: APP_SECRET
@@ -65,51 +83,63 @@ services:
     dockerfilePath: ./Dockerfile
     dockerCommand: php /var/www/html/cron/process_reminders.php
     envVars:
-      - fromService:
+      - key: APP_ENV
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: APP_ENV
-      - fromService:
+      - key: DB_HOST
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_HOST
-      - fromService:
+      - key: DB_NAME
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_NAME
-      - fromService:
+      - key: DB_USER
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_USER
-      - fromService:
+      - key: DB_PASS
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_PASS
-      - fromService:
+      - key: DB_CHARSET
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_CHARSET
-      - fromService:
+      - key: MAIL_ENABLED
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: MAIL_ENABLED
-      - fromService:
+      - key: SMTP_HOST
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: SMTP_HOST
-      - fromService:
+      - key: SMTP_PORT
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: SMTP_PORT
-      - fromService:
+      - key: SMTP_USER
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: SMTP_USER
-      - fromService:
+      - key: SMTP_PASS
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: SMTP_PASS
-      - fromService:
+      - key: SMTP_SECURE
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: SMTP_SECURE
@@ -121,19 +151,23 @@ services:
     dockerfilePath: ./Dockerfile
     dockerCommand: php /var/www/html/cron/publish_social_posts.php
     envVars:
-      - fromService:
+      - key: DB_HOST
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_HOST
-      - fromService:
+      - key: DB_NAME
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_NAME
-      - fromService:
+      - key: DB_USER
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_USER
-      - fromService:
+      - key: DB_PASS
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_PASS
@@ -145,39 +179,48 @@ services:
     dockerfilePath: ./Dockerfile
     dockerCommand: php /var/www/html/cron/backup_database.php
     envVars:
-      - fromService:
+      - key: DB_HOST
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_HOST
-      - fromService:
+      - key: DB_NAME
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_NAME
-      - fromService:
+      - key: DB_USER
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_USER
-      - fromService:
+      - key: DB_PASS
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: DB_PASS
-      - fromService:
+      - key: BACKUP_CLOUD_ENABLED
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: BACKUP_CLOUD_ENABLED
-      - fromService:
+      - key: BACKUP_S3_ENDPOINT
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: BACKUP_S3_ENDPOINT
-      - fromService:
+      - key: BACKUP_S3_BUCKET
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: BACKUP_S3_BUCKET
-      - fromService:
+      - key: BACKUP_S3_KEY
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: BACKUP_S3_KEY
-      - fromService:
+      - key: BACKUP_S3_SECRET
+        fromService:
           type: web
           name: gestionale-immobiliare
           envVarKey: BACKUP_S3_SECRET
