@@ -33,6 +33,18 @@
         // Fix blank tiles when map container was hidden during init
         setTimeout(() => map.invalidateSize(), 100);
 
+        // Keep the map fitted to its container when the window is resized/minimized,
+        // so it never overflows the layout. Debounced + auto-detached when the view unmounts.
+        const onResize = () => {
+            if (!document.getElementById('leaflet-map')) {
+                window.removeEventListener('resize', onResize);
+                return;
+            }
+            clearTimeout(onResize._t);
+            onResize._t = setTimeout(() => map && map.invalidateSize(), 150);
+        };
+        window.addEventListener('resize', onResize);
+
         els.geocodeBtn.addEventListener('click', () => geocodeBatch(false));
         if (els.regeocodeBtn) {
             els.regeocodeBtn.addEventListener('click', async () => {

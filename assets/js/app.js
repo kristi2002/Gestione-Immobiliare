@@ -56,6 +56,7 @@
             activity_log:   'Log Attività',
             settings:       'Impostazioni',
             client_profile:        'Scheda Cliente',
+            automations:           'Automazioni Clienti',
             buildings:             'Edifici',
             insurance:             'Assicurazioni',
             meters:                'Contatori',

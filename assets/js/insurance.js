@@ -79,7 +79,7 @@
             if (!json.success) throw new Error(json.error);
 
             const parsed = window.Pagination.parseResponse(json);
-            renderStats(json.stats || {});
+            renderStats((json.data && json.data.stats) || {});
             renderRows(parsed.items);
             window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadInsurances(); });
         } catch (err) {

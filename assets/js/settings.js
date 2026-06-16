@@ -81,6 +81,17 @@
         document.getElementById('set-smtp-user').value = m.smtp_user || '';
         document.getElementById('set-smtp-pass').value = m.smtp_pass || '';
         document.getElementById('set-smtp-secure').value = m.smtp_secure || 'tls';
+        document.getElementById('set-mailgun-webhook-key').value = m.mailgun_webhook_key || '';
+        // Show the webhook URL so the user can copy it into Mailgun
+        const urlEl = document.getElementById('mailgun-webhook-url');
+        if (urlEl) {
+            const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
+            const webhookUrl = base + 'api/email_inbound.php';
+            urlEl.textContent = webhookUrl;
+            urlEl.addEventListener('click', () => {
+                navigator.clipboard.writeText(webhookUrl).then(() => showAlert('URL copiato!', 'success'));
+            });
+        }
     }
 
     function fillWhatsApp(w) {
@@ -129,13 +140,14 @@
 
     function collectMail() {
         return {
-            mail_enabled: document.getElementById('set-mail-enabled').checked,
-            agency_email: document.getElementById('set-agency-email').value,
-            smtp_host: document.getElementById('set-smtp-host').value,
-            smtp_port: document.getElementById('set-smtp-port').value,
-            smtp_user: document.getElementById('set-smtp-user').value,
-            smtp_pass: document.getElementById('set-smtp-pass').value,
-            smtp_secure: document.getElementById('set-smtp-secure').value,
+            mail_enabled:         document.getElementById('set-mail-enabled').checked,
+            agency_email:         document.getElementById('set-agency-email').value,
+            smtp_host:            document.getElementById('set-smtp-host').value,
+            smtp_port:            document.getElementById('set-smtp-port').value,
+            smtp_user:            document.getElementById('set-smtp-user').value,
+            smtp_pass:            document.getElementById('set-smtp-pass').value,
+            smtp_secure:          document.getElementById('set-smtp-secure').value,
+            mailgun_webhook_key:  document.getElementById('set-mailgun-webhook-key').value,
         };
     }
 

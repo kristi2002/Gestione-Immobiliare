@@ -87,7 +87,29 @@ function listCommissions(PDO $db): void
             ORDER BY ac.created_at DESC";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-    apiPaginatedSuccess($items, $total, $pagination);
+
+    // Global KPI stats for the header cards (independent of the current page/filter).
+    $statsRow = $db->query(
+        "SELECT
+            COALESCE(SUM(CASE WHEN status = 'pending' THEN amount END), 0) AS pending_total,
+            COALESCE(SUM(CASE WHEN status = 'paid'    THEN amount END), 0) AS paid_total,
+            COUNT(*) AS total_count
+         FROM agent_commissions"
+    )->fetch();
+
+    $pages = $total > 0 ? (int) ceil($total / $pagination['limit']) : 0;
+    apiSuccess([
+        'items' => $items,
+        'total' => $total,
+        'page'  => $pagination['page'],
+        'limit' => $pagination['limit'],
+        'pages' => $pages,
+        'stats' => [
+            'pending_total' => (float) $statsRow['pending_total'],
+            'paid_total'    => (float) $statsRow['paid_total'],
+            'total_count'   => (int) $statsRow['total_count'],
+        ],
+    ]);
 }
 
 function getCommission(PDO $db, int $id): void

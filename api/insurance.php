@@ -71,7 +71,8 @@ function listInsurance(PDO $db): void
 
     $dataSql = "SELECT pi.*,
                    p.address AS property_address, p.city AS property_city,
-                   c.name AS client_name, c.surname AS client_surname
+                   c.name AS client_name, c.surname AS client_surname,
+                   TRIM(CONCAT(COALESCE(c.name, ''), ' ', COALESCE(c.surname, ''))) AS owner_name
             FROM property_insurance pi
             LEFT JOIN properties p ON p.id = pi.property_id
             LEFT JOIN clients c ON c.id = pi.client_id
@@ -79,7 +80,29 @@ function listInsurance(PDO $db): void
             ORDER BY pi.end_date ASC";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-    apiPaginatedSuccess($items, $total, $pagination);
+
+    // Global KPI stats for the header cards (independent of page/filter).
+    $statsRow = $db->query(
+        "SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS expiring_soon,
+            COALESCE(SUM(premium_annual), 0) AS annual_cost_total
+         FROM property_insurance"
+    )->fetch();
+
+    $pages = $total > 0 ? (int) ceil($total / $pagination['limit']) : 0;
+    apiSuccess([
+        'items' => $items,
+        'total' => $total,
+        'page'  => $pagination['page'],
+        'limit' => $pagination['limit'],
+        'pages' => $pages,
+        'stats' => [
+            'total'             => (int) $statsRow['total'],
+            'expiring_soon'     => (int) $statsRow['expiring_soon'],
+            'annual_cost_total' => (float) $statsRow['annual_cost_total'],
+        ],
+    ]);
 }
 
 function getInsurance(PDO $db, int $id): void

@@ -172,13 +172,14 @@ function publicSettingsPayload(): array
     return [
         'branding' => getPublicBranding(),
         'mail' => [
-            'mail_enabled' => filter_var(getSetting('mail_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
-            'agency_email' => getSetting('agency_email'),
-            'smtp_host'    => getSetting('smtp_host'),
-            'smtp_port'    => (int) getSetting('smtp_port', '587'),
-            'smtp_user'    => getSetting('smtp_user'),
-            'smtp_pass'    => maskSecret(getSetting('smtp_pass')),
-            'smtp_secure'  => getSetting('smtp_secure', 'tls'),
+            'mail_enabled'        => filter_var(getSetting('mail_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
+            'agency_email'        => getSetting('agency_email'),
+            'smtp_host'           => getSetting('smtp_host'),
+            'smtp_port'           => (int) getSetting('smtp_port', '587'),
+            'smtp_user'           => getSetting('smtp_user'),
+            'smtp_pass'           => maskSecret(getSetting('smtp_pass')),
+            'smtp_secure'         => getSetting('smtp_secure', 'tls'),
+            'mailgun_webhook_key' => maskSecret(getSetting('mailgun_webhook_key')),
         ],
         'whatsapp' => [
             'whatsapp_enabled'     => filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),

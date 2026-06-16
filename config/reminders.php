@@ -8,7 +8,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/mail_html.php';
 
-const REMINDER_FREQUENCIES = ['once', 'weekly', 'monthly', 'yearly'];
+const REMINDER_FREQUENCIES = ['once', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
 
 /**
  * Process all due pending reminders.
@@ -78,12 +78,21 @@ function processSingleReminder(PDO $db, array $reminder): array
         $actions['status'] = 'completed';
     } else {
         $nextDate = calculateNextReminderDate($reminder['reminder_date'], $frequency);
-        $update   = $db->prepare(
-            "UPDATE reminders SET reminder_date = :next_date, last_notified_at = NOW() WHERE id = :id"
-        );
-        $update->execute(['id' => $id, 'next_date' => $nextDate]);
-        $actions['status']      = 'rescheduled';
-        $actions['next_date']   = $nextDate;
+        // Stop automation if end_date is set and next occurrence would be past it
+        if (!empty($reminder['end_date']) && $nextDate > $reminder['end_date']) {
+            $update = $db->prepare(
+                "UPDATE reminders SET status = 'completed', last_notified_at = NOW() WHERE id = :id"
+            );
+            $update->execute(['id' => $id]);
+            $actions['status'] = 'completed';
+        } else {
+            $update = $db->prepare(
+                "UPDATE reminders SET reminder_date = :next_date, last_notified_at = NOW() WHERE id = :id"
+            );
+            $update->execute(['id' => $id, 'next_date' => $nextDate]);
+            $actions['status']    = 'rescheduled';
+            $actions['next_date'] = $nextDate;
+        }
     }
 
     return [
@@ -171,8 +180,14 @@ function calculateNextReminderDate(string $currentDate, string $frequency): stri
         case 'weekly':
             $dt->modify('+1 week');
             break;
+        case 'biweekly':
+            $dt->modify('+15 days');
+            break;
         case 'monthly':
             $dt->modify('+1 month');
+            break;
+        case 'quarterly':
+            $dt->modify('+3 months');
             break;
         case 'yearly':
             $dt->modify('+1 year');

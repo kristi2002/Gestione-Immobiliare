@@ -1,0 +1,237 @@
+Progetto: Gestionale per Agenzia Immobiliare
+L'obiettivo è realizzare un gestionale semplice e intuitivo per la gestione dei clienti proprietari degli
+immobili e delle relative attività operative dell'agenzia.
+In questa prima versione esisterà un solo ruolo utente: Admin. La gestione dei collaboratori potrà
+essere aggiunta in futuro.
+FUNZIONALITÀ PRINCIPALI
+Gestione Clienti
+Il concetto principale del sistema è il cliente, inteso come proprietario degli immobili.
+Ogni cliente può avere uno o più immobili associati.
+Esempi:
+Cliente A → 1 immobile
+Cliente B → 3 immobili
+Cliente C → 10 immobili
+Per ogni cliente devono essere gestiti almeno i seguenti dati:
+Nome e cognome
+Telefono
+Email
+Note interne
+Data di creazione
+Stato del cliente (opzionale)
+Scheda Cliente
+Entrando nella scheda cliente devono essere visibili:
+Dati anagrafici
+Note interne
+Elenco degli immobili associati
+Documenti collegati
+Storico delle comunicazioni
+Promemoria e automazioni configurate
+Gestione Immobili
+Ogni immobile deve essere rappresentato tramite una card con:
+Foto di anteprima
+Titolo o riferimento immobile
+1. 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+1
+Informazioni essenziali
+Cliccando sulla card si accede alla scheda completa dell'immobile.
+Scheda Immobile
+Ogni immobile deve contenere:
+Indirizzo completo
+Città
+CAP
+Metri quadrati
+Numero stanze
+Numero bagni
+Piano
+Descrizione
+Caratteristiche aggiuntive
+Note interne
+Galleria Multimediale
+Per ogni immobile deve essere possibile gestire:
+Foto
+Video
+Planimetrie
+Cartine della casa
+Altri allegati
+L'admin deve poter caricare, eliminare e visualizzare facilmente tutti questi contenuti.
+Gestione Documenti
+Devono poter essere associati documenti sia ai clienti che agli immobili.
+Esempi:
+Fatture
+Contratti
+Incarichi
+Documenti di identità
+Certificazioni
+Altri file
+I documenti devono poter essere caricati, scaricati e consultati.
+Comunicazioni tramite Email (visualizzate come chat)
+Il gestionale deve integrare la posta elettronica.
+• 
+1. 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+1. 
+• 
+• 
+• 
+• 
+• 
+• 
+1. 
+2
+L'obiettivo è avere una sezione "Messaggi" che mostri le email come una conversazione simile a una
+chat.
+Ogni email inviata o ricevuta deve essere salvata nel database.
+Dalla scheda cliente deve essere possibile:
+Visualizzare lo storico completo delle comunicazioni
+Inviare email
+Ricevere email
+Cercare nei messaggi precedenti
+L'utente non dovrà utilizzare software esterni per la gestione della posta.
+Promemoria per l'Admin
+Per ogni cliente deve essere possibile impostare promemoria personalizzati.
+Esempio: "Ricordami di contattare questo cliente ogni 2 settimane."
+I promemoria devono essere inviati automaticamente all'admin tramite email.
+In futuro dovrà essere possibile inviarli anche tramite WhatsApp.
+Le frequenze possono essere:
+Settimanali
+Ogni 15 giorni
+Mensili
+Trimestrali
+Personalizzate
+Automazioni verso i Clienti
+Il sistema deve permettere di programmare comunicazioni automatiche verso i clienti.
+Ad esempio:
+Invio automatico di email
+Comunicazioni periodiche
+Messaggi predefiniti
+L'admin deve poter definire:
+Destinatario
+Contenuto del messaggio
+Frequenza
+Data di inizio
+Eventuale data di fine
+• 
+• 
+• 
+• 
+1. 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+3
+WhatsApp
+Predisporre il sistema per una futura integrazione con WhatsApp.
+L'obiettivo sarà utilizzare WhatsApp sia per:
+Promemoria destinati all'admin
+Comunicazioni verso i clienti
+L'implementazione effettiva potrà essere sviluppata successivamente.
+Pubblicazione automatica sui Social
+Il gestionale dovrà integrarsi con le API ufficiali di Meta.
+Funzionalità richieste:
+Pubblicazione automatica su Facebook
+Pubblicazione automatica su Instagram
+Scelta dell'immobile da pubblicare
+Selezione delle immagini
+Inserimento o generazione del testo del post
+Pubblicazione immediata
+Programmazione della pubblicazione
+Salvataggio del collegamento tra immobile e post pubblicato
+L'obiettivo è utilizzare direttamente le API ufficiali di Meta, senza dipendere da strumenti esterni come
+n8n.
+Dashboard
+La dashboard iniziale dovrà mostrare una panoramica generale, ad esempio:
+Numero totale dei clienti
+Numero totale degli immobili
+Promemoria in scadenza
+Attività programmate
+Ultime comunicazioni
+Ultimi immobili inseriti
+Considerazioni finali
+L'obiettivo del progetto è realizzare un gestionale semplice, pratico e veloce da utilizzare ogni giorno.
+Le priorità principali sono:
+Gestione dei clienti proprietari
+Associazione di più immobili allo stesso cliente
+Gestione completa delle schede immobili
+Archivio documentale
+Email integrate e visualizzate come chat
+Promemoria automatici per l'admin
+• 
+• 
+• 
+1. 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+1. 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+4
+Automazioni verso i clienti
+Predisposizione per WhatsApp
+Pubblicazione automatica degli immobili sui social tramite API Meta
+Questa è la versione iniziale del progetto. Eventuali funzionalità aggiuntive, come la gestione dei
+collaboratori e dei permessi, verranno sviluppate in una fase successiva.
+• 
+• 
+• 
+5

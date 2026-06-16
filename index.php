@@ -68,6 +68,9 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     <li><a href="view.php?name=map" class="nav-link" data-view="map"><span class="nav-icon">🗺️</span><span class="nav-label">Mappa</span></a></li>
                     <?php endif; ?>
                     <li><a href="view.php?name=reminders" class="nav-link" data-view="reminders"><span class="nav-icon">🔔</span><span class="nav-label">Promemoria</span></a></li>
+                    <?php if (canAccessView('automations')): ?>
+                    <li><a href="view.php?name=automations" class="nav-link" data-view="automations"><span class="nav-icon">⚙️</span><span class="nav-label">Automazioni</span></a></li>
+                    <?php endif; ?>
                     <?php if (canAccessView('tenants')): ?>
                     <li><a href="view.php?name=tenants" class="nav-link" data-view="tenants"><span class="nav-icon">🔑</span><span class="nav-label">Inquilini</span></a></li>
                     <?php endif; ?>

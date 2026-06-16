@@ -219,6 +219,15 @@ foreach ($rentedProps as $idx => $prop) {
     $ln = pick($lastNames);
     $start = randDate(600, -30);
     $end   = (new DateTimeImmutable($start))->modify('+3 years')->format('Y-m-d');
+    // properties.price is a sale/listing figure; derive a realistic monthly rent.
+    $price = (float) ($prop['price'] ?? 0);
+    if ($price > 0 && $price <= 5000) {
+        $rent = (int) round($price);                                  // already a monthly figure
+    } elseif ($price > 5000) {
+        $rent = max(450, min(3000, (int) round($price / 250 / 10) * 10)); // ~0.4% of sale price
+    } else {
+        $rent = random_int(600, 1200);
+    }
     $insTenant->execute([
         'pid'    => $prop['id'],
         'name'   => $fn,
@@ -227,7 +236,7 @@ foreach ($rentedProps as $idx => $prop) {
         'phone'  => '+393' . random_int(20, 99) . random_int(1000000, 9999999),
         'start'  => $start,
         'end'    => $end,
-        'rent'   => $prop['price'] ?? random_int(600, 1200),
+        'rent'   => $rent,
         'notes'  => '[DEMO]',
         'status' => 'active',
     ]);
@@ -401,9 +410,21 @@ if (tableExists($db, 'payments') && $tenantIds) {
         $t->execute(['id' => $tid]);
         $t = $t->fetch(PDO::FETCH_ASSOC);
         if (!$t) continue;
-        for ($m = 0; $m < 12; $m++) {
-            $due = (new DateTimeImmutable('first day of this month'))->modify("-$m months")->format('Y-m-05');
-            $status = $m === 0 ? pick(['pending', 'late']) : pick(['paid', 'paid', 'paid', 'late', 'pending']);
+        // Window from 8 months back to 6 months ahead so the revenue forecast
+        // (which is forward-looking) has upcoming, not-yet-due payments to chart.
+        for ($m = -8; $m <= 6; $m++) {
+            $due = (new DateTimeImmutable('first day of this month'))
+                ->modify(sprintf('%+d months', $m))
+                ->format('Y-m-05');
+
+            if ($m > 0) {
+                $status = 'pending';                                  // upcoming
+            } elseif ($m === 0) {
+                $status = pick(['pending', 'late']);                  // current month
+            } else {
+                $status = pick(['paid', 'paid', 'paid', 'late', 'pending']); // past
+            }
+
             $insPay->execute([
                 'tid'    => $tid,
                 'pid'    => $t['property_id'],

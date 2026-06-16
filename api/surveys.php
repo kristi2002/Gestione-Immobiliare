@@ -83,6 +83,9 @@ function listSurveys(PDO $db): void
     $countSql = "SELECT COUNT(*) FROM tenant_surveys ts $where";
 
     $dataSql = "SELECT ts.*,
+                   ts.overall_rating       AS rating_global,
+                   ts.maintenance_rating   AS rating_maintenance,
+                   ts.communication_rating AS rating_communication,
                    t.name AS tenant_name, t.surname AS tenant_surname,
                    p.address AS property_address, p.city AS property_city
             FROM tenant_surveys ts
@@ -92,7 +95,32 @@ function listSurveys(PDO $db): void
             ORDER BY ts.submitted_at DESC, ts.id DESC";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-    apiPaginatedSuccess($items, $total, $pagination);
+
+    // Average ratings across submitted surveys (header cards).
+    $statsRow = $db->query(
+        "SELECT
+            COUNT(*) AS total,
+            AVG(overall_rating)       AS avg_global,
+            AVG(maintenance_rating)   AS avg_maintenance,
+            AVG(communication_rating) AS avg_communication
+         FROM tenant_surveys
+         WHERE submitted_at IS NOT NULL"
+    )->fetch();
+
+    $pages = $total > 0 ? (int) ceil($total / $pagination['limit']) : 0;
+    apiSuccess([
+        'items' => $items,
+        'total' => $total,
+        'page'  => $pagination['page'],
+        'limit' => $pagination['limit'],
+        'pages' => $pages,
+        'stats' => [
+            'total'             => (int) $statsRow['total'],
+            'avg_global'        => $statsRow['avg_global'] !== null ? round((float) $statsRow['avg_global'], 1) : null,
+            'avg_maintenance'   => $statsRow['avg_maintenance'] !== null ? round((float) $statsRow['avg_maintenance'], 1) : null,
+            'avg_communication' => $statsRow['avg_communication'] !== null ? round((float) $statsRow['avg_communication'], 1) : null,
+        ],
+    ]);
 }
 
 function getSurveyByToken(PDO $db, string $token): void

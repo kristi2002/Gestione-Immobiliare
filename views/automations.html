@@ -1,0 +1,109 @@
+<div class="automations-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Automazioni verso i Clienti</h2>
+            <p>Email programmate inviate automaticamente ai proprietari in base alla frequenza configurata.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-automation">+ Nuova Automazione</button>
+        </div>
+    </div>
+
+    <div id="automations-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="automation-search" class="form-input" placeholder="Cerca per titolo o proprietario…" autocomplete="off">
+        </div>
+        <select id="automation-status-filter" class="form-select">
+            <option value="pending" selected>Attive</option>
+            <option value="completed">Completate</option>
+            <option value="">Tutte</option>
+        </select>
+        <select id="automation-freq-filter" class="form-select">
+            <option value="">Tutte le frequenze</option>
+            <option value="weekly">Settimanale</option>
+            <option value="biweekly">Quindicinale</option>
+            <option value="monthly">Mensile</option>
+            <option value="quarterly">Trimestrale</option>
+            <option value="yearly">Annuale</option>
+        </select>
+    </div>
+
+    <div id="automations-grid" class="entity-grid">
+        <div class="entity-loading">Caricamento…</div>
+    </div>
+    <div id="automations-pagination" class="pagination-container"></div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="automation-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="automation-modal-title">
+        <div class="modal-header">
+            <h3 id="automation-modal-title">Nuova Automazione</h3>
+            <button class="modal-close" id="automation-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="automation-form" class="modal-body">
+            <input type="hidden" id="automation-id">
+
+            <fieldset class="form-section">
+                <legend>Destinatario</legend>
+                <div class="form-group">
+                    <label for="automation-client">Proprietario <span class="required">*</span></label>
+                    <select id="automation-client" class="form-select" required>
+                        <option value="">— Seleziona proprietario —</option>
+                    </select>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Contenuto email</legend>
+                <div class="form-group">
+                    <label for="automation-subject">Oggetto email <span class="required">*</span></label>
+                    <input type="text" id="automation-subject" class="form-input" required maxlength="255"
+                           placeholder="es. Aggiornamento mensile sul tuo immobile">
+                </div>
+                <div class="form-group">
+                    <label for="automation-body">Corpo del messaggio <span class="required">*</span></label>
+                    <textarea id="automation-body" class="form-textarea" rows="6" required
+                              placeholder="Gentile [Nome],&#10;&#10;...&#10;&#10;Cordiali saluti,&#10;Agenzia"></textarea>
+                    <small class="form-hint">Puoi usare il nome del proprietario inserendolo manualmente nel testo.</small>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Programmazione</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="automation-frequency">Frequenza <span class="required">*</span></label>
+                        <select id="automation-frequency" class="form-select" required>
+                            <option value="weekly">Settimanale</option>
+                            <option value="biweekly">Quindicinale (ogni 15 giorni)</option>
+                            <option value="monthly" selected>Mensile</option>
+                            <option value="quarterly">Trimestrale</option>
+                            <option value="yearly">Annuale</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="automation-start">Data inizio <span class="required">*</span></label>
+                        <input type="date" id="automation-start" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="automation-end">Data fine</label>
+                        <input type="date" id="automation-end" class="form-input">
+                        <small class="form-hint">Lascia vuoto per ripetere a tempo indefinito.</small>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="automation-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="automation-modal-save">Salva automazione</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/automations.js?v=1"></script>

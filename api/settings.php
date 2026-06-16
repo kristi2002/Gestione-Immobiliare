@@ -142,6 +142,9 @@ function updateSettings(): void
         if (!empty($data['smtp_pass']) && !str_starts_with((string) $data['smtp_pass'], '••••')) {
             $pairs['smtp_pass'] = trim((string) $data['smtp_pass']);
         }
+        if (!empty($data['mailgun_webhook_key']) && !str_starts_with((string) $data['mailgun_webhook_key'], '••••')) {
+            $pairs['mailgun_webhook_key'] = trim((string) $data['mailgun_webhook_key']);
+        }
     }
 
     if (in_array($section, ['whatsapp', 'all'], true)) {

@@ -148,11 +148,11 @@ function createReminder(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO reminders
-            (title, description, reminder_date, frequency, status,
+            (title, description, reminder_date, end_date, frequency, status,
              client_id, property_id, notify_admin, notify_client,
              email_subject, email_body)
          VALUES
-            (:title, :description, :reminder_date, :frequency, :status,
+            (:title, :description, :reminder_date, :end_date, :frequency, :status,
              :client_id, :property_id, :notify_admin, :notify_client,
              :email_subject, :email_body)"
     );
@@ -173,7 +173,7 @@ function updateReminder(PDO $db, int $id): void
     $stmt = $db->prepare(
         "UPDATE reminders
          SET title = :title, description = :description, reminder_date = :reminder_date,
-             frequency = :frequency, status = :status,
+             end_date = :end_date, frequency = :frequency, status = :status,
              client_id = :client_id, property_id = :property_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
              email_subject = :email_subject, email_body = :email_body
@@ -232,6 +232,9 @@ function validateReminderInput(array $data): array
     $notifyClient = !empty($data['notify_client']) ? 1 : 0;
     $emailSubject = trim($data['email_subject'] ?? '') ?: null;
     $emailBody    = trim($data['email_body'] ?? '') ?: null;
+    $endDateRaw   = trim($data['end_date'] ?? '');
+    $endDate      = ($endDateRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}/', $endDateRaw))
+                    ? substr($endDateRaw, 0, 10) : null;
 
     if ($title === '') {
         apiError('Il titolo è obbligatorio.');
@@ -259,6 +262,7 @@ function validateReminderInput(array $data): array
         'title'         => $title,
         'description'   => $description,
         'reminder_date' => $parsed->format('Y-m-d H:i:s'),
+        'end_date'      => $endDate,
         'frequency'     => $frequency,
         'status'        => $status,
         'client_id'     => $clientId,

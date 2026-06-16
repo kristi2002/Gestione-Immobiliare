@@ -16,10 +16,12 @@
     };
 
     const FREQUENCY_LABELS = {
-        once:    'Una tantum',
-        weekly:  'Settimanale',
-        monthly: 'Mensile',
-        yearly:  'Annuale',
+        once:      'Una tantum',
+        weekly:    'Settimanale',
+        biweekly:  'Quindicinale',
+        monthly:   'Mensile',
+        quarterly: 'Trimestrale',
+        yearly:    'Annuale',
     };
 
     let reminders  = [];
