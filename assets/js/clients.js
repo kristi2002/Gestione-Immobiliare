@@ -199,6 +199,7 @@
                         <span class="entity-card__stat-label">${propLabel}</span>
                     </div>
                     <div class="entity-card__actions">
+                        <button class="btn btn--sm btn--ghost btn-profile" data-id="${c.id}" title="Scheda cliente">👤</button>
                         <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni">✉️</button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia">🗑️</button>
@@ -211,6 +212,12 @@
             cb.addEventListener('change', () => {
                 cb.checked ? selectedIds.add(+cb.dataset.id) : selectedIds.delete(+cb.dataset.id);
                 updateBulkToolbar();
+            });
+        });
+
+        els.grid.querySelectorAll('.btn-profile').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.App) window.App.navigateTo('client_profile', { clientId: Number(btn.dataset.id) });
             });
         });
 

@@ -1,0 +1,219 @@
+<div class="client-profile-view">
+
+    <!-- Back nav -->
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="btn-back-to-clients">← Proprietari</button>
+    </div>
+
+    <!-- Hero card: avatar + name + contacts + notes -->
+    <div class="profile-hero card">
+        <div class="profile-hero__avatar" id="profile-avatar">??</div>
+        <div class="profile-hero__info">
+            <div class="profile-hero__name">
+                <h2 id="profile-name">Caricamento...</h2>
+                <span id="profile-status-badge" class="badge"></span>
+            </div>
+            <div class="profile-hero__meta" id="profile-meta"></div>
+            <div class="profile-hero__notes" id="profile-notes" hidden>
+                <strong>Note interne</strong>
+                <p id="profile-notes-text"></p>
+            </div>
+        </div>
+        <div class="profile-hero__actions">
+            <button class="btn btn--ghost btn--sm" id="btn-profile-edit">✏️ Modifica</button>
+            <button class="btn btn--ghost btn--sm" id="btn-profile-report">📄 Rendiconto</button>
+        </div>
+    </div>
+
+    <div id="profile-alert" class="alert" style="display:none;"></div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs" role="tablist">
+        <button class="profile-tab profile-tab--active" role="tab" data-tab="properties">🏢 Immobili</button>
+        <button class="profile-tab" role="tab" data-tab="documents">📄 Documenti</button>
+        <button class="profile-tab" role="tab" data-tab="communications">💬 Comunicazioni</button>
+        <button class="profile-tab" role="tab" data-tab="reminders">🔔 Promemoria</button>
+    </div>
+
+    <!-- Panel: Immobili -->
+    <div class="profile-panel" id="profile-panel-properties">
+        <div class="profile-panel__header">
+            <span class="text-muted" id="profile-props-count"></span>
+            <button class="btn btn--sm btn--primary" id="btn-profile-new-property">+ Aggiungi immobile</button>
+        </div>
+        <div id="profile-props-grid" class="entity-grid">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Documenti -->
+    <div class="profile-panel" id="profile-panel-documents" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="profile-docs-count"></span>
+            <label class="btn btn--sm btn--primary" style="cursor:pointer;">
+                ⬆️ Carica documento
+                <input type="file" id="profile-doc-upload" hidden multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+            </label>
+        </div>
+        <div id="profile-docs-list" class="docs-list">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Comunicazioni (chat-style) -->
+    <div class="profile-panel" id="profile-panel-communications" hidden>
+        <div class="chat-container">
+            <div class="chat-messages" id="profile-chat-messages">
+                <div class="entity-loading">Caricamento…</div>
+            </div>
+            <div class="chat-compose__form">
+                <form id="profile-compose-form">
+                    <input type="text" id="profile-compose-subject" class="form-input" placeholder="Oggetto email…" style="margin-bottom:8px;">
+                    <div class="chat-compose__row">
+                        <textarea id="profile-compose-body" class="form-textarea" rows="3" placeholder="Scrivi un messaggio al proprietario…"></textarea>
+                        <button type="submit" class="btn btn--primary" id="btn-send-email">Invia ✉️</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel: Promemoria -->
+    <div class="profile-panel" id="profile-panel-reminders" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="profile-reminders-count"></span>
+            <button class="btn btn--sm btn--primary" id="btn-profile-new-reminder">+ Nuovo promemoria</button>
+        </div>
+        <div id="profile-reminders-list" class="reminders-list">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Edit client modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="profile-edit-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="profile-edit-title">
+        <div class="modal-header">
+            <h3 id="profile-edit-title">Modifica Proprietario</h3>
+            <button class="modal-close" id="profile-edit-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="profile-edit-form" class="modal-body">
+            <input type="hidden" id="profile-edit-id">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="profile-edit-name">Nome <span class="required">*</span></label>
+                    <input type="text" id="profile-edit-name" class="form-input" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="profile-edit-surname">Cognome <span class="required">*</span></label>
+                    <input type="text" id="profile-edit-surname" class="form-input" required maxlength="100">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="profile-edit-phone">Telefono</label>
+                    <input type="tel" id="profile-edit-phone" class="form-input" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label for="profile-edit-email">Email</label>
+                    <input type="email" id="profile-edit-email" class="form-input" maxlength="255">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="profile-edit-status">Stato</label>
+                <select id="profile-edit-status" class="form-select">
+                    <option value="active">Attivo</option>
+                    <option value="inactive">Inattivo</option>
+                    <option value="archived">Archiviato</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="profile-edit-notes">Note interne</label>
+                <textarea id="profile-edit-notes" class="form-textarea" rows="4"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="profile-edit-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="profile-edit-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── New / Edit Reminder modal ──────────────────────────────── -->
+<div class="modal-overlay" id="profile-reminder-modal" hidden>
+    <div class="modal modal--lg" role="dialog">
+        <div class="modal-header">
+            <h3 id="profile-reminder-title-el">Nuovo Promemoria</h3>
+            <button class="modal-close" id="profile-reminder-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="profile-reminder-form" class="modal-body">
+            <input type="hidden" id="profile-reminder-id">
+            <div class="form-group">
+                <label for="profile-reminder-title">Titolo <span class="required">*</span></label>
+                <input type="text" id="profile-reminder-title" class="form-input" required maxlength="255">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="profile-reminder-freq">Frequenza</label>
+                    <select id="profile-reminder-freq" class="form-select">
+                        <option value="once">Una volta</option>
+                        <option value="weekly">Settimanale</option>
+                        <option value="biweekly">Quindicinale</option>
+                        <option value="monthly">Mensile</option>
+                        <option value="quarterly">Trimestrale</option>
+                        <option value="yearly">Annuale</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="profile-reminder-date">Data promemoria</label>
+                    <input type="date" id="profile-reminder-date" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="profile-reminder-notes">Note</label>
+                <textarea id="profile-reminder-notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="profile-reminder-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Owner Report modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="profile-report-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Rendiconto proprietario</h3>
+            <button class="modal-close" id="profile-report-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="profile-report-month">Mese</label>
+                    <select id="profile-report-month" class="form-select">
+                        <option value="">Anno intero</option>
+                        <option value="1">Gennaio</option><option value="2">Febbraio</option>
+                        <option value="3">Marzo</option><option value="4">Aprile</option>
+                        <option value="5">Maggio</option><option value="6">Giugno</option>
+                        <option value="7">Luglio</option><option value="8">Agosto</option>
+                        <option value="9">Settembre</option><option value="10">Ottobre</option>
+                        <option value="11">Novembre</option><option value="12">Dicembre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="profile-report-year">Anno</label>
+                    <input type="number" id="profile-report-year" class="form-input" min="2000" max="2100">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="profile-report-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="profile-report-generate">Genera PDF</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/client_profile.js?v=1"></script>

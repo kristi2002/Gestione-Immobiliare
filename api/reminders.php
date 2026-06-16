@@ -61,6 +61,7 @@ function listReminders(PDO $db): void
     $dueSoon  = isset($_GET['due_soon']) ? (int) $_GET['due_soon'] : null;
     $from     = trim($_GET['from'] ?? '');
     $to       = trim($_GET['to'] ?? '');
+    $filterClientId = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
 
     $where = 'WHERE 1=1';
     $params = [];
@@ -96,6 +97,11 @@ function listReminders(PDO $db): void
     if ($to !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
         $where .= ' AND r.reminder_date <= :to';
         $params['to'] = $to . ' 23:59:59';
+    }
+
+    if ($filterClientId) {
+        $where .= ' AND r.client_id = :filter_client_id';
+        $params['filter_client_id'] = $filterClientId;
     }
 
     $countSql = "SELECT COUNT(*) FROM reminders r

@@ -55,6 +55,7 @@
             social:         'Social Media',
             activity_log:   'Log Attività',
             settings:       'Impostazioni',
+            client_profile:        'Scheda Cliente',
             buildings:             'Edifici',
             insurance:             'Assicurazioni',
             meters:                'Contatori',
