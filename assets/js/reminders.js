@@ -139,7 +139,7 @@
         params.set('limit', PAGE_LIMIT);
 
         const url = `${API}?${params}`;
-        els.tbody.innerHTML = '<tr><td colspan="7" class="table-empty">Caricamento...</td></tr>';
+        softLoad(els.tbody, '<tr><td colspan="7" class="table-empty">Caricamento...</td></tr>');
 
         try {
             const res  = await fetch(url);
@@ -151,11 +151,13 @@
             renderTable();
             Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadReminders(); });
         } catch (err) {
+            els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="7" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
         }
     }
 
     function renderTable() {
+        els.tbody.classList.remove('is-loading');
         if (reminders.length === 0) {
             els.tbody.innerHTML = '<tr><td colspan="7" class="table-empty">Nessun promemoria trovato.</td></tr>';
             return;

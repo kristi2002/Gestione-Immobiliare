@@ -291,3 +291,20 @@
     // Expose App globally so view scripts can call back into the router
     window.App = App;
 })();
+
+/**
+ * softLoad(el, spinnerHtml)
+ * On first load (empty container): shows the spinner as usual.
+ * On subsequent loads (filter/search): dims existing content instead of wiping it.
+ * Call el.classList.remove('is-loading') after rendering the new content.
+ */
+window.softLoad = function (el, spinnerHtml) {
+    if (!el) return;
+    const isEmpty = !el.firstElementChild
+        || !!el.querySelector('.entity-loading, .table-empty, [class*="entity-loading"]');
+    if (isEmpty) {
+        el.innerHTML = spinnerHtml;
+    } else {
+        el.classList.add('is-loading');
+    }
+};

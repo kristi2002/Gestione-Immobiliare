@@ -46,7 +46,7 @@
         if (els.toFilter.value)           params.set('to', els.toFilter.value);
         params.set('page', currentPage);
 
-        els.tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Caricamento...</td></tr>';
+        softLoad(els.tbody, '<tr><td colspan="6" class="table-empty">Caricamento...</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -54,11 +54,13 @@
             if (!json.success) throw new Error(json.error);
             renderTable(json.data);
         } catch (err) {
+            els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="6" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
         }
     }
 
     function renderTable(data) {
+        els.tbody.classList.remove('is-loading');
         const items = data.items || [];
         if (items.length === 0) {
             els.tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Nessuna attività registrata.</td></tr>';

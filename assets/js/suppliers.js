@@ -82,7 +82,7 @@
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
-        els.grid.innerHTML = '<div class="text-muted" style="text-align:center;padding:2rem;grid-column:1/-1;">Caricamento…</div>';
+        softLoad(els.grid, '<div class="text-muted" style="text-align:center;padding:2rem;grid-column:1/-1;">Caricamento…</div>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -93,6 +93,7 @@
             renderCards(parsed.items);
             window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadSuppliers(); });
         } catch (err) {
+            els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div style="color:var(--color-danger);padding:2rem;grid-column:1/-1;">${esc(err.message)}</div>`;
         }
     }
@@ -105,6 +106,7 @@
     }
 
     function renderCards(items) {
+        els.grid.classList.remove('is-loading');
         if (!items.length) {
             els.grid.innerHTML = '<div class="text-muted" style="text-align:center;padding:2rem;grid-column:1/-1;">Nessun fornitore trovato.</div>';
             return;

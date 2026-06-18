@@ -47,10 +47,12 @@ try {
 
 function listInsurance(PDO $db): void
 {
-    $pagination = apiGetPagination();
+    $pagination   = apiGetPagination();
     $propertyId   = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $clientId     = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
     $expiringSoon = !empty($_GET['expiring_soon']);
+    $search       = trim($_GET['search'] ?? '');
+    $policyType   = trim($_GET['policy_type'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
@@ -66,8 +68,23 @@ function listInsurance(PDO $db): void
     if ($expiringSoon) {
         $where .= ' AND pi.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
     }
+    if ($policyType !== '' && in_array($policyType, INSURANCE_TYPES, true)) {
+        $where .= ' AND pi.policy_type = :policy_type';
+        $params['policy_type'] = $policyType;
+    }
+    if ($search !== '') {
+        $where .= ' AND (pi.insurer_name LIKE :search
+                      OR pi.policy_number LIKE :search
+                      OR p.address LIKE :search
+                      OR c.name LIKE :search
+                      OR c.surname LIKE :search)';
+        $params['search'] = '%' . $search . '%';
+    }
 
-    $countSql = "SELECT COUNT(*) FROM property_insurance pi $where";
+    $countSql = "SELECT COUNT(*) FROM property_insurance pi
+            LEFT JOIN properties p ON p.id = pi.property_id
+            LEFT JOIN clients c ON c.id = pi.client_id
+            $where";
 
     $dataSql = "SELECT pi.*,
                    p.address AS property_address, p.city AS property_city,
@@ -126,10 +143,23 @@ function getInsurance(PDO $db, int $id): void
     apiSuccess($row);
 }
 
+function fillClientFromProperty(PDO $db, array &$validated): void
+{
+    if ($validated['client_id'] === null && $validated['property_id'] !== null) {
+        $stmt = $db->prepare("SELECT client_id FROM properties WHERE id = :id");
+        $stmt->execute(['id' => $validated['property_id']]);
+        $row = $stmt->fetch();
+        if ($row && $row['client_id']) {
+            $validated['client_id'] = (int) $row['client_id'];
+        }
+    }
+}
+
 function createInsurance(PDO $db): void
 {
     $data      = apiGetJsonBody();
     $validated = validateInsuranceInput($data);
+    fillClientFromProperty($db, $validated);
 
     $stmt = $db->prepare(
         "INSERT INTO property_insurance
@@ -154,6 +184,7 @@ function updateInsurance(PDO $db, int $id): void
 
     $data      = apiGetJsonBody();
     $validated = validateInsuranceInput($data);
+    fillClientFromProperty($db, $validated);
 
     $stmt = $db->prepare(
         "UPDATE property_insurance

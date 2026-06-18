@@ -172,7 +172,7 @@
         params.set('limit', PAGE_LIMIT);
 
         const url = `${POSTS_API}?${params}`;
-        els.tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Caricamento...</td></tr>';
+        softLoad(els.tbody, '<tr><td colspan="6" class="table-empty">Caricamento...</td></tr>');
 
         try {
             const res  = await fetch(url);
@@ -184,11 +184,13 @@
             renderTable();
             Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadPosts(); });
         } catch (err) {
+            els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="6" class="table-empty table-empty--error">${escapeHtml(err.message)}</td></tr>`;
         }
     }
 
     function renderTable() {
+        els.tbody.classList.remove('is-loading');
         if (posts.length === 0) {
             els.tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Nessun post trovato.</td></tr>';
             return;

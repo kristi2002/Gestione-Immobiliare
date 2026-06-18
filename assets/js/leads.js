@@ -93,7 +93,7 @@
         params.set('limit', PAGE_LIMIT);
 
         const url = `${API}?${params}`;
-        els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
 
         try {
             const res = await fetch(url);
@@ -104,11 +104,13 @@
             renderCards();
             Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadLeads(); });
         } catch (err) {
+            els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
     }
 
     function renderCards() {
+        els.grid.classList.remove('is-loading');
         if (leads.length === 0) {
             els.grid.innerHTML = '<div class="entity-empty">Nessun lead trovato.</div>';
             return;

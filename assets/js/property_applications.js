@@ -132,13 +132,14 @@
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
-        els.tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>';
+        softLoad(els.tbody, '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
 
             // Graceful degradation if API doesn't exist yet
             if (res.status === 404) {
+                els.tbody.classList.remove('is-loading');
                 els.tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">API non ancora disponibile. Nessuna richiesta da mostrare.</td></tr>';
                 return;
             }
@@ -151,12 +152,14 @@
             window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadApplications(); });
         } catch (err) {
             // Show friendly error — API may not exist yet
+            els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
             showAlert('Impossibile caricare le richieste: ' + err.message, 'error');
         }
     }
 
     function renderRows(items) {
+        els.tbody.classList.remove('is-loading');
         if (!items.length) {
             els.tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Nessuna richiesta trovata.</td></tr>';
             return;

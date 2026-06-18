@@ -5554,3 +5554,10 @@ body.nav-open {
     color: var(--color-primary, #2563eb);
     margin-bottom: 4px;
 }
+
+/* ── Soft-load: dim existing content while re-fetching (no flash) ── */
+.is-loading {
+    opacity: 0.45;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}

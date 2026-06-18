@@ -83,7 +83,7 @@
         if (status) params.set('status', status);
         if (freq)   params.set('frequency', freq);
 
-        els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -94,11 +94,13 @@
             renderCards();
             Pagination.render(els.pagination, parsed, p => { currentPage = p; loadAutomations(); });
         } catch (err) {
+            els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
         }
     }
 
     function renderCards() {
+        els.grid.classList.remove('is-loading');
         if (!automations.length) {
             els.grid.innerHTML = '<div class="entity-empty">Nessuna automazione configurata. Creane una con il pulsante in alto.</div>';
             return;

@@ -69,7 +69,7 @@
         if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
 
-        els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
         try {
             const res = await fetch(`${API}?${params}`);
             const json = await res.json();
@@ -79,11 +79,13 @@
             renderCards();
             Pagination.render(els.pagination, parsed, p => { currentPage = p; loadKeys(); });
         } catch (err) {
+            els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
     }
 
     function renderCards() {
+        els.grid.classList.remove('is-loading');
         if (!keys.length) {
             els.grid.innerHTML = '<div class="entity-empty">Nessun registro chiavi.</div>';
             return;

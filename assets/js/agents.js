@@ -29,18 +29,20 @@
     }
 
     async function loadAgents() {
-        els.grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
         try {
             const res = await fetch(API);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             renderCards(json.data);
         } catch (err) {
+            els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
     }
 
     function renderCards(agents) {
+        els.grid.classList.remove('is-loading');
         if (!agents.length) {
             els.grid.innerHTML = '<div class="entity-empty">Nessun agente trovato.</div>';
             return;

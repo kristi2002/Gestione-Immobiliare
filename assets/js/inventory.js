@@ -105,7 +105,7 @@
         if (!selectedProperty) return;
         const params = new URLSearchParams({ property_id: selectedProperty, page: currentPage, limit: PAGE_LIMIT });
 
-        els.tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>';
+        softLoad(els.tbody, '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -116,6 +116,7 @@
             renderRows(parsed.items);
             window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadItems(); });
         } catch (err) {
+            els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
         }
     }
@@ -128,6 +129,7 @@
     }
 
     function renderRows(items) {
+        els.tbody.classList.remove('is-loading');
         if (!items.length) {
             els.tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Nessun articolo in inventario.</td></tr>';
             return;
