@@ -20,6 +20,7 @@
     let properties = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
+    let schedaPaymentId = null;
 
     const els = {};
 
@@ -60,6 +61,23 @@
 
         els.modal.addEventListener('click', (e) => {
             if (e.target === els.modal) closeModal();
+        });
+
+        // Scheda quick-view
+        const schedaModal = document.getElementById('payment-scheda-modal');
+        document.getElementById('payment-scheda-close').addEventListener('click', closeSchedaModal);
+        document.getElementById('scheda-pay-close2').addEventListener('click', closeSchedaModal);
+        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
+        document.getElementById('scheda-pay-edit').addEventListener('click', () => {
+            const id = schedaPaymentId;
+            closeSchedaModal();
+            const p = payments.find(x => x.id === id);
+            if (p) openModal(p);
+        });
+        document.getElementById('scheda-pay-paid').addEventListener('click', () => {
+            const id = schedaPaymentId;
+            closeSchedaModal();
+            markPaid(id);
         });
     }
 
@@ -123,7 +141,7 @@
                 : '';
 
             return `
-            <div class="entity-card payment-card payment-card--${p.status}">
+            <div class="entity-card payment-card payment-card--${p.status} entity-card--clickable" data-id="${p.id}">
                 <div class="entity-card__header">
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">€ ${formatPrice(p.amount)}</div>
@@ -163,6 +181,44 @@
                 if (await confirmDialog('Vuoi annullare questo pagamento?', { title: 'Annulla pagamento', confirmText: 'Annulla pagamento', cancelText: 'Indietro' })) cancelPayment(btn.dataset.id);
             });
         });
+
+        els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, a, input')) return;
+                const p = payments.find(x => x.id == card.dataset.id);
+                if (p) openSchedaModal(p);
+            });
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Scheda quick-view
+    // -------------------------------------------------------------------------
+
+    function openSchedaModal(p) {
+        schedaPaymentId = p.id;
+        document.getElementById('scheda-pay-amount').textContent = '€ ' + formatPrice(p.amount);
+        document.getElementById('scheda-pay-badge').innerHTML =
+            `<span class="badge badge--payment-${p.status}">${STATUS_LABELS[p.status] || p.status}</span>`;
+
+        document.getElementById('scheda-pay-body').innerHTML = `
+            <div class="scheda-rows">
+                <div class="scheda-row"><span class="scheda-row__label">🔑 Inquilino</span><span class="scheda-row__value">${escapeHtml(p.tenant_surname)} ${escapeHtml(p.tenant_name)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">🏢 Immobile</span><span class="scheda-row__value">${escapeHtml(p.property_address)}, ${escapeHtml(p.property_city)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">📅 Scadenza</span><span class="scheda-row__value">${formatDate(p.due_date)}</span></div>
+                ${p.paid_date ? `<div class="scheda-row"><span class="scheda-row__label">✅ Pagato il</span><span class="scheda-row__value">${formatDate(p.paid_date)}</span></div>` : ''}
+                ${p.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(p.notes)}</span></div>` : ''}
+            </div>`;
+
+        const paidBtn = document.getElementById('scheda-pay-paid');
+        paidBtn.hidden = !(p.status === 'pending' || p.status === 'late');
+
+        document.getElementById('payment-scheda-modal').hidden = false;
+    }
+
+    function closeSchedaModal() {
+        schedaPaymentId = null;
+        document.getElementById('payment-scheda-modal').hidden = true;
     }
 
     // -------------------------------------------------------------------------

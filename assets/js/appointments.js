@@ -17,6 +17,7 @@
     let appointments = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
+    let schedaAppointmentId = null;
     const els = {};
 
     function init() {
@@ -46,6 +47,28 @@
         els.form.addEventListener('submit', handleFormSubmit);
         [els.statusFilter, els.from, els.to].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
         els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
+
+        // Scheda quick-view
+        const schedaModal = document.getElementById('appointment-scheda-modal');
+        document.getElementById('appointment-scheda-close').addEventListener('click', closeSchedaModal);
+        document.getElementById('scheda-appt-close2').addEventListener('click', closeSchedaModal);
+        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
+        document.getElementById('scheda-appt-edit').addEventListener('click', () => {
+            const id = schedaAppointmentId;
+            closeSchedaModal();
+            const a = appointments.find(x => x.id === id);
+            if (a) openModal(a);
+        });
+        document.getElementById('scheda-appt-complete').addEventListener('click', () => {
+            const id = schedaAppointmentId;
+            closeSchedaModal();
+            quickStatus(id, 'completed');
+        });
+        document.getElementById('scheda-appt-cancel').addEventListener('click', () => {
+            const id = schedaAppointmentId;
+            closeSchedaModal();
+            quickStatus(id, 'cancelled');
+        });
     }
 
     async function loadProperties() {
@@ -111,7 +134,7 @@
             const who = a.lead_id ? `${a.lead_surname} ${a.lead_name}` :
                         (a.client_id ? `${a.client_surname} ${a.client_name}` : '—');
             return `
-            <div class="entity-card appointment-card appointment-card--${a.status}">
+            <div class="entity-card appointment-card appointment-card--${a.status} entity-card--clickable" data-id="${a.id}">
                 <div class="appointment-card__header">
                     <strong>${escapeHtml(a.property_address)}, ${escapeHtml(a.property_city)}</strong>
                     <span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
@@ -139,6 +162,46 @@
         els.grid.querySelectorAll('.btn-complete').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'completed')));
         els.grid.querySelectorAll('.btn-cancel').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'cancelled')));
         els.grid.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => deleteAppointment(b.dataset.id)));
+
+        els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, a, input')) return;
+                const a = appointments.find(x => x.id == card.dataset.id);
+                if (a) openSchedaModal(a);
+            });
+        });
+    }
+
+    function openSchedaModal(a) {
+        schedaAppointmentId = a.id;
+        const who = a.lead_id
+            ? `${a.lead_surname} ${a.lead_name}`
+            : (a.client_id ? `${a.client_surname} ${a.client_name}` : '—');
+
+        document.getElementById('scheda-appt-property').textContent =
+            `${a.property_address}, ${a.property_city}`;
+        document.getElementById('scheda-appt-badge').innerHTML =
+            `<span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>`;
+
+        document.getElementById('scheda-appt-body').innerHTML = `
+            <div class="scheda-rows">
+                <div class="scheda-row"><span class="scheda-row__label">📅 Data e ora</span><span class="scheda-row__value">${formatDateTime(a.appointment_date)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">⏱ Durata</span><span class="scheda-row__value">${a.duration_minutes} minuti</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">👤 Visitatore</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
+                ${a.agent_name ? `<div class="scheda-row"><span class="scheda-row__label">🧑‍💼 Agente</span><span class="scheda-row__value">${escapeHtml(a.agent_name)}</span></div>` : ''}
+                ${a.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(a.notes)}</span></div>` : ''}
+            </div>`;
+
+        const isScheduled = a.status === 'scheduled';
+        document.getElementById('scheda-appt-complete').hidden = !isScheduled;
+        document.getElementById('scheda-appt-cancel').hidden = !isScheduled;
+
+        document.getElementById('appointment-scheda-modal').hidden = false;
+    }
+
+    function closeSchedaModal() {
+        schedaAppointmentId = null;
+        document.getElementById('appointment-scheda-modal').hidden = true;
     }
 
     function openModal(appt = null) {

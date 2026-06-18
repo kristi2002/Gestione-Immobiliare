@@ -48,7 +48,7 @@
     let deleteTargetId = null;
     let searchTimer    = null;
     let currentPage    = 1;
-    const PAGE_LIMIT   = 25;
+    const PAGE_LIMIT   = 16;
     let selectedIds    = new Set();
     let compareIds     = new Set();
 
@@ -76,6 +76,7 @@
 
         if (!els.grid || !els.form) return;
 
+        ensureCompareBar();
         ensureLightbox();
         bindEvents();
         loadClients().then(() => {
@@ -91,6 +92,28 @@
     function bindChange(id, handler) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', handler);
+    }
+
+    function ensureCompareBar() {
+        if (document.getElementById('compare-float-bar')) return;
+        const bar = document.createElement('div');
+        bar.id = 'compare-float-bar';
+        bar.className = 'compare-float-bar';
+        bar.hidden = true;
+        bar.innerHTML = `
+            <div class="compare-float-bar__chips" id="compare-float-chips"></div>
+            <div class="compare-float-bar__actions">
+                <button type="button" class="btn btn--sm compare-float-clear" id="compare-float-clear">✕ Cancella selezione</button>
+                <button type="button" class="btn btn--sm compare-float-go" id="compare-float-go">📊 Confronta (<span id="compare-float-count">0</span>)</button>
+            </div>`;
+        document.body.appendChild(bar);
+
+        document.getElementById('compare-float-go').addEventListener('click', openCompareModal);
+        document.getElementById('compare-float-clear').addEventListener('click', () => {
+            compareIds.clear();
+            renderCards();
+            updateCompareButton();
+        });
     }
 
     function ensureLightbox() {
@@ -341,14 +364,12 @@
         els.grid.querySelectorAll('.entity-card--property').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('button, input, label, a')) return;
-                const prop = properties.find(p => p.id == card.dataset.id);
-                if (prop) openModal(prop);
+                if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(card.dataset.id, 10) });
             });
             card.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    const prop = properties.find(p => p.id == card.dataset.id);
-                    if (prop) openModal(prop);
+                    if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(card.dataset.id, 10) });
                 }
             });
         });
@@ -419,9 +440,33 @@
     }
 
     function updateCompareButton() {
+        ensureCompareBar();
+        const count = compareIds.size;
+        const show  = count >= 2;
+
+        // toolbar button
         const btn = document.getElementById('btn-compare-properties');
-        btn.hidden = compareIds.size < 2;
-        document.getElementById('compare-count').textContent = compareIds.size;
+        btn.hidden = !show;
+        document.getElementById('compare-count').textContent = count;
+
+        // floating bar
+        const bar = document.getElementById('compare-float-bar');
+        if (!bar) return;
+        bar.hidden = !show;
+        const countEl = document.getElementById('compare-float-count');
+        if (countEl) countEl.textContent = count;
+
+        // chips: show addresses of currently-visible selected properties
+        const chips = document.getElementById('compare-float-chips');
+        if (chips) {
+            const visible = properties.filter(p => compareIds.has(p.id));
+            const hiddenCount = count - visible.length;
+            chips.innerHTML = visible.map(p =>
+                `<span class="compare-chip">${escapeHtml(p.address)}</span>`
+            ).join('') + (hiddenCount > 0
+                ? `<span class="compare-chip compare-chip--more">+${hiddenCount} altre pagine</span>`
+                : '');
+        }
     }
 
     function openQrModal(propertyId, address) {
@@ -889,20 +934,11 @@
             const saved = await saveProperty(data, id || null);
             const wasNew = !id;
 
-            if (wasNew) {
-                editingId = saved.id;
-                document.getElementById('property-id').value = saved.id;
-                els.modalTitle.textContent = 'Modifica Immobile — carica la galleria';
-                els.gallerySection.hidden = false;
-                els.galleryHint.hidden = true;
-                document.getElementById('btn-property-mandato').hidden = false;
-                updateMediaFileAccept();
-                showAlert('Immobile creato. Ora puoi caricare foto, video e allegati nella galleria.', 'success');
-                loadProperties();
-            } else {
-                closeModal();
-                showAlert('Immobile salvato con successo.', 'success');
-                loadProperties();
+            closeModal();
+            showAlert(wasNew ? 'Immobile creato con successo.' : 'Immobile salvato con successo.', 'success');
+            loadProperties();
+            if (wasNew && window.App) {
+                window.App.navigateTo('property_profile', { propertyId: saved.id });
             }
         } catch (err) {
             showAlert(err.message, 'error');

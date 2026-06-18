@@ -89,4 +89,24 @@
     </div>
 </div>
 
+<!-- Scheda Visita quick-view -->
+<div class="modal-overlay" id="appointment-scheda-modal" hidden>
+    <div class="modal" role="dialog">
+        <div class="modal-header">
+            <div>
+                <h3 id="scheda-appt-property" style="font-size: 1rem; font-weight: 700;"></h3>
+                <div id="scheda-appt-badge" class="scheda-modal-badges"></div>
+            </div>
+            <button class="modal-close" id="appointment-scheda-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="scheda-appt-body"></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--primary btn--sm" id="scheda-appt-complete" hidden>✓ Completa</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-appt-cancel" hidden>✕ Annulla visita</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-appt-edit">✏️ Modifica</button>
+            <button type="button" class="btn btn--ghost" id="scheda-appt-close2">Chiudi</button>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/appointments.js"></script>

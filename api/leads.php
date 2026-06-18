@@ -81,13 +81,15 @@ function listLeads(PDO $db): void
     $params = [];
 
     if ($search !== '') {
-        $where .= " AND (l.name LIKE :search OR l.surname LIKE :search
-                      OR l.phone LIKE :search OR l.email LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        $frag = apiWordSearch($search, ['l.name', 'l.surname', 'l.phone', 'l.email', 'l.notes'], $params);
+        if ($frag) $where .= " AND $frag";
     }
     if ($status !== '' && in_array($status, LEAD_STATUSES, true)) {
         $where .= ' AND l.status = :status';
         $params['status'] = $status;
+    } else if ($status === '') {
+        // By default exclude converted and lost leads
+        $where .= " AND l.status NOT IN ('converted', 'lost')";
     }
     if ($interest !== '' && in_array($interest, LEAD_INTERESTS, true)) {
         $where .= ' AND l.interest_type = :interest';

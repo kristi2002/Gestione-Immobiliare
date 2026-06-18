@@ -105,15 +105,24 @@
             }
         });
 
-        // ID card upload inside edit modal
-        document.getElementById('btn-upload-id-card').addEventListener('click', () => {
-            document.getElementById('client-id-card-file').click();
+        // ID card front/back upload inside edit modal
+        document.getElementById('btn-upload-id-front').addEventListener('click', () => {
+            document.getElementById('client-id-front-file').click();
         });
-        document.getElementById('client-id-card-file').addEventListener('change', (e) => {
+        document.getElementById('client-id-front-file').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file || !editingClientId) return;
             e.target.value = '';
-            uploadIdDocument(editingClientId, file);
+            uploadIdDocument(editingClientId, file, 'id_front');
+        });
+        document.getElementById('btn-upload-id-back').addEventListener('click', () => {
+            document.getElementById('client-id-back-file').click();
+        });
+        document.getElementById('client-id-back-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file || !editingClientId) return;
+            e.target.value = '';
+            uploadIdDocument(editingClientId, file, 'id_back');
         });
 
         // CSV export / import
@@ -230,7 +239,6 @@
                         <span class="entity-card__stat-label">${propLabel}</span>
                     </div>
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-profile" data-id="${c.id}" title="Scheda cliente">👤</button>
                         <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni">✉️</button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
                         <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità">🪪</button>
@@ -247,11 +255,6 @@
             });
         });
 
-        els.grid.querySelectorAll('.btn-profile').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.App) window.App.navigateTo('client_profile', { clientId: Number(btn.dataset.id) });
-            });
-        });
 
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -697,16 +700,27 @@
         const container = document.getElementById('scheda-id-card-status');
         if (!container) return;
         try {
-            const res  = await fetch(`api/documents.php?doc_type=id&client_id=${clientId}&limit=1`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            const docs = json.data?.items || [];
-            if (docs.length === 0) {
+            const [frontRes, backRes] = await Promise.all([
+                fetch(`api/documents.php?doc_type=id_front&client_id=${clientId}&limit=1`).then(r => r.json()),
+                fetch(`api/documents.php?doc_type=id_back&client_id=${clientId}&limit=1`).then(r => r.json()),
+            ]);
+            const front = frontRes.data?.items?.[0] || null;
+            const back  = backRes.data?.items?.[0] || null;
+            if (!front && !back) {
                 container.innerHTML = '<p class="text-muted">Nessuna carta di identità caricata.</p>';
-            } else {
-                const doc = docs[0];
-                container.innerHTML = `<div class="id-card-row"><span>📄 ${escapeHtml(doc.original_name)}</span><a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza / Stampa</a></div>`;
+                return;
             }
+            container.innerHTML = `
+                <div class="id-card-sides" style="gap:12px;">
+                    <div class="id-card-side">
+                        <div class="id-card-side-label">Fronte</div>
+                        ${front ? `<div class="id-card-row"><span>📄 ${escapeHtml(front.original_name)}</span><a href="${escapeHtml(front.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza</a></div>` : '<p class="text-muted" style="margin:0;font-size:13px;">Non caricato</p>'}
+                    </div>
+                    <div class="id-card-side">
+                        <div class="id-card-side-label">Retro</div>
+                        ${back ? `<div class="id-card-row"><span>📄 ${escapeHtml(back.original_name)}</span><a href="${escapeHtml(back.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza</a></div>` : '<p class="text-muted" style="margin:0;font-size:13px;">Non caricato</p>'}
+                    </div>
+                </div>`;
         } catch (_) {
             if (container) container.innerHTML = '<p class="text-muted">Impossibile caricare.</p>';
         }
@@ -717,27 +731,31 @@
     // -------------------------------------------------------------------------
 
     async function loadClientIdDocForModal(clientId) {
-        const container = document.getElementById('client-id-card-status');
-        if (!container) return;
-        container.innerHTML = '<p class="text-muted">Caricamento...</p>';
-        try {
-            const res  = await fetch(`api/documents.php?doc_type=id&client_id=${clientId}&limit=1`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            const docs = json.data?.items || [];
-            if (docs.length === 0) {
-                container.innerHTML = '<p class="text-muted">Nessuna carta di identità caricata.</p>';
-            } else {
+        const frontContainer = document.getElementById('client-id-front-status');
+        const backContainer  = document.getElementById('client-id-back-status');
+        if (!frontContainer && !backContainer) return;
+
+        async function loadSide(container, docType, label, btnId) {
+            if (!container) return;
+            container.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Caricamento...</p>';
+            try {
+                const res  = await fetch(`api/documents.php?doc_type=${docType}&client_id=${clientId}&limit=1`);
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error);
+                const docs = json.data?.items || [];
+                if (!docs.length) {
+                    container.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Non caricato</p>';
+                    return;
+                }
                 const doc = docs[0];
                 container.innerHTML = `
                     <div class="id-card-row">
-                        <span>📄 ${escapeHtml(doc.original_name)}</span>
-                        <span class="text-muted" style="font-size:12px">${formatDate(doc.created_at)}</span>
-                        <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza</a>
-                        <button type="button" class="btn btn--sm btn--ghost" id="btn-delete-id-card" style="color:#b91c1c" title="Rimuovi">🗑️</button>
+                        <span style="font-size:13px;">📄 ${escapeHtml(doc.original_name)}</span>
+                        <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--xs btn--ghost">🖨️ Stampa</a>
+                        <button type="button" class="btn btn--xs btn--ghost" data-del-id="${doc.id}" style="color:#b91c1c">🗑️</button>
                     </div>`;
-                document.getElementById('btn-delete-id-card')?.addEventListener('click', async () => {
-                    if (!await confirmDialog('Rimuovere la carta di identità?', { title: 'Rimuovi documento', confirmText: 'Rimuovi' })) return;
+                container.querySelector('[data-del-id]')?.addEventListener('click', async () => {
+                    if (!confirm('Rimuovere questo documento?')) return;
                     try {
                         const r = await fetch(`api/documents.php?id=${doc.id}`, { method: 'DELETE' });
                         const j = await r.json();
@@ -745,44 +763,55 @@
                         loadClientIdDocForModal(clientId);
                     } catch (err) { showAlert(err.message, 'error'); }
                 });
+            } catch (err) {
+                if (container) container.innerHTML = `<p class="text-muted" style="font-size:13px;margin:0;">Errore</p>`;
             }
-        } catch (err) {
-            if (container) container.innerHTML = `<p class="text-muted">Errore: ${escapeHtml(err.message)}</p>`;
         }
+
+        await Promise.all([
+            loadSide(frontContainer, 'id_front', 'Fronte', 'btn-upload-id-front'),
+            loadSide(backContainer,  'id_back',  'Retro',  'btn-upload-id-back'),
+        ]);
     }
 
-    async function uploadIdDocument(clientId, file) {
+    async function uploadIdDocument(clientId, file, docType) {
+        const btnId   = docType === 'id_front' ? 'btn-upload-id-front' : 'btn-upload-id-back';
+        const btnLabel = docType === 'id_front' ? '⬆️ Carica Fronte' : '⬆️ Carica Retro';
+        const title   = docType === 'id_front' ? 'CI - Fronte' : 'CI - Retro';
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('doc_type', 'id');
+        formData.append('doc_type', docType);
         formData.append('client_id', clientId);
-        formData.append('title', 'Carta di Identità');
-        const btn = document.getElementById('btn-upload-id-card');
+        formData.append('title', title);
+        const btn = document.getElementById(btnId);
         if (btn) { btn.disabled = true; btn.textContent = 'Caricamento...'; }
         try {
             const res  = await fetch('api/documents.php', { method: 'POST', body: formData });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            showAlert('Carta di identità caricata.', 'success');
+            showAlert('Documento caricato.', 'success');
             loadClientIdDocForModal(clientId);
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '⬆️ Carica Carta di Identità'; }
+            if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
         }
     }
 
     async function loadAndPrintIdDoc(clientId) {
         try {
-            const res  = await fetch(`api/documents.php?doc_type=id&client_id=${clientId}&limit=1`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            const docs = json.data?.items || [];
-            if (docs.length === 0) {
+            const [frontRes, backRes] = await Promise.all([
+                fetch(`api/documents.php?doc_type=id_front&client_id=${clientId}&limit=1`).then(r => r.json()),
+                fetch(`api/documents.php?doc_type=id_back&client_id=${clientId}&limit=1`).then(r => r.json()),
+            ]);
+            const front = frontRes.data?.items?.[0] || null;
+            const back  = backRes.data?.items?.[0] || null;
+            if (!front && !back) {
                 showAlert('Nessuna carta di identità caricata per questo proprietario.', 'error');
                 return;
             }
-            window.open(docs[0].download_url, '_blank');
+            if (front) window.open(front.download_url, '_blank');
+            if (back)  setTimeout(() => window.open(back.download_url, '_blank'), 300);
         } catch (_) {
             showAlert('Impossibile recuperare il documento.', 'error');
         }

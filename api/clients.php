@@ -66,9 +66,8 @@ function listClients(PDO $db): void
     $params = [];
 
     if ($search !== '') {
-        $where .= " AND (c.name LIKE :search OR c.surname LIKE :search
-                      OR c.email LIKE :search OR c.phone LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        $frag = apiWordSearch($search, ['c.name', 'c.surname', 'c.email', 'c.phone', 'c.address', 'c.city'], $params);
+        if ($frag) $where .= " AND $frag";
     }
 
     if ($status !== '' && in_array($status, CLIENT_STATUSES, true)) {

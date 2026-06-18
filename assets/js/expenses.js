@@ -22,6 +22,7 @@
     let clients    = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
+    let schedaExpenseId = null;
 
     const els = {};
 
@@ -63,6 +64,18 @@
 
         els.modal.addEventListener('click', (e) => {
             if (e.target === els.modal) closeModal();
+        });
+
+        // Scheda quick-view
+        const schedaModal = document.getElementById('expense-scheda-modal');
+        document.getElementById('expense-scheda-close').addEventListener('click', closeSchedaModal);
+        document.getElementById('scheda-exp-close2').addEventListener('click', closeSchedaModal);
+        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
+        document.getElementById('scheda-exp-edit').addEventListener('click', () => {
+            const id = schedaExpenseId;
+            closeSchedaModal();
+            const e = expenses.find(x => x.id === id);
+            if (e) openModal(e);
         });
     }
 
@@ -129,7 +142,7 @@
                 : (e.client_surname ? `${escapeHtml(e.client_surname)} ${escapeHtml(e.client_name)}` : null);
 
             return `
-            <div class="entity-card expense-card expense-card--${e.category}">
+            <div class="entity-card expense-card expense-card--${e.category} entity-card--clickable" data-id="${e.id}">
                 <div class="entity-card__header">
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">€ ${formatPrice(e.amount)}</div>
@@ -163,6 +176,45 @@
                 if (await confirmDialog('Vuoi eliminare questa spesa?', { title: 'Elimina spesa' })) deleteExpense(btn.dataset.id);
             });
         });
+
+        els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
+            card.addEventListener('click', (ev) => {
+                if (ev.target.closest('button, a, input')) return;
+                const e = expenses.find(x => x.id == card.dataset.id);
+                if (e) openSchedaModal(e);
+            });
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Scheda quick-view
+    // -------------------------------------------------------------------------
+
+    function openSchedaModal(e) {
+        schedaExpenseId = e.id;
+        document.getElementById('scheda-exp-amount').textContent = '€ ' + formatPrice(e.amount);
+        document.getElementById('scheda-exp-badge').innerHTML =
+            `<span class="badge badge--expense badge--expense-${e.category}">${CATEGORY_LABELS[e.category] || e.category}</span>`;
+
+        const linked = e.property_address
+            ? `🏢 ${e.property_address}, ${e.property_city}`
+            : (e.client_surname ? `👤 ${e.client_surname} ${e.client_name}` : null);
+
+        document.getElementById('scheda-exp-body').innerHTML = `
+            <div class="scheda-rows">
+                <div class="scheda-row"><span class="scheda-row__label">📝 Descrizione</span><span class="scheda-row__value"><strong>${escapeHtml(e.description)}</strong></span></div>
+                <div class="scheda-row"><span class="scheda-row__label">📅 Data</span><span class="scheda-row__value">${formatDate(e.expense_date)}</span></div>
+                ${linked ? `<div class="scheda-row"><span class="scheda-row__label">Associato a</span><span class="scheda-row__value">${escapeHtml(linked)}</span></div>` : ''}
+                ${e.receipt_url ? `<div class="scheda-row"><span class="scheda-row__label">📎 Ricevuta</span><span class="scheda-row__value"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener">Apri ricevuta</a></span></div>` : ''}
+                ${e.notes ? `<div class="scheda-row"><span class="scheda-row__label">📄 Note</span><span class="scheda-row__value">${escapeHtml(e.notes)}</span></div>` : ''}
+            </div>`;
+
+        document.getElementById('expense-scheda-modal').hidden = false;
+    }
+
+    function closeSchedaModal() {
+        schedaExpenseId = null;
+        document.getElementById('expense-scheda-modal').hidden = true;
     }
 
     // -------------------------------------------------------------------------

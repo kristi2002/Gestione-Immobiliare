@@ -106,4 +106,22 @@
     </div>
 </div>
 
+<!-- Scheda Spesa quick-view -->
+<div class="modal-overlay" id="expense-scheda-modal" hidden>
+    <div class="modal" role="dialog">
+        <div class="modal-header">
+            <div>
+                <div id="scheda-exp-amount" class="scheda-amount-hero"></div>
+                <div id="scheda-exp-badge" class="scheda-modal-badges"></div>
+            </div>
+            <button class="modal-close" id="expense-scheda-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="scheda-exp-body"></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-exp-edit">✏️ Modifica</button>
+            <button type="button" class="btn btn--ghost" id="scheda-exp-close2">Chiudi</button>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/expenses.js"></script>

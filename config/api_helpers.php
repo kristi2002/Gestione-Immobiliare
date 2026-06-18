@@ -53,6 +53,37 @@ function apiSuccess(mixed $data = null, int $code = 200): void
     exit;
 }
 
+/**
+ * Build a word-by-word search SQL fragment (AND of ORs).
+ * Each word must appear in at least one of the given columns.
+ * Every column×word pair gets its own unique named parameter (ws_i_j)
+ * so the query is safe even with PDO::ATTR_EMULATE_PREPARES => true.
+ * Appends named params to $params.  Returns '' when $search is blank.
+ *
+ * @param string   $prefix  Optional prefix to namespace params (avoids
+ *                          clashes when called twice for the same query).
+ */
+function apiWordSearch(string $search, array $columns, array &$params, string $prefix = 'ws'): string
+{
+    $search = trim($search);
+    if ($search === '' || empty($columns)) return '';
+
+    $words   = array_values(array_filter(preg_split('/\s+/u', $search)));
+    $clauses = [];
+
+    foreach ($words as $i => $word) {
+        $colParts = [];
+        foreach ($columns as $j => $col) {
+            $key        = $prefix . '_' . $i . '_' . $j;
+            $colParts[] = "$col LIKE :$key";
+            $params[$key] = '%' . $word . '%';
+        }
+        $clauses[] = '(' . implode(' OR ', $colParts) . ')';
+    }
+
+    return implode(' AND ', $clauses);
+}
+
 function apiError(string $message, int $code = 400): void
 {
     apiDiscardBufferedOutput();

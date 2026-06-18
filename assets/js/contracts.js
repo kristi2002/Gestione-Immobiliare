@@ -34,12 +34,14 @@
     let clients    = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
+    let schedaContractId = null;
 
     const els = {};
 
     function init() {
         els.grid           = document.getElementById('contracts-grid');
         els.alert          = document.getElementById('contracts-alert');
+        els.search         = document.getElementById('contract-search');
         els.propFilter     = document.getElementById('contract-property-filter');
         els.typeFilter     = document.getElementById('contract-type-filter');
         els.statusFilter   = document.getElementById('contract-status-filter');
@@ -54,6 +56,14 @@
         bindEvents();
         Promise.all([loadProperties(), loadTenants(), loadClients()])
             .then(() => loadContracts())
+            .then(() => {
+                const targetId = window.App?.viewParams?.contractId;
+                if (targetId) {
+                    const match = contracts.find(c => c.id === targetId);
+                    if (match) openModal(match);
+                    else fetch(`api/contracts.php?id=${targetId}`).then(r => r.json()).then(j => { if (j.success) openModal(j.data); });
+                }
+            })
             .catch(err => {
                 if (!els.alert?.isConnected) return;
                 showAlert('Errore inizializzazione: ' + err.message, 'error');
@@ -67,6 +77,12 @@
 
         els.form.addEventListener('submit', handleFormSubmit);
 
+        let searchTimer = null;
+        els.search.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => { currentPage = 1; loadContracts(); }, 300);
+        });
+
         [els.propFilter, els.typeFilter, els.statusFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadContracts(); }));
 
         els.modal.addEventListener('click', (e) => {
@@ -79,6 +95,28 @@
         document.getElementById('btn-copy-esign').addEventListener('click', () => {
             const url = document.getElementById('esign-link-url').value;
             navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
+        });
+
+        // Scheda quick-view
+        const schedaModal = document.getElementById('contract-scheda-modal');
+        document.getElementById('contract-scheda-close').addEventListener('click', closeSchedaModal);
+        document.getElementById('scheda-ct-close2').addEventListener('click', closeSchedaModal);
+        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
+        document.getElementById('scheda-ct-edit').addEventListener('click', () => {
+            const id = schedaContractId;
+            closeSchedaModal();
+            const c = contracts.find(x => x.id === id);
+            if (c) openModal(c);
+        });
+        document.getElementById('scheda-ct-esign').addEventListener('click', () => {
+            const id = schedaContractId;
+            closeSchedaModal();
+            openEsignModal(id);
+        });
+        document.getElementById('scheda-ct-advance').addEventListener('click', () => {
+            const id = schedaContractId;
+            closeSchedaModal();
+            advanceStatus(id);
         });
     }
 
@@ -113,9 +151,10 @@
 
     async function loadContracts() {
         const params = new URLSearchParams();
-        if (els.propFilter.value)   params.set('property_id', els.propFilter.value);
-        if (els.typeFilter.value)   params.set('type', els.typeFilter.value);
-        if (els.statusFilter.value) params.set('status', els.statusFilter.value);
+        if (els.search?.value.trim()) params.set('search', els.search.value.trim());
+        if (els.propFilter.value)     params.set('property_id', els.propFilter.value);
+        if (els.typeFilter.value)     params.set('type', els.typeFilter.value);
+        if (els.statusFilter.value)   params.set('status', els.statusFilter.value);
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
@@ -155,7 +194,7 @@
                 : '';
 
             return `
-            <div class="entity-card contract-card contract-card--${c.status}">
+            <div class="entity-card contract-card contract-card--${c.status} entity-card--clickable" data-id="${c.id}">
                 <div class="entity-card__header">
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">${escapeHtml(c.title)}</div>
@@ -202,6 +241,59 @@
         els.grid.querySelectorAll('.btn-esign').forEach(btn => {
             btn.addEventListener('click', () => openEsignModal(btn.dataset.id));
         });
+
+        els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, a, input')) return;
+                const c = contracts.find(x => x.id == card.dataset.id);
+                if (c) openSchedaModal(c);
+            });
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Scheda quick-view
+    // -------------------------------------------------------------------------
+
+    function openSchedaModal(c) {
+        schedaContractId = c.id;
+        const who = c.tenant_surname
+            ? `${c.tenant_surname} ${c.tenant_name}`
+            : (c.client_surname ? `${c.client_surname} ${c.client_name}` : '—');
+        const dateRange = (c.start_date || c.end_date)
+            ? `${formatDate(c.start_date)} → ${formatDate(c.end_date)}`
+            : '—';
+
+        document.getElementById('scheda-ct-title').textContent = c.title;
+        document.getElementById('scheda-ct-badges').innerHTML =
+            `<span class="badge badge--contract-type badge--contract-type-${c.contract_type}">${TYPE_LABELS[c.contract_type] || c.contract_type}</span>
+             <span class="badge badge--contract-${c.status}">${STATUS_LABELS[c.status] || c.status}</span>`;
+
+        document.getElementById('scheda-ct-body').innerHTML = `
+            <div class="scheda-rows">
+                <div class="scheda-row"><span class="scheda-row__label">🏢 Immobile</span><span class="scheda-row__value">${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">👤 Parte</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">📅 Durata</span><span class="scheda-row__value">${escapeHtml(dateRange)}</span></div>
+                ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="scheda-row"><span class="scheda-row__label">💶 Canone</span><span class="scheda-row__value">€ ${formatPrice(c.monthly_rent)}/mese</span></div>` : ''}
+                ${c.deposit ? `<div class="scheda-row"><span class="scheda-row__label">🔐 Deposito</span><span class="scheda-row__value">€ ${formatPrice(c.deposit)}</span></div>` : ''}
+                ${c.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(c.notes)}</span></div>` : ''}
+            </div>`;
+
+        const advBtn = document.getElementById('scheda-ct-advance');
+        const ns = nextStatus(c.status);
+        if (ns) {
+            advBtn.textContent = `→ ${STATUS_LABELS[ns]}`;
+            advBtn.hidden = false;
+        } else {
+            advBtn.hidden = true;
+        }
+
+        document.getElementById('contract-scheda-modal').hidden = false;
+    }
+
+    function closeSchedaModal() {
+        schedaContractId = null;
+        document.getElementById('contract-scheda-modal').hidden = true;
     }
 
     // -------------------------------------------------------------------------

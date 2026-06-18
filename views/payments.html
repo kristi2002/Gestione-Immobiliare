@@ -106,4 +106,23 @@
     </div>
 </div>
 
+<!-- Scheda Pagamento quick-view -->
+<div class="modal-overlay" id="payment-scheda-modal" hidden>
+    <div class="modal" role="dialog">
+        <div class="modal-header">
+            <div>
+                <div id="scheda-pay-amount" class="scheda-amount-hero"></div>
+                <div id="scheda-pay-badge" class="scheda-modal-badges"></div>
+            </div>
+            <button class="modal-close" id="payment-scheda-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="scheda-pay-body"></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--primary btn--sm" id="scheda-pay-paid" hidden>✓ Segna pagato</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-pay-edit">✏️ Modifica</button>
+            <button type="button" class="btn btn--ghost" id="scheda-pay-close2">Chiudi</button>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/payments.js"></script>

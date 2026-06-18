@@ -158,24 +158,30 @@
             }
 
             grid.innerHTML = items.map(p => {
-                const photo = p.photo_url
-                    ? `<img src="${esc(p.photo_url)}" class="prop-card-thumb" alt="" loading="lazy">`
+                const photo = p.cover_url
+                    ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy">`
                     : `<div class="prop-card-thumb prop-card-thumb--empty">🏢</div>`;
                 const color = PROP_COLOR[p.status] || '#94a3b8';
-                const rent  = p.monthly_rent ? `<span class="profile-prop-rent">€ ${Number(p.monthly_rent).toLocaleString('it-IT')}/mese</span>` : '';
+                const price = p.price ? `<span class="profile-prop-rent">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';
                 return `
-                <div class="entity-card profile-prop-card">
+                <div class="entity-card profile-prop-card entity-card--clickable" data-prop-id="${p.id}" style="cursor:pointer;">
                     <div class="prop-card-thumb-wrap">${photo}</div>
                     <div class="entity-card__body">
                         <div class="entity-card__name" style="font-size:14px;">${esc(p.address)}, ${esc(p.city)}</div>
                         <div class="profile-prop-meta">
                             <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;">${PROP_STATUS[p.status] || p.status}</span>
                             ${p.sqm ? `<span class="text-muted" style="font-size:12px;">${esc(p.sqm)} m²</span>` : ''}
-                            ${rent}
+                            ${price}
                         </div>
                     </div>
                 </div>`;
             }).join('');
+
+            grid.querySelectorAll('[data-prop-id]').forEach(card => {
+                card.addEventListener('click', () => {
+                    if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(card.dataset.propId, 10) });
+                });
+            });
         } catch (err) {
             grid.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
         }

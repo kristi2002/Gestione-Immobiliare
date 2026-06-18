@@ -71,10 +71,8 @@ function listProperties(PDO $db): void
     $params = [];
 
     if ($search !== '') {
-        $where .= " AND (p.address LIKE :search OR p.city LIKE :search
-                      OR p.cap LIKE :search OR p.description LIKE :search
-                      OR c.name LIKE :search OR c.surname LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        $frag = apiWordSearch($search, ['p.address', 'p.city', 'p.cap', 'p.province', 'p.description', 'c.name', 'c.surname'], $params);
+        if ($frag) $where .= " AND $frag";
     }
 
     if ($status !== '' && in_array($status, PROPERTY_STATUSES, true)) {

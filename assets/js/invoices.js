@@ -14,6 +14,7 @@
     let invoices = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
+    let schedaInvoiceId = null;
     const els = {};
 
     function init() {
@@ -40,6 +41,31 @@
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadInvoices(); });
         els.yearFilter.addEventListener('input', () => { clearTimeout(els._t); els._t = setTimeout(() => { currentPage = 1; loadInvoices(); }, 300); });
         els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
+
+        // Scheda quick-view
+        const schedaModal = document.getElementById('invoice-scheda-modal');
+        document.getElementById('invoice-scheda-close').addEventListener('click', closeSchedaModal);
+        document.getElementById('scheda-inv-close2').addEventListener('click', closeSchedaModal);
+        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
+        document.getElementById('scheda-inv-edit').addEventListener('click', () => {
+            const id = schedaInvoiceId;
+            closeSchedaModal();
+            const i = invoices.find(x => x.id === id);
+            if (i) openModal(i);
+        });
+        document.getElementById('scheda-inv-pdf').addEventListener('click', () => {
+            if (schedaInvoiceId) generatePdf(schedaInvoiceId);
+        });
+        document.getElementById('scheda-inv-send').addEventListener('click', () => {
+            const id = schedaInvoiceId;
+            closeSchedaModal();
+            quickStatus(id, 'sent');
+        });
+        document.getElementById('scheda-inv-paid').addEventListener('click', () => {
+            const id = schedaInvoiceId;
+            closeSchedaModal();
+            quickStatus(id, 'paid');
+        });
     }
 
     async function loadClients() {
@@ -87,7 +113,7 @@
             const who = i.client_id ? `${i.client_surname} ${i.client_name}` :
                         (i.lead_id ? `${i.lead_surname} ${i.lead_name}` : '—');
             return `
-            <div class="entity-card invoice-card invoice-card--${i.status}">
+            <div class="entity-card invoice-card invoice-card--${i.status} entity-card--clickable" data-id="${i.id}">
                 <div class="invoice-card__header">
                     <strong>${escapeHtml(i.invoice_number)}</strong>
                     <span class="badge badge--invoice-${i.status}">${STATUS_LABELS[i.status] || i.status}</span>
@@ -117,6 +143,47 @@
         els.grid.querySelectorAll('.btn-send').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'sent')));
         els.grid.querySelectorAll('.btn-paid').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'paid')));
         els.grid.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => deleteInvoice(b.dataset.id)));
+
+        els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, a, input')) return;
+                const i = invoices.find(x => x.id == card.dataset.id);
+                if (i) openSchedaModal(i);
+            });
+        });
+    }
+
+    function openSchedaModal(i) {
+        schedaInvoiceId = i.id;
+        const who = i.client_id
+            ? `${i.client_surname} ${i.client_name}`
+            : (i.lead_id ? `${i.lead_surname} ${i.lead_name}` : '—');
+
+        document.getElementById('scheda-inv-number').textContent = i.invoice_number;
+        document.getElementById('scheda-inv-badge').innerHTML =
+            `<span class="badge badge--invoice-${i.status}">${STATUS_LABELS[i.status] || i.status}</span>`;
+
+        document.getElementById('scheda-inv-body').innerHTML = `
+            <div class="scheda-rows">
+                <div class="scheda-row"><span class="scheda-row__label">👤 Intestatario</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">💶 Imponibile</span><span class="scheda-row__value">€ ${fmt(i.amount)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">📊 IVA (${i.vat_rate}%)</span><span class="scheda-row__value">€ ${fmt(i.vat_amount)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label">💰 Totale</span><span class="scheda-row__value"><strong>€ ${fmt(i.total)}</strong></span></div>
+                <div class="scheda-row"><span class="scheda-row__label">📅 Emessa</span><span class="scheda-row__value">${formatDate(i.issue_date)}${i.due_date ? ' · Scad. ' + formatDate(i.due_date) : ''}</span></div>
+                ${i.paid_date ? `<div class="scheda-row"><span class="scheda-row__label">✅ Pagata il</span><span class="scheda-row__value">${formatDate(i.paid_date)}</span></div>` : ''}
+                ${i.description ? `<div class="scheda-row"><span class="scheda-row__label">📝 Descrizione</span><span class="scheda-row__value">${escapeHtml(i.description)}</span></div>` : ''}
+                ${i.notes ? `<div class="scheda-row"><span class="scheda-row__label">📄 Note</span><span class="scheda-row__value">${escapeHtml(i.notes)}</span></div>` : ''}
+            </div>`;
+
+        document.getElementById('scheda-inv-send').hidden = i.status !== 'draft';
+        document.getElementById('scheda-inv-paid').hidden = i.status === 'paid' || i.status === 'cancelled';
+
+        document.getElementById('invoice-scheda-modal').hidden = false;
+    }
+
+    function closeSchedaModal() {
+        schedaInvoiceId = null;
+        document.getElementById('invoice-scheda-modal').hidden = true;
     }
 
     function openModal(inv = null) {

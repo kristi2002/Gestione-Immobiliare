@@ -11,6 +11,7 @@ $allowed = [
     'agents', 'reports', 'social', 'activity_log', 'settings',
     'buildings', 'insurance', 'meters', 'suppliers', 'inventory', 'commissions', 'surveys', 'forecast',
     'maintenance_workflow', 'whatsapp_inbox', 'property_applications', 'client_profile', 'automations',
+    'property_profile',
 ];
 $name    = basename($_GET['name'] ?? '');
 

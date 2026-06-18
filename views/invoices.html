@@ -99,4 +99,25 @@
     </div>
 </div>
 
+<!-- Scheda Fattura quick-view -->
+<div class="modal-overlay" id="invoice-scheda-modal" hidden>
+    <div class="modal" role="dialog">
+        <div class="modal-header">
+            <div>
+                <h3 id="scheda-inv-number"></h3>
+                <div id="scheda-inv-badge" class="scheda-modal-badges"></div>
+            </div>
+            <button class="modal-close" id="invoice-scheda-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="scheda-inv-body"></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-inv-pdf">📄 PDF</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-inv-send" hidden>📤 Invia</button>
+            <button type="button" class="btn btn--primary btn--sm" id="scheda-inv-paid" hidden>✓ Pagata</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="scheda-inv-edit">✏️ Modifica</button>
+            <button type="button" class="btn btn--ghost" id="scheda-inv-close2">Chiudi</button>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/invoices.js"></script>

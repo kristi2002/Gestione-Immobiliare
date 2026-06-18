@@ -54,6 +54,7 @@ function listContracts(PDO $db): void
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $status     = trim($_GET['status'] ?? '');
     $type       = trim($_GET['type'] ?? '');
+    $search     = trim($_GET['search'] ?? '');
 
     $where = 'WHERE 1=1';
     $params = [];
@@ -61,6 +62,10 @@ function listContracts(PDO $db): void
     if ($propertyId) {
         $where .= ' AND ct.property_id = :property_id';
         $params['property_id'] = $propertyId;
+    }
+    if ($search !== '') {
+        $frag = apiWordSearch($search, ['p.address', 'p.city', 't.name', 't.surname', 'c.name', 'c.surname', 'ct.title'], $params);
+        if ($frag) $where .= " AND $frag";
     }
     if ($status !== '' && in_array($status, CONTRACT_STATUSES, true)) {
         $where .= ' AND ct.status = :status';

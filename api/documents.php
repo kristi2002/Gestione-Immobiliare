@@ -64,52 +64,101 @@ function listDocuments(PDO $db): void
     $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
 
-    $where = 'WHERE 1=1';
-    $params = [];
+    // ── Part 1: real documents ────────────────────────────────────────────
+    $docItems = [];
+    if ($docType !== 'contratto') {
+        $dWhere  = 'WHERE 1=1';
+        $dParams = [];
 
-    if ($search !== '') {
-        $where .= " AND (d.title LIKE :search OR d.original_name LIKE :search
-                      OR d.notes LIKE :search
-                      OR c.name LIKE :search OR c.surname LIKE :search
-                      OR p.address LIKE :search OR p.city LIKE :search)";
-        $params['search'] = '%' . $search . '%';
+        if ($search !== '') {
+            $frag = apiWordSearch($search, ['d.title', 'd.original_name', 'd.notes', 'c.name', 'c.surname', 'p.address', 'p.city'], $dParams, 'dw');
+            if ($frag) $dWhere .= " AND $frag";
+        }
+        if ($docType !== '') {
+            $dWhere .= ' AND d.doc_type = :doc_type';
+            $dParams['doc_type'] = $docType;
+        }
+        if ($clientId) {
+            $dWhere .= ' AND d.client_id = :client_id';
+            $dParams['client_id'] = $clientId;
+        }
+        if ($propertyId) {
+            $dWhere .= ' AND d.property_id = :property_id';
+            $dParams['property_id'] = $propertyId;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id,
+                    d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
+                    c.name AS client_name, c.surname AS client_surname,
+                    p.address AS property_address, p.city AS property_city,
+                    NULL AS contract_id
+             FROM documents d
+             LEFT JOIN clients c ON c.id = d.client_id
+             LEFT JOIN properties p ON p.id = d.property_id
+             $dWhere
+             ORDER BY d.created_at DESC"
+        );
+        $stmt->execute($dParams);
+        $docItems = $stmt->fetchAll();
+        foreach ($docItems as &$d) {
+            $d['download_url'] = 'api/download_document.php?id=' . $d['id'];
+        }
+        unset($d);
     }
 
-    if ($docType !== '' && in_array($docType, DOC_TYPES, true)) {
-        $where .= ' AND d.doc_type = :doc_type';
-        $params['doc_type'] = $docType;
+    // ── Part 2: contracts (as virtual document entries) ───────────────────
+    $ctItems = [];
+    if ($docType === '' || $docType === 'contratto') {
+        $cWhere  = 'WHERE 1=1';
+        $cParams = [];
+
+        if ($search !== '') {
+            $frag = apiWordSearch($search, ['ct.title', 'ct.notes', 'cl.name', 'cl.surname', 'pr.address', 'pr.city'], $cParams, 'cw');
+            if ($frag) $cWhere .= " AND $frag";
+        }
+        if ($clientId) {
+            $cWhere .= ' AND ct.client_id = :ct_client_id';
+            $cParams['ct_client_id'] = $clientId;
+        }
+        if ($propertyId) {
+            $cWhere .= ' AND ct.property_id = :ct_property_id';
+            $cParams['ct_property_id'] = $propertyId;
+        }
+
+        $typeLabels = [
+            'locazione' => 'Locazione', 'compravendita' => 'Compravendita',
+            'preliminare' => 'Preliminare', 'mandato' => 'Mandato', 'altro' => 'Altro',
+        ];
+
+        $stmt = $db->prepare(
+            "SELECT ct.id, 'contratto' AS doc_type, ct.title, ct.client_id, ct.property_id,
+                    ct.contract_type AS original_name, NULL AS mime_type, NULL AS file_size,
+                    ct.notes, ct.created_at,
+                    cl.name AS client_name, cl.surname AS client_surname,
+                    pr.address AS property_address, pr.city AS property_city,
+                    ct.id AS contract_id
+             FROM contracts ct
+             LEFT JOIN clients cl ON cl.id = ct.client_id
+             INNER JOIN properties pr ON pr.id = ct.property_id
+             $cWhere
+             ORDER BY ct.created_at DESC"
+        );
+        $stmt->execute($cParams);
+        $rows = $stmt->fetchAll();
+        foreach ($rows as $row) {
+            $row['original_name'] = $typeLabels[$row['original_name']] ?? $row['original_name'];
+            $row['download_url']  = null;
+            $ctItems[] = $row;
+        }
     }
 
-    if ($clientId) {
-        $where .= ' AND d.client_id = :client_id';
-        $params['client_id'] = $clientId;
-    }
+    // ── Merge, sort, paginate in PHP ──────────────────────────────────────
+    $all = array_merge($docItems, $ctItems);
+    usort($all, fn($a, $b) => strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? '')));
 
-    if ($propertyId) {
-        $where .= ' AND d.property_id = :property_id';
-        $params['property_id'] = $propertyId;
-    }
-
-    $countSql = "SELECT COUNT(*) FROM documents d
-            LEFT JOIN clients c ON c.id = d.client_id
-            LEFT JOIN properties p ON p.id = d.property_id
-            $where";
-
-    $dataSql = "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id,
-                   d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
-                   c.name AS client_name, c.surname AS client_surname,
-                   p.address AS property_address, p.city AS property_city
-            FROM documents d
-            LEFT JOIN clients c ON c.id = d.client_id
-            LEFT JOIN properties p ON p.id = d.property_id
-            $where
-            ORDER BY d.created_at DESC";
-
-    [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-
-    foreach ($items as &$item) {
-        $item['download_url'] = 'api/download_document.php?id=' . $item['id'];
-    }
+    $total = count($all);
+    $items = array_slice($all, $pagination['offset'], $pagination['limit']);
 
     apiPaginatedSuccess($items, $total, $pagination);
 }

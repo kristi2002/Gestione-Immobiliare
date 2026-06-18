@@ -87,10 +87,23 @@
 
             <fieldset class="form-section" id="client-id-card-section" hidden>
                 <legend>Carta di Identità</legend>
-                <div id="client-id-card-status" class="id-card-status-container"></div>
-                <div style="margin-top:8px;">
-                    <input type="file" id="client-id-card-file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
-                    <button type="button" class="btn btn--ghost btn--sm" id="btn-upload-id-card">⬆️ Carica Carta di Identità</button>
+                <div class="id-card-sides">
+                    <div class="id-card-side">
+                        <div class="id-card-side-label">Fronte</div>
+                        <div id="client-id-front-status" class="id-card-status-container"></div>
+                        <div style="margin-top:8px;">
+                            <input type="file" id="client-id-front-file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+                            <button type="button" class="btn btn--ghost btn--sm" id="btn-upload-id-front">⬆️ Carica Fronte</button>
+                        </div>
+                    </div>
+                    <div class="id-card-side">
+                        <div class="id-card-side-label">Retro</div>
+                        <div id="client-id-back-status" class="id-card-status-container"></div>
+                        <div style="margin-top:8px;">
+                            <input type="file" id="client-id-back-file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+                            <button type="button" class="btn btn--ghost btn--sm" id="btn-upload-id-back">⬆️ Carica Retro</button>
+                        </div>
+                    </div>
                 </div>
             </fieldset>
 

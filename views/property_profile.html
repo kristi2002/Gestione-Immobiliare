@@ -1,0 +1,272 @@
+<div class="property-profile-view">
+
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="btn-back-to-properties">← Immobili</button>
+    </div>
+
+    <!-- Title — populated by JS -->
+    <div id="pp-title-section" class="pp-title-section" hidden>
+        <div class="pp-title-row">
+            <h2 class="pp-title-heading" id="pp-address-heading"></h2>
+            <span class="badge" id="pp-status-badge"></span>
+        </div>
+        <div class="pp-title-meta" id="pp-title-meta"></div>
+    </div>
+
+    <!-- Booking.com-style gallery — populated by JS -->
+    <div id="pp-gallery" class="pp-gallery pp-gallery--loading">
+        <div class="entity-loading" style="padding:60px 0;">Caricamento gallery…</div>
+    </div>
+
+    <!-- Info section below gallery — populated by JS -->
+    <div id="pp-info-section" hidden></div>
+
+    <div id="property-profile-alert" class="alert" style="display:none;"></div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs" id="property-profile-tabs" role="tablist" hidden>
+        <button class="profile-tab profile-tab--active" role="tab" data-tab="media">📷 Gestione Foto</button>
+        <button class="profile-tab" role="tab" data-tab="documents">📄 Documenti</button>
+        <button class="profile-tab" role="tab" data-tab="reminders">🔔 Promemoria</button>
+        <button class="profile-tab" role="tab" data-tab="history">📜 Storico Prezzi</button>
+    </div>
+
+    <!-- Panel: Media management -->
+    <div class="profile-panel" id="panel-media" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="pp-media-count"></span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <input type="hidden" id="pp-media-type" value="photo">
+                <label class="btn btn--sm btn--primary" style="cursor:pointer;margin:0;">
+                    ⬆️ Carica
+                    <input type="file" id="pp-media-upload" hidden multiple>
+                </label>
+            </div>
+        </div>
+        <div id="pp-gallery-grid" class="gallery-grid">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Documenti -->
+    <div class="profile-panel" id="panel-documents" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="pp-docs-count"></span>
+            <label class="btn btn--sm btn--primary" style="cursor:pointer;margin:0;">
+                ⬆️ Carica documento
+                <input type="file" id="pp-doc-upload" hidden multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+            </label>
+        </div>
+        <div id="pp-docs-list" class="docs-list">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Promemoria -->
+    <div class="profile-panel" id="panel-reminders" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="pp-reminders-count"></span>
+            <button class="btn btn--sm btn--primary" id="btn-pp-new-reminder">+ Nuovo promemoria</button>
+        </div>
+        <div id="pp-reminders-list" class="reminders-list">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Storico Prezzi -->
+    <div class="profile-panel" id="panel-history" hidden>
+        <div id="pp-price-history" class="price-history-list">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Edit modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="pp-edit-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="pp-edit-title">
+        <div class="modal-header">
+            <h3 id="pp-edit-title">Modifica Immobile</h3>
+            <button class="modal-close" id="pp-edit-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="pp-edit-form" class="modal-body">
+            <input type="hidden" id="pp-prop-id">
+            <fieldset class="form-section">
+                <legend>Proprietario & Stato</legend>
+                <div class="form-row">
+                    <div class="form-group" style="flex:2">
+                        <label for="pp-client">Proprietario <span class="required">*</span></label>
+                        <select id="pp-client" class="form-select" required>
+                            <option value="">— Seleziona proprietario —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-status">Stato</label>
+                        <select id="pp-status" class="form-select">
+                            <option value="available">Disponibile</option>
+                            <option value="rented">Affittato</option>
+                            <option value="sold">Venduto</option>
+                            <option value="archived">Archiviato</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset class="form-section">
+                <legend>Localizzazione</legend>
+                <div class="form-row">
+                    <div class="form-group" style="flex:3">
+                        <label for="pp-address">Indirizzo <span class="required">*</span></label>
+                        <input type="text" id="pp-address" class="form-input" required maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-floor">Piano</label>
+                        <input type="text" id="pp-floor" class="form-input" maxlength="20">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:2">
+                        <label for="pp-city">Città <span class="required">*</span></label>
+                        <input type="text" id="pp-city" class="form-input" required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-cap">CAP</label>
+                        <input type="text" id="pp-cap" class="form-input" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-province">Prov.</label>
+                        <input type="text" id="pp-province" class="form-input" maxlength="2" style="text-transform:uppercase">
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset class="form-section">
+                <legend>Caratteristiche & Prezzo</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pp-sqm">Superficie (mq)</label>
+                        <input type="number" id="pp-sqm" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-rooms">Stanze</label>
+                        <input type="number" id="pp-rooms" class="form-input" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-bathrooms">Bagni</label>
+                        <input type="number" id="pp-bathrooms" class="form-input" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:2">
+                        <label for="pp-price">Prezzo (€)</label>
+                        <input type="number" id="pp-price" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="pp-price-type">Tipo</label>
+                        <select id="pp-price-type" class="form-select">
+                            <option value="affitto">Affitto</option>
+                            <option value="vendita">Vendita</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+            <div class="form-group">
+                <label for="pp-description">Descrizione</label>
+                <textarea id="pp-description" class="form-textarea" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="pp-features">Caratteristiche aggiuntive</label>
+                <textarea id="pp-features" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="pp-edit-notes">Note interne</label>
+                <textarea id="pp-edit-notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="pp-edit-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="pp-edit-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Archive modal ───────────────────────────────────────── -->
+<div class="modal-overlay" id="pp-archive-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Archivia immobile</h3>
+            <button class="modal-close" id="pp-archive-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Sei sicuro di voler archiviare questo immobile?</p>
+            <p class="text-muted">L'immobile non verrà eliminato definitivamente.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn--ghost" id="pp-archive-cancel">Annulla</button>
+            <button class="btn btn--danger" id="pp-archive-confirm">Archivia</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── QR modal ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="pp-qr-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Link pubblico & QR Code</h3>
+            <button class="modal-close" id="pp-qr-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align:center;">
+            <img id="pp-qr-img" src="" alt="QR Code" style="width:180px;height:180px;display:block;margin:0 auto 16px;">
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <input type="text" id="pp-qr-url" class="form-input" readonly style="flex:1;font-size:12px;">
+                <button class="btn btn--ghost btn--sm" id="pp-qr-copy">📋 Copia</button>
+            </div>
+            <a id="pp-qr-download" href="" class="btn btn--ghost btn--sm">⬇️ Scarica QR</a>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn--ghost" id="pp-qr-cancel">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Reminder modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="pp-reminder-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="pp-rem-title">
+        <div class="modal-header">
+            <h3 id="pp-rem-title">Nuovo promemoria</h3>
+            <button class="modal-close" id="pp-rem-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="pp-reminder-form" class="modal-body">
+            <input type="hidden" id="pp-rem-id">
+            <div class="form-group">
+                <label for="pp-rem-title-input">Titolo <span class="required">*</span></label>
+                <input type="text" id="pp-rem-title-input" class="form-input" required maxlength="200">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pp-rem-date">Data</label>
+                    <input type="date" id="pp-rem-date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="pp-rem-freq">Frequenza</label>
+                    <select id="pp-rem-freq" class="form-select">
+                        <option value="once">Una volta</option>
+                        <option value="weekly">Settimanale</option>
+                        <option value="biweekly">Quindicinale</option>
+                        <option value="monthly">Mensile</option>
+                        <option value="quarterly">Trimestrale</option>
+                        <option value="yearly">Annuale</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pp-rem-notes">Note</label>
+                <textarea id="pp-rem-notes" class="form-textarea" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="pp-rem-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/property_profile.js?v=2"></script>

@@ -9,10 +9,13 @@
     const PROPERTIES_API = 'api/properties.php';
 
     const DOC_TYPE_LABELS = {
-        invoice:  'Fattura',
-        contract: 'Contratto',
-        id:       'Doc. identità',
-        other:    'Altro',
+        invoice:   'Fattura',
+        contract:  'File contratto',
+        contratto: 'Contratto',
+        id:        'Doc. identità',
+        id_front:  'CI Fronte',
+        id_back:   'CI Retro',
+        other:     'Altro',
     };
 
     let documents      = [];
@@ -187,29 +190,30 @@
         }
 
         els.tbody.innerHTML = documents.map(d => {
-            const displayName = d.title || d.original_name;
-            const clientLabel = d.client_id
-                ? `${d.client_surname} ${d.client_name}`
-                : null;
-            const propertyLabelText = d.property_id
-                ? `${d.property_address}, ${d.property_city}`
-                : null;
+            const isContract    = d.doc_type === 'contratto';
+            const displayName   = d.title || d.original_name;
+            const clientLabel   = d.client_id ? `${d.client_surname || ''} ${d.client_name || ''}`.trim() : null;
+            const propertyLabel = d.property_id ? `${d.property_address || ''}, ${d.property_city || ''}` : null;
+            const typeLabel     = DOC_TYPE_LABELS[d.doc_type] || d.doc_type;
+
+            const actions = isContract
+                ? `<button class="btn btn--sm btn--ghost btn-open-contract" data-id="${d.contract_id}" title="Apri contratto">📋 Apri</button>`
+                : `<a href="${escapeHtml(d.download_url)}" class="btn btn--sm btn--ghost" title="Scarica" download>⬇️</a>
+                   <button class="btn btn--sm btn--ghost btn-delete-doc" data-id="${d.id}" title="Elimina">🗑️</button>`;
 
             return `
                 <tr>
-                    <td data-label="Tipo"><span class="badge badge--doc-${d.doc_type}">${DOC_TYPE_LABELS[d.doc_type] || d.doc_type}</span></td>
+                    <td data-label="Tipo"><span class="badge badge--doc-${d.doc_type}">${escapeHtml(typeLabel)}</span></td>
                     <td data-label="Documento">
                         <span class="doc-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
-                        ${d.title && d.title !== d.original_name ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
+                        ${!isContract && d.title && d.title !== d.original_name ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
+                        ${isContract ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
                     </td>
                     <td data-label="Proprietario">${clientLabel ? escapeHtml(clientLabel) : '<span class="text-muted">—</span>'}</td>
-                    <td data-label="Immobile">${propertyLabelText ? escapeHtml(propertyLabelText) : '<span class="text-muted">—</span>'}</td>
-                    <td data-label="Dimensione">${formatFileSize(d.file_size)}</td>
+                    <td data-label="Immobile">${propertyLabel ? escapeHtml(propertyLabel) : '<span class="text-muted">—</span>'}</td>
+                    <td data-label="Dimensione">${isContract ? '—' : formatFileSize(d.file_size)}</td>
                     <td data-label="Data">${formatDate(d.created_at)}</td>
-                    <td class="col-actions" data-label="Azioni">
-                        <a href="${escapeHtml(d.download_url)}" class="btn btn--sm btn--ghost" title="Scarica" download>⬇️</a>
-                        <button class="btn btn--sm btn--ghost btn-delete-doc" data-id="${d.id}" title="Elimina">🗑️</button>
-                    </td>
+                    <td class="col-actions" data-label="Azioni">${actions}</td>
                 </tr>`;
         }).join('');
 
@@ -217,6 +221,12 @@
             btn.addEventListener('click', () => {
                 const doc = documents.find(d => d.id == btn.dataset.id);
                 if (doc) openDeleteModal(doc.id, doc.title || doc.original_name);
+            });
+        });
+
+        els.tbody.querySelectorAll('.btn-open-contract').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.App) window.App.navigateTo('contracts', { contractId: parseInt(btn.dataset.id, 10) });
             });
         });
     }
