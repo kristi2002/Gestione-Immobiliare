@@ -93,7 +93,7 @@ ALTER TABLE properties
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS documents (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    doc_type        ENUM('invoice', 'contract', 'id', 'other') NOT NULL DEFAULT 'other',
+    doc_type        ENUM('invoice', 'contract', 'id', 'id_front', 'id_back', 'other') NOT NULL DEFAULT 'other',
     title           VARCHAR(255) DEFAULT NULL,
     client_id       INT UNSIGNED DEFAULT NULL,
     property_id     INT UNSIGNED DEFAULT NULL,

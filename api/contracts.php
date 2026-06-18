@@ -52,6 +52,7 @@ function listContracts(PDO $db): void
 {
     $pagination = apiGetPagination();
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $clientId   = isset($_GET['client_id'])   ? (int) $_GET['client_id']   : null;
     $status     = trim($_GET['status'] ?? '');
     $type       = trim($_GET['type'] ?? '');
     $search     = trim($_GET['search'] ?? '');
@@ -62,6 +63,10 @@ function listContracts(PDO $db): void
     if ($propertyId) {
         $where .= ' AND ct.property_id = :property_id';
         $params['property_id'] = $propertyId;
+    }
+    if ($clientId) {
+        $where .= ' AND ct.client_id = :client_id';
+        $params['client_id'] = $clientId;
     }
     if ($search !== '') {
         $frag = apiWordSearch($search, ['p.address', 'p.city', 't.name', 't.surname', 'c.name', 'c.surname', 'ct.title'], $params);

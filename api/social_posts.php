@@ -283,7 +283,9 @@ function handleImageUpload(?array $file): ?string
     }
 
     $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    $mime    = mime_content_type($file['tmp_name']) ?: $file['type'];
+    $mime    = function_exists('mime_content_type')
+        ? (mime_content_type($file['tmp_name']) ?: $file['type'])
+        : $file['type'];
     if (!in_array($mime, $allowed, true)) {
         apiError('Formato immagine non supportato. Usa JPEG, PNG o WebP.');
     }

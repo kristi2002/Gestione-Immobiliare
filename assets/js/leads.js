@@ -318,10 +318,13 @@
                         <strong>${escapeHtml(p.address)}</strong>, ${escapeHtml(p.city)}<br>
                         <small class="text-muted">${p.rooms != null ? p.rooms + ' stanze · ' : ''}${p.sqm != null ? p.sqm + ' mq · ' : ''}${p.price != null ? '€ ' + p.price + ' (' + escapeHtml(p.price_type) + ')' : 'prezzo n.d.'}</small>
                     </div>
-                    <button class="btn btn--sm btn--ghost btn-open-prop">Apri</button>
+                    <button class="btn btn--sm btn--ghost btn-open-prop" data-prop-id="${p.id}">Apri</button>
                 </div>`).join('');
             els.matchList.querySelectorAll('.btn-open-prop').forEach((b) => {
-                b.addEventListener('click', () => { closeMatchModal(); window.App.navigateTo('properties'); });
+                b.addEventListener('click', () => {
+                    closeMatchModal();
+                    window.App.navigateTo('property_profile', { propertyId: parseInt(b.dataset.propId, 10) });
+                });
             });
         } catch (err) {
             els.matchList.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;

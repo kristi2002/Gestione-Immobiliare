@@ -19,7 +19,9 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
 }
 
 $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', 'image/svg+xml' => 'svg'];
-$mime = mime_content_type($file['tmp_name']) ?: $file['type'];
+$mime = function_exists('mime_content_type')
+    ? (mime_content_type($file['tmp_name']) ?: $file['type'])
+    : $file['type'];
 if (!isset($allowed[$mime])) {
     apiError('Formato non supportato. Usa PNG, JPG, WebP o SVG.');
 }

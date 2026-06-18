@@ -315,7 +315,7 @@
                     email:       activeItem.applicant_email || '',
                     phone:       activeItem.applicant_phone || '',
                     property_id: activeItem.property_id || null,
-                    source:      'application',
+                    source:      'web',
                     notes:       `Convertito da richiesta #${activeItem.id}`,
                 }),
             });

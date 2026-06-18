@@ -30,6 +30,8 @@
     <!-- Tabs -->
     <div class="profile-tabs" role="tablist">
         <button class="profile-tab profile-tab--active" role="tab" data-tab="properties">🏢 Immobili</button>
+        <button class="profile-tab" role="tab" data-tab="fatture">💶 Fatture</button>
+        <button class="profile-tab" role="tab" data-tab="contratti">📋 Contratti</button>
         <button class="profile-tab" role="tab" data-tab="documents">📄 Documenti</button>
         <button class="profile-tab" role="tab" data-tab="communications">💬 Comunicazioni</button>
         <button class="profile-tab" role="tab" data-tab="reminders">🔔 Promemoria</button>
@@ -42,6 +44,27 @@
             <button class="btn btn--sm btn--primary" id="btn-profile-new-property">+ Aggiungi immobile</button>
         </div>
         <div id="profile-props-grid" class="entity-grid">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Fatture -->
+    <div class="profile-panel" id="profile-panel-fatture" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="profile-fatture-count"></span>
+            <button class="btn btn--sm btn--primary" id="btn-profile-new-fattura">+ Nuova Fattura</button>
+        </div>
+        <div id="profile-fatture-list" class="docs-list">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Contratti -->
+    <div class="profile-panel" id="profile-panel-contratti" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="profile-contratti-count"></span>
+        </div>
+        <div id="profile-contratti-list" class="docs-list">
             <div class="entity-loading">Caricamento…</div>
         </div>
     </div>

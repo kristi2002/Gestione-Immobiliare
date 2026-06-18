@@ -348,8 +348,7 @@ function validateLeadInput(array $data): array
 
     if ($name === '')    apiError('Il nome è obbligatorio.');
     if ($surname === '') apiError('Il cognome è obbligatorio.');
-    if ($cf === null)    apiError('Il codice fiscale è obbligatorio.');
-    if (!preg_match('/^[A-Z0-9]{11,16}$/', $cf)) apiError('Codice fiscale non valido (11-16 caratteri alfanumerici).');
+    if ($cf !== null && !preg_match('/^[A-Z0-9]{11,16}$/', $cf)) apiError('Codice fiscale non valido (11-16 caratteri alfanumerici).');
     if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) apiError('Email non valida.');
     if (!in_array($interest, LEAD_INTERESTS, true)) apiError('Tipo interesse non valido.');
     if (!in_array($status, LEAD_STATUSES, true)) apiError('Stato non valido.');

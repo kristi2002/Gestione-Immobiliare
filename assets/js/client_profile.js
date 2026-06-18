@@ -10,6 +10,8 @@
     const COMM_API  = 'api/communications.php';
     const REM_API   = 'api/reminders.php';
     const RPT_API   = 'api/generate_owner_report.php';
+    const INV_API   = 'api/invoices.php';
+    const CONT_API  = 'api/contracts.php';
 
     const STATUS_LABELS = { active: 'Attivo', inactive: 'Inattivo', archived: 'Archiviato' };
     const FREQ_LABELS   = { once: 'Una volta', weekly: 'Settimanale', biweekly: 'Quindicinale', monthly: 'Mensile', quarterly: 'Trimestrale', yearly: 'Annuale' };
@@ -42,6 +44,9 @@
         document.getElementById('btn-profile-report').addEventListener('click', openReportModal);
         document.getElementById('btn-profile-new-property').addEventListener('click', () => {
             if (window.App) window.App.navigateTo('properties');
+        });
+        document.getElementById('btn-profile-new-fattura').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('invoices');
         });
         document.getElementById('btn-profile-new-reminder').addEventListener('click', () => openReminderModal());
 
@@ -133,10 +138,12 @@
 
     function loadTab(tab) {
         tabsLoaded.add(tab);
-        if (tab === 'properties')     loadProperties();
-        else if (tab === 'documents')     loadDocuments();
+        if (tab === 'properties')          loadProperties();
+        else if (tab === 'fatture')        loadFatture();
+        else if (tab === 'contratti')      loadContratti();
+        else if (tab === 'documents')      loadDocuments();
         else if (tab === 'communications') loadCommunications();
-        else if (tab === 'reminders')     loadReminders();
+        else if (tab === 'reminders')      loadReminders();
     }
 
     // ── Properties ───────────────────────────────────────────────────
@@ -184,6 +191,119 @@
             });
         } catch (err) {
             grid.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+        }
+    }
+
+    // ── Fatture ──────────────────────────────────────────────────────
+
+    async function loadFatture() {
+        const list = document.getElementById('profile-fatture-list');
+        list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        try {
+            const res  = await fetch(`${INV_API}?client_id=${clientId}&limit=200&page=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+            const cnt   = items.length;
+            document.getElementById('profile-fatture-count').textContent =
+                cnt ? `${cnt} fattur${cnt === 1 ? 'a' : 'e'}` : '';
+
+            if (!cnt) {
+                list.innerHTML = '<div class="entity-empty">Nessuna fattura associata a questo proprietario.</div>';
+                return;
+            }
+
+            const INV_STATUS = { draft: 'Bozza', sent: 'Inviata', paid: 'Pagata', cancelled: 'Annullata' };
+            const INV_COLOR  = { draft: '#94a3b8', sent: '#2563eb', paid: '#16a34a', cancelled: '#dc2626' };
+            list.innerHTML = items.map(i => {
+                const color  = INV_COLOR[i.status] || '#94a3b8';
+                const label  = INV_STATUS[i.status] || i.status;
+                const total  = Number(i.total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const desc   = (i.description || '').length > 60 ? i.description.slice(0, 60) + '…' : (i.description || '');
+                return `
+                <div class="doc-item">
+                    <span class="doc-item__icon">💶</span>
+                    <div class="doc-item__info">
+                        <div class="doc-item__name">${esc(i.invoice_number)} — € ${total}</div>
+                        <div class="doc-item__meta">
+                            <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;font-size:11px;">${label}</span>
+                            · ${fmtDate(i.issue_date)}${desc ? ' · ' + esc(desc) : ''}
+                        </div>
+                    </div>
+                    <div class="doc-item__actions">
+                        <button class="btn btn--sm btn--ghost btn-fattura-pdf" data-id="${i.id}" title="PDF fattura">📄</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            list.querySelectorAll('.btn-fattura-pdf').forEach(btn => {
+                btn.addEventListener('click', () => downloadFatturaPdf(btn.dataset.id));
+            });
+        } catch (err) {
+            list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+        }
+    }
+
+    async function downloadFatturaPdf(id) {
+        try {
+            const res  = await fetch('api/generate_invoice_pdf.php', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ invoice_id: parseInt(id, 10) }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            window.open(json.data.download, '_blank');
+        } catch (err) {
+            showAlert('Errore generazione PDF: ' + err.message, 'error');
+        }
+    }
+
+    // ── Contratti ────────────────────────────────────────────────────
+
+    async function loadContratti() {
+        const list = document.getElementById('profile-contratti-list');
+        list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        try {
+            const res  = await fetch(`${CONT_API}?client_id=${clientId}&limit=200&page=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+            const cnt   = items.length;
+            document.getElementById('profile-contratti-count').textContent =
+                cnt ? `${cnt} contratt${cnt === 1 ? 'o' : 'i'}` : '';
+
+            if (!cnt) {
+                list.innerHTML = '<div class="entity-empty">Nessun contratto associato a questo proprietario.</div>';
+                return;
+            }
+
+            const CT_STATUS = { draft: 'Bozza', sent: 'Inviato', signed: 'Firmato', expired: 'Scaduto', cancelled: 'Annullato' };
+            const CT_COLOR  = { draft: '#94a3b8', sent: '#2563eb', signed: '#16a34a', expired: '#d97706', cancelled: '#dc2626' };
+            const CT_TYPE   = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
+
+            list.innerHTML = items.map(c => {
+                const color  = CT_COLOR[c.status] || '#94a3b8';
+                const label  = CT_STATUS[c.status] || c.status;
+                const type   = CT_TYPE[c.contract_type] || c.contract_type;
+                const where  = c.property_address ? `${esc(c.property_address)}, ${esc(c.property_city)}` : '—';
+                const tenant = c.tenant_name ? `${esc(c.tenant_name)} ${esc(c.tenant_surname)}` : '';
+                const rent   = c.monthly_rent ? `€ ${Number(c.monthly_rent).toLocaleString('it-IT')}/mese` : '';
+                const period = [c.start_date ? fmtDate(c.start_date) : null, c.end_date ? fmtDate(c.end_date) : null].filter(Boolean).join(' → ');
+                return `
+                <div class="doc-item">
+                    <span class="doc-item__icon">📋</span>
+                    <div class="doc-item__info">
+                        <div class="doc-item__name">${esc(c.title || type)} — ${where}</div>
+                        <div class="doc-item__meta">
+                            <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;font-size:11px;">${label}</span>
+                            · ${type}${tenant ? ' · 👤 ' + tenant : ''}${rent ? ' · ' + rent : ''}${period ? ' · ' + period : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (err) {
+            list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
         }
     }
 

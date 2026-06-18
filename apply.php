@@ -17,9 +17,12 @@ $success    = false;
 
 if ($propertyId > 0) {
     $stmt = $db->prepare(
-        "SELECT id, address, city, property_type, status, rent_price, sale_price, description, main_photo
-           FROM properties
-          WHERE id = :id AND status != 'archived'"
+        "SELECT p.id, p.address, p.city, p.property_type, p.status,
+                p.price, p.price_type, p.description,
+                pm.file_path AS cover_photo
+           FROM properties p
+           LEFT JOIN property_media pm ON pm.id = p.cover_media_id
+          WHERE p.id = :id AND p.status != 'archived'"
     );
     $stmt->execute([':id' => $propertyId]);
     $property = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -230,16 +233,15 @@ $primaryColor = $branding['primary_color'] ?? '#2563eb';
 
             <!-- Property preview -->
             <div class="property-info">
-                <?php if (!empty($property['main_photo'])): ?>
-                    <img class="property-photo" src="<?= esc($property['main_photo']) ?>" alt="Foto immobile">
+                <?php if (!empty($property['cover_photo'])): ?>
+                    <img class="property-photo" src="<?= esc($property['cover_photo']) ?>" alt="Foto immobile">
                 <?php endif; ?>
                 <h3><?= esc($property['address']) ?><?= $property['city'] ? ', ' . esc($property['city']) : '' ?></h3>
                 <p class="meta"><?= esc(ucfirst(str_replace('_', ' ', $property['property_type'] ?? ''))) ?></p>
-                <?php if (!empty($property['rent_price'])): ?>
-                    <span class="price-badge">Affitto: € <?= number_format((float)$property['rent_price'], 0, ',', '.') ?>/mese</span>
-                <?php endif; ?>
-                <?php if (!empty($property['sale_price'])): ?>
-                    <span class="price-badge">Vendita: € <?= number_format((float)$property['sale_price'], 0, ',', '.') ?></span>
+                <?php if (!empty($property['price']) && $property['price_type'] === 'affitto'): ?>
+                    <span class="price-badge">Affitto: € <?= number_format((float)$property['price'], 0, ',', '.') ?>/mese</span>
+                <?php elseif (!empty($property['price']) && $property['price_type'] === 'vendita'): ?>
+                    <span class="price-badge">Vendita: € <?= number_format((float)$property['price'], 0, ',', '.') ?></span>
                 <?php endif; ?>
                 <?php if (!empty($property['description'])): ?>
                     <p style="margin-top:10px;font-size:.9rem;color:#475569"><?= nl2br(esc($property['description'])) ?></p>

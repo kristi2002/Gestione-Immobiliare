@@ -12,7 +12,7 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 
 apiHandleOptions();
 
-const DOC_TYPES = ['invoice', 'contract', 'id', 'other'];
+const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'other'];
 
 const ALLOWED_MIMES = [
     'application/pdf',
@@ -218,7 +218,9 @@ function uploadDocument(PDO $db): void
         apiError('File troppo grande. Massimo 25 MB.');
     }
 
-    $mime = mime_content_type($file['tmp_name']) ?: $file['type'];
+    $mime = function_exists('mime_content_type')
+        ? (mime_content_type($file['tmp_name']) ?: $file['type'])
+        : $file['type'];
     if (!in_array($mime, ALLOWED_MIMES, true)) {
         apiError('Tipo di file non consentito. Formati: PDF, immagini, Word, testo.');
     }

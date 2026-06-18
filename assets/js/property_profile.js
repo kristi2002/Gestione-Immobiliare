@@ -362,7 +362,7 @@
         const uploads = Array.from(files).map(file => {
             const fd = new FormData();
             fd.append('property_id', propertyId);
-            fd.append('doc_type', 'generic');
+            fd.append('doc_type', 'other');
             fd.append('file', file);
             return fetch('api/documents.php', { method: 'POST', body: fd }).then(r => r.json());
         });
@@ -557,16 +557,29 @@
 
     // ── PDF & QR ──────────────────────────────────────────────────────────────
 
-    function generatePdf() {
-        fetch('api/generate_pdf.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ property_id: propertyId }) })
-            .then(r => r.blob())
-            .then(blob => {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'immobile_' + propertyId + '.pdf';
-                a.click();
-            })
-            .catch(() => showAlert('Errore generazione PDF.', 'error'));
+    async function generatePdf() {
+        const btn = document.getElementById('btn-pp-pdf');
+        if (btn) { btn.disabled = true; btn.textContent = 'Generazione…'; }
+        try {
+            const res  = await fetch('api/generate_pdf.php', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ type: 'report', property_id: propertyId }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const a = document.createElement('a');
+            a.href     = json.data.download;
+            a.target   = '_blank';
+            a.rel      = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            showAlert('Errore generazione PDF: ' + err.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '📄 Scheda PDF'; }
+        }
     }
 
     function openQrModal() {

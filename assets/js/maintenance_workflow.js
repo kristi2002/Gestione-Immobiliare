@@ -135,6 +135,7 @@
                 renderTable(parsed.items);
                 window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadRequests(); });
             } else {
+                els.tbody.classList.remove('is-loading');
                 renderKanban(parsed.items);
             }
         } catch (err) {
