@@ -85,6 +85,15 @@
                 <textarea id="client-notes" name="internal_notes" class="form-textarea" rows="4"></textarea>
             </div>
 
+            <fieldset class="form-section" id="client-id-card-section" hidden>
+                <legend>Carta di Identità</legend>
+                <div id="client-id-card-status" class="id-card-status-container"></div>
+                <div style="margin-top:8px;">
+                    <input type="file" id="client-id-card-file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+                    <button type="button" class="btn btn--ghost btn--sm" id="btn-upload-id-card">⬆️ Carica Carta di Identità</button>
+                </div>
+            </fieldset>
+
             <fieldset class="form-section" id="client-comm-section" hidden>
                 <legend>Comunicazioni recenti</legend>
                 <div id="client-comm-history" class="client-comm-history">
@@ -136,6 +145,23 @@
     </div>
 </div>
 
+<!-- Scheda Proprietario modal -->
+<div class="modal-overlay" id="scheda-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="scheda-modal-title">
+        <div class="modal-header">
+            <h3 id="scheda-modal-title">Scheda Proprietario</h3>
+            <button class="modal-close" id="scheda-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="scheda-modal-body"></div>
+        <div class="modal-footer">
+            <button class="btn btn--ghost" id="scheda-btn-profile">👤 Profilo completo</button>
+            <button class="btn btn--ghost" id="scheda-btn-report">📄 Rendiconto</button>
+            <button class="btn btn--ghost" id="scheda-btn-edit">✏️ Modifica</button>
+            <button class="btn btn--ghost" id="scheda-close">Chiudi</button>
+        </div>
+    </div>
+</div>
+
 <!-- CSV import preview modal -->
 <div class="modal-overlay" id="import-modal" hidden>
     <div class="modal modal--lg" role="dialog">
@@ -174,4 +200,4 @@
     </div>
 </div>
 
-<script src="assets/js/clients.js?v=2"></script>
+<script src="assets/js/clients.js?v=3"></script>

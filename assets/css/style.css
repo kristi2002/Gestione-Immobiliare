@@ -4718,3 +4718,107 @@ body.nav-open {
 .toolbar-toggle[aria-expanded="true"] .toggle-icon {
     transform: rotate(180deg);
 }
+
+/* ── Copy button (inline on cards and scheda) ─────────────── */
+.btn--copy {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 1px 5px;
+    font-size: 11px;
+    line-height: 1.4;
+    opacity: 0.4;
+    transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--color-text);
+}
+.btn--copy:hover {
+    opacity: 1;
+    background: var(--color-bg);
+    border-color: var(--color-border);
+}
+.btn--copy.copied {
+    opacity: 1;
+    color: #16a34a;
+}
+
+/* ── Scheda Proprietario modal body ───────────────────────── */
+.scheda-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.scheda-hero__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.scheda-hero__info { flex: 1; min-width: 0; }
+.scheda-hero__name {
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+.scheda-contact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 5px 0;
+    font-size: 14px;
+}
+.scheda-contact a { color: var(--color-primary); text-decoration: none; }
+.scheda-contact a:hover { text-decoration: underline; }
+.scheda-notes {
+    background: var(--color-bg);
+    border-left: 3px solid var(--color-primary, #2563eb);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 16px 0;
+}
+.scheda-notes strong {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+}
+.scheda-notes p { margin: 0; white-space: pre-wrap; }
+.scheda-stats { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0 4px; }
+.scheda-id-info {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border);
+}
+.scheda-id-info__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.6;
+    margin-bottom: 8px;
+}
+
+/* ID card section inside edit modal */
+.id-card-status-container { font-size: 14px; }
+.id-card-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}

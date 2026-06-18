@@ -20,6 +20,7 @@
     let deleteTargetId = null;
     let searchTimer   = null;
     let editingClientId = null;
+    let schedaClientId  = null;
     let currentPage = 1;
     const PAGE_LIMIT = 25;
 
@@ -83,6 +84,36 @@
                 closeModal();
                 window.App.navigateTo('communications', { clientId: editingClientId });
             }
+        });
+
+        // Scheda modal
+        const schedaModal = document.getElementById('scheda-modal');
+        document.getElementById('scheda-modal-close').addEventListener('click', closeSchedaModal);
+        document.getElementById('scheda-close').addEventListener('click', closeSchedaModal);
+        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
+        document.getElementById('scheda-btn-profile').addEventListener('click', () => {
+            if (schedaClientId && window.App) { const id = schedaClientId; closeSchedaModal(); window.App.navigateTo('client_profile', { clientId: id }); }
+        });
+        document.getElementById('scheda-btn-report').addEventListener('click', () => {
+            if (schedaClientId) { const id = schedaClientId; closeSchedaModal(); editingClientId = id; openReportModal(); }
+        });
+        document.getElementById('scheda-btn-edit').addEventListener('click', () => {
+            if (schedaClientId) {
+                const client = clients.find(c => c.id === schedaClientId);
+                closeSchedaModal();
+                if (client) openModal(client);
+            }
+        });
+
+        // ID card upload inside edit modal
+        document.getElementById('btn-upload-id-card').addEventListener('click', () => {
+            document.getElementById('client-id-card-file').click();
+        });
+        document.getElementById('client-id-card-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file || !editingClientId) return;
+            e.target.value = '';
+            uploadIdDocument(editingClientId, file);
         });
 
         // CSV export / import
@@ -179,7 +210,7 @@
             const propLabel = c.property_count === 1 ? '1 immobile' : `${c.property_count} immobili`;
             const checked   = selectedIds.has(c.id) ? 'checked' : '';
             return `
-            <div class="entity-card" data-id="${c.id}">
+            <div class="entity-card entity-card--clickable" data-id="${c.id}">
                 <div class="entity-card__header">
                     <input type="checkbox" class="client-checkbox entity-card__select" data-id="${c.id}" ${checked} title="Seleziona">
                     <div class="entity-card__avatar">${escapeHtml(initials.toUpperCase())}</div>
@@ -189,8 +220,8 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon">📞</span>${escapeHtml(c.phone)}</div>` : ''}
-                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon">✉️</span><a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a></div>` : ''}
+                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon">📞</span><span style="flex:1;min-width:0">${escapeHtml(c.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.phone)}" title="Copia numero">📋</button></div>` : ''}
+                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon">✉️</span><a href="mailto:${escapeHtml(c.email)}" style="flex:1;min-width:0">${escapeHtml(c.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.email)}" title="Copia email">📋</button></div>` : ''}
                     ${!c.phone && !c.email ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
@@ -202,6 +233,7 @@
                         <button class="btn btn--sm btn--ghost btn-profile" data-id="${c.id}" title="Scheda cliente">👤</button>
                         <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni">✉️</button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
+                        <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità">🪪</button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia">🗑️</button>
                     </div>
                 </div>
@@ -238,6 +270,29 @@
             btn.addEventListener('click', () => {
                 const client = clients.find(c => c.id == btn.dataset.id);
                 if (client) openDeleteModal(client.id, `${client.name} ${client.surname}`);
+            });
+        });
+
+        els.grid.querySelectorAll('.btn-print-id').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                loadAndPrintIdDoc(Number(btn.dataset.id));
+            });
+        });
+
+        els.grid.querySelectorAll('.btn-copy').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                copyToClipboard(btn.dataset.copy, btn);
+            });
+        });
+
+        els.grid.querySelectorAll('.entity-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('button, input, a')) {
+                    const client = clients.find(c => c.id == card.dataset.id);
+                    if (client) openSchedaModal(client);
+                }
             });
         });
 
@@ -299,6 +354,8 @@
 
             document.getElementById('client-comm-section').hidden = false;
             loadClientCommunications(client.id);
+            document.getElementById('client-id-card-section').hidden = false;
+            loadClientIdDocForModal(client.id);
         } else {
             els.modalTitle.textContent = 'Nuovo Proprietario';
             document.getElementById('client-status').value = 'active';
@@ -311,6 +368,8 @@
     function closeModal() {
         els.modal.hidden = true;
         editingClientId = null;
+        document.getElementById('client-id-card-section').hidden = true;
+        document.getElementById('client-id-card-status').innerHTML = '';
     }
 
     async function loadClientCommunications(clientId) {
@@ -588,6 +647,171 @@
         }
         out.push(cur);
         return out;
+    }
+
+    // -------------------------------------------------------------------------
+    // Scheda Proprietario modal
+    // -------------------------------------------------------------------------
+
+    function openSchedaModal(client) {
+        schedaClientId = client.id;
+        const initials  = ((client.name || '')[0] || '') + ((client.surname || '')[0] || '');
+        const propLabel = client.property_count === 1 ? '1 immobile' : `${client.property_count} immobili`;
+
+        document.getElementById('scheda-modal-body').innerHTML = `
+            <div class="scheda-hero">
+                <div class="scheda-hero__avatar">${escapeHtml(initials.toUpperCase())}</div>
+                <div class="scheda-hero__info">
+                    <div class="scheda-hero__name">
+                        <span>${escapeHtml(client.name)} ${escapeHtml(client.surname)}</span>
+                        <span class="badge badge--${client.status}">${STATUS_LABELS[client.status] || client.status}</span>
+                    </div>
+                    ${client.phone ? `<div class="scheda-contact"><span>📞</span><span>${escapeHtml(client.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(client.phone)}" title="Copia numero">📋</button></div>` : ''}
+                    ${client.email ? `<div class="scheda-contact"><span>✉️</span><a href="mailto:${escapeHtml(client.email)}">${escapeHtml(client.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(client.email)}" title="Copia email">📋</button></div>` : ''}
+                </div>
+            </div>
+            ${client.internal_notes ? `<div class="scheda-notes"><strong>Note interne</strong><p>${escapeHtml(client.internal_notes)}</p></div>` : ''}
+            <div class="scheda-stats">
+                <span class="entity-card__stat"><span class="entity-card__stat-icon">🏢</span><span class="entity-card__stat-label">${propLabel}</span></span>
+            </div>
+            <div class="scheda-id-info">
+                <div class="scheda-id-info__label">Carta di Identità</div>
+                <div id="scheda-id-card-status"><p class="text-muted">Caricamento...</p></div>
+            </div>
+        `;
+
+        document.querySelectorAll('#scheda-modal-body .btn-copy').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(btn.dataset.copy, btn); });
+        });
+
+        document.getElementById('scheda-modal').hidden = false;
+        loadSchedaIdDoc(client.id);
+    }
+
+    function closeSchedaModal() {
+        document.getElementById('scheda-modal').hidden = true;
+        schedaClientId = null;
+    }
+
+    async function loadSchedaIdDoc(clientId) {
+        const container = document.getElementById('scheda-id-card-status');
+        if (!container) return;
+        try {
+            const res  = await fetch(`api/documents.php?doc_type=id&client_id=${clientId}&limit=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const docs = json.data?.items || [];
+            if (docs.length === 0) {
+                container.innerHTML = '<p class="text-muted">Nessuna carta di identità caricata.</p>';
+            } else {
+                const doc = docs[0];
+                container.innerHTML = `<div class="id-card-row"><span>📄 ${escapeHtml(doc.original_name)}</span><a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza / Stampa</a></div>`;
+            }
+        } catch (_) {
+            if (container) container.innerHTML = '<p class="text-muted">Impossibile caricare.</p>';
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // ID card (carta di identità) for edit modal
+    // -------------------------------------------------------------------------
+
+    async function loadClientIdDocForModal(clientId) {
+        const container = document.getElementById('client-id-card-status');
+        if (!container) return;
+        container.innerHTML = '<p class="text-muted">Caricamento...</p>';
+        try {
+            const res  = await fetch(`api/documents.php?doc_type=id&client_id=${clientId}&limit=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const docs = json.data?.items || [];
+            if (docs.length === 0) {
+                container.innerHTML = '<p class="text-muted">Nessuna carta di identità caricata.</p>';
+            } else {
+                const doc = docs[0];
+                container.innerHTML = `
+                    <div class="id-card-row">
+                        <span>📄 ${escapeHtml(doc.original_name)}</span>
+                        <span class="text-muted" style="font-size:12px">${formatDate(doc.created_at)}</span>
+                        <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza</a>
+                        <button type="button" class="btn btn--sm btn--ghost" id="btn-delete-id-card" style="color:#b91c1c" title="Rimuovi">🗑️</button>
+                    </div>`;
+                document.getElementById('btn-delete-id-card')?.addEventListener('click', async () => {
+                    if (!await confirmDialog('Rimuovere la carta di identità?', { title: 'Rimuovi documento', confirmText: 'Rimuovi' })) return;
+                    try {
+                        const r = await fetch(`api/documents.php?id=${doc.id}`, { method: 'DELETE' });
+                        const j = await r.json();
+                        if (!j.success) throw new Error(j.error);
+                        loadClientIdDocForModal(clientId);
+                    } catch (err) { showAlert(err.message, 'error'); }
+                });
+            }
+        } catch (err) {
+            if (container) container.innerHTML = `<p class="text-muted">Errore: ${escapeHtml(err.message)}</p>`;
+        }
+    }
+
+    async function uploadIdDocument(clientId, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('doc_type', 'id');
+        formData.append('client_id', clientId);
+        formData.append('title', 'Carta di Identità');
+        const btn = document.getElementById('btn-upload-id-card');
+        if (btn) { btn.disabled = true; btn.textContent = 'Caricamento...'; }
+        try {
+            const res  = await fetch('api/documents.php', { method: 'POST', body: formData });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert('Carta di identità caricata.', 'success');
+            loadClientIdDocForModal(clientId);
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '⬆️ Carica Carta di Identità'; }
+        }
+    }
+
+    async function loadAndPrintIdDoc(clientId) {
+        try {
+            const res  = await fetch(`api/documents.php?doc_type=id&client_id=${clientId}&limit=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const docs = json.data?.items || [];
+            if (docs.length === 0) {
+                showAlert('Nessuna carta di identità caricata per questo proprietario.', 'error');
+                return;
+            }
+            window.open(docs[0].download_url, '_blank');
+        } catch (_) {
+            showAlert('Impossibile recuperare il documento.', 'error');
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Copy to clipboard
+    // -------------------------------------------------------------------------
+
+    function copyToClipboard(text, btn) {
+        const finish = () => {
+            if (!btn) return;
+            const orig = btn.textContent;
+            btn.textContent = '✅';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+        };
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(finish).catch(finish);
+        } else {
+            const el = document.createElement('textarea');
+            el.value = text;
+            el.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(el);
+            el.select();
+            try { document.execCommand('copy'); } catch (_) {}
+            document.body.removeChild(el);
+            finish();
+        }
     }
 
     init();
