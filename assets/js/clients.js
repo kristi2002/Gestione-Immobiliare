@@ -229,9 +229,10 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
+                    ${c.codice_fiscale ? `<div class="entity-card__info"><span class="entity-card__info-icon">🪪</span><span style="flex:1;min-width:0;font-family:monospace;font-size:12px">${escapeHtml(c.codice_fiscale)}</span></div>` : ''}
                     ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon">📞</span><span style="flex:1;min-width:0">${escapeHtml(c.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.phone)}" title="Copia numero">📋</button></div>` : ''}
                     ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon">✉️</span><a href="mailto:${escapeHtml(c.email)}" style="flex:1;min-width:0">${escapeHtml(c.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.email)}" title="Copia email">📋</button></div>` : ''}
-                    ${!c.phone && !c.email ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
+                    ${!c.codice_fiscale && !c.phone && !c.email ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__stat">
@@ -336,10 +337,23 @@
     // Modal
     // -------------------------------------------------------------------------
 
+    function showModalError(message) {
+        const el = document.getElementById('client-modal-error');
+        if (!el) return;
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+
+    function clearModalError() {
+        const el = document.getElementById('client-modal-error');
+        if (el) el.style.display = 'none';
+    }
+
     function openModal(client = null) {
         els.form.reset();
         document.getElementById('client-id').value = '';
         editingClientId = null;
+        clearModalError();
         document.getElementById('client-comm-section').hidden = true;
         document.getElementById('btn-owner-report').hidden = true;
 
@@ -350,6 +364,7 @@
             document.getElementById('client-id').value       = client.id;
             document.getElementById('client-name').value     = client.name;
             document.getElementById('client-surname').value  = client.surname;
+            document.getElementById('client-cf').value       = client.codice_fiscale || '';
             document.getElementById('client-phone').value    = client.phone || '';
             document.getElementById('client-email').value    = client.email || '';
             document.getElementById('client-status').value   = client.status;
@@ -372,7 +387,6 @@
         els.modal.hidden = true;
         editingClientId = null;
         document.getElementById('client-id-card-section').hidden = true;
-        document.getElementById('client-id-card-status').innerHTML = '';
     }
 
     async function loadClientCommunications(clientId) {
@@ -438,6 +452,7 @@
         const data = {
             name:           document.getElementById('client-name').value.trim(),
             surname:        document.getElementById('client-surname').value.trim(),
+            codice_fiscale: document.getElementById('client-cf').value.trim().toUpperCase() || null,
             phone:          document.getElementById('client-phone').value.trim(),
             email:          document.getElementById('client-email').value.trim(),
             status:         document.getElementById('client-status').value,
@@ -454,7 +469,7 @@
             showAlert('Proprietario salvato con successo.', 'success');
             loadClients();
         } catch (err) {
-            showAlert(err.message, 'error');
+            showModalError(err.message);
         } finally {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Salva';
@@ -669,6 +684,7 @@
                         <span>${escapeHtml(client.name)} ${escapeHtml(client.surname)}</span>
                         <span class="badge badge--${client.status}">${STATUS_LABELS[client.status] || client.status}</span>
                     </div>
+                    ${client.codice_fiscale ? `<div class="scheda-contact"><span>🪪</span><span style="font-family:monospace;font-size:13px">${escapeHtml(client.codice_fiscale)}</span></div>` : ''}
                     ${client.phone ? `<div class="scheda-contact"><span>📞</span><span>${escapeHtml(client.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(client.phone)}" title="Copia numero">📋</button></div>` : ''}
                     ${client.email ? `<div class="scheda-contact"><span>✉️</span><a href="mailto:${escapeHtml(client.email)}">${escapeHtml(client.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(client.email)}" title="Copia email">📋</button></div>` : ''}
                 </div>

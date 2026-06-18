@@ -130,6 +130,7 @@
                 <div class="lead-card__body">
                     <div class="lead-meta"><span class="badge badge--interest">${INTEREST_LABELS[l.interest_type] || l.interest_type}</span>
                         ${budget ? `<span class="prop-chip">💶 ${escapeHtml(budget)}</span>` : ''}</div>
+                    ${l.codice_fiscale ? `<div class="entity-card__info">🪪 <span style="font-family:monospace;font-size:12px">${escapeHtml(l.codice_fiscale)}</span></div>` : ''}
                     ${l.phone ? `<div class="entity-card__info">📞 ${escapeHtml(l.phone)}</div>` : ''}
                     ${l.email ? `<div class="entity-card__info">✉️ ${escapeHtml(l.email)}</div>` : ''}
                     <div class="entity-card__info text-muted">Fonte: ${SOURCE_LABELS[l.source] || l.source}${l.agent_name ? ' · Agente: ' + escapeHtml(l.agent_name) : ''}</div>
@@ -211,11 +212,13 @@
     function openModal(lead = null) {
         els.form.reset();
         document.getElementById('lead-id').value = '';
+        clearLeadModalError();
         if (lead) {
             els.modalTitle.textContent = 'Modifica Lead';
             document.getElementById('lead-id').value = lead.id;
             document.getElementById('lead-name').value = lead.name;
             document.getElementById('lead-surname').value = lead.surname;
+            document.getElementById('lead-cf').value = lead.codice_fiscale || '';
             document.getElementById('lead-phone').value = lead.phone || '';
             document.getElementById('lead-email').value = lead.email || '';
             document.getElementById('lead-interest').value = lead.interest_type;
@@ -239,12 +242,25 @@
     function closeModal() { els.modal.hidden = true; }
     function closeMatchModal() { els.matchModal.hidden = true; }
 
+    function showLeadModalError(message) {
+        const el = document.getElementById('lead-modal-error');
+        if (!el) return;
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+
+    function clearLeadModalError() {
+        const el = document.getElementById('lead-modal-error');
+        if (el) el.style.display = 'none';
+    }
+
     async function handleFormSubmit(e) {
         e.preventDefault();
         const id = document.getElementById('lead-id').value;
         const data = {
             name: document.getElementById('lead-name').value.trim(),
             surname: document.getElementById('lead-surname').value.trim(),
+            codice_fiscale: document.getElementById('lead-cf').value.trim().toUpperCase() || null,
             phone: document.getElementById('lead-phone').value.trim(),
             email: document.getElementById('lead-email').value.trim(),
             interest_type: document.getElementById('lead-interest').value,
@@ -274,7 +290,7 @@
             showAlert('Lead salvato.', 'success');
             loadLeads();
         } catch (err) {
-            showAlert(err.message, 'error');
+            showLeadModalError(err.message);
         } finally {
             btn.disabled = false; btn.textContent = 'Salva';
         }

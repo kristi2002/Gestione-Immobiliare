@@ -49,6 +49,9 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'uq_clients_cf')) {
+        apiError('Esiste già un proprietario con questo codice fiscale.');
+    }
     apiError('Errore database.', 500);
 }
 
@@ -66,7 +69,7 @@ function listClients(PDO $db): void
     $params = [];
 
     if ($search !== '') {
-        $frag = apiWordSearch($search, ['c.name', 'c.surname', 'c.email', 'c.phone', 'c.address', 'c.city'], $params);
+        $frag = apiWordSearch($search, ['c.name', 'c.surname', 'c.email', 'c.phone', 'c.codice_fiscale', 'c.internal_notes'], $params);
         if ($frag) $where .= " AND $frag";
     }
 
@@ -79,7 +82,7 @@ function listClients(PDO $db): void
 
     $countSql = "SELECT COUNT(*) FROM clients c $where";
 
-    $dataSql = "SELECT c.id, c.name, c.surname, c.phone, c.email,
+    $dataSql = "SELECT c.id, c.name, c.surname, c.codice_fiscale, c.phone, c.email,
                    c.internal_notes, c.creation_date, c.status,
                    COUNT(p.id) AS property_count
             FROM clients c
@@ -116,8 +119,8 @@ function createClient(PDO $db): void
     $validated = validateClientInput($data);
 
     $stmt = $db->prepare(
-        "INSERT INTO clients (name, surname, phone, email, internal_notes, status)
-         VALUES (:name, :surname, :phone, :email, :internal_notes, :status)"
+        "INSERT INTO clients (name, surname, codice_fiscale, phone, email, internal_notes, status)
+         VALUES (:name, :surname, :codice_fiscale, :phone, :email, :internal_notes, :status)"
     );
     $stmt->execute($validated);
 
@@ -137,8 +140,8 @@ function updateClient(PDO $db, int $id): void
 
     $stmt = $db->prepare(
         "UPDATE clients
-         SET name = :name, surname = :surname, phone = :phone,
-             email = :email, internal_notes = :internal_notes, status = :status
+         SET name = :name, surname = :surname, codice_fiscale = :codice_fiscale,
+             phone = :phone, email = :email, internal_notes = :internal_notes, status = :status
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -168,6 +171,7 @@ function validateClientInput(array $data): array
 {
     $name    = trim($data['name'] ?? '');
     $surname = trim($data['surname'] ?? '');
+    $cf      = strtoupper(trim($data['codice_fiscale'] ?? '')) ?: null;
     $phone   = trim($data['phone'] ?? '') ?: null;
     $email   = trim($data['email'] ?? '') ?: null;
     $notes   = trim($data['internal_notes'] ?? '') ?: null;
@@ -179,6 +183,12 @@ function validateClientInput(array $data): array
     if ($surname === '') {
         apiError('Il cognome è obbligatorio.');
     }
+    if ($cf === null) {
+        apiError('Il codice fiscale è obbligatorio.');
+    }
+    if (!preg_match('/^[A-Z0-9]{11,16}$/', $cf)) {
+        apiError('Codice fiscale non valido (11-16 caratteri alfanumerici).');
+    }
     if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         apiError('Indirizzo email non valido.');
     }
@@ -189,6 +199,7 @@ function validateClientInput(array $data): array
     return [
         'name'           => $name,
         'surname'        => $surname,
+        'codice_fiscale' => $cf,
         'phone'          => $phone,
         'email'          => $email,
         'internal_notes' => $notes,

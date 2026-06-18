@@ -92,7 +92,7 @@ function listProperties(PDO $db): void
             $where";
 
     $dataSql = "SELECT p.id, p.client_id, p.address, p.city, p.cap, p.province, p.sqm,
-                   p.rooms, p.bathrooms, p.floor, p.description,
+                   p.rooms, p.bathrooms, p.floor, p.year_built, p.property_type, p.description,
                    p.additional_features, p.internal_notes, p.status,
                    p.price, p.price_type, p.latitude, p.longitude, p.geo_confidence,
                    p.cover_media_id, p.created_at,
@@ -170,11 +170,11 @@ function createProperty(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO properties
             (client_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
-             description, additional_features, internal_notes, status,
+             year_built, property_type, description, additional_features, internal_notes, status,
              price, price_type, latitude, longitude, geo_confidence)
          VALUES
             (:client_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
-             :description, :additional_features, :internal_notes, :status,
+             :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
              :price, :price_type, :latitude, :longitude, :geo_confidence)"
     );
     $stmt->execute($validated);
@@ -229,6 +229,7 @@ function updateProperty(PDO $db, int $id): void
         "UPDATE properties
          SET client_id = :client_id, address = :address, city = :city, cap = :cap,
              province = :province, sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
+             year_built = :year_built, property_type = :property_type,
              description = :description, additional_features = :additional_features,
              internal_notes = :internal_notes, status = :status,
              price = :price, price_type = :price_type,
@@ -311,8 +312,10 @@ function validatePropertyInput(PDO $db, array $data): array
     $sqm       = isset($data['sqm']) && $data['sqm'] !== '' ? (float) $data['sqm'] : null;
     $rooms     = isset($data['rooms']) && $data['rooms'] !== '' ? (int) $data['rooms'] : null;
     $bathrooms = isset($data['bathrooms']) && $data['bathrooms'] !== '' ? (int) $data['bathrooms'] : null;
-    $floor     = trim($data['floor'] ?? '') ?: null;
-    $desc      = trim($data['description'] ?? '') ?: null;
+    $floor        = trim($data['floor'] ?? '') ?: null;
+    $yearBuilt    = isset($data['year_built']) && $data['year_built'] !== '' ? (int) $data['year_built'] : null;
+    $propertyType = trim($data['property_type'] ?? 'appartamento');
+    $desc         = trim($data['description'] ?? '') ?: null;
     $features  = trim($data['additional_features'] ?? '') ?: null;
     $notes     = trim($data['internal_notes'] ?? '') ?: null;
     $status    = trim($data['status'] ?? 'available');
@@ -340,6 +343,13 @@ function validatePropertyInput(PDO $db, array $data): array
     if (!in_array($priceType, ['affitto', 'vendita'], true)) {
         apiError('Tipo prezzo non valido.');
     }
+    $validTypes = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
+    if (!in_array($propertyType, $validTypes, true)) {
+        $propertyType = 'appartamento';
+    }
+    if ($yearBuilt !== null && ($yearBuilt < 1800 || $yearBuilt > (int) date('Y'))) {
+        apiError('Anno di costruzione non valido.');
+    }
     if ($sqm !== null && $sqm < 0) {
         apiError('I metri quadri non possono essere negativi.');
     }
@@ -366,6 +376,8 @@ function validatePropertyInput(PDO $db, array $data): array
         'rooms'               => $rooms,
         'bathrooms'           => $bathrooms,
         'floor'               => $floor,
+        'year_built'          => $yearBuilt,
+        'property_type'       => $propertyType,
         'description'         => $desc,
         'additional_features' => $features,
         'internal_notes'      => $notes,

@@ -192,10 +192,8 @@
                 btn.addEventListener('click', async () => {
                     if (!await confirmDialog('Vuoi scollegare questo immobile dall\'edificio?', { title: 'Scollega immobile', confirmText: 'Scollega', danger: false, icon: '🔗' })) return;
                     try {
-                        const r = await fetch(`${API}?action=unlink`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ building_id: btn.dataset.building, property_id: btn.dataset.prop }),
+                        const r = await fetch(`${API}?id=${btn.dataset.building}&action=unlink_property&property_id=${btn.dataset.prop}`, {
+                            method: 'DELETE',
                         });
                         const j = await r.json();
                         if (!j.success) throw new Error(j.error);
@@ -224,10 +222,10 @@
         const btn = document.getElementById('buildings-link-confirm');
         btn.disabled = true;
         try {
-            const res  = await fetch(`${API}?action=link`, {
+            const res  = await fetch(`${API}?id=${buildingId}&action=link_property`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ building_id: buildingId, property_id: propertyId }),
+                body: JSON.stringify({ property_id: propertyId }),
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);

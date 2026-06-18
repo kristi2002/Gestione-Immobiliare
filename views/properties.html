@@ -104,6 +104,24 @@
 
             <fieldset class="form-section">
                 <legend>Caratteristiche</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="property-type">Tipo immobile</label>
+                        <select id="property-type" class="form-select">
+                            <option value="appartamento">Appartamento</option>
+                            <option value="villa">Villa</option>
+                            <option value="ufficio">Ufficio</option>
+                            <option value="negozio">Negozio</option>
+                            <option value="box">Box / Garage</option>
+                            <option value="terreno">Terreno</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="property-year-built">Anno costruzione</label>
+                        <input type="number" id="property-year-built" class="form-input" min="1800" max="2099" step="1" placeholder="es. 1985">
+                    </div>
+                </div>
                 <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="property-sqm">Metri quadri</label>
@@ -170,11 +188,11 @@
                         <option value="video">Video</option>
                         <option value="floor_plan">Planimetria</option>
                         <option value="house_map">Cartina della casa</option>
-                        <option value="attachment">Altro allegato</option>
                     </select>
                     <input type="file" id="media-file" class="gallery-upload__file">
                     <button type="button" class="btn btn--ghost" id="btn-upload-media">Carica file</button>
                 </div>
+                <p class="text-muted" style="font-size:0.82rem;margin-top:4px;">Per PDF e documenti usa la sezione <strong>Documenti</strong>.</p>
 
                 <div id="gallery-grid" class="gallery-grid">
                     <p class="text-muted gallery-empty">Nessun file caricato.</p>

@@ -163,6 +163,11 @@
         async loadView(url, viewKey) {
             const token = ++this._viewToken;
             this.currentView = viewKey;
+            // Hide the compare bar when leaving the properties view
+            if (viewKey !== 'properties') {
+                const compareBar = document.getElementById('compare-float-bar');
+                if (compareBar) compareBar.hidden = true;
+            }
             this.showLoading();
 
             if (this.titleEl && this.viewTitles[viewKey]) {

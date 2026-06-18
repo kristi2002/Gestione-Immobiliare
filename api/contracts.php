@@ -76,7 +76,11 @@ function listContracts(PDO $db): void
         $params['type'] = $type;
     }
 
-    $countSql = "SELECT COUNT(*) FROM contracts ct $where";
+    $countSql = "SELECT COUNT(*) FROM contracts ct
+                 INNER JOIN properties p ON p.id = ct.property_id
+                 LEFT JOIN tenants t ON t.id = ct.tenant_id
+                 LEFT JOIN clients c ON c.id = ct.client_id
+                 $where";
 
     $dataSql = "SELECT ct.*, p.address AS property_address, p.city AS property_city,
                    t.name AS tenant_name, t.surname AS tenant_surname,

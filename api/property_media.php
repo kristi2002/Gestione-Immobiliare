@@ -317,7 +317,7 @@ function uploadErrorMessage(int $code): string
 function detectMimeType(array $file): string
 {
     $mime = '';
-    if (!empty($file['tmp_name']) && is_file($file['tmp_name'])) {
+    if (!empty($file['tmp_name']) && is_file($file['tmp_name']) && function_exists('mime_content_type')) {
         $mime = mime_content_type($file['tmp_name']) ?: '';
     }
     if ($mime === '' || $mime === 'application/octet-stream') {

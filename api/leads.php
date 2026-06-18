@@ -62,6 +62,9 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'uq_clients_cf')) {
+        apiError('Esiste già un proprietario con questo codice fiscale.');
+    }
     apiError('Errore database.', 500);
 }
 
@@ -81,7 +84,7 @@ function listLeads(PDO $db): void
     $params = [];
 
     if ($search !== '') {
-        $frag = apiWordSearch($search, ['l.name', 'l.surname', 'l.phone', 'l.email', 'l.notes'], $params);
+        $frag = apiWordSearch($search, ['l.name', 'l.surname', 'l.phone', 'l.email', 'l.codice_fiscale', 'l.notes'], $params);
         if ($frag) $where .= " AND $frag";
     }
     if ($status !== '' && in_array($status, LEAD_STATUSES, true)) {
@@ -133,11 +136,11 @@ function createLead(PDO $db): void
     $validated = validateLeadInput(apiGetJsonBody());
     $stmt = $db->prepare(
         "INSERT INTO leads
-            (name, surname, phone, email, interest_type, budget_min, budget_max,
+            (name, surname, codice_fiscale, phone, email, interest_type, budget_min, budget_max,
              preferred_city, preferred_type, min_rooms, min_sqm, status, source,
              assigned_to, notes)
          VALUES
-            (:name, :surname, :phone, :email, :interest_type, :budget_min, :budget_max,
+            (:name, :surname, :codice_fiscale, :phone, :email, :interest_type, :budget_min, :budget_max,
              :preferred_city, :preferred_type, :min_rooms, :min_sqm, :status, :source,
              :assigned_to, :notes)"
     );
@@ -153,7 +156,8 @@ function updateLead(PDO $db, int $id): void
     $validated = validateLeadInput(apiGetJsonBody());
     $stmt = $db->prepare(
         "UPDATE leads SET
-            name = :name, surname = :surname, phone = :phone, email = :email,
+            name = :name, surname = :surname, codice_fiscale = :codice_fiscale,
+            phone = :phone, email = :email,
             interest_type = :interest_type, budget_min = :budget_min, budget_max = :budget_max,
             preferred_city = :preferred_city, preferred_type = :preferred_type,
             min_rooms = :min_rooms, min_sqm = :min_sqm, status = :status, source = :source,
@@ -230,17 +234,21 @@ function convertLead(PDO $db, int $id): void
     if (!$lead) {
         apiError('Lead non trovato.', 404);
     }
+    if (empty($lead['codice_fiscale'])) {
+        apiError('Il lead non ha un codice fiscale. Modifica il lead prima di convertirlo.');
+    }
 
     $insert = $db->prepare(
-        "INSERT INTO clients (name, surname, phone, email, internal_notes, status)
-         VALUES (:name, :surname, :phone, :email, :notes, 'active')"
+        "INSERT INTO clients (name, surname, codice_fiscale, phone, email, internal_notes, status)
+         VALUES (:name, :surname, :codice_fiscale, :phone, :email, :notes, 'active')"
     );
     $insert->execute([
-        'name'    => $lead['name'],
-        'surname' => $lead['surname'],
-        'phone'   => $lead['phone'],
-        'email'   => $lead['email'],
-        'notes'   => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
+        'name'           => $lead['name'],
+        'surname'        => $lead['surname'],
+        'codice_fiscale' => $lead['codice_fiscale'],
+        'phone'          => $lead['phone'],
+        'email'          => $lead['email'],
+        'notes'          => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
     ]);
     $clientId = (int) $db->lastInsertId();
 
@@ -323,6 +331,7 @@ function validateLeadInput(array $data): array
 {
     $name     = trim($data['name'] ?? '');
     $surname  = trim($data['surname'] ?? '');
+    $cf       = strtoupper(trim($data['codice_fiscale'] ?? '')) ?: null;
     $phone    = trim($data['phone'] ?? '') ?: null;
     $email    = trim($data['email'] ?? '') ?: null;
     $interest = trim($data['interest_type'] ?? 'affitto');
@@ -339,6 +348,8 @@ function validateLeadInput(array $data): array
 
     if ($name === '')    apiError('Il nome è obbligatorio.');
     if ($surname === '') apiError('Il cognome è obbligatorio.');
+    if ($cf === null)    apiError('Il codice fiscale è obbligatorio.');
+    if (!preg_match('/^[A-Z0-9]{11,16}$/', $cf)) apiError('Codice fiscale non valido (11-16 caratteri alfanumerici).');
     if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) apiError('Email non valida.');
     if (!in_array($interest, LEAD_INTERESTS, true)) apiError('Tipo interesse non valido.');
     if (!in_array($status, LEAD_STATUSES, true)) apiError('Stato non valido.');
@@ -348,6 +359,7 @@ function validateLeadInput(array $data): array
     return [
         'name'           => $name,
         'surname'        => $surname,
+        'codice_fiscale' => $cf,
         'phone'          => $phone,
         'email'          => $email,
         'interest_type'  => $interest,

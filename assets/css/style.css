@@ -2,6 +2,9 @@
    Gestionale Immobiliare — Global Styles (Phase 1)
    ========================================================================== */
 
+/* Enforce the HTML `hidden` attribute even on elements with explicit display rules (e.g. .btn uses inline-flex) */
+[hidden] { display: none !important; }
+
 :root {
     --color-primary:       #2563eb;
     --color-primary-dark:  #1d4ed8;

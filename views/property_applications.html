@@ -6,6 +6,7 @@
         </div>
         <div class="view-header__actions">
             <button class="btn btn--ghost" id="btn-pa-refresh" title="Aggiorna">⟳ Aggiorna</button>
+            <button class="btn btn--primary" id="btn-pa-new">+ Nuova Richiesta</button>
         </div>
     </div>
 
@@ -72,6 +73,55 @@
             </select>
             <button type="button" class="btn btn--primary" id="pa-detail-save-status">Salva stato</button>
         </div>
+    </div>
+</div>
+
+<!-- New application modal -->
+<div class="modal-overlay" id="pa-new-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="pa-new-title">
+        <div class="modal-header">
+            <h3 id="pa-new-title">Nuova Richiesta di Locazione / Acquisto</h3>
+            <button class="modal-close" id="pa-new-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="pa-new-form" class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pa-new-property">Immobile <span class="required">*</span></label>
+                    <select id="pa-new-property" class="form-select" required>
+                        <option value="">— Seleziona immobile —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pa-new-type">Tipo richiesta</label>
+                    <select id="pa-new-type" class="form-select">
+                        <option value="affitto">Affitto</option>
+                        <option value="acquisto">Acquisto</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pa-new-name">Nome richiedente <span class="required">*</span></label>
+                    <input type="text" id="pa-new-name" class="form-input" required maxlength="150" placeholder="Es. Mario Rossi">
+                </div>
+                <div class="form-group">
+                    <label for="pa-new-phone">Telefono</label>
+                    <input type="tel" id="pa-new-phone" class="form-input" maxlength="30" placeholder="Es. +39 333 1234567">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pa-new-email">Email <span class="required">*</span></label>
+                <input type="email" id="pa-new-email" class="form-input" required maxlength="150" placeholder="richiedente@email.com">
+            </div>
+            <div class="form-group">
+                <label for="pa-new-message">Messaggio / Note</label>
+                <textarea id="pa-new-message" class="form-textarea" rows="3" placeholder="Informazioni aggiuntive ricevute per telefono…"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="pa-new-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="pa-new-save">Salva richiesta</button>
+            </div>
+        </form>
     </div>
 </div>
 

@@ -297,8 +297,27 @@
         Promise.all(uploads).then(() => loadMedia()).catch(() => showAlert('Errore durante il caricamento.', 'error'));
     }
 
+    let _pendingDeleteId = null;
+
     function deleteMedia(id) {
-        if (!confirm('Eliminare questo file?')) return;
+        const media = allMedia.find(m => String(m.id) === String(id));
+        const overlay = document.getElementById('pp-delete-media-modal');
+        const preview = document.getElementById('pp-delete-media-preview');
+        const nameEl  = document.getElementById('pp-delete-media-name');
+
+        const isPhoto = media && (!media.media_type || media.media_type === 'photo' || media.media_type === 'image');
+        if (isPhoto && media?.file_path) {
+            preview.innerHTML = `<img src="${esc(media.file_path)}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+        } else {
+            preview.innerHTML = '📄';
+        }
+        nameEl.textContent = media?.original_name || media?.file_name || '';
+
+        _pendingDeleteId = id;
+        overlay.hidden = false;
+    }
+
+    function _execDeleteMedia(id) {
         fetch('api/property_media.php?id=' + id, { method: 'DELETE' })
             .then(r => r.json())
             .then(json => { if (!json.success) throw new Error(); loadMedia(); })
@@ -479,6 +498,7 @@
             document.getElementById('pp-sqm').value = p.sqm || '';
             document.getElementById('pp-rooms').value = p.rooms || '';
             document.getElementById('pp-bathrooms').value = p.bathrooms || '';
+            document.getElementById('pp-property-type').value = p.property_type || 'appartamento';
             document.getElementById('pp-price').value = p.price || '';
             document.getElementById('pp-price-type').value = p.price_type || 'affitto';
             document.getElementById('pp-description').value = p.description || '';
@@ -506,6 +526,7 @@
             sqm: parseFloat(document.getElementById('pp-sqm').value) || null,
             rooms: parseInt(document.getElementById('pp-rooms').value, 10) || null,
             bathrooms: parseInt(document.getElementById('pp-bathrooms').value, 10) || null,
+            property_type: document.getElementById('pp-property-type').value,
             price: parseFloat(document.getElementById('pp-price').value) || null,
             price_type: document.getElementById('pp-price-type').value,
             description: document.getElementById('pp-description').value.trim() || null,
@@ -611,6 +632,21 @@
         document.getElementById('pp-qr-cancel').addEventListener('click', closeQrModal);
         document.getElementById('pp-qr-copy').addEventListener('click', () => {
             navigator.clipboard.writeText(document.getElementById('pp-qr-url').value).catch(() => {});
+        });
+
+        const closeDeleteModal = () => {
+            document.getElementById('pp-delete-media-modal').hidden = true;
+            _pendingDeleteId = null;
+        };
+        document.getElementById('pp-delete-media-close').addEventListener('click', closeDeleteModal);
+        document.getElementById('pp-delete-media-cancel').addEventListener('click', closeDeleteModal);
+        document.getElementById('pp-delete-media-modal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeDeleteModal();
+        });
+        document.getElementById('pp-delete-media-confirm').addEventListener('click', () => {
+            const id = _pendingDeleteId;
+            closeDeleteModal();
+            if (id != null) _execDeleteMedia(id);
         });
     }
 

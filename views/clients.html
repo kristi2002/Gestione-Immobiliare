@@ -52,20 +52,27 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="client-name">Nome <span class="required">*</span></label>
-                    <input type="text" id="client-name" name="name" class="form-input" required maxlength="100">
+                    <input type="text" id="client-name" name="name" class="form-input" required maxlength="100" placeholder="es. Mario">
                 </div>
                 <div class="form-group">
                     <label for="client-surname">Cognome <span class="required">*</span></label>
-                    <input type="text" id="client-surname" name="surname" class="form-input" required maxlength="100">
+                    <input type="text" id="client-surname" name="surname" class="form-input" required maxlength="100" placeholder="es. Rossi">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
+                    <label for="client-cf">Codice Fiscale</label>
+                    <input type="text" id="client-cf" name="codice_fiscale" class="form-input" required maxlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase">
+                </div>
+                <div class="form-group">
                     <label for="client-phone">Telefono</label>
                     <input type="tel" id="client-phone" name="phone" class="form-input" maxlength="30">
                 </div>
-                <div class="form-group">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1">
                     <label for="client-email">Email</label>
                     <input type="email" id="client-email" name="email" class="form-input" maxlength="255">
                 </div>
@@ -115,6 +122,7 @@
                 <button type="button" class="btn btn--ghost" id="btn-open-chat">Apri conversazione completa →</button>
             </fieldset>
 
+            <div id="client-modal-error" class="alert alert--error" style="display:none;margin:0 0 12px 0"></div>
             <div class="modal-footer">
                 <button type="button" class="btn btn--ghost" id="btn-owner-report" hidden>📄 Genera Rendiconto</button>
                 <button type="button" class="btn btn--ghost" id="modal-cancel">Annulla</button>

@@ -35,8 +35,9 @@ try {
     $stmt = $db->prepare(
         "SELECT p.id, p.address, p.city, p.cap, p.province,
                 p.sqm AS size_sqm, p.rooms, p.bathrooms, p.floor,
+                p.year_built, p.property_type,
                 p.description, p.additional_features AS features,
-                p.status, p.price AS purchase_price,
+                p.status, p.price, p.price_type,
                 p.created_at, p.latitude, p.longitude,
                 c.name AS client_name, c.surname AS client_surname
          FROM properties p
@@ -57,7 +58,7 @@ try {
     foreach ($properties as $prop) {
         $propId = (int) $prop['id'];
 
-        // Current monthly rent from latest active contract
+        // Current monthly rent: prefer active signed contract, fall back to price if price_type='affitto'
         $rentStmt = $db->prepare(
             "SELECT monthly_rent FROM contracts
              WHERE property_id = :pid AND status = 'signed'
@@ -67,7 +68,13 @@ try {
         );
         $rentStmt->execute(['pid' => $propId]);
         $rentRow     = $rentStmt->fetch();
-        $monthlyRent = $rentRow ? (float) $rentRow['monthly_rent'] : null;
+        if ($rentRow) {
+            $monthlyRent = (float) $rentRow['monthly_rent'];
+        } elseif ($prop['price_type'] === 'affitto' && $prop['price'] !== null) {
+            $monthlyRent = (float) $prop['price'];
+        } else {
+            $monthlyRent = null;
+        }
 
         // Total income last 12 months
         $incomeStmt = $db->prepare(
@@ -78,6 +85,15 @@ try {
         );
         $incomeStmt->execute(['pid' => $propId]);
         $totalIncome12m = (float) $incomeStmt->fetchColumn();
+
+        // Latest appraised market value
+        $apprStmt = $db->prepare(
+            "SELECT estimated_value FROM property_appraisals
+             WHERE property_id = :pid
+             ORDER BY appraisal_date DESC, id DESC LIMIT 1"
+        );
+        $apprStmt->execute(['pid' => $propId]);
+        $currentValue = ($v = $apprStmt->fetchColumn()) !== false ? (float) $v : null;
 
         // Last payment date
         $lastPayStmt = $db->prepare(
@@ -112,13 +128,15 @@ try {
             'city'               => $prop['city'],
             'cap'                => $prop['cap'],
             'province'           => $prop['province'],
+            'property_type'      => $prop['property_type'],
             'size_sqm'           => $prop['size_sqm'] !== null ? (float) $prop['size_sqm'] : null,
             'rooms'              => $prop['rooms'] !== null ? (int) $prop['rooms'] : null,
             'bathrooms'          => $prop['bathrooms'] !== null ? (int) $prop['bathrooms'] : null,
             'floor'              => $prop['floor'],
-            'year_built'         => null, // column may not exist; extend if added to schema
-            'purchase_price'     => $prop['purchase_price'] !== null ? (float) $prop['purchase_price'] : null,
-            'current_value'      => null, // placeholder for appraisals integration
+            'year_built'         => $prop['year_built'] !== null ? (int) $prop['year_built'] : null,
+            'price_type'         => $prop['price_type'],
+            'price'              => $prop['price'] !== null ? (float) $prop['price'] : null,
+            'current_value'      => $currentValue,
             'monthly_rent'       => $monthlyRent,
             'status'             => $prop['status'],
             'features'           => $features,

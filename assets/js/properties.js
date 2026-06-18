@@ -34,9 +34,8 @@
     const MEDIA_ACCEPT = {
         photo:      'image/jpeg,image/png,image/webp,image/gif',
         video:      'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov',
-        floor_plan: 'image/jpeg,image/png,image/webp,application/pdf',
-        house_map:  'image/jpeg,image/png,image/webp,application/pdf',
-        attachment: 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf,.doc,.docx',
+        floor_plan: 'image/jpeg,image/png,image/webp',
+        house_map:  'image/jpeg,image/png,image/webp',
     };
 
     const COVER_MEDIA_TYPES = new Set(['photo', 'floor_plan', 'house_map']);
@@ -95,21 +94,31 @@
     }
 
     function ensureCompareBar() {
-        if (document.getElementById('compare-float-bar')) return;
-        const bar = document.createElement('div');
-        bar.id = 'compare-float-bar';
-        bar.className = 'compare-float-bar';
-        bar.hidden = true;
-        bar.innerHTML = `
-            <div class="compare-float-bar__chips" id="compare-float-chips"></div>
-            <div class="compare-float-bar__actions">
-                <button type="button" class="btn btn--sm compare-float-clear" id="compare-float-clear">✕ Cancella selezione</button>
-                <button type="button" class="btn btn--sm compare-float-go" id="compare-float-go">📊 Confronta (<span id="compare-float-count">0</span>)</button>
-            </div>`;
-        document.body.appendChild(bar);
+        if (!document.getElementById('compare-float-bar')) {
+            const bar = document.createElement('div');
+            bar.id = 'compare-float-bar';
+            bar.className = 'compare-float-bar';
+            bar.hidden = true;
+            bar.innerHTML = `
+                <div class="compare-float-bar__chips" id="compare-float-chips"></div>
+                <div class="compare-float-bar__actions">
+                    <button type="button" class="btn btn--sm compare-float-clear" id="compare-float-clear">✕ Cancella selezione</button>
+                    <button type="button" class="btn btn--sm compare-float-go" id="compare-float-go">📊 Confronta (<span id="compare-float-count">0</span>)</button>
+                </div>`;
+            document.body.appendChild(bar);
+        }
 
-        document.getElementById('compare-float-go').addEventListener('click', openCompareModal);
-        document.getElementById('compare-float-clear').addEventListener('click', () => {
+        // Always rebind to the current closure — the SPA re-runs this script on
+        // every navigation, so the old bar would otherwise keep stale handlers.
+        const goBtn = document.getElementById('compare-float-go');
+        const clearBtn = document.getElementById('compare-float-clear');
+        const freshGo = goBtn.cloneNode(true);
+        const freshClear = clearBtn.cloneNode(true);
+        goBtn.replaceWith(freshGo);
+        clearBtn.replaceWith(freshClear);
+
+        freshGo.addEventListener('click', openCompareModal);
+        freshClear.addEventListener('click', () => {
             compareIds.clear();
             renderCards();
             updateCompareButton();
@@ -344,7 +353,6 @@
                         <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto">📊</button>
                         <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
                         <button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica scheda">✏️</button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
                     </div>
                 </div>
@@ -483,6 +491,8 @@
     async function openCompareModal() {
         if (compareIds.size < 2) return;
         document.getElementById('property-compare-modal').hidden = false;
+        const floatBar = document.getElementById('compare-float-bar');
+        if (floatBar) floatBar.hidden = true;
         const wrapper = document.getElementById('compare-table-wrapper');
         wrapper.innerHTML = '<p class="text-muted">Caricamento confronto…</p>';
         try {
@@ -492,21 +502,31 @@
             if (!json.success) throw new Error(json.error);
             const props = Array.isArray(json.data) ? json.data : (json.data?.properties || []);
             if (!props.length) throw new Error('Nessun immobile da confrontare.');
+            const propTypeLabels = { appartamento: 'Appartamento', villa: 'Villa', ufficio: 'Ufficio', negozio: 'Negozio', box: 'Box / Garage', terreno: 'Terreno', altro: 'Altro' };
+            const statusLabels   = { available: 'Disponibile', rented: 'Affittato', sold: 'Venduto', archived: 'Archiviato' };
+            const priceLabel     = props.every(p => p.price_type === 'vendita') ? 'Prezzo vendita'
+                                 : props.every(p => p.price_type === 'affitto') ? 'Canone listino'
+                                 : 'Prezzo';
             const rows = [
-                ['Indirizzo',         p => `${p.address}, ${p.city}`],
-                ['Tipo',              p => p.property_type || '—'],
-                ['Superficie',        p => p.size_sqm ? p.size_sqm + ' mq' : '—'],
-                ['Stanze',            p => p.rooms ?? '—'],
-                ['Bagni',             p => p.bathrooms ?? '—'],
-                ['Piano',             p => p.floor ?? '—'],
-                ['Anno costruzione',  p => p.year_built ?? '—'],
-                ['Prezzo acquisto',   p => p.purchase_price ? '€ ' + Number(p.purchase_price).toLocaleString('it-IT') : '—'],
-                ['Valore attuale',    p => p.current_value ? '€ ' + Number(p.current_value).toLocaleString('it-IT') : '—'],
-                ['Canone mensile',    p => p.monthly_rent ? '€ ' + Number(p.monthly_rent).toFixed(2) : '—'],
-                ['Reddito 12m',       p => p.total_income_12m ? '€ ' + Number(p.total_income_12m).toLocaleString('it-IT') : '—'],
-                ['ROI lordo',         p => (p.purchase_price && p.monthly_rent) ? ((p.monthly_rent*12/p.purchase_price)*100).toFixed(1)+'%' : '—'],
-                ['Stato',             p => p.status ?? '—'],
-                ['Occupato',          p => p.occupancy_status === 'occupied' ? 'Sì' : 'No'],
+                ['Indirizzo',        p => `${p.address}, ${p.city}`],
+                ['Tipo',             p => propTypeLabels[p.property_type] || p.property_type || '—'],
+                ['Superficie',       p => p.size_sqm ? p.size_sqm + ' mq' : '—'],
+                ['Stanze',           p => p.rooms ?? '—'],
+                ['Bagni',            p => p.bathrooms ?? '—'],
+                ['Piano',            p => p.floor ?? '—'],
+                ['Anno costruzione', p => p.year_built ?? '—'],
+                [priceLabel,         p => p.price ? '€ ' + Number(p.price).toLocaleString('it-IT') : '—'],
+                ['Valore stimato',   p => p.current_value ? '€ ' + Number(p.current_value).toLocaleString('it-IT') : '—'],
+                ['Canone mensile',   p => p.monthly_rent ? '€ ' + Number(p.monthly_rent).toLocaleString('it-IT') : '—'],
+                ['Reddito 12m',      p => p.total_income_12m != null ? '€ ' + Number(p.total_income_12m).toLocaleString('it-IT') : '—'],
+                ['ROI lordo',        p => {
+                    if (!p.monthly_rent) return '—';
+                    const base = (p.price_type === 'vendita' && p.price) ? p.price
+                               : (p.current_value || null);
+                    return base ? ((p.monthly_rent * 12 / base) * 100).toFixed(1) + '%' : '—';
+                }],
+                ['Stato',            p => statusLabels[p.status] || p.status || '—'],
+                ['Occupato',         p => p.occupancy_status === 'occupied' ? 'Sì' : 'No'],
             ];
             const headerCells = props.map(p => `<th>${escapeHtml(p.address)}</th>`).join('');
             const bodyRows = rows.map(([label, fn]) =>
@@ -797,8 +817,10 @@
             document.getElementById('property-city').value      = property.city;
             document.getElementById('property-cap').value       = property.cap || '';
             document.getElementById('property-province').value  = property.province || '';
-            document.getElementById('property-floor').value     = property.floor || '';
-            document.getElementById('property-sqm').value       = property.sqm ?? '';
+            document.getElementById('property-floor').value      = property.floor || '';
+            document.getElementById('property-type').value       = property.property_type || 'appartamento';
+            document.getElementById('property-year-built').value = property.year_built ?? '';
+            document.getElementById('property-sqm').value        = property.sqm ?? '';
             document.getElementById('property-rooms').value     = property.rooms ?? '';
             document.getElementById('property-bathrooms').value = property.bathrooms ?? '';
             document.getElementById('property-description').value = property.description || '';
@@ -956,6 +978,8 @@
             cap:                 document.getElementById('property-cap').value.trim(),
             province:            document.getElementById('property-province').value.trim(),
             floor:               document.getElementById('property-floor').value.trim(),
+            property_type:       document.getElementById('property-type').value,
+            year_built:          document.getElementById('property-year-built').value,
             sqm:                 document.getElementById('property-sqm').value,
             rooms:               document.getElementById('property-rooms').value,
             bathrooms:           document.getElementById('property-bathrooms').value,
@@ -1115,11 +1139,12 @@
             const res = await fetch(`${APPRAISAL_API}?property_id=${propertyId}`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            if (!json.data.length) {
+            const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+            if (!items.length) {
                 container.innerHTML = '<p class="text-muted">Nessuna valutazione registrata.</p>';
                 return;
             }
-            container.innerHTML = json.data.map(a => `
+            container.innerHTML = items.map(a => `
                 <div class="appraisal-item">
                     <div><strong>€ ${Number(a.estimated_value).toLocaleString('it-IT')}</strong>
                         ${a.estimated_rent ? ` · canone € ${Number(a.estimated_rent).toLocaleString('it-IT')}` : ''}

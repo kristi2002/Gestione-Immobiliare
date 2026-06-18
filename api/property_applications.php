@@ -32,7 +32,7 @@ try {
                 if (!$id) apiError('ID richiesta mancante.');
                 convertToLead($db, $id);
             } else {
-                apiError('Azione non riconosciuta.', 400);
+                createApplication($db);
             }
             break;
         case 'PUT':
@@ -180,6 +180,42 @@ function convertToLead(PDO $db, int $id): void
     )->execute([':lead_id' => $leadId, ':id' => $id]);
 
     apiSuccess(['lead_id' => $leadId, 'application_id' => $id]);
+}
+
+function createApplication(PDO $db): void
+{
+    $body = apiGetJsonBody();
+    $propertyId = isset($body['property_id']) ? (int) $body['property_id'] : 0;
+    $name       = trim($body['applicant_name'] ?? '');
+    $email      = trim($body['applicant_email'] ?? '');
+    $phone      = trim($body['applicant_phone'] ?? '') ?: null;
+    $type       = trim($body['application_type'] ?? 'affitto');
+    $message    = trim($body['message'] ?? '') ?: null;
+
+    if ($propertyId <= 0) apiError('Immobile obbligatorio.');
+    if ($name === '')     apiError('Nome richiedente obbligatorio.');
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) apiError('Email non valida.');
+    if (!in_array($type, APP_TYPES, true)) apiError('Tipo non valido.');
+
+    $chk = $db->prepare('SELECT id FROM properties WHERE id = :id');
+    $chk->execute([':id' => $propertyId]);
+    if (!$chk->fetch()) apiError('Immobile non trovato.', 404);
+
+    $stmt = $db->prepare(
+        "INSERT INTO property_applications
+            (property_id, applicant_name, applicant_email, applicant_phone, application_type, message, status)
+         VALUES
+            (:property_id, :name, :email, :phone, :type, :message, 'new')"
+    );
+    $stmt->execute([
+        ':property_id' => $propertyId,
+        ':name'        => $name,
+        ':email'       => $email,
+        ':phone'       => $phone,
+        ':type'        => $type,
+        ':message'     => $message,
+    ]);
+    getApplication($db, (int) $db->lastInsertId());
 }
 
 function deleteApplication(PDO $db, int $id): void
