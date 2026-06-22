@@ -8,6 +8,7 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/../config/mail_html.php';
 apiHandleOptions();
 
 requireRole('admin', 'super_admin');
@@ -144,7 +145,7 @@ function sendReminders(PDO $db): void
             . "Per qualsiasi informazione, non esiti a contattarci.\n\n"
             . "Cordiali saluti,\nGestione Immobiliare";
 
-        $result = sendClientEmail($tenantEmail, $subject, $body);
+        $result = sendHtmlEmail($tenantEmail, $subject, $body);
 
         $status   = $result['success'] ? 'sent' : 'failed';
         $errorMsg = $result['error'] ?? null;

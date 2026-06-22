@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/../config/mail_html.php';
 
 apiHandleOptions();
 
@@ -166,7 +167,7 @@ function createMessage(PDO $db): void
                 apiError('Il proprietario non ha un indirizzo email configurato.');
             }
 
-            $result = sendClientEmail($client['email'], $subject ?? '(nessun oggetto)', $body);
+            $result = sendHtmlEmail($client['email'], $subject ?? '(nessun oggetto)', $body);
 
             if (!$result['success']) {
                 apiError($result['error'] ?? 'Invio fallito.');

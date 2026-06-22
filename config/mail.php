@@ -135,8 +135,9 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
 
 function sendTestEmail(string $to): array
 {
-    $cfg = getMailConfig();
+    $cfg     = getMailConfig();
     $subject = 'Test email — ' . ($cfg['agency_name'] ?: 'Gestionale');
-    $body    = "Questa è un'email di test dal gestionale immobiliare.\n\nSe la ricevi, la configurazione SMTP funziona.";
-    return sendClientEmail($to, $subject, $body);
+    $body    = "Questa è un'email di test dal gestionale immobiliare.\n\nSe la ricevi, la configurazione SMTP funziona correttamente.";
+    $html    = wrapHtmlEmail($subject, $body);
+    return sendClientEmail($to, $subject, $body, $html);
 }

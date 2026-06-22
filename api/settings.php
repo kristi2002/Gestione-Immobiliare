@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/../config/mail_html.php';
 require_once __DIR__ . '/../config/totp.php';
 
 apiHandleOptions();
