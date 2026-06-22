@@ -370,6 +370,7 @@
             document.getElementById('client-phone').value    = client.phone || '';
             document.getElementById('client-email').value    = client.email || '';
             document.getElementById('client-status').value   = client.status;
+            document.querySelector('#client-status option[value="archived"]').hidden = false;
             document.getElementById('client-notes').value    = client.internal_notes || '';
 
             document.getElementById('client-comm-section').hidden = false;
@@ -379,6 +380,7 @@
         } else {
             els.modalTitle.textContent = 'Nuovo Proprietario';
             document.getElementById('client-status').value = 'active';
+            document.querySelector('#client-status option[value="archived"]').hidden = true;
         }
 
         els.modal.hidden = false;
