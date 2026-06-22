@@ -263,12 +263,9 @@ details.nav-group[open] > summary .nav-group-arrow {
 .app-content {
     flex: 1;
     min-width: 0;
-    min-height: 0;
     padding: 28px 28px 40px;
     overflow-y: auto;
     height: calc(100vh - var(--topbar-height));
-    display: flex;
-    flex-direction: column;
 }
 
 /* Section blocks inside views */
@@ -1491,8 +1488,7 @@ details.nav-group[open] > summary .nav-group-arrow {
 .communications-view {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    height: 100%;
 }
 
 .chat-layout {
@@ -2072,7 +2068,6 @@ body.nav-open {
     }
 
     .communications-view {
-        flex: none;
         height: auto;
     }
 
