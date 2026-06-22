@@ -42,93 +42,141 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="view.php?name=dashboard" class="nav-link active" data-view="dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a></li>
-                    <li><a href="view.php?name=clients" class="nav-link" data-view="clients"><span class="nav-icon">👥</span><span class="nav-label">Proprietari</span></a></li>
-                    <?php if (canAccessView('leads')): ?>
-                    <li><a href="view.php?name=leads" class="nav-link" data-view="leads"><span class="nav-icon">🎯</span><span class="nav-label">Leads</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="view.php?name=properties" class="nav-link" data-view="properties"><span class="nav-icon">🏢</span><span class="nav-label">Immobili</span></a></li>
-                    <?php if (canAccessView('contracts')): ?>
-                    <li><a href="view.php?name=contracts" class="nav-link" data-view="contracts"><span class="nav-icon">📝</span><span class="nav-label">Contratti</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="view.php?name=documents" class="nav-link" data-view="documents"><span class="nav-icon">📄</span><span class="nav-label">Documenti</span></a></li>
-                    <?php if (canAccessView('payments')): ?>
-                    <li><a href="view.php?name=payments" class="nav-link" data-view="payments"><span class="nav-icon">💶</span><span class="nav-label">Pagamenti</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('expenses')): ?>
-                    <li><a href="view.php?name=expenses" class="nav-link" data-view="expenses"><span class="nav-icon">💰</span><span class="nav-label">Spese</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('invoices')): ?>
-                    <li><a href="view.php?name=invoices" class="nav-link" data-view="invoices"><span class="nav-icon">🧾</span><span class="nav-label">Fatture</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="view.php?name=communications" class="nav-link" data-view="communications"><span class="nav-icon">✉️</span><span class="nav-label">Comunicazioni</span></a></li>
-                    <?php if (canAccessView('appointments')): ?>
-                    <li><a href="view.php?name=appointments" class="nav-link" data-view="appointments"><span class="nav-icon">📅</span><span class="nav-label">Visite</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('calendar')): ?>
-                    <li><a href="view.php?name=calendar" class="nav-link" data-view="calendar"><span class="nav-icon">🗓️</span><span class="nav-label">Calendario</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('map')): ?>
-                    <li><a href="view.php?name=map" class="nav-link" data-view="map"><span class="nav-icon">🗺️</span><span class="nav-label">Mappa</span></a></li>
-                    <?php endif; ?>
-                    <li><a href="view.php?name=reminders" class="nav-link" data-view="reminders"><span class="nav-icon">🔔</span><span class="nav-label">Promemoria</span></a></li>
-                    <?php if (canAccessView('automations')): ?>
-                    <li><a href="view.php?name=automations" class="nav-link" data-view="automations"><span class="nav-icon">⚙️</span><span class="nav-label">Automazioni</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('tenants')): ?>
-                    <li><a href="view.php?name=tenants" class="nav-link" data-view="tenants"><span class="nav-icon">🔑</span><span class="nav-label">Inquilini</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('keys')): ?>
-                    <li><a href="view.php?name=keys" class="nav-link" data-view="keys"><span class="nav-icon">🗝️</span><span class="nav-label">Chiavi</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('agents')): ?>
-                    <li><a href="view.php?name=agents" class="nav-link" data-view="agents"><span class="nav-icon">👤</span><span class="nav-label">Portafoglio agenti</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('reports')): ?>
-                    <li><a href="view.php?name=reports" class="nav-link" data-view="reports"><span class="nav-icon">📊</span><span class="nav-label">Report</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('social')): ?>
-                    <li><a href="view.php?name=social" class="nav-link" data-view="social"><span class="nav-icon">📱</span><span class="nav-label">Social Media</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('activity_log')): ?>
-                    <li><a href="view.php?name=activity_log" class="nav-link" data-view="activity_log"><span class="nav-icon">📋</span><span class="nav-label">Log Attività</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('buildings')): ?>
-                    <li><a href="view.php?name=buildings" class="nav-link" data-view="buildings"><span class="nav-icon">🏗️</span><span class="nav-label">Edifici</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('insurance')): ?>
-                    <li><a href="view.php?name=insurance" class="nav-link" data-view="insurance"><span class="nav-icon">🛡️</span><span class="nav-label">Assicurazioni</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('meters')): ?>
-                    <li><a href="view.php?name=meters" class="nav-link" data-view="meters"><span class="nav-icon">💡</span><span class="nav-label">Contatori</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('suppliers')): ?>
-                    <li><a href="view.php?name=suppliers" class="nav-link" data-view="suppliers"><span class="nav-icon">🔧</span><span class="nav-label">Fornitori</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('inventory')): ?>
-                    <li><a href="view.php?name=inventory" class="nav-link" data-view="inventory"><span class="nav-icon">📦</span><span class="nav-label">Inventario</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('commissions')): ?>
-                    <li><a href="view.php?name=commissions" class="nav-link" data-view="commissions"><span class="nav-icon">💼</span><span class="nav-label">Provvigioni</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('surveys')): ?>
-                    <li><a href="view.php?name=surveys" class="nav-link" data-view="surveys"><span class="nav-icon">⭐</span><span class="nav-label">Sondaggi</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('forecast')): ?>
-                    <li><a href="view.php?name=forecast" class="nav-link" data-view="forecast"><span class="nav-icon">📈</span><span class="nav-label">Previsioni</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('maintenance_workflow')): ?>
-                    <li><a href="view.php?name=maintenance_workflow" class="nav-link" data-view="maintenance_workflow"><span class="nav-icon">🔨</span><span class="nav-label">Manutenzione</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('whatsapp_inbox')): ?>
-                    <li><a href="view.php?name=whatsapp_inbox" class="nav-link" data-view="whatsapp_inbox"><span class="nav-icon">💬</span><span class="nav-label">WhatsApp Inbox</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('property_applications')): ?>
-                    <li><a href="view.php?name=property_applications" class="nav-link" data-view="property_applications"><span class="nav-icon">📋</span><span class="nav-label">Richieste</span></a></li>
-                    <?php endif; ?>
-                    <?php if (canAccessView('settings')): ?>
-                    <li><a href="view.php?name=settings" class="nav-link" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Impostazioni</span></a></li>
-                    <?php endif; ?>
                 </ul>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Persone</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <li><a href="view.php?name=clients" class="nav-link" data-view="clients"><span class="nav-icon">👥</span><span class="nav-label">Proprietari</span></a></li>
+                        <?php if (canAccessView('leads')): ?>
+                        <li><a href="view.php?name=leads" class="nav-link" data-view="leads"><span class="nav-icon">🎯</span><span class="nav-label">Leads</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('tenants')): ?>
+                        <li><a href="view.php?name=tenants" class="nav-link" data-view="tenants"><span class="nav-icon">🔑</span><span class="nav-label">Inquilini</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('agents')): ?>
+                        <li><a href="view.php?name=agents" class="nav-link" data-view="agents"><span class="nav-icon">👤</span><span class="nav-label">Portafoglio agenti</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Immobili</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <li><a href="view.php?name=properties" class="nav-link" data-view="properties"><span class="nav-icon">🏢</span><span class="nav-label">Immobili</span></a></li>
+                        <?php if (canAccessView('buildings')): ?>
+                        <li><a href="view.php?name=buildings" class="nav-link" data-view="buildings"><span class="nav-icon">🏗️</span><span class="nav-label">Edifici</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('map')): ?>
+                        <li><a href="view.php?name=map" class="nav-link" data-view="map"><span class="nav-icon">🗺️</span><span class="nav-label">Mappa</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('keys')): ?>
+                        <li><a href="view.php?name=keys" class="nav-link" data-view="keys"><span class="nav-icon">🗝️</span><span class="nav-label">Chiavi</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('meters')): ?>
+                        <li><a href="view.php?name=meters" class="nav-link" data-view="meters"><span class="nav-icon">💡</span><span class="nav-label">Contatori</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('inventory')): ?>
+                        <li><a href="view.php?name=inventory" class="nav-link" data-view="inventory"><span class="nav-icon">📦</span><span class="nav-label">Inventario</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Documenti</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <?php if (canAccessView('contracts')): ?>
+                        <li><a href="view.php?name=contracts" class="nav-link" data-view="contracts"><span class="nav-icon">📝</span><span class="nav-label">Contratti</span></a></li>
+                        <?php endif; ?>
+                        <li><a href="view.php?name=documents" class="nav-link" data-view="documents"><span class="nav-icon">📄</span><span class="nav-label">Documenti</span></a></li>
+                        <?php if (canAccessView('invoices')): ?>
+                        <li><a href="view.php?name=invoices" class="nav-link" data-view="invoices"><span class="nav-icon">🧾</span><span class="nav-label">Fatture</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Finanze</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <?php if (canAccessView('payments')): ?>
+                        <li><a href="view.php?name=payments" class="nav-link" data-view="payments"><span class="nav-icon">💶</span><span class="nav-label">Pagamenti</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('expenses')): ?>
+                        <li><a href="view.php?name=expenses" class="nav-link" data-view="expenses"><span class="nav-icon">💰</span><span class="nav-label">Spese</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('commissions')): ?>
+                        <li><a href="view.php?name=commissions" class="nav-link" data-view="commissions"><span class="nav-icon">💼</span><span class="nav-label">Provvigioni</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('forecast')): ?>
+                        <li><a href="view.php?name=forecast" class="nav-link" data-view="forecast"><span class="nav-icon">📈</span><span class="nav-label">Previsioni</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('reports')): ?>
+                        <li><a href="view.php?name=reports" class="nav-link" data-view="reports"><span class="nav-icon">📊</span><span class="nav-label">Report</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Gestione</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <?php if (canAccessView('maintenance_workflow')): ?>
+                        <li><a href="view.php?name=maintenance_workflow" class="nav-link" data-view="maintenance_workflow"><span class="nav-icon">🔨</span><span class="nav-label">Manutenzione</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('insurance')): ?>
+                        <li><a href="view.php?name=insurance" class="nav-link" data-view="insurance"><span class="nav-icon">🛡️</span><span class="nav-label">Assicurazioni</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('suppliers')): ?>
+                        <li><a href="view.php?name=suppliers" class="nav-link" data-view="suppliers"><span class="nav-icon">🔧</span><span class="nav-label">Fornitori</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('property_applications')): ?>
+                        <li><a href="view.php?name=property_applications" class="nav-link" data-view="property_applications"><span class="nav-icon">📋</span><span class="nav-label">Richieste</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Comunicazioni</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <li><a href="view.php?name=communications" class="nav-link" data-view="communications"><span class="nav-icon">✉️</span><span class="nav-label">Comunicazioni</span></a></li>
+                        <?php if (canAccessView('whatsapp_inbox')): ?>
+                        <li><a href="view.php?name=whatsapp_inbox" class="nav-link" data-view="whatsapp_inbox"><span class="nav-icon">💬</span><span class="nav-label">WhatsApp Inbox</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('social')): ?>
+                        <li><a href="view.php?name=social" class="nav-link" data-view="social"><span class="nav-icon">📱</span><span class="nav-label">Social Media</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('surveys')): ?>
+                        <li><a href="view.php?name=surveys" class="nav-link" data-view="surveys"><span class="nav-icon">⭐</span><span class="nav-label">Sondaggi</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Agenda</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <?php if (canAccessView('appointments')): ?>
+                        <li><a href="view.php?name=appointments" class="nav-link" data-view="appointments"><span class="nav-icon">📅</span><span class="nav-label">Visite</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('calendar')): ?>
+                        <li><a href="view.php?name=calendar" class="nav-link" data-view="calendar"><span class="nav-icon">🗓️</span><span class="nav-label">Calendario</span></a></li>
+                        <?php endif; ?>
+                        <li><a href="view.php?name=reminders" class="nav-link" data-view="reminders"><span class="nav-icon">🔔</span><span class="nav-label">Promemoria</span></a></li>
+                        <?php if (canAccessView('automations')): ?>
+                        <li><a href="view.php?name=automations" class="nav-link" data-view="automations"><span class="nav-icon">⚙️</span><span class="nav-label">Automazioni</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
+
+                <details class="nav-group" open>
+                    <summary><span class="nav-group-label">Sistema</span><span class="nav-group-arrow">▾</span></summary>
+                    <ul>
+                        <?php if (canAccessView('activity_log')): ?>
+                        <li><a href="view.php?name=activity_log" class="nav-link" data-view="activity_log"><span class="nav-icon">📋</span><span class="nav-label">Log Attività</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('settings')): ?>
+                        <li><a href="view.php?name=settings" class="nav-link" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Impostazioni</span></a></li>
+                        <?php endif; ?>
+                    </ul>
+                </details>
             </nav>
 
             <div class="sidebar-footer">

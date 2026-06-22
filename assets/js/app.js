@@ -154,6 +154,8 @@
         setActiveNav(activeLink) {
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             activeLink.classList.add('active');
+            const group = activeLink.closest('details.nav-group');
+            if (group) group.open = true;
         },
 
         /**
