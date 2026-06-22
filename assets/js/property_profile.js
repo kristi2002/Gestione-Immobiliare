@@ -502,8 +502,8 @@
             document.getElementById('pp-price').value = p.price || '';
             document.getElementById('pp-price-type').value = p.price_type || 'affitto';
             document.getElementById('pp-description').value = p.description || '';
-            document.getElementById('pp-features').value = p.features || '';
-            document.getElementById('pp-edit-notes').value = p.notes || '';
+            document.getElementById('pp-features').value = p.additional_features || '';
+            document.getElementById('pp-edit-notes').value = p.internal_notes || '';
             document.getElementById('pp-edit-modal').hidden = false;
         });
     }
@@ -530,8 +530,8 @@
             price: parseFloat(document.getElementById('pp-price').value) || null,
             price_type: document.getElementById('pp-price-type').value,
             description: document.getElementById('pp-description').value.trim() || null,
-            features: document.getElementById('pp-features').value.trim() || null,
-            notes: document.getElementById('pp-edit-notes').value.trim() || null,
+            additional_features: document.getElementById('pp-features').value.trim() || null,
+            internal_notes: document.getElementById('pp-edit-notes').value.trim() || null,
         };
         const btn = document.getElementById('pp-edit-save');
         btn.disabled = true;
