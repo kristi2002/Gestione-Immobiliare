@@ -1,0 +1,419 @@
+erDiagram
+
+%% ============================================================
+%% Gestione Immobiliare — Entity Relationship Diagram
+%% Generated from database/schema_production.sql
+%% ============================================================
+
+    ADMIN_USERS {
+        int id PK
+        varchar username
+        enum role "super_admin/admin/agent/readonly"
+        varchar email
+        tinyint is_active
+    }
+
+    CLIENTS {
+        int id PK
+        varchar name
+        varchar surname
+        varchar email
+        varchar portal_email
+        enum status
+    }
+
+    LEADS {
+        int id PK
+        varchar name
+        varchar surname
+        int assigned_to FK
+        enum status
+        enum interest_type
+    }
+
+    BUILDINGS {
+        int id PK
+        varchar name
+        varchar address
+        varchar city
+    }
+
+    SUPPLIERS {
+        int id PK
+        varchar name
+        enum category
+        tinyint is_active
+    }
+
+    PROPERTIES {
+        int id PK
+        int client_id FK
+        int building_id FK
+        int cover_media_id FK
+        varchar address
+        varchar city
+        enum property_type
+        enum status
+        decimal price
+    }
+
+    TENANTS {
+        int id PK
+        varchar name
+        varchar surname
+        varchar email
+        enum status
+    }
+
+    TENANT_USERS {
+        int id PK
+        int tenant_id FK "unique"
+        varchar password_hash
+    }
+
+    CONTRACTS {
+        int id PK
+        int property_id FK
+        int tenant_id FK
+        int client_id FK
+        int created_by FK
+        varchar title
+        enum contract_type
+        enum status
+    }
+
+    PAYMENTS {
+        int id PK
+        int tenant_id FK
+        int property_id FK
+        int contract_id FK
+        decimal amount
+        date due_date
+        enum status
+    }
+
+    STRIPE_PAYMENTS {
+        int id PK
+        int payment_id FK
+        int tenant_id FK
+        varchar stripe_session_id
+        enum status
+    }
+
+    PAYMENT_REMINDER_LOG {
+        int id PK
+        int payment_id FK
+        int tenant_id FK
+        int client_id FK
+        enum channel
+        enum status
+    }
+
+    INVOICES {
+        int id PK
+        int client_id FK
+        int lead_id FK
+        int property_id FK
+        int created_by FK
+        varchar invoice_number
+        decimal amount
+        enum status
+    }
+
+    EXPENSES {
+        int id PK
+        int property_id FK
+        int client_id FK
+        int supplier_id FK
+        int created_by FK
+        enum category
+        decimal amount
+    }
+
+    DOCUMENTS {
+        int id PK
+        int client_id FK
+        int property_id FK
+        int contract_id FK
+        enum doc_type
+        varchar file_path
+    }
+
+    PDF_DOCUMENTS {
+        int id PK
+        int client_id FK
+        int property_id FK
+        int tenant_id FK
+        int created_by FK
+        enum doc_type
+    }
+
+    ESIGN_REQUESTS {
+        int id PK
+        int document_id FK
+        int contract_id FK
+        varchar signer_name
+        varchar token
+        enum status
+    }
+
+    COMMUNICATIONS {
+        int id PK
+        int client_id FK
+        enum direction
+        enum channel
+        enum status
+    }
+
+    WHATSAPP_MESSAGES {
+        int id PK
+        int client_id FK
+        int tenant_id FK
+        enum direction
+        tinyint is_read
+    }
+
+    WHATSAPP_TEMPLATES {
+        int id PK
+        varchar name
+        enum category
+    }
+
+    EMAIL_TEMPLATES {
+        int id PK
+        varchar name
+        enum category
+    }
+
+    APPOINTMENTS {
+        int id PK
+        int property_id FK
+        int lead_id FK
+        int client_id FK
+        int agent_id FK
+        datetime appointment_date
+        enum status
+    }
+
+    REMINDERS {
+        int id PK
+        int client_id FK
+        int tenant_id FK
+        int supplier_id FK
+        int property_id FK
+        varchar title
+        enum status
+        enum maintenance_status
+    }
+
+    AGENT_COMMISSIONS {
+        int id PK
+        int admin_user_id FK
+        int contract_id FK
+        int property_id FK
+        int client_id FK
+        decimal amount
+        enum status
+    }
+
+    ACTIVITY_LOG {
+        int id PK
+        int admin_user_id FK
+        enum action
+        varchar entity_type
+    }
+
+    PROPERTY_MEDIA {
+        int id PK
+        int property_id FK
+        enum media_type
+        varchar file_path
+    }
+
+    PROPERTY_APPLICATIONS {
+        int id PK
+        int property_id FK
+        int converted_to_lead_id FK
+        varchar applicant_name
+        enum status
+    }
+
+    PROPERTY_APPRAISALS {
+        int id PK
+        int property_id FK
+        int appraised_by FK
+        decimal estimated_value
+        enum condition_rating
+    }
+
+    PROPERTY_INSURANCE {
+        int id PK
+        int property_id "no FK constraint"
+        int client_id FK
+        varchar insurer_name
+        enum policy_type
+    }
+
+    PROPERTY_INVENTORY {
+        int id PK
+        int property_id FK
+        varchar item_name
+        enum category
+    }
+
+    PROPERTY_KEYS {
+        int id PK
+        int property_id FK
+        int holder_id FK
+        enum status
+    }
+
+    PROPERTY_PRICE_HISTORY {
+        int id PK
+        int property_id FK
+        int changed_by FK
+        decimal old_price
+        decimal new_price
+    }
+
+    METER_READINGS {
+        int id PK
+        int property_id FK
+        enum meter_type
+        decimal reading_value
+    }
+
+    SOCIAL_POSTS {
+        int id PK
+        int property_id FK
+        enum platform
+        enum status
+    }
+
+    SOCIAL_SETTINGS {
+        tinyint id PK "singleton"
+        varchar facebook_page_id
+        varchar instagram_account_id
+    }
+
+    TENANT_SURVEYS {
+        int id PK
+        int tenant_id FK
+        int property_id FK
+        tinyint overall_rating
+        varchar token
+    }
+
+    LEAD_PROPERTY_MATCHES {
+        int lead_id FK
+        int property_id FK
+    }
+
+    APP_SETTINGS {
+        varchar setting_key PK
+        text setting_value
+    }
+
+    LOGIN_ATTEMPTS {
+        int id PK
+        varchar ip_address
+        tinyint success
+    }
+
+%% ============================================================
+%% Relationships
+%% ============================================================
+
+    %% Core ownership chain
+    CLIENTS               ||--o{ PROPERTIES            : "owns"
+    BUILDINGS              |o--o{ PROPERTIES            : "contains (1:N)"
+    TENANTS                ||--o| TENANT_USERS          : "portal login"
+
+    %% Contracts & money — a tenant's property/lease is recorded HERE, not
+    %% on the tenant row, so the same person can be re-rented over time.
+    PROPERTIES             ||--o{ CONTRACTS             : "subject of (RESTRICT)"
+    TENANTS                |o--o{ CONTRACTS             : "party to"
+    CLIENTS                |o--o{ CONTRACTS             : "party to"
+    ADMIN_USERS             |o--o{ CONTRACTS             : "created by"
+    CONTRACTS               |o--o{ DOCUMENTS             : "has attachments (1:N)"
+
+    TENANTS                ||--o{ PAYMENTS              : "owes"
+    PROPERTIES              ||--o{ PAYMENTS              : "generates (RESTRICT)"
+    CONTRACTS               |o--o{ PAYMENTS              : "scheduled by"
+
+    PAYMENTS                ||--o{ STRIPE_PAYMENTS       : "settled via"
+    TENANTS                 ||--o{ STRIPE_PAYMENTS       : "pays via"
+
+    PAYMENTS                 ||--o{ PAYMENT_REMINDER_LOG  : "chased by"
+    TENANTS                  |o--o{ PAYMENT_REMINDER_LOG  : "reminded"
+    CLIENTS                  |o--o{ PAYMENT_REMINDER_LOG  : "notified"
+
+    CLIENTS                  |o--o{ INVOICES              : "billed"
+    LEADS                    |o--o{ INVOICES              : "billed"
+    PROPERTIES                |o--o{ INVOICES              : "relates to"
+    ADMIN_USERS                |o--o{ INVOICES              : "created by"
+
+    PROPERTIES                 |o--o{ EXPENSES              : "incurs"
+    CLIENTS                    |o--o{ EXPENSES              : "incurs"
+    SUPPLIERS                  |o--o{ EXPENSES              : "paid to"
+    ADMIN_USERS                 |o--o{ EXPENSES              : "logged by"
+
+    %% Documents / PDFs / e-sign
+    CLIENTS                     |o--o{ DOCUMENTS             : "owns"
+    PROPERTIES                  |o--o{ DOCUMENTS             : "relates to"
+
+    CLIENTS                      |o--o{ PDF_DOCUMENTS         : "subject of"
+    PROPERTIES                   |o--o{ PDF_DOCUMENTS         : "subject of"
+    TENANTS                      |o--o{ PDF_DOCUMENTS         : "subject of"
+    ADMIN_USERS                  |o--o{ PDF_DOCUMENTS         : "generated by"
+
+    DOCUMENTS                     |o--o{ ESIGN_REQUESTS        : "signed via"
+    CONTRACTS                     |o--o{ ESIGN_REQUESTS        : "signed via"
+
+    %% Comms
+    CLIENTS                       ||--o{ COMMUNICATIONS        : "receives"
+    CLIENTS                       |o--o{ WHATSAPP_MESSAGES     : "messages"
+    TENANTS                       |o--o{ WHATSAPP_MESSAGES     : "messages"
+
+    %% Calendar / CRM
+    PROPERTIES                    ||--o{ APPOINTMENTS          : "viewed at"
+    LEADS                         |o--o{ APPOINTMENTS          : "attends"
+    CLIENTS                       |o--o{ APPOINTMENTS          : "attends"
+    ADMIN_USERS                   |o--o{ APPOINTMENTS          : "hosts"
+
+    CLIENTS                       |o--o{ REMINDERS             : "for"
+    TENANTS                       |o--o{ REMINDERS             : "for"
+    SUPPLIERS                     |o--o{ REMINDERS             : "assigned to"
+    PROPERTIES                    |o--o{ REMINDERS             : "for"
+
+    ADMIN_USERS                   ||--o{ AGENT_COMMISSIONS     : "earns"
+    CONTRACTS                     |o--o{ AGENT_COMMISSIONS     : "generates"
+    PROPERTIES                    |o--o{ AGENT_COMMISSIONS     : "generates"
+    CLIENTS                       |o--o{ AGENT_COMMISSIONS     : "generates"
+
+    ADMIN_USERS                   |o--o{ ACTIVITY_LOG          : "performs"
+
+    %% Property-owned collections
+    PROPERTIES                    ||--o{ PROPERTY_MEDIA        : "gallery"
+    PROPERTIES                    ||--o{ PROPERTY_APPLICATIONS : "receives"
+    LEADS                         |o--o{ PROPERTY_APPLICATIONS : "becomes"
+    PROPERTIES                    ||--o{ PROPERTY_APPRAISALS   : "valued by"
+    ADMIN_USERS                   |o--o{ PROPERTY_APPRAISALS   : "appraises"
+    PROPERTIES                    ||--o{ PROPERTY_INSURANCE    : "insured by"
+    CLIENTS                       |o--o{ PROPERTY_INSURANCE    : "pays for"
+    PROPERTIES                    ||--o{ PROPERTY_INVENTORY    : "contains"
+    PROPERTIES                    ||--o{ PROPERTY_KEYS         : "tracked by"
+    ADMIN_USERS                   |o--o{ PROPERTY_KEYS         : "holds"
+    PROPERTIES                    ||--o{ PROPERTY_PRICE_HISTORY: "repriced"
+    ADMIN_USERS                   |o--o{ PROPERTY_PRICE_HISTORY: "changed by"
+    PROPERTIES                    ||--o{ METER_READINGS        : "metered"
+    PROPERTIES                    |o--o{ SOCIAL_POSTS          : "advertised in"
+    TENANTS                       |o--o{ TENANT_SURVEYS        : "responds to"
+    PROPERTIES                    |o--o{ TENANT_SURVEYS        : "rated in"
+
+    %% Many-to-many junction (leads <-> properties is the only true M:N left)
+    LEADS                          ||--o{ LEAD_PROPERTY_MATCHES : "matched to"
+    PROPERTIES                     ||--o{ LEAD_PROPERTY_MATCHES : "matches"
+
+    %% Self-referential cover image
+    PROPERTY_MEDIA                  |o--o| PROPERTIES           : "cover photo"
