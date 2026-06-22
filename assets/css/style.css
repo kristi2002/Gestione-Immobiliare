@@ -1486,9 +1486,6 @@ details.nav-group[open] > summary .nav-group-arrow {
    Communications / Chat (Phase 5)
    -------------------------------------------------------------------------- */
 .communications-view {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
 }
 
 .chat-layout {
