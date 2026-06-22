@@ -51,6 +51,7 @@ function listExpenses(PDO $db): void
     $pagination = apiGetPagination();
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
+    $supplierId = isset($_GET['supplier_id']) ? (int) $_GET['supplier_id'] : null;
     $category   = trim($_GET['category'] ?? '');
     $year       = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : null;
 
@@ -65,6 +66,10 @@ function listExpenses(PDO $db): void
         $where .= ' AND e.client_id = :client_id';
         $params['client_id'] = $clientId;
     }
+    if ($supplierId) {
+        $where .= ' AND e.supplier_id = :supplier_id';
+        $params['supplier_id'] = $supplierId;
+    }
     if ($category !== '' && in_array($category, EXPENSE_CATEGORIES, true)) {
         $where .= ' AND e.category = :category';
         $params['category'] = $category;
@@ -77,10 +82,12 @@ function listExpenses(PDO $db): void
     $countSql = "SELECT COUNT(*) FROM expenses e $where";
 
     $dataSql = "SELECT e.*, p.address AS property_address, p.city AS property_city,
-                   c.name AS client_name, c.surname AS client_surname
+                   c.name AS client_name, c.surname AS client_surname,
+                   s.name AS supplier_name
             FROM expenses e
             LEFT JOIN properties p ON p.id = e.property_id
             LEFT JOIN clients c ON c.id = e.client_id
+            LEFT JOIN suppliers s ON s.id = e.supplier_id
             $where
             ORDER BY e.expense_date DESC";
 
@@ -92,10 +99,12 @@ function getExpense(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
         "SELECT e.*, p.address AS property_address, p.city AS property_city,
-                c.name AS client_name, c.surname AS client_surname
+                c.name AS client_name, c.surname AS client_surname,
+                s.name AS supplier_name
          FROM expenses e
          LEFT JOIN properties p ON p.id = e.property_id
          LEFT JOIN clients c ON c.id = e.client_id
+         LEFT JOIN suppliers s ON s.id = e.supplier_id
          WHERE e.id = :id"
     );
     $stmt->execute(['id' => $id]);
@@ -116,9 +125,9 @@ function createExpense(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO expenses
-            (property_id, client_id, category, description, amount, expense_date, receipt_url, notes, created_by)
+            (property_id, client_id, supplier_id, category, description, amount, expense_date, receipt_url, notes, created_by)
          VALUES
-            (:property_id, :client_id, :category, :description, :amount, :expense_date, :receipt_url, :notes, :created_by)"
+            (:property_id, :client_id, :supplier_id, :category, :description, :amount, :expense_date, :receipt_url, :notes, :created_by)"
     );
     $stmt->execute($validated);
 
@@ -138,7 +147,7 @@ function updateExpense(PDO $db, int $id): void
 
     $stmt = $db->prepare(
         "UPDATE expenses
-         SET property_id = :property_id, client_id = :client_id, category = :category,
+         SET property_id = :property_id, client_id = :client_id, supplier_id = :supplier_id, category = :category,
              description = :description, amount = :amount, expense_date = :expense_date,
              receipt_url = :receipt_url, notes = :notes
          WHERE id = :id"
@@ -170,6 +179,7 @@ function validateExpenseInput(array $data): array
 {
     $propertyId  = !empty($data['property_id']) ? (int) $data['property_id'] : null;
     $clientId    = !empty($data['client_id']) ? (int) $data['client_id'] : null;
+    $supplierId  = !empty($data['supplier_id']) ? (int) $data['supplier_id'] : null;
     $category    = trim($data['category'] ?? 'altro');
     $description = trim($data['description'] ?? '');
     $amount      = isset($data['amount']) && $data['amount'] !== '' ? (float) $data['amount'] : null;
@@ -193,6 +203,7 @@ function validateExpenseInput(array $data): array
     return [
         'property_id'  => $propertyId,
         'client_id'    => $clientId,
+        'supplier_id'  => $supplierId,
         'category'     => $category,
         'description'  => $description,
         'amount'       => $amount,

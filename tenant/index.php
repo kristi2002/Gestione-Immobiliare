@@ -9,13 +9,26 @@ require_once __DIR__ . '/../config/settings.php';
 $tenantId = getCurrentTenantId();
 $db = getDB();
 
-// Tenant + property info
-$stmt = $db->prepare(
-    "SELECT t.*, p.address, p.city, p.cap, p.sqm, p.rooms, p.description, p.id AS property_id
-     FROM tenants t INNER JOIN properties p ON p.id = t.property_id WHERE t.id = :id"
-);
+// Tenant + property info — property/lease come from the tenant's current
+// contract (see getTenantCurrentContract in config/db.php), not a fixed
+// column on the tenant, since the same person can be re-rented over time.
+$stmt = $db->prepare("SELECT * FROM tenants WHERE id = :id");
 $stmt->execute(['id' => $tenantId]);
 $tenant = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$contract = $tenant ? getTenantCurrentContract($db, $tenantId) : null;
+if ($tenant) {
+    $tenant['property_id']  = $contract['property_id'] ?? null;
+    $tenant['address']      = $contract['address'] ?? null;
+    $tenant['city']         = $contract['city'] ?? null;
+    $tenant['cap']          = $contract['cap'] ?? null;
+    $tenant['sqm']          = $contract['sqm'] ?? null;
+    $tenant['rooms']        = $contract['rooms'] ?? null;
+    $tenant['description']  = $contract['description'] ?? null;
+    $tenant['lease_start']  = $contract['lease_start'] ?? null;
+    $tenant['lease_end']    = $contract['lease_end'] ?? null;
+    $tenant['monthly_rent'] = $contract['monthly_rent'] ?? null;
+}
 
 // Payments history
 $payStmt = $db->prepare(

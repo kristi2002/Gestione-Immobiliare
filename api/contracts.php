@@ -138,10 +138,10 @@ function createContract(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO contracts
             (property_id, tenant_id, client_id, title, contract_type, status,
-             start_date, end_date, monthly_rent, deposit, document_id, notes, created_by)
+             start_date, end_date, monthly_rent, deposit, notes, created_by)
          VALUES
             (:property_id, :tenant_id, :client_id, :title, :contract_type, :status,
-             :start_date, :end_date, :monthly_rent, :deposit, :document_id, :notes, :created_by)"
+             :start_date, :end_date, :monthly_rent, :deposit, :notes, :created_by)"
     );
     $stmt->execute($validated);
 
@@ -164,7 +164,7 @@ function updateContract(PDO $db, int $id): void
          SET property_id = :property_id, tenant_id = :tenant_id, client_id = :client_id,
              title = :title, contract_type = :contract_type, status = :status,
              start_date = :start_date, end_date = :end_date, monthly_rent = :monthly_rent,
-             deposit = :deposit, document_id = :document_id, notes = :notes
+             deposit = :deposit, notes = :notes
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -207,7 +207,6 @@ function validateContractInput(array $data): array
     $endDate      = trim($data['end_date'] ?? '') ?: null;
     $monthlyRent  = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? (float) $data['monthly_rent'] : null;
     $deposit      = isset($data['deposit']) && $data['deposit'] !== '' ? (float) $data['deposit'] : null;
-    $documentId   = !empty($data['document_id']) ? (int) $data['document_id'] : null;
     $notes        = trim($data['notes'] ?? '') ?: null;
 
     if ($propertyId <= 0) {
@@ -240,7 +239,6 @@ function validateContractInput(array $data): array
         'end_date'      => $endDate,
         'monthly_rent'  => $monthlyRent,
         'deposit'       => $deposit,
-        'document_id'   => $documentId,
         'notes'         => $notes,
     ];
 }

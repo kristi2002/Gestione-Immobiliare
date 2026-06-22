@@ -31,12 +31,12 @@ SELECT
     p.due_date               AS due_date,
     p.notes                  AS payment_notes,
     DATEDIFF(CURDATE(), p.due_date) AS days_overdue,
-    -- tenant info (via property assignment)
+    -- tenant info (payments.tenant_id is the direct, authoritative link —
+    -- tenants no longer carry their own property_id)
     t.id                     AS tenant_id,
-    t.first_name             AS tenant_first,
-    t.last_name              AS tenant_last,
+    t.name                   AS tenant_first,
+    t.surname                AS tenant_last,
     t.email                  AS tenant_email,
-    t.property_id            AS tenant_property_id,
     -- client (property owner) info
     cl.id                    AS client_id,
     cl.name                  AS client_name,
@@ -44,9 +44,9 @@ SELECT
     -- property info
     pr.address               AS property_address
 FROM payments p
-LEFT JOIN tenants  t  ON t.property_id = p.property_id AND t.status = 'active'
-LEFT JOIN clients  cl ON cl.id         = p.client_id
-LEFT JOIN properties pr ON pr.id       = p.property_id
+LEFT JOIN tenants  t  ON t.id  = p.tenant_id
+LEFT JOIN properties pr ON pr.id = p.property_id
+LEFT JOIN clients  cl ON cl.id  = pr.client_id
 WHERE p.status IN ('pending', 'late')
   AND p.due_date < CURDATE()
   AND p.due_date >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)

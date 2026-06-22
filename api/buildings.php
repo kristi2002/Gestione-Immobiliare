@@ -71,14 +71,15 @@ function listBuildings(PDO $db): void
     $countSql = "SELECT COUNT(*) FROM buildings b $where";
 
     $dataSql = "SELECT b.*,
-                   COUNT(DISTINCT bp.property_id) AS unit_count,
+                   COUNT(DISTINCT p.id) AS unit_count,
                    COUNT(DISTINCT CASE WHEN EXISTS (
-                       SELECT 1 FROM tenants tn
-                       WHERE tn.property_id = bp.property_id
-                         AND tn.status = 'active'
-                   ) THEN bp.property_id END) AS occupancy_count
+                       SELECT 1 FROM contracts c
+                       INNER JOIN tenants tn ON tn.id = c.tenant_id AND tn.status = 'active'
+                       WHERE c.property_id = p.id
+                         AND (c.end_date IS NULL OR c.end_date >= CURDATE())
+                   ) THEN p.id END) AS occupancy_count
             FROM buildings b
-            LEFT JOIN building_properties bp ON bp.building_id = b.id
+            LEFT JOIN properties p ON p.building_id = b.id
             $where
             GROUP BY b.id
             ORDER BY b.name ASC";
@@ -100,10 +101,9 @@ function getBuilding(PDO $db, int $id): void
     $propStmt = $db->prepare(
         "SELECT p.id, p.address, p.city, p.sqm, p.rooms, p.status, p.price, p.price_type,
                 c.name AS client_name, c.surname AS client_surname
-         FROM building_properties bp
-         INNER JOIN properties p ON p.id = bp.property_id
+         FROM properties p
          LEFT JOIN clients c ON c.id = p.client_id
-         WHERE bp.building_id = :bid
+         WHERE p.building_id = :bid
          ORDER BY p.address ASC"
     );
     $propStmt->execute(['bid' => $id]);
@@ -160,7 +160,7 @@ function deleteBuilding(PDO $db, int $id): void
     }
 
     // Check linked properties
-    $check = $db->prepare("SELECT COUNT(*) FROM building_properties WHERE building_id = :id");
+    $check = $db->prepare("SELECT COUNT(*) FROM properties WHERE building_id = :id");
     $check->execute(['id' => $id]);
     if ((int) $check->fetchColumn() > 0) {
         apiError('Impossibile eliminare: ci sono immobili collegati. Scollegarli prima.');
@@ -187,23 +187,21 @@ function linkProperty(PDO $db, int $buildingId): void
         apiError('property_id obbligatorio.');
     }
 
-    $propCheck = $db->prepare("SELECT id FROM properties WHERE id = :id");
+    $propCheck = $db->prepare("SELECT id, building_id FROM properties WHERE id = :id");
     $propCheck->execute(['id' => $propertyId]);
-    if (!$propCheck->fetch()) {
+    $prop = $propCheck->fetch();
+    if (!$prop) {
         apiError('Immobile non trovato.');
     }
 
-    // Check not already linked
-    $linkCheck = $db->prepare(
-        "SELECT 1 FROM building_properties WHERE building_id = :bid AND property_id = :pid"
-    );
-    $linkCheck->execute(['bid' => $buildingId, 'pid' => $propertyId]);
-    if ($linkCheck->fetch()) {
+    // A property belongs to exactly one building — check it isn't already this one.
+    if ((int) $prop['building_id'] === $buildingId) {
         apiError('Immobile già collegato a questo edificio.');
     }
 
+    // Re-linking moves the property from any previous building to this one.
     $db->prepare(
-        "INSERT INTO building_properties (building_id, property_id) VALUES (:bid, :pid)"
+        "UPDATE properties SET building_id = :bid WHERE id = :pid"
     )->execute(['bid' => $buildingId, 'pid' => $propertyId]);
 
     logActivity('update', 'building', $buildingId, 'Immobile #' . $propertyId . ' collegato all\'edificio');
@@ -217,7 +215,7 @@ function unlinkProperty(PDO $db, int $buildingId, int $propertyId): void
     }
 
     $stmt = $db->prepare(
-        "DELETE FROM building_properties WHERE building_id = :bid AND property_id = :pid"
+        "UPDATE properties SET building_id = NULL WHERE id = :pid AND building_id = :bid"
     );
     $stmt->execute(['bid' => $buildingId, 'pid' => $propertyId]);
 

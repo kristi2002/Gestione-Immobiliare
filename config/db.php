@@ -61,3 +61,28 @@ function getDB(): PDO
 
     return $pdo;
 }
+
+/**
+ * A tenant is a person, not a fixed property assignment — the CONTRACTS table
+ * is the source of truth for where they live and on what terms. This resolves
+ * the tenant's "current" property/lease by preferring an active contract
+ * (no end_date, or end_date in the future), falling back to their most recent
+ * contract otherwise. Returns null if the tenant has no contract at all.
+ */
+function getTenantCurrentContract(PDO $db, int $tenantId): ?array
+{
+    $stmt = $db->prepare(
+        "SELECT c.id AS contract_id, c.property_id, c.start_date AS lease_start,
+                c.end_date AS lease_end, c.monthly_rent, c.status AS contract_status,
+                p.address, p.city, p.cap, p.province, p.sqm, p.rooms, p.description,
+                p.client_id AS property_client_id
+         FROM contracts c
+         INNER JOIN properties p ON p.id = c.property_id
+         WHERE c.tenant_id = :tid
+         ORDER BY (c.end_date IS NULL OR c.end_date >= CURDATE()) DESC, c.start_date DESC, c.id DESC
+         LIMIT 1"
+    );
+    $stmt->execute(['tid' => $tenantId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}

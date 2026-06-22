@@ -7,6 +7,7 @@
     const API           = 'api/documents.php';
     const CLIENTS_API   = 'api/clients.php';
     const PROPERTIES_API = 'api/properties.php';
+    const CONTRACTS_API  = 'api/contracts.php';
 
     const DOC_TYPE_LABELS = {
         invoice:   'Fattura',
@@ -21,6 +22,7 @@
     let documents      = [];
     let clients        = [];
     let properties     = [];
+    let contracts      = [];
     let deleteTargetId = null;
     let searchTimer    = null;
     let currentPage    = 1;
@@ -40,11 +42,13 @@
         els.uploadForm      = document.getElementById('doc-upload-form');
         els.clientSelect    = document.getElementById('doc-client');
         els.propertySelect  = document.getElementById('doc-property');
+        els.contractSelect  = document.getElementById('doc-contract');
         els.pagination      = document.getElementById('documents-pagination');
 
         bindEvents();
         loadClients()
             .then(() => loadProperties())
+            .then(() => loadContracts())
             .then(() => loadDocuments())
             .catch(err => {
                 if (!els.alert?.isConnected) return;
@@ -112,6 +116,14 @@
 
     function propertyLabel(p) {
         return `${p.address}, ${p.city}`;
+    }
+
+    async function loadContracts() {
+        contracts = await Pagination.fetchList(CONTRACTS_API);
+        const opts = contracts.map(c =>
+            `<option value="${c.id}">${escapeHtml(c.title)} — ${escapeHtml(c.property_address || '')}</option>`
+        ).join('');
+        els.contractSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
     }
 
     function updatePropertyFilterOptions(clientId) {
@@ -196,6 +208,7 @@
             const displayName   = d.title || d.original_name;
             const clientLabel   = d.client_id ? `${d.client_surname || ''} ${d.client_name || ''}`.trim() : null;
             const propertyLabel = d.property_id ? `${d.property_address || ''}, ${d.property_city || ''}` : null;
+            const contractLabel = (!isContract && d.contract_id && d.contract_title) ? d.contract_title : null;
             const typeLabel     = DOC_TYPE_LABELS[d.doc_type] || d.doc_type;
 
             const actions = isContract
@@ -212,7 +225,7 @@
                         ${isContract ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
                     </td>
                     <td data-label="Proprietario">${clientLabel ? escapeHtml(clientLabel) : '<span class="text-muted">—</span>'}</td>
-                    <td data-label="Immobile">${propertyLabel ? escapeHtml(propertyLabel) : '<span class="text-muted">—</span>'}</td>
+                    <td data-label="Immobile">${propertyLabel ? escapeHtml(propertyLabel) : '<span class="text-muted">—</span>'}${contractLabel ? `<br><small class="text-muted">📋 ${escapeHtml(contractLabel)}</small>` : ''}</td>
                     <td data-label="Dimensione">${isContract ? '—' : formatFileSize(d.file_size)}</td>
                     <td data-label="Data">${formatDate(d.created_at)}</td>
                     <td class="col-actions" data-label="Azioni">${actions}</td>
@@ -252,10 +265,11 @@
 
         const clientId   = els.clientSelect.value;
         const propertyId = els.propertySelect.value;
+        const contractId = els.contractSelect.value;
         const fileInput  = document.getElementById('doc-file');
 
-        if (!clientId && !propertyId) {
-            showAlert('Associa il documento ad almeno un proprietario o un immobile.', 'error');
+        if (!clientId && !propertyId && !contractId) {
+            showAlert('Associa il documento ad almeno un proprietario, un immobile o un contratto.', 'error');
             return;
         }
 
@@ -270,6 +284,7 @@
         formData.append('notes', document.getElementById('doc-notes').value.trim());
         if (clientId)   formData.append('client_id', clientId);
         if (propertyId) formData.append('property_id', propertyId);
+        if (contractId) formData.append('contract_id', contractId);
         formData.append('file', fileInput.files[0]);
 
         const btn = document.getElementById('doc-upload-save');

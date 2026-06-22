@@ -284,6 +284,7 @@
                 ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="scheda-row"><span class="scheda-row__label">💶 Canone</span><span class="scheda-row__value">€ ${formatPrice(c.monthly_rent)}/mese</span></div>` : ''}
                 ${c.deposit ? `<div class="scheda-row"><span class="scheda-row__label">🔐 Deposito</span><span class="scheda-row__value">€ ${formatPrice(c.deposit)}</span></div>` : ''}
                 ${c.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(c.notes)}</span></div>` : ''}
+                <div class="scheda-row"><span class="scheda-row__label">📎 Documenti</span><span class="scheda-row__value" id="scheda-ct-docs">Caricamento…</span></div>
             </div>`;
 
         const advBtn = document.getElementById('scheda-ct-advance');
@@ -299,6 +300,22 @@
         genBtn.hidden = !(c.contract_type === 'locazione' && c.tenant_id && c.monthly_rent && c.start_date && c.end_date);
 
         document.getElementById('contract-scheda-modal').hidden = false;
+        loadContractDocuments(c.id);
+    }
+
+    async function loadContractDocuments(contractId) {
+        const el = document.getElementById('scheda-ct-docs');
+        if (!el) return;
+        try {
+            const res  = await fetch(`api/documents.php?contract_id=${contractId}&limit=100`);
+            const json = await res.json();
+            const docs = json.success ? Pagination.parseResponse(json).items.filter(d => d.doc_type !== 'contratto') : [];
+            el.innerHTML = docs.length
+                ? docs.map(d => `<a href="${d.download_url}" target="_blank" rel="noopener" style="display:inline-block;margin-right:8px">${escapeHtml(d.title || d.original_name)}</a>`).join('')
+                : '<span class="text-muted">Nessun documento allegato.</span>';
+        } catch (err) {
+            el.innerHTML = '<span class="text-muted">—</span>';
+        }
     }
 
     function closeSchedaModal() {

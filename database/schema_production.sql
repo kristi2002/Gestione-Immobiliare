@@ -147,23 +147,6 @@ CREATE TABLE `appointments` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `building_properties`
---
-
-DROP TABLE IF EXISTS `building_properties`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `building_properties` (
-  `building_id` int unsigned NOT NULL,
-  `property_id` int unsigned NOT NULL,
-  PRIMARY KEY (`building_id`,`property_id`),
-  KEY `fk_bp_property` (`property_id`),
-  CONSTRAINT `fk_bp_building` FOREIGN KEY (`building_id`) REFERENCES `buildings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_bp_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `buildings`
 --
 
@@ -256,7 +239,6 @@ CREATE TABLE `contracts` (
   `end_date` date DEFAULT NULL,
   `monthly_rent` decimal(10,2) DEFAULT NULL,
   `deposit` decimal(10,2) DEFAULT NULL,
-  `document_id` int unsigned DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `created_by` int unsigned DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -265,13 +247,11 @@ CREATE TABLE `contracts` (
   KEY `fk_contracts_property` (`property_id`),
   KEY `fk_contracts_tenant` (`tenant_id`),
   KEY `fk_contracts_client` (`client_id`),
-  KEY `fk_contracts_document` (`document_id`),
   KEY `idx_contracts_status` (`status`),
   KEY `idx_ct_created_by` (`created_by`),
   KEY `idx_contracts_dates` (`start_date`,`end_date`),
   CONSTRAINT `fk_contracts_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_contracts_created_by` FOREIGN KEY (`created_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `fk_contracts_document` FOREIGN KEY (`document_id`) REFERENCES `documents` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_contracts_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_contracts_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -290,6 +270,7 @@ CREATE TABLE `documents` (
   `title` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `client_id` int unsigned DEFAULT NULL,
   `property_id` int unsigned DEFAULT NULL,
+  `contract_id` int unsigned DEFAULT NULL,
   `file_path` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
   `original_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `mime_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -300,8 +281,10 @@ CREATE TABLE `documents` (
   PRIMARY KEY (`id`),
   KEY `idx_documents_client` (`client_id`),
   KEY `idx_documents_property` (`property_id`),
+  KEY `idx_documents_contract` (`contract_id`),
   KEY `idx_documents_type` (`doc_type`),
   CONSTRAINT `fk_documents_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_documents_contract` FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_documents_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -370,6 +353,7 @@ CREATE TABLE `expenses` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `property_id` int unsigned DEFAULT NULL,
   `client_id` int unsigned DEFAULT NULL,
+  `supplier_id` int unsigned DEFAULT NULL,
   `category` enum('manutenzione','utenze','tasse','assicurazione','agenzia','altro') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'altro',
   `description` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
   `amount` decimal(10,2) NOT NULL,
@@ -381,11 +365,13 @@ CREATE TABLE `expenses` (
   PRIMARY KEY (`id`),
   KEY `fk_expenses_property` (`property_id`),
   KEY `fk_expenses_client` (`client_id`),
+  KEY `idx_expenses_supplier` (`supplier_id`),
   KEY `idx_expenses_date` (`expense_date`),
   KEY `idx_exp_created_by` (`created_by`),
   CONSTRAINT `fk_expenses_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_expenses_created_by` FOREIGN KEY (`created_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `fk_expenses_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_expenses_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_expenses_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -621,6 +607,7 @@ DROP TABLE IF EXISTS `properties`;
 CREATE TABLE `properties` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `client_id` int unsigned NOT NULL,
+  `building_id` int unsigned DEFAULT NULL,
   `address` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `city` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `property_type` enum('appartamento','villa','ufficio','negozio','box','terreno','altro') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'appartamento',
@@ -645,9 +632,11 @@ CREATE TABLE `properties` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_properties_client` (`client_id`),
+  KEY `idx_properties_building` (`building_id`),
   KEY `idx_properties_city` (`city`),
   KEY `idx_properties_status` (`status`),
   KEY `idx_properties_cover_media` (`cover_media_id`),
+  CONSTRAINT `fk_properties_building` FOREIGN KEY (`building_id`) REFERENCES `buildings` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_properties_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_properties_cover_media` FOREIGN KEY (`cover_media_id`) REFERENCES `property_media` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1043,23 +1032,17 @@ DROP TABLE IF EXISTS `tenants`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tenants` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `property_id` int unsigned NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `surname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `phone` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `lease_start` date DEFAULT NULL,
-  `lease_end` date DEFAULT NULL,
-  `monthly_rent` decimal(10,2) DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `status` enum('active','inactive','archived') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_tenant_email` (`email`),
-  KEY `idx_tenants_property` (`property_id`),
-  KEY `idx_tenants_status` (`status`),
-  CONSTRAINT `fk_tenants_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+  KEY `idx_tenants_status` (`status`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

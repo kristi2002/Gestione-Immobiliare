@@ -208,10 +208,13 @@ for ($i = 1; $i <= $nProperties; $i++) {
 
 say('Seeding tenants…');
 $tenantIds = [];
+// Tenants are just people — property/lease terms live on CONTRACTS, so we
+// stash them here keyed by tenant id and write the contract rows further down.
+$tenantLease = [];
 $rentedProps = $db->query("SELECT id, price FROM properties WHERE status = 'rented' LIMIT " . (20 * $scale))->fetchAll(PDO::FETCH_ASSOC);
 $insTenant = $db->prepare(
-    'INSERT INTO tenants (property_id, name, surname, email, phone, lease_start, lease_end, monthly_rent, notes, status)
-     VALUES (:pid, :name, :surname, :email, :phone, :start, :end, :rent, :notes, :status)'
+    'INSERT INTO tenants (name, surname, email, phone, notes, status)
+     VALUES (:name, :surname, :email, :phone, :notes, :status)'
 );
 
 foreach ($rentedProps as $idx => $prop) {
@@ -229,18 +232,16 @@ foreach ($rentedProps as $idx => $prop) {
         $rent = random_int(600, 1200);
     }
     $insTenant->execute([
-        'pid'    => $prop['id'],
         'name'   => $fn,
         'surname'=> $ln,
         'email'  => strtolower("inquilino.$fn.$ln$idx@demo.test"),
         'phone'  => '+393' . random_int(20, 99) . random_int(1000000, 9999999),
-        'start'  => $start,
-        'end'    => $end,
-        'rent'   => $rent,
         'notes'  => '[DEMO]',
         'status' => 'active',
     ]);
-    $tenantIds[] = (int) $db->lastInsertId();
+    $newTenantId = (int) $db->lastInsertId();
+    $tenantIds[] = $newTenantId;
+    $tenantLease[$newTenantId] = ['property_id' => $prop['id'], 'start' => $start, 'end' => $end, 'rent' => $rent];
 }
 say('  ' . count($tenantIds) . ' tenants');
 
@@ -372,16 +373,14 @@ if (tableExists($db, 'contracts')) {
     );
     $contractIds = [];
     foreach (array_slice($tenantIds, 0, min(15 * $scale, count($tenantIds))) as $tid) {
-        $t = $db->prepare('SELECT property_id, monthly_rent FROM tenants WHERE id = :id');
-        $t->execute(['id' => $tid]);
-        $t = $t->fetch(PDO::FETCH_ASSOC);
-        if (!$t) continue;
+        $lease = $tenantLease[$tid] ?? null;
+        if (!$lease) continue;
         $prop = $db->prepare('SELECT client_id FROM properties WHERE id = :id');
-        $prop->execute(['id' => $t['property_id']]);
+        $prop->execute(['id' => $lease['property_id']]);
         $cid = $prop->fetchColumn();
         $start = randDate(400, -60);
         $insContract->execute([
-            'pid'    => $t['property_id'],
+            'pid'    => $lease['property_id'],
             'tid'    => $tid,
             'cid'    => $cid,
             'title'  => 'Contratto locazione demo',
@@ -389,8 +388,8 @@ if (tableExists($db, 'contracts')) {
             'status' => pick(['draft', 'sent', 'signed', 'signed', 'expired']),
             'start'  => $start,
             'end'    => (new DateTimeImmutable($start))->modify('+3 years')->format('Y-m-d'),
-            'rent'   => $t['monthly_rent'],
-            'dep'    => ($t['monthly_rent'] ?? 800) * 3,
+            'rent'   => $lease['rent'],
+            'dep'    => ($lease['rent'] ?? 800) * 3,
             'by'     => $adminId,
         ]);
         $contractIds[] = (int) $db->lastInsertId();
@@ -406,9 +405,7 @@ if (tableExists($db, 'payments') && $tenantIds) {
     );
     $payCount = 0;
     foreach ($tenantIds as $tid) {
-        $t = $db->prepare('SELECT property_id, monthly_rent FROM tenants WHERE id = :id');
-        $t->execute(['id' => $tid]);
-        $t = $t->fetch(PDO::FETCH_ASSOC);
+        $t = $tenantLease[$tid] ?? null;
         if (!$t) continue;
         // Window from 8 months back to 6 months ahead so the revenue forecast
         // (which is forward-looking) has upcoming, not-yet-due payments to chart.
@@ -428,7 +425,7 @@ if (tableExists($db, 'payments') && $tenantIds) {
             $insPay->execute([
                 'tid'    => $tid,
                 'pid'    => $t['property_id'],
-                'amt'    => $t['monthly_rent'] ?? random_int(600, 1200),
+                'amt'    => $t['rent'] ?? random_int(600, 1200),
                 'due'    => $due,
                 'paid'   => $status === 'paid' ? (new DateTimeImmutable($due))->modify('+'.random_int(0,5).' days')->format('Y-m-d') : null,
                 'status' => $status,
@@ -658,9 +655,7 @@ if (tableExists($db, 'tenant_surveys') && $tenantIds) {
          VALUES (:tid, :pid, :overall, :maint, :comm, :comment, :token, :submitted)'
     );
     foreach (array_slice($tenantIds, 0, 10 * $scale) as $tid) {
-        $t = $db->prepare('SELECT property_id FROM tenants WHERE id = :id');
-        $t->execute(['id' => $tid]);
-        $pid = $t->fetchColumn();
+        $pid = $tenantLease[$tid]['property_id'] ?? null;
         $insSurvey->execute([
             'tid'      => $tid,
             'pid'      => $pid,

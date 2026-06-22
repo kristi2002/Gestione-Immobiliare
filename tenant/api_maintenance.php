@@ -45,18 +45,18 @@ $tenantName = ($_SESSION['tenant_name'] ?? 'Inquilino');
 $fullTitle  = "[Richiesta $type] $subject";
 $fullDesc   = $message . "\n\n— Inviato da: $tenantName (inquilino ID $tenantId)";
 
-// Resolve client_id via the tenant's property
-$prop = $db->prepare('SELECT client_id FROM properties WHERE id = :pid');
-$prop->execute(['pid' => $tenant['property_id']]);
-$prop = $prop->fetch(PDO::FETCH_ASSOC);
-$clientId = $prop ? $prop['client_id'] : null;
+// Resolve property/client via the tenant's current contract (tenants no
+// longer carry a fixed property_id — see getTenantCurrentContract in config/db.php).
+$contract = getTenantCurrentContract($db, $tenantId);
+$propertyId = $contract['property_id'] ?? null;
+$clientId   = $contract['property_client_id'] ?? null;
 
 $db->prepare(
     'INSERT INTO reminders (client_id, property_id, tenant_id, title, description, reminder_date, frequency, status, created_at)
      VALUES (:cid, :pid, :tid, :title, :desc, CURDATE(), :freq, :status, NOW())'
 )->execute([
     'cid'    => $clientId,
-    'pid'    => $tenant['property_id'],
+    'pid'    => $propertyId,
     'tid'    => $tenantId,
     'title'  => $fullTitle,
     'desc'   => $fullDesc,

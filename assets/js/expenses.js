@@ -7,6 +7,7 @@
     const API            = 'api/expenses.php';
     const PROPERTIES_API = 'api/properties.php';
     const CLIENTS_API    = 'api/clients.php';
+    const SUPPLIERS_API  = 'api/suppliers.php';
 
     const CATEGORY_LABELS = {
         manutenzione:  'Manutenzione',
@@ -20,6 +21,7 @@
     let expenses   = [];
     let properties = [];
     let clients    = [];
+    let suppliers  = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let schedaExpenseId = null;
@@ -31,6 +33,7 @@
         els.alert          = document.getElementById('expenses-alert');
         els.propFilter     = document.getElementById('expense-property-filter');
         els.clientFilter   = document.getElementById('expense-client-filter');
+        els.supplierFilter = document.getElementById('expense-supplier-filter');
         els.categoryFilter = document.getElementById('expense-category-filter');
         els.yearFilter     = document.getElementById('expense-year-filter');
         els.modal          = document.getElementById('expense-modal');
@@ -38,10 +41,11 @@
         els.modalTitle     = document.getElementById('expense-modal-title');
         els.propSelect     = document.getElementById('expense-property');
         els.clientSelect   = document.getElementById('expense-client');
+        els.supplierSelect = document.getElementById('expense-supplier');
         els.pagination     = document.getElementById('expenses-pagination');
 
         bindEvents();
-        Promise.all([loadProperties(), loadClients()])
+        Promise.all([loadProperties(), loadClients(), loadSuppliers()])
             .then(() => loadExpenses())
             .catch(err => {
                 if (!els.alert?.isConnected) return;
@@ -56,7 +60,7 @@
 
         els.form.addEventListener('submit', handleFormSubmit);
 
-        [els.propFilter, els.clientFilter, els.categoryFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadExpenses(); }));
+        [els.propFilter, els.clientFilter, els.supplierFilter, els.categoryFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadExpenses(); }));
         els.yearFilter.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadExpenses(); }, 400);
@@ -101,6 +105,15 @@
         els.clientFilter.innerHTML = '<option value="">Tutti i proprietari</option>' + opts;
     }
 
+    async function loadSuppliers() {
+        suppliers = await Pagination.fetchList(SUPPLIERS_API);
+        const opts = suppliers.map(s =>
+            `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+        ).join('');
+        els.supplierSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
+        els.supplierFilter.innerHTML = '<option value="">Tutti i fornitori</option>' + opts;
+    }
+
     // -------------------------------------------------------------------------
     // List
     // -------------------------------------------------------------------------
@@ -109,6 +122,7 @@
         const params = new URLSearchParams();
         if (els.propFilter.value)     params.set('property_id', els.propFilter.value);
         if (els.clientFilter.value)   params.set('client_id', els.clientFilter.value);
+        if (els.supplierFilter.value) params.set('supplier_id', els.supplierFilter.value);
         if (els.categoryFilter.value) params.set('category', els.categoryFilter.value);
         if (els.yearFilter.value.trim()) params.set('year', els.yearFilter.value.trim());
         params.set('page', currentPage);
@@ -155,6 +169,7 @@
                     <div class="entity-card__info"><strong>${escapeHtml(e.description)}</strong></div>
                     <div class="entity-card__info"><span class="entity-card__info-icon">📅</span>${formatDate(e.expense_date)}</div>
                     ${link ? `<div class="entity-card__info"><span class="entity-card__info-icon">🏢</span>${link}</div>` : ''}
+                    ${e.supplier_name ? `<div class="entity-card__info"><span class="entity-card__info-icon">🔧</span>${escapeHtml(e.supplier_name)}</div>` : ''}
                     ${e.receipt_url ? `<div class="entity-card__info"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener">📎 Ricevuta</a></div>` : ''}
                 </div>
                 <div class="entity-card__footer">
@@ -207,6 +222,7 @@
                 <div class="scheda-row"><span class="scheda-row__label">📝 Descrizione</span><span class="scheda-row__value"><strong>${escapeHtml(e.description)}</strong></span></div>
                 <div class="scheda-row"><span class="scheda-row__label">📅 Data</span><span class="scheda-row__value">${formatDate(e.expense_date)}</span></div>
                 ${linked ? `<div class="scheda-row"><span class="scheda-row__label">Associato a</span><span class="scheda-row__value">${escapeHtml(linked)}</span></div>` : ''}
+                ${e.supplier_name ? `<div class="scheda-row"><span class="scheda-row__label">🔧 Fornitore</span><span class="scheda-row__value">${escapeHtml(e.supplier_name)}</span></div>` : ''}
                 ${e.receipt_url ? `<div class="scheda-row"><span class="scheda-row__label">📎 Ricevuta</span><span class="scheda-row__value"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener">Apri ricevuta</a></span></div>` : ''}
                 ${e.notes ? `<div class="scheda-row"><span class="scheda-row__label">📄 Note</span><span class="scheda-row__value">${escapeHtml(e.notes)}</span></div>` : ''}
             </div>`;
@@ -236,6 +252,7 @@
             document.getElementById('expense-date').value         = expense.expense_date;
             document.getElementById('expense-property').value     = expense.property_id || '';
             document.getElementById('expense-client').value       = expense.client_id || '';
+            document.getElementById('expense-supplier').value     = expense.supplier_id || '';
             document.getElementById('expense-receipt').value      = expense.receipt_url || '';
             document.getElementById('expense-notes').value        = expense.notes || '';
         } else {
@@ -267,6 +284,7 @@
             expense_date: document.getElementById('expense-date').value,
             property_id:  document.getElementById('expense-property').value || null,
             client_id:    document.getElementById('expense-client').value || null,
+            supplier_id:  document.getElementById('expense-supplier').value || null,
             receipt_url:  document.getElementById('expense-receipt').value.trim(),
             notes:        document.getElementById('expense-notes').value.trim(),
         };

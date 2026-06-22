@@ -63,6 +63,7 @@ function listDocuments(PDO $db): void
     $docType    = trim($_GET['doc_type'] ?? '');
     $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $contractId = isset($_GET['contract_id']) ? (int) $_GET['contract_id'] : null;
 
     // ── Part 1: real documents ────────────────────────────────────────────
     $docItems = [];
@@ -86,16 +87,21 @@ function listDocuments(PDO $db): void
             $dWhere .= ' AND d.property_id = :property_id';
             $dParams['property_id'] = $propertyId;
         }
+        if ($contractId) {
+            $dWhere .= ' AND d.contract_id = :contract_id';
+            $dParams['contract_id'] = $contractId;
+        }
 
         $stmt = $db->prepare(
-            "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id,
+            "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id, d.contract_id,
                     d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
                     c.name AS client_name, c.surname AS client_surname,
                     p.address AS property_address, p.city AS property_city,
-                    NULL AS contract_id
+                    ct.title AS contract_title
              FROM documents d
              LEFT JOIN clients c ON c.id = d.client_id
              LEFT JOIN properties p ON p.id = d.property_id
+             LEFT JOIN contracts ct ON ct.id = d.contract_id
              $dWhere
              ORDER BY d.created_at DESC"
         );
@@ -124,6 +130,10 @@ function listDocuments(PDO $db): void
         if ($propertyId) {
             $cWhere .= ' AND ct.property_id = :ct_property_id';
             $cParams['ct_property_id'] = $propertyId;
+        }
+        if ($contractId) {
+            $cWhere .= ' AND ct.id = :ct_id';
+            $cParams['ct_id'] = $contractId;
         }
 
         $typeLabels = [
@@ -167,10 +177,12 @@ function getDocument(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
         "SELECT d.*, c.name AS client_name, c.surname AS client_surname,
-                p.address AS property_address, p.city AS property_city
+                p.address AS property_address, p.city AS property_city,
+                ct.title AS contract_title
          FROM documents d
          LEFT JOIN clients c ON c.id = d.client_id
          LEFT JOIN properties p ON p.id = d.property_id
+         LEFT JOIN contracts ct ON ct.id = d.contract_id
          WHERE d.id = :id"
     );
     $stmt->execute(['id' => $id]);
@@ -190,14 +202,15 @@ function uploadDocument(PDO $db): void
     $title      = trim($_POST['title'] ?? '') ?: null;
     $clientId   = !empty($_POST['client_id']) ? (int) $_POST['client_id'] : null;
     $propertyId = !empty($_POST['property_id']) ? (int) $_POST['property_id'] : null;
+    $contractId = !empty($_POST['contract_id']) ? (int) $_POST['contract_id'] : null;
     $notes      = trim($_POST['notes'] ?? '') ?: null;
 
     if (!in_array($docType, DOC_TYPES, true)) {
         apiError('Tipo documento non valido.');
     }
 
-    if (!$clientId && !$propertyId) {
-        apiError('Associa il documento ad almeno un proprietario o un immobile.');
+    if (!$clientId && !$propertyId && !$contractId) {
+        apiError('Associa il documento ad almeno un proprietario, un immobile o un contratto.');
     }
 
     if ($clientId && !clientExists($db, $clientId)) {
@@ -206,6 +219,10 @@ function uploadDocument(PDO $db): void
 
     if ($propertyId && !propertyExists($db, $propertyId)) {
         apiError('Immobile non trovato.');
+    }
+
+    if ($contractId && !contractExists($db, $contractId)) {
+        apiError('Contratto non trovato.');
     }
 
     if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
@@ -244,10 +261,10 @@ function uploadDocument(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO documents
-            (doc_type, title, client_id, property_id, file_path,
+            (doc_type, title, client_id, property_id, contract_id, file_path,
              original_name, mime_type, file_size, notes)
          VALUES
-            (:doc_type, :title, :client_id, :property_id, :file_path,
+            (:doc_type, :title, :client_id, :property_id, :contract_id, :file_path,
              :original_name, :mime_type, :file_size, :notes)"
     );
     $stmt->execute([
@@ -255,6 +272,7 @@ function uploadDocument(PDO $db): void
         'title'         => $title,
         'client_id'     => $clientId,
         'property_id'   => $propertyId,
+        'contract_id'   => $contractId,
         'file_path'     => $relativePath,
         'original_name' => $file['name'],
         'mime_type'     => $mime,
@@ -285,6 +303,13 @@ function deleteDocument(PDO $db, int $id): void
     $del->execute(['id' => $id]);
 
     apiSuccess(['id' => $id, 'message' => 'Documento eliminato.']);
+}
+
+function contractExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM contracts WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
 }
 
 function clientExists(PDO $db, int $id): bool

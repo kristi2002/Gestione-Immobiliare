@@ -169,11 +169,11 @@ function createProperty(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO properties
-            (client_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
+            (client_id, building_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
              year_built, property_type, description, additional_features, internal_notes, status,
              price, price_type, latitude, longitude, geo_confidence)
          VALUES
-            (:client_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
+            (:client_id, :building_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
              :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
              :price, :price_type, :latitude, :longitude, :geo_confidence)"
     );
@@ -227,7 +227,7 @@ function updateProperty(PDO $db, int $id): void
 
     $stmt = $db->prepare(
         "UPDATE properties
-         SET client_id = :client_id, address = :address, city = :city, cap = :cap,
+         SET client_id = :client_id, building_id = :building_id, address = :address, city = :city, cap = :cap,
              province = :province, sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
              year_built = :year_built, property_type = :property_type,
              description = :description, additional_features = :additional_features,
@@ -304,7 +304,8 @@ function normalizeBulkIds(array $ids): array
 
 function validatePropertyInput(PDO $db, array $data): array
 {
-    $clientId  = (int) ($data['client_id'] ?? 0);
+    $clientId   = (int) ($data['client_id'] ?? 0);
+    $buildingId = !empty($data['building_id']) ? (int) $data['building_id'] : null;
     $address   = trim($data['address'] ?? '');
     $city      = trim($data['city'] ?? '');
     $cap       = trim($data['cap'] ?? '') ?: null;
@@ -366,8 +367,17 @@ function validatePropertyInput(PDO $db, array $data): array
         apiError('Proprietario non trovato o archiviato.');
     }
 
+    if ($buildingId !== null) {
+        $buildingStmt = $db->prepare('SELECT id FROM buildings WHERE id = :id');
+        $buildingStmt->execute(['id' => $buildingId]);
+        if (!$buildingStmt->fetch()) {
+            apiError('Edificio non trovato.');
+        }
+    }
+
     return [
         'client_id'           => $clientId,
+        'building_id'         => $buildingId,
         'address'             => $address,
         'city'                => $city,
         'cap'                 => $cap,
