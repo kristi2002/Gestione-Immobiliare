@@ -166,9 +166,21 @@
             window.open(`${API}?format=csv`, '_blank');
         });
         bindClick('btn-portal-export', () => {
-            const fmt = prompt('Formato esportazione portali:\n1 = JSON (Immobiliare.it)\n2 = XML (feed MLS)\nInserisci 1 o 2:', '1');
-            if (fmt === '1') window.open(`${EXPORT_API}?format=json`, '_blank');
-            else if (fmt === '2') window.open(`${EXPORT_API}?format=xml`, '_blank');
+            document.getElementById('portal-export-modal').hidden = false;
+        });
+        bindClick('portal-export-close', () => {
+            document.getElementById('portal-export-modal').hidden = true;
+        });
+        document.getElementById('portal-export-modal')?.addEventListener('click', e => {
+            if (e.target.id === 'portal-export-modal') e.target.hidden = true;
+        });
+        bindClick('portal-export-json', () => {
+            document.getElementById('portal-export-modal').hidden = true;
+            window.open(`${EXPORT_API}?format=json`, '_blank');
+        });
+        bindClick('portal-export-xml', () => {
+            document.getElementById('portal-export-modal').hidden = true;
+            window.open(`${EXPORT_API}?format=xml`, '_blank');
         });
         bindClick('btn-compare-properties', openCompareModal);
         bindClick('property-qr-close', () => {

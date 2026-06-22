@@ -363,6 +363,37 @@
     </div>
 </div>
 
+<!-- Portal export modal -->
+<div class="modal-overlay" id="portal-export-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="portal-export-title">
+        <div class="modal-header">
+            <h3 id="portal-export-title">🌐 Esporta per portali</h3>
+            <button class="modal-close" id="portal-export-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" style="margin-bottom:16px;font-size:13px;">Scegli il formato di esportazione per pubblicare gli immobili sui portali immobiliari.</p>
+            <div class="portal-export-options">
+                <button class="portal-export-option" id="portal-export-json">
+                    <span class="portal-export-option__icon">📄</span>
+                    <div class="portal-export-option__info">
+                        <strong>JSON</strong>
+                        <span>Immobiliare.it, Casa.it</span>
+                    </div>
+                    <span class="portal-export-option__arrow">→</span>
+                </button>
+                <button class="portal-export-option" id="portal-export-xml">
+                    <span class="portal-export-option__icon">🔗</span>
+                    <div class="portal-export-option__info">
+                        <strong>XML</strong>
+                        <span>Feed MLS / altri portali</span>
+                    </div>
+                    <span class="portal-export-option__arrow">→</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Media lightbox -->
 <div class="media-lightbox" id="media-lightbox" hidden>
     <button type="button" class="media-lightbox__close" id="media-lightbox-close" aria-label="Chiudi">&times;</button>

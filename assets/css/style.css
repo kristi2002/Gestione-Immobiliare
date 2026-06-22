@@ -3393,6 +3393,71 @@ body.nav-open {
 /* Appraisal modal */
 .appraisal-modal .modal-body { max-height: 75vh; overflow-y: auto; }
 
+/* Portal export modal */
+.portal-export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.portal-export-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--color-bg);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+    width: 100%;
+}
+
+.portal-export-option:hover {
+    border-color: #22d3ee;
+    background: #ecfeff;
+    box-shadow: 0 2px 8px rgba(14,116,144,.12);
+}
+
+.portal-export-option:active {
+    background: #cffafe;
+}
+
+.portal-export-option__icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.portal-export-option__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.portal-export-option__info strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.portal-export-option__info span {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.portal-export-option__arrow {
+    font-size: 16px;
+    color: var(--color-muted);
+    transition: transform .15s, color .15s;
+}
+
+.portal-export-option:hover .portal-export-option__arrow {
+    transform: translateX(3px);
+    color: #0e7490;
+}
+
 /* TOTP setup */
 .totp-setup { max-width: 520px; }
 
