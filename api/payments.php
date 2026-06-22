@@ -39,6 +39,9 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        apiError('Operazione non consentita: esistono record collegati a questo elemento. Rimuoverli prima di procedere.', 409);
+    }
     apiError('Errore database.', 500);
 }
 
@@ -86,6 +89,7 @@ function listPayments(PDO $db): void
             FROM payments pay
             INNER JOIN tenants t ON t.id = pay.tenant_id
             INNER JOIN properties p ON p.id = pay.property_id
+            LEFT JOIN contracts ct ON ct.id = pay.contract_id
             $where
             ORDER BY pay.due_date DESC";
 
@@ -120,9 +124,9 @@ function createPayment(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO payments
-            (tenant_id, property_id, amount, due_date, paid_date, status, notes)
+            (tenant_id, property_id, contract_id, amount, due_date, paid_date, status, notes)
          VALUES
-            (:tenant_id, :property_id, :amount, :due_date, :paid_date, :status, :notes)"
+            (:tenant_id, :property_id, :contract_id, :amount, :due_date, :paid_date, :status, :notes)"
     );
     $stmt->execute($validated);
 
@@ -142,8 +146,8 @@ function updatePayment(PDO $db, int $id): void
 
     $stmt = $db->prepare(
         "UPDATE payments
-         SET tenant_id = :tenant_id, property_id = :property_id, amount = :amount,
-             due_date = :due_date, paid_date = :paid_date, status = :status, notes = :notes
+         SET tenant_id = :tenant_id, property_id = :property_id, contract_id = :contract_id,
+             amount = :amount, due_date = :due_date, paid_date = :paid_date, status = :status, notes = :notes
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -173,6 +177,8 @@ function validatePaymentInput(array $data): array
 {
     $tenantId   = (int) ($data['tenant_id'] ?? 0);
     $propertyId = (int) ($data['property_id'] ?? 0);
+    $contractId = isset($data['contract_id']) && $data['contract_id'] !== '' && $data['contract_id'] !== null
+        ? (int) $data['contract_id'] : null;
     $amount     = isset($data['amount']) && $data['amount'] !== '' ? (float) $data['amount'] : null;
     $dueDate    = trim($data['due_date'] ?? '');
     $paidDate   = trim($data['paid_date'] ?? '') ?: null;
@@ -204,19 +210,3 @@ function validatePaymentInput(array $data): array
     }
 
     return [
-        'tenant_id'   => $tenantId,
-        'property_id' => $propertyId,
-        'amount'      => $amount,
-        'due_date'    => $dueDate,
-        'paid_date'   => $paidDate,
-        'status'      => $status,
-        'notes'       => $notes,
-    ];
-}
-
-function paymentExists(PDO $db, int $id): bool
-{
-    $stmt = $db->prepare("SELECT id FROM payments WHERE id = :id");
-    $stmt->execute(['id' => $id]);
-    return (bool) $stmt->fetch();
-}

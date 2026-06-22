@@ -89,7 +89,7 @@
         tenants = await Pagination.fetchList(TENANTS_API);
         els.tenantSelect.innerHTML = '<option value="">— Seleziona inquilino —</option>' +
             tenants.map(t =>
-                `<option value="${t.id}" data-property="${t.property_id}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`
+                `<option value="${t.id}" data-property="${t.property_id || ''}" data-contract="${t.contract_id || ''}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`
             ).join('');
     }
 
@@ -138,7 +138,7 @@
         }
 
         els.grid.innerHTML = payments.map(p => {
-            const markPaidBtn = (p.status === 'pending' || p.status === 'late')
+            const markPaidBtn = window.canWrite !== false && (p.status === 'pending' || p.status === 'late')
                 ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${p.id}" title="Segna come pagato">✓ Pagato</button>`
                 : '';
 
@@ -160,8 +160,8 @@
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
                         ${markPaidBtn}
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${p.id}" title="Annulla">🗑️</button>
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
+                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${p.id}" title="Annulla">🗑️</button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -213,7 +213,10 @@
             </div>`;
 
         const paidBtn = document.getElementById('scheda-pay-paid');
-        paidBtn.hidden = !(p.status === 'pending' || p.status === 'late');
+        paidBtn.hidden = !(window.canWrite !== false && (p.status === 'pending' || p.status === 'late'));
+
+        const editBtn = document.getElementById('scheda-pay-edit');
+        if (editBtn) editBtn.hidden = window.canWrite === false;
 
         document.getElementById('payment-scheda-modal').hidden = false;
     }
@@ -236,6 +239,8 @@
             document.getElementById('payment-id').value        = payment.id;
             document.getElementById('payment-tenant').value     = payment.tenant_id;
             document.getElementById('payment-property').value   = payment.property_id;
+            const contractInput = document.getElementById('payment-contract-id');
+            if (contractInput) contractInput.value = payment.contract_id || '';
             document.getElementById('payment-amount').value     = payment.amount;
             document.getElementById('payment-due-date').value   = payment.due_date;
             document.getElementById('payment-paid-date').value  = payment.paid_date || '';
@@ -259,6 +264,10 @@
         if (opt && opt.dataset.property) {
             els.propSelect.value = opt.dataset.property;
         }
+        const contractInput = document.getElementById('payment-contract-id');
+        if (contractInput && opt) {
+            contractInput.value = opt.dataset.contract || '';
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -272,6 +281,7 @@
         const data = {
             tenant_id:   document.getElementById('payment-tenant').value,
             property_id: document.getElementById('payment-property').value,
+            contract_id: document.getElementById('payment-contract-id')?.value || null,
             amount:      document.getElementById('payment-amount').value,
             due_date:    document.getElementById('payment-due-date').value,
             paid_date:   document.getElementById('payment-paid-date').value,
@@ -316,6 +326,7 @@
         const data = {
             tenant_id:   payment.tenant_id,
             property_id: payment.property_id,
+            contract_id: payment.contract_id || null,
             amount:      payment.amount,
             due_date:    payment.due_date,
             paid_date:   new Date().toISOString().slice(0, 10),
@@ -357,27 +368,4 @@
     }
 
     function formatPrice(value) {
-        const n = Number(value);
-        if (!isFinite(n)) return value;
-        return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    function truncate(str, len) {
-        return str.length > len ? str.slice(0, len) + '…' : str;
-    }
-
-    function escapeHtml(str) {
-        if (str == null) return '';
-        const div = document.createElement('div');
-        div.textContent = String(str);
-        return div.innerHTML;
-    }
-
-    init();
-    document.getElementById('payment-tenant').addEventListener('change', onTenantChange);
-})();
+        const n 

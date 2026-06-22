@@ -201,6 +201,14 @@
                     FilterBar.setupIn(this.contentEl);
                 }
 
+                // Hide write-only static controls for readonly users.
+                // Dynamic card buttons are gated inside each module's renderCards().
+                if (!window.canWrite) {
+                    this.contentEl.querySelectorAll('[id^="btn-new-"]').forEach(el => {
+                        el.hidden = true;
+                    });
+                }
+
             } catch (err) {
                 this.contentEl.innerHTML = `
                     <div class="alert alert--error">
@@ -298,15 +306,4 @@
  * softLoad(el, spinnerHtml)
  * On first load (empty container): shows the spinner as usual.
  * On subsequent loads (filter/search): dims existing content instead of wiping it.
- * Call el.classList.remove('is-loading') after rendering the new content.
- */
-window.softLoad = function (el, spinnerHtml) {
-    if (!el) return;
-    const isEmpty = !el.firstElementChild
-        || !!el.querySelector('.entity-loading, .table-empty, [class*="entity-loading"]');
-    if (isEmpty) {
-        el.innerHTML = spinnerHtml;
-    } else {
-        el.classList.add('is-loading');
-    }
-};
+ * Call el.classList.remove

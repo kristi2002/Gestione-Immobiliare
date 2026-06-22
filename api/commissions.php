@@ -16,7 +16,7 @@ apiHandleOptions();
 requireRole('admin', 'super_admin');
 
 const COMMISSION_TYPES    = ['vendita', 'locazione', 'affitto', 'gestione', 'altro'];
-const COMMISSION_STATUSES = ['pending', 'paid'];
+const COMMISSION_STATUSES = ['pending', 'paid', 'cancelled'];
 
 try {
     $db     = getDB();
@@ -275,6 +275,4 @@ function validateCommissionInput(array $data): array
         'status'          => $status,
         'notes'           => $notes,
         'due_date'        => $dueDate,
-        'paid_at'         => $paidAt,
-    ];
-}
+        'paid_at'         => $paid

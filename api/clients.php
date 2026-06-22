@@ -49,8 +49,11 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
-    if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'uq_clients_cf')) {
-        apiError('Esiste già un proprietario con questo codice fiscale.');
+    if ($e->getCode() === '23000') {
+        if (str_contains($e->getMessage(), 'uq_clients_cf')) {
+            apiError('Esiste già un proprietario con questo codice fiscale.');
+        }
+        apiError('Operazione non consentita: esistono record collegati a questo proprietario. Rimuoverli prima di procedere.', 409);
     }
     apiError('Errore database.', 500);
 }
@@ -275,10 +278,4 @@ function importClients(PDO $db): void
 
         $stmt->execute([
             'name' => $name, 'surname' => $surname,
-            'phone' => $phone, 'email' => $email, 'status' => $status,
-        ]);
-        $imported++;
-    }
-
-    apiSuccess(['imported' => $imported, 'errors' => $errors]);
-}
+            'phone

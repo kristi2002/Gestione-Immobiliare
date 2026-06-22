@@ -47,6 +47,9 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        apiError('Operazione non consentita: esistono record collegati a questo contratto. Rimuoverli prima di procedere.', 409);
+    }
     apiError('Errore database.', 500);
 }
 
@@ -290,12 +293,4 @@ function generatePayments(PDO $db, int $id): void
     }
 
     logActivity('create', 'contract', $id, "Scadenzario generato: $count pagamenti per contratto #$id");
-    apiSuccess(['contract_id' => $id, 'payments_created' => $count, 'message' => "$count pagamenti creati."]);
-}
-
-function contractExists(PDO $db, int $id): bool
-{
-    $stmt = $db->prepare("SELECT id FROM contracts WHERE id = :id");
-    $stmt->execute(['id' => $id]);
-    return (bool) $stmt->fetch();
-}
+    apiSuccess(['con

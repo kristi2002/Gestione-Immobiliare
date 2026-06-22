@@ -119,9 +119,9 @@
                 <td>${formatDate(c.due_date)}</td>
                 <td><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
                 <td style="white-space:nowrap;">
-                    ${isPending ? `<button class="btn btn--sm btn--ghost btn-mark-paid" data-id="${c.id}" title="Segna come pagata" style="color:var(--color-success,#27ae60);">✓ Pagata</button>` : ''}
-                    <button class="btn btn--sm btn--ghost btn-c-edit" data-id="${c.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-c-del" data-id="${c.id}" title="Elimina">🗑️</button>
+                    ${window.canWrite !== false && isPending ? `<button class="btn btn--sm btn--ghost btn-mark-paid" data-id="${c.id}" title="Segna come pagata" style="color:var(--color-success,#27ae60);">✓ Pagata</button>` : ''}
+                    ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-c-edit" data-id="${c.id}" title="Modifica">✏️</button>
+                    <button class="btn btn--sm btn--ghost btn-c-del" data-id="${c.id}" title="Elimina">🗑️</button>` : ''}
                 </td>
             </tr>`;
         }).join('');
@@ -156,7 +156,7 @@
             const res  = await fetch(`${API}?id=${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ status: 'paid' }),
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
@@ -253,8 +253,4 @@
 
     function formatDate(str) {
         if (!str) return '—';
-        return new Date(str).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    init();
-})();
+        return new Date(str).toLocaleDateString('it-IT'

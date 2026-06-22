@@ -366,8 +366,8 @@
                         <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR">🔗</button>
                         <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto">📊</button>
                         <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
-                        <button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -1324,21 +1324,4 @@
         return lines;
     }
 
-    function parseCsvLine(line) {
-        const out = [];
-        let cur = '', inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (ch === '"') {
-                if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-                else inQuotes = !inQuotes;
-            } else if (ch === ',' && !inQuotes) {
-                out.push(cur); cur = '';
-            } else { cur += ch; }
-        }
-        out.push(cur);
-        return out;
-    }
-
-    init();
-})();
+    function 

@@ -53,6 +53,9 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        apiError('Operazione non consentita: esistono record collegati a questo elemento. Rimuoverli prima di procedere.', 409);
+    }
     apiError('Errore database.', 500);
 }
 
@@ -99,6 +102,11 @@ function listProperties(PDO $db): void
                    c.name AS client_name, c.surname AS client_surname,
                    COUNT(m.id) AS media_count,
                    SUM(CASE WHEN m.media_type = 'photo' THEN 1 ELSE 0 END) AS photo_count,
+                   (SELECT c2.monthly_rent FROM contracts c2
+                    WHERE c2.property_id = p.id
+                      AND c2.status NOT IN ('terminated', 'cancelled')
+                      AND (c2.end_date IS NULL OR c2.end_date >= CURDATE())
+                    ORDER BY c2.start_date DESC LIMIT 1) AS monthly_rent,
                    COALESCE(
                        (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
                        (SELECT fm.file_path FROM property_media fm
@@ -477,24 +485,4 @@ function importProperties(PDO $db): void
             continue;
         }
         $status    = trim((string) ($row['stato'] ?? 'available'));
-        $priceType = trim((string) ($row['tipo_prezzo'] ?? 'affitto'));
-        if (!in_array($status, PROPERTY_STATUSES, true))    $status = 'available';
-        if (!in_array($priceType, ['affitto', 'vendita'], true)) $priceType = 'affitto';
-
-        $stmt->execute([
-            'client_id'  => $clientId,
-            'address'    => $address,
-            'city'       => $city,
-            'cap'        => trim((string) ($row['cap'] ?? '')) ?: null,
-            'sqm'        => ($row['mq'] ?? '') !== '' ? (float) $row['mq'] : null,
-            'rooms'      => ($row['stanze'] ?? '') !== '' ? (int) $row['stanze'] : null,
-            'bathrooms'  => ($row['bagni'] ?? '') !== '' ? (int) $row['bagni'] : null,
-            'status'     => $status,
-            'price'      => ($row['prezzo'] ?? '') !== '' ? (float) $row['prezzo'] : null,
-            'price_type' => $priceType,
-        ]);
-        $imported++;
-    }
-
-    apiSuccess(['imported' => $imported, 'errors' => $errors]);
-}
+        $priceType = trim((s

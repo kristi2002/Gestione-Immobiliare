@@ -48,6 +48,9 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        apiError('Operazione non consentita: esistono immobili collegati a questo edificio. Rimuoverli prima di procedere.', 409);
+    }
     apiError('Errore database.', 500);
 }
 
@@ -246,9 +249,4 @@ function validateBuildingInput(array $data): array
 
     return [
         'name'        => $name,
-        'address'     => $address,
-        'city'        => $city,
-        'total_units' => $totalUnits,
-        'notes'       => $notes,
-    ];
-}
+        

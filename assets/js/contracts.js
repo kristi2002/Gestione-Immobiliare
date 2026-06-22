@@ -219,10 +219,10 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${advanceBtn}
-                        <button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale">✍️</button>
+                        ${window.canWrite !== false ? advanceBtn : ''}
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale">✍️</button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina">🗑️</button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina">🗑️</button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -525,38 +525,4 @@
             loadContracts();
         } catch (err) {
             showAlert(err.message, 'error');
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Utilities
-    // -------------------------------------------------------------------------
-
-    function showAlert(message, type) {
-        els.alert.textContent = message;
-        els.alert.className   = `alert alert--${type}`;
-        els.alert.style.display = 'block';
-        clearTimeout(els.alert._t);
-        els.alert._t = setTimeout(() => { els.alert.style.display = 'none'; }, 4000);
-    }
-
-    function formatPrice(value) {
-        const n = Number(value);
-        if (!isFinite(n)) return value;
-        return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    function escapeHtml(str) {
-        if (str == null) return '';
-        const div = document.createElement('div');
-        div.textContent = String(str);
-        return div.innerHTML;
-    }
-
-    init();
-})();
+      

@@ -23,6 +23,12 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
     <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="stylesheet" href="branding.css.php">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script>
+        // Expose role + write permission to all view scripts.
+        // canWrite is false only for the 'readonly' role — API enforces the same.
+        window.userRole = <?= json_encode($role) ?>;
+        window.canWrite = <?= json_encode(!isReadOnlyRole()) ?>;
+    </script>
 </head>
 <body>
     <div class="sidebar-backdrop" id="sidebar-backdrop" hidden aria-hidden="true"></div>
@@ -228,14 +234,4 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
         const hadController = !!navigator.serviceWorker.controller;
         let swReloaded = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (swReloaded || !hadController) return;
-            swReloaded = true;
-            window.location.reload();
-        });
-        navigator.serviceWorker.register('sw.js')
-            .then((reg) => { reg.update(); })
-            .catch(() => {});
-    }
-    </script>
-</body>
-</html>
+         
