@@ -175,6 +175,11 @@ function updateContract(PDO $db, int $id): void
 
 function deleteContract(PDO $db, int $id): void
 {
+    // Deleting a contract is permanent and removes legal/financial history —
+    // restrict to admin+ (same convention as admin_users.php, backup_trigger.php, etc.).
+    // Agents can still create/update contracts via requireWriteAccess() above.
+    requireRole('super_admin', 'admin');
+
     if (!contractExists($db, $id)) {
         apiError('Contratto non trovato.', 404);
     }

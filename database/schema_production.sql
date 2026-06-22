@@ -268,10 +268,11 @@ CREATE TABLE `contracts` (
   KEY `fk_contracts_document` (`document_id`),
   KEY `idx_contracts_status` (`status`),
   KEY `idx_ct_created_by` (`created_by`),
+  KEY `idx_contracts_dates` (`start_date`,`end_date`),
   CONSTRAINT `fk_contracts_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_contracts_created_by` FOREIGN KEY (`created_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_contracts_document` FOREIGN KEY (`document_id`) REFERENCES `documents` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_contracts_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_contracts_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_contracts_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -421,6 +422,8 @@ CREATE TABLE `invoices` (
   KEY `idx_invoices_number` (`invoice_number`),
   KEY `fk_invoices_property` (`property_id`),
   KEY `idx_inv_created_by` (`created_by`),
+  KEY `idx_invoices_issue_date` (`issue_date`),
+  KEY `idx_invoices_due_date` (`due_date`),
   CONSTRAINT `fk_invoice_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_invoice_lead` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_invoices_created_by` FOREIGN KEY (`created_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -558,6 +561,7 @@ CREATE TABLE `payments` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `tenant_id` int unsigned NOT NULL,
   `property_id` int unsigned NOT NULL,
+  `contract_id` int unsigned DEFAULT NULL,
   `amount` decimal(10,2) NOT NULL,
   `due_date` date NOT NULL,
   `paid_date` date DEFAULT NULL,
@@ -568,9 +572,11 @@ CREATE TABLE `payments` (
   PRIMARY KEY (`id`),
   KEY `fk_payments_tenant` (`tenant_id`),
   KEY `fk_payments_property` (`property_id`),
+  KEY `idx_payments_contract` (`contract_id`),
   KEY `idx_payments_due` (`due_date`),
   KEY `idx_payments_status` (`status`),
-  CONSTRAINT `fk_payments_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_payments_contract` FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_payments_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_payments_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -847,6 +853,7 @@ CREATE TABLE `reminders` (
   `frequency` enum('once','weekly','biweekly','monthly','quarterly','yearly') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'once',
   `status` enum('pending','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `client_id` int unsigned DEFAULT NULL,
+  `tenant_id` int unsigned DEFAULT NULL,
   `supplier_id` int unsigned DEFAULT NULL,
   `supplier_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `maintenance_status` enum('aperta','in_lavorazione','completata','chiusa') COLLATE utf8mb4_unicode_ci DEFAULT 'aperta',
@@ -869,9 +876,11 @@ CREATE TABLE `reminders` (
   KEY `idx_reminders_status` (`status`),
   KEY `idx_notify_client` (`notify_client`,`status`),
   KEY `idx_rem_supplier` (`supplier_id`),
+  KEY `idx_rem_tenant` (`tenant_id`),
   CONSTRAINT `fk_reminders_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_reminders_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `fk_reminders_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `fk_reminders_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_reminders_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
