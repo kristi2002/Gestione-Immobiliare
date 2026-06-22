@@ -1649,6 +1649,7 @@ details.nav-group[open] > summary .nav-group-arrow {
     padding: 16px 20px;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface);
+    flex-shrink: 0;
 }
 
 .chat-header h3 {
@@ -1747,6 +1748,7 @@ details.nav-group[open] > summary .nav-group-arrow {
     border-top: 1px solid var(--color-border);
     padding: 14px 20px 16px;
     background: var(--color-surface);
+    flex-shrink: 0;
 }
 
 .chat-compose__tabs {
