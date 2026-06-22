@@ -44,6 +44,9 @@ try {
             if ($action === 'convert') {
                 if (!$id) apiError('ID lead mancante.');
                 convertLead($db, $id);
+            } elseif ($action === 'convert_tenant') {
+                if (!$id) apiError('ID lead mancante.');
+                convertLeadToTenant($db, $id);
             } elseif ($action === 'bulk' || ($postBody['action'] ?? '') === 'bulk') {
                 bulkLeads($db);
             } else {
@@ -255,6 +258,62 @@ function convertLead(PDO $db, int $id): void
     $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
 
     apiSuccess(['lead_id' => $id, 'client_id' => $clientId, 'message' => 'Lead convertito in proprietario.']);
+}
+
+function convertLeadToTenant(PDO $db, int $id): void
+{
+    $stmt = $db->prepare("SELECT * FROM leads WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    $lead = $stmt->fetch();
+    if (!$lead) {
+        apiError('Lead non trovato.', 404);
+    }
+
+    $data        = apiGetJsonBody();
+    $propertyId  = !empty($data['property_id'])  ? (int) $data['property_id']  : 0;
+    $leaseStart  = trim($data['lease_start']  ?? '') ?: null;
+    $leaseEnd    = trim($data['lease_end']    ?? '') ?: null;
+    $monthlyRent = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? (float) $data['monthly_rent'] : null;
+    $email       = trim($data['email'] ?? '') ?: trim($lead['email'] ?? '');
+
+    if ($propertyId <= 0)  apiError('Seleziona un immobile.');
+    if (!$leaseStart)      apiError('La data di inizio locazione è obbligatoria.');
+    if ($email === '')     apiError('L\'email è obbligatoria per creare un inquilino (campo univoco).');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) apiError('Email non valida.');
+
+    $propStmt = $db->prepare("SELECT id FROM properties WHERE id = :id AND status != 'archived'");
+    $propStmt->execute(['id' => $propertyId]);
+    if (!$propStmt->fetch()) {
+        apiError('Immobile non trovato o archiviato.');
+    }
+
+    $dupStmt = $db->prepare("SELECT id FROM tenants WHERE email = :email AND status != 'archived'");
+    $dupStmt->execute(['email' => $email]);
+    if ($dupStmt->fetch()) {
+        apiError('Esiste già un inquilino attivo con questa email.');
+    }
+
+    $insert = $db->prepare(
+        "INSERT INTO tenants (property_id, name, surname, email, phone, lease_start, lease_end, monthly_rent, notes, status)
+         VALUES (:property_id, :name, :surname, :email, :phone, :lease_start, :lease_end, :monthly_rent, :notes, 'active')"
+    );
+    $insert->execute([
+        'property_id'  => $propertyId,
+        'name'         => $lead['name'],
+        'surname'      => $lead['surname'],
+        'email'        => $email,
+        'phone'        => $lead['phone'],
+        'lease_start'  => $leaseStart,
+        'lease_end'    => $leaseEnd,
+        'monthly_rent' => $monthlyRent,
+        'notes'        => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
+    ]);
+    $tenantId = (int) $db->lastInsertId();
+
+    $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
+    logActivity('create', 'tenant', $tenantId, 'Inquilino creato da lead #' . $id);
+
+    apiSuccess(['lead_id' => $id, 'tenant_id' => $tenantId, 'message' => 'Lead convertito in inquilino.']);
 }
 
 function matchProperties(PDO $db, int $leadId): void

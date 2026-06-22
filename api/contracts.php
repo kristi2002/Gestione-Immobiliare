@@ -27,7 +27,13 @@ try {
             $id ? getContract($db, $id) : listContracts($db);
             break;
         case 'POST':
-            createContract($db);
+            $action = trim($_GET['action'] ?? '');
+            if ($action === 'generate_payments') {
+                if (!$id) apiError('ID contratto mancante.');
+                generatePayments($db, $id);
+            } else {
+                createContract($db);
+            }
             break;
         case 'PUT':
             if (!$id) apiError('ID contratto mancante.');
@@ -232,6 +238,56 @@ function validateContractInput(array $data): array
         'document_id'   => $documentId,
         'notes'         => $notes,
     ];
+}
+
+function generatePayments(PDO $db, int $id): void
+{
+    $stmt = $db->prepare("SELECT * FROM contracts WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    $contract = $stmt->fetch();
+    if (!$contract) apiError('Contratto non trovato.', 404);
+
+    if ($contract['contract_type'] !== 'locazione')
+        apiError('La generazione dello scadenzario è disponibile solo per contratti di locazione.');
+    if (!$contract['tenant_id'])
+        apiError('Il contratto non ha un inquilino associato.');
+    if (!$contract['monthly_rent'])
+        apiError('Il contratto non ha un canone mensile.');
+    if (!$contract['start_date'])
+        apiError('Il contratto non ha una data di inizio.');
+    if (!$contract['end_date'])
+        apiError('Il contratto non ha una data di fine.');
+
+    $existStmt = $db->prepare("SELECT COUNT(*) FROM payments WHERE contract_id = :cid");
+    $existStmt->execute(['cid' => $id]);
+    if ((int) $existStmt->fetchColumn() > 0) {
+        apiError('Esiste già uno scadenzario per questo contratto. Elimina i pagamenti esistenti prima di rigenerarlo.');
+    }
+
+    $start   = new DateTime($contract['start_date']);
+    $end     = new DateTime($contract['end_date']);
+    $current = clone $start;
+
+    $insert = $db->prepare(
+        "INSERT INTO payments (contract_id, tenant_id, property_id, amount, due_date, status)
+         VALUES (:contract_id, :tenant_id, :property_id, :amount, :due_date, 'pending')"
+    );
+
+    $count = 0;
+    while ($current <= $end) {
+        $insert->execute([
+            'contract_id' => $id,
+            'tenant_id'   => $contract['tenant_id'],
+            'property_id' => $contract['property_id'],
+            'amount'      => $contract['monthly_rent'],
+            'due_date'    => $current->format('Y-m-d'),
+        ]);
+        $count++;
+        $current->modify('+1 month');
+    }
+
+    logActivity('create', 'contract', $id, "Scadenzario generato: $count pagamenti per contratto #$id");
+    apiSuccess(['contract_id' => $id, 'payments_created' => $count, 'message' => "$count pagamenti creati."]);
 }
 
 function contractExists(PDO $db, int $id): bool

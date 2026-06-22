@@ -198,4 +198,47 @@
     </div>
 </div>
 
+<!-- Convert to Tenant modal -->
+<div class="modal-overlay" id="lead-tenant-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-label="Converti in inquilino">
+        <div class="modal-header">
+            <h3>Converti in Inquilino</h3>
+            <button class="modal-close" id="lead-tenant-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="lead-tenant-lead-id">
+            <p class="text-muted" style="margin-bottom:16px">I dati anagrafici del lead verranno copiati automaticamente nel profilo inquilino.</p>
+            <div class="form-group">
+                <label for="lead-tenant-email">Email <span class="required">*</span></label>
+                <input type="email" id="lead-tenant-email" class="form-input" required maxlength="255">
+            </div>
+            <div class="form-group">
+                <label for="lead-tenant-property">Immobile <span class="required">*</span></label>
+                <select id="lead-tenant-property" class="form-select" required>
+                    <option value="">— Seleziona immobile —</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="lead-tenant-start">Inizio locazione <span class="required">*</span></label>
+                    <input type="date" id="lead-tenant-start" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="lead-tenant-end">Fine locazione</label>
+                    <input type="date" id="lead-tenant-end" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="lead-tenant-rent">Canone mensile (€)</label>
+                <input type="number" id="lead-tenant-rent" class="form-input" min="0" step="0.01">
+            </div>
+            <div id="lead-tenant-error" class="alert alert--error" style="display:none;margin:0 0 12px 0"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="lead-tenant-modal-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="lead-tenant-modal-save">Converti in Inquilino</button>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/leads.js"></script>

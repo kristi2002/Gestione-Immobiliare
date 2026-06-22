@@ -118,6 +118,11 @@
             closeSchedaModal();
             advanceStatus(id);
         });
+        document.getElementById('scheda-ct-generate').addEventListener('click', () => {
+            const id = schedaContractId;
+            closeSchedaModal();
+            generatePayments(id);
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -290,12 +295,37 @@
             advBtn.hidden = true;
         }
 
+        const genBtn = document.getElementById('scheda-ct-generate');
+        genBtn.hidden = !(c.contract_type === 'locazione' && c.tenant_id && c.monthly_rent && c.start_date && c.end_date);
+
         document.getElementById('contract-scheda-modal').hidden = false;
     }
 
     function closeSchedaModal() {
         schedaContractId = null;
         document.getElementById('contract-scheda-modal').hidden = true;
+    }
+
+    async function generatePayments(id) {
+        const c = contracts.find(x => x.id == id);
+        if (!c) return;
+
+        const msPerMonth    = 1000 * 60 * 60 * 24 * 30.44;
+        const approxMonths  = Math.ceil((new Date(c.end_date) - new Date(c.start_date)) / msPerMonth);
+
+        if (!await confirmDialog(
+            `Verranno creati circa ${approxMonths} pagamenti da € ${formatPrice(c.monthly_rent)}/mese per questo contratto.\n\nProcedere?`,
+            { title: 'Genera scadenzario pagamenti', confirmText: 'Genera', danger: false }
+        )) return;
+
+        try {
+            const res  = await fetch(`${API}?action=generate_payments&id=${id}`, { method: 'POST' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert(`Scadenzario creato: ${json.data.payments_created} pagamenti.`, 'success');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
     }
 
     // -------------------------------------------------------------------------

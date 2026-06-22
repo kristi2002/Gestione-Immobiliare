@@ -133,11 +133,11 @@ function listReminders(PDO $db): void
 
     $dataSql = "SELECT r.*, c.name AS client_name, c.surname AS client_surname,
                    p.address AS property_address, p.city AS property_city,
-                   COALESCE(r.tenant_name, CONCAT(tn.name, ' ', tn.surname)) AS tenant_name
+                   CASE WHEN tn.id IS NOT NULL THEN CONCAT(tn.name, ' ', tn.surname) ELSE r.tenant_name END AS tenant_name
             FROM reminders r
             LEFT JOIN clients c ON c.id = r.client_id
             LEFT JOIN properties p ON p.id = r.property_id
-            LEFT JOIN tenants tn ON tn.property_id = r.property_id AND tn.status != 'archived'
+            LEFT JOIN tenants tn ON tn.id = r.tenant_id
             $where
             ORDER BY r.reminder_date ASC";
 

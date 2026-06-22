@@ -52,11 +52,12 @@ $prop = $prop->fetch(PDO::FETCH_ASSOC);
 $clientId = $prop ? $prop['client_id'] : null;
 
 $db->prepare(
-    'INSERT INTO reminders (client_id, property_id, title, description, reminder_date, frequency, status, created_at)
-     VALUES (:cid, :pid, :title, :desc, CURDATE(), :freq, :status, NOW())'
+    'INSERT INTO reminders (client_id, property_id, tenant_id, title, description, reminder_date, frequency, status, created_at)
+     VALUES (:cid, :pid, :tid, :title, :desc, CURDATE(), :freq, :status, NOW())'
 )->execute([
     'cid'    => $clientId,
     'pid'    => $tenant['property_id'],
+    'tid'    => $tenantId,
     'title'  => $fullTitle,
     'desc'   => $fullDesc,
     'freq'   => 'once',

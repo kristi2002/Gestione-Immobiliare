@@ -42,9 +42,12 @@
         els.bulkCount     = document.getElementById('leads-bulk-count');
         els.selectAll     = document.getElementById('leads-select-all');
         els.bulkAssignAgent = document.getElementById('bulk-assign-agent');
+        els.tenantModal    = document.getElementById('lead-tenant-modal');
+        els.tenantPropSel  = document.getElementById('lead-tenant-property');
 
         bindEvents();
         loadAgents().then(loadLeads);
+        loadPropertiesForTenantModal();
     }
 
     function bindEvents() {
@@ -68,6 +71,11 @@
 
         els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
         els.matchModal.addEventListener('click', (e) => { if (e.target === els.matchModal) closeMatchModal(); });
+
+        document.getElementById('lead-tenant-modal-close').addEventListener('click', closeTenantModal);
+        document.getElementById('lead-tenant-modal-cancel').addEventListener('click', closeTenantModal);
+        document.getElementById('lead-tenant-modal-save').addEventListener('click', submitConvertToTenant);
+        els.tenantModal.addEventListener('click', (e) => { if (e.target === els.tenantModal) closeTenantModal(); });
     }
 
     async function loadAgents() {
@@ -82,6 +90,18 @@
                     agents.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
             }
         } catch (err) { /* non blocking */ }
+    }
+
+    async function loadPropertiesForTenantModal() {
+        try {
+            const res  = await fetch('api/properties.php?limit=500');
+            const json = await res.json();
+            if (json.success) {
+                const props = json.data.items || [];
+                els.tenantPropSel.innerHTML = '<option value="">— Seleziona immobile —</option>' +
+                    props.map(p => `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`).join('');
+            }
+        } catch (_) { /* non blocking */ }
     }
 
     async function loadLeads() {
@@ -142,6 +162,9 @@
                     <div class="entity-card__actions">
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${l.id}" title="Modifica">✏️</button>
                         <button class="btn btn--sm btn--ghost btn-convert" data-id="${l.id}" title="Converti in proprietario">👤</button>
+                        ${(l.interest_type === 'affitto' || l.interest_type === 'entrambi')
+                            ? `<button class="btn btn--sm btn--ghost btn-convert-tenant" data-id="${l.id}" title="Converti in inquilino">🔑</button>`
+                            : ''}
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${l.id}" title="Archivia">🗑️</button>
                     </div>
                 </div>
@@ -162,6 +185,10 @@
         }));
         els.grid.querySelectorAll('.btn-match').forEach(b => b.addEventListener('click', () => showMatches(b.dataset.id)));
         els.grid.querySelectorAll('.btn-convert').forEach(b => b.addEventListener('click', () => convertLead(b.dataset.id)));
+        els.grid.querySelectorAll('.btn-convert-tenant').forEach(b => b.addEventListener('click', () => {
+            const l = leads.find(x => x.id == b.dataset.id);
+            if (l) openTenantModal(l);
+        }));
         els.grid.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => archiveLead(b.dataset.id)));
         updateBulkToolbar();
     }
@@ -351,6 +378,60 @@
             showAlert('Lead archiviato.', 'success');
             loadLeads();
         } catch (err) { showAlert(err.message, 'error'); }
+    }
+
+    function openTenantModal(lead) {
+        document.getElementById('lead-tenant-lead-id').value = lead.id;
+        document.getElementById('lead-tenant-email').value   = lead.email || '';
+        document.getElementById('lead-tenant-start').value   = '';
+        document.getElementById('lead-tenant-end').value     = '';
+        document.getElementById('lead-tenant-rent').value    = '';
+        document.getElementById('lead-tenant-error').style.display = 'none';
+        els.tenantModal.hidden = false;
+    }
+
+    function closeTenantModal() { els.tenantModal.hidden = true; }
+
+    async function submitConvertToTenant() {
+        const leadId = document.getElementById('lead-tenant-lead-id').value;
+        const email  = document.getElementById('lead-tenant-email').value.trim();
+        const propId = document.getElementById('lead-tenant-property').value;
+        const start  = document.getElementById('lead-tenant-start').value;
+        const end    = document.getElementById('lead-tenant-end').value;
+        const rent   = document.getElementById('lead-tenant-rent').value;
+        const errEl  = document.getElementById('lead-tenant-error');
+
+        if (!email)  { errEl.textContent = 'L\'email è obbligatoria.'; errEl.style.display = 'block'; return; }
+        if (!propId) { errEl.textContent = 'Seleziona un immobile.';   errEl.style.display = 'block'; return; }
+        if (!start)  { errEl.textContent = 'Inserisci la data di inizio locazione.'; errEl.style.display = 'block'; return; }
+        errEl.style.display = 'none';
+
+        const btn = document.getElementById('lead-tenant-modal-save');
+        btn.disabled = true; btn.textContent = 'Conversione...';
+
+        try {
+            const res  = await fetch(`${API}?action=convert_tenant&id=${leadId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    property_id:  parseInt(propId, 10),
+                    lease_start:  start,
+                    lease_end:    end   || null,
+                    monthly_rent: rent  || null,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            closeTenantModal();
+            showAlert('Lead convertito in inquilino.', 'success');
+            loadLeads();
+        } catch (err) {
+            errEl.textContent = err.message;
+            errEl.style.display = 'block';
+        } finally {
+            btn.disabled = false; btn.textContent = 'Converti in Inquilino';
+        }
     }
 
     function formatBudget(min, max) {
