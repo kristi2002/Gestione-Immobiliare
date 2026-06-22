@@ -161,7 +161,9 @@
                     <button class="btn btn--sm btn--ghost btn-match" data-id="${l.id}">🔎 Trova immobili compatibili</button>
                     <div class="entity-card__actions">
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${l.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-convert" data-id="${l.id}" title="Converti in proprietario">👤</button>
+                        ${(l.interest_type === 'acquisto' || l.interest_type === 'entrambi')
+                            ? `<button class="btn btn--sm btn--ghost btn-convert" data-id="${l.id}" title="Converti in proprietario">👤</button>`
+                            : ''}
                         ${(l.interest_type === 'affitto' || l.interest_type === 'entrambi')
                             ? `<button class="btn btn--sm btn--ghost btn-convert-tenant" data-id="${l.id}" title="Converti in inquilino">🔑</button>`
                             : ''}
