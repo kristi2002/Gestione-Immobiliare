@@ -15,6 +15,12 @@ loadEnv(dirname(__DIR__) . '/.env');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/settings.php';
 
+// Stripe SDK (installed via Composer)
+$autoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (file_exists($autoload)) {
+    require_once $autoload;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -28,48 +34,65 @@ $sigHeader = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
 
 // ── Webhook signing secret ──────────────────────────────────────────────────────
 $webhookSecret = getSetting('stripe_webhook_secret')
-              ?? (getenv('STRIPE_WEBHOOK_SECRET') ?: '');
+              ?: (getenv('STRIPE_WEBHOOK_SECRET') ?: '');
 
-if ($webhookSecret && $sigHeader) {
-    // Verify Stripe signature (Stripe-Signature: t=...,v1=...)
-    $valid = false;
-    $parts = [];
-    foreach (explode(',', $sigHeader) as $part) {
-        [$k, $v] = array_pad(explode('=', $part, 2), 2, '');
-        $parts[$k][] = $v;
-    }
+$event = null;
 
-    $timestamp = $parts['t'][0] ?? 0;
-    // Reject if timestamp is too old (5 minutes)
-    if (abs(time() - (int) $timestamp) > 300) {
+if ($webhookSecret) {
+    if (!$sigHeader) {
         http_response_code(400);
-        echo json_encode(['error' => 'Timestamp troppo vecchio.']);
+        echo json_encode(['error' => 'Stripe-Signature header mancante.']);
         exit;
     }
 
-    $signedPayload = $timestamp . '.' . $payload;
-    $expectedSig   = hash_hmac('sha256', $signedPayload, $webhookSecret);
-    foreach ($parts['v1'] ?? [] as $v1) {
-        if (hash_equals($expectedSig, $v1)) {
-            $valid = true;
-            break;
+    // ── Use Stripe SDK if available, otherwise fall back to manual HMAC ──────
+    if (class_exists('\\Stripe\\Webhook')) {
+        try {
+            $event = \Stripe\Webhook::constructEvent($payload, $sigHeader, $webhookSecret);
+            $event = json_decode(json_encode($event), true); // normalise to plain array
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Firma non valida.']);
+            exit;
+        } catch (\UnexpectedValueException $e) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Payload non valido.']);
+            exit;
+        }
+    } else {
+        // Fallback: manual HMAC-SHA256 (identical algorithm to the SDK)
+        $parts = [];
+        foreach (explode(',', $sigHeader) as $part) {
+            [$k, $v] = array_pad(explode('=', $part, 2), 2, '');
+            $parts[$k][] = $v;
+        }
+        $timestamp = (int) ($parts['t'][0] ?? 0);
+        if (abs(time() - $timestamp) > 300) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Timestamp troppo vecchio.']);
+            exit;
+        }
+        $expected = hash_hmac('sha256', $timestamp . '.' . $payload, $webhookSecret);
+        $valid    = false;
+        foreach ($parts['v1'] ?? [] as $v1) {
+            if (hash_equals($expected, $v1)) { $valid = true; break; }
+        }
+        if (!$valid) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Firma non valida.']);
+            exit;
         }
     }
-
-    if (!$valid) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Firma non valida.']);
-        exit;
-    }
-} elseif ($webhookSecret && !$sigHeader) {
-    // Secret configured but signature missing — reject
-    http_response_code(400);
-    echo json_encode(['error' => 'Stripe-Signature header mancante.']);
-    exit;
+} else {
+    // No secret configured — accept event (development/testing mode only)
+    // In production, set STRIPE_WEBHOOK_SECRET in Coolify env vars.
+    error_log('[stripe_webhook] WARNING: no STRIPE_WEBHOOK_SECRET set — accepting unverified events.');
 }
-// If no webhook secret is configured, accept the event (development mode)
 
-$event = json_decode($payload, true);
+// If $event wasn't already set by SDK path, parse the raw payload now
+if ($event === null) {
+    $event = json_decode($payload, true);
+}
 if (!is_array($event)) {
     http_response_code(400);
     echo json_encode(['error' => 'Payload non valido.']);

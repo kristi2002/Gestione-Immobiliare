@@ -2,7 +2,9 @@
 
 Web-based admin dashboard for real estate agencies. Manage property owners, listings, documents, tenant leases, communications, reminders, and social media — with a separate portal for tenants.
 
-**Stack:** PHP 8+ · MySQL · Apache · Docker · Vanilla JavaScript (no build step)
+**Live:** https://testdemo.it | **Stack:** PHP 8.3 · MySQL 8 · Apache · Docker · Vanilla JavaScript
+
+> 📁 **Full documentation is in the [`/docs`](./docs/) folder** — architecture, database ERD, integrations, gaps, and deploy guide.
 
 ---
 

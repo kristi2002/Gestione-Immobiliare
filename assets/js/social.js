@@ -357,18 +357,33 @@
     async function handlePostSubmit(e) {
         e.preventDefault();
 
-        const id = document.getElementById('post-id').value;
+        const id       = document.getElementById('post-id').value;
+        const platform = document.getElementById('post-platform').value;
+
+        // Instagram requires an image — warn before saving
+        const imageFile      = document.getElementById('post-image').files[0];
+        const propertyMediaId = document.getElementById('post-property-media-id').value;
+        const hasImage       = imageFile || propertyMediaId;
+
+        if ((platform === 'instagram' || platform === 'both') && !hasImage) {
+            const igWarn = document.getElementById('post-instagram-warn');
+            if (igWarn) {
+                igWarn.hidden = false;
+                setTimeout(() => { igWarn.hidden = true; }, 6000);
+            } else {
+                showAlert('Instagram richiede un\'immagine. Seleziona un\'immagine o una foto dall\'immobile prima di salvare.', 'error');
+            }
+            return;
+        }
+
         const formData = new FormData();
-        formData.append('platform', document.getElementById('post-platform').value);
+        formData.append('platform', platform);
         formData.append('property_id', document.getElementById('post-property').value);
         formData.append('caption', document.getElementById('post-caption').value.trim());
         formData.append('scheduled_at', document.getElementById('post-scheduled').value);
         formData.append('status', document.getElementById('post-status').value);
 
-        const imageFile = document.getElementById('post-image').files[0];
         if (imageFile) formData.append('image', imageFile);
-
-        const propertyMediaId = document.getElementById('post-property-media-id').value;
         if (propertyMediaId) formData.append('property_media_id', propertyMediaId);
 
         const btn = document.getElementById('post-modal-save');

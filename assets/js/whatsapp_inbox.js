@@ -7,24 +7,29 @@
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
-    let pollTimer       = null;
-    let activePhone     = null;
-    let threads         = [];
-    const els           = {};
+    let pollTimer        = null;
+    let activePhone      = null;
+    let threads          = [];
+    let msgPage          = 1;   // current oldest page loaded (pages go newest→oldest as page increases)
+    let msgTotalPages    = 1;   // total pages available for active thread
+    const MSG_LIMIT      = 50;  // messages per page
+    const els            = {};
 
     function init() {
-        els.alert       = document.getElementById('whatsapp-inbox-alert');
-        els.threadList  = document.getElementById('wa-thread-list');
-        els.emptyState  = document.getElementById('wa-empty-state');
-        els.activeChat  = document.getElementById('wa-active-chat');
-        els.chatHeader  = document.getElementById('wa-chat-header');
-        els.chatName    = document.getElementById('wa-chat-name');
-        els.chatSub     = document.getElementById('wa-chat-sub');
-        els.chatAvatar  = document.getElementById('wa-chat-avatar');
-        els.chatMsgs    = document.getElementById('wa-chat-messages');
-        els.replyText   = document.getElementById('wa-reply-text');
-        els.sendBtn     = document.getElementById('wa-send-btn');
-        els.newModal    = document.getElementById('wa-new-modal');
+        els.alert            = document.getElementById('whatsapp-inbox-alert');
+        els.threadList       = document.getElementById('wa-thread-list');
+        els.emptyState       = document.getElementById('wa-empty-state');
+        els.activeChat       = document.getElementById('wa-active-chat');
+        els.chatHeader       = document.getElementById('wa-chat-header');
+        els.chatName         = document.getElementById('wa-chat-name');
+        els.chatSub          = document.getElementById('wa-chat-sub');
+        els.chatAvatar       = document.getElementById('wa-chat-avatar');
+        els.chatMsgs         = document.getElementById('wa-chat-messages');
+        els.replyText        = document.getElementById('wa-reply-text');
+        els.sendBtn          = document.getElementById('wa-send-btn');
+        els.newModal         = document.getElementById('wa-new-modal');
+        els.loadEarlierBar   = document.getElementById('wa-load-earlier-bar');
+        els.loadEarlierBtn   = document.getElementById('wa-load-earlier-btn');
 
         bindEvents();
         loadThreads();
@@ -50,6 +55,8 @@
             els.replyText.style.height = 'auto';
             els.replyText.style.height = Math.min(els.replyText.scrollHeight, 120) + 'px';
         });
+        // Load earlier messages button
+        els.loadEarlierBtn.addEventListener('click', loadEarlierMessages);
     }
 
     function startPolling() {
@@ -127,14 +134,17 @@
     }
 
     async function openThread(phone) {
-        activePhone = phone;
+        activePhone    = phone;
+        msgPage        = 1;
+        msgTotalPages  = 1;
         renderThreads(); // update active highlight
 
         els.emptyState.style.display  = 'none';
         els.activeChat.style.display  = 'flex';
+        els.loadEarlierBar.style.display = 'none';
 
-        const thread = threads.find(t => t.phone === phone);
-        const name   = thread?.contact_name || phone;
+        const thread   = threads.find(t => t.phone === phone);
+        const name     = thread?.contact_name || phone;
         const initials = name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
 
         els.chatName.textContent   = name;
@@ -145,30 +155,78 @@
         await markRead(phone);
     }
 
+    function renderBubbles(messages) {
+        return messages.map(m => {
+            const isOut = m.direction === 'outbound' || m.direction === 'sent';
+            const time  = m.received_at || m.created_at;
+            return `<div class="wa-bubble wa-bubble--${isOut ? 'out' : 'in'}">
+                ${esc(m.body || m.message || '')}
+                <div class="wa-bubble-time">${esc(time ? formatTime(time) : '')}</div>
+            </div>`;
+        }).join('');
+    }
+
     async function loadMessages(phone, silent = false) {
         if (!silent) els.chatMsgs.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Caricamento…</div>';
         try {
-            const res  = await fetch(`${INBOX_API}?thread=${encodeURIComponent(phone)}`);
+            const url  = `${INBOX_API}?thread=${encodeURIComponent(phone)}&page=1&limit=${MSG_LIMIT}`;
+            const res  = await fetch(url);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            const messages  = json.data?.items ?? json.data ?? [];
-            const wasBottom = isNearBottom();
+            const data      = json.data;
+            const messages  = data?.items ?? data ?? [];
+            msgPage         = 1;
+            msgTotalPages   = data?.pages ?? 1;
 
-            els.chatMsgs.innerHTML = messages.map(m => {
-                const isOut = m.direction === 'outbound' || m.direction === 'sent';
-                const time  = m.created_at ? formatTime(m.created_at) : '';
-                return `<div class="wa-bubble wa-bubble--${isOut ? 'out' : 'in'}">
-                    ${esc(m.body || m.message || '')}
-                    <div class="wa-bubble-time">${esc(time)}</div>
-                </div>`;
-            }).join('');
+            els.chatMsgs.innerHTML = renderBubbles(messages);
+            els.loadEarlierBar.style.display = msgTotalPages > 1 ? 'block' : 'none';
 
-            if (!silent || wasBottom) scrollToBottom();
+            if (!silent) scrollToBottom();
+            else if (isNearBottom()) scrollToBottom();
         } catch (err) {
             if (!silent) {
                 els.chatMsgs.innerHTML = `<div style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</div>`;
             }
+        }
+    }
+
+    async function loadEarlierMessages() {
+        if (!activePhone || msgPage >= msgTotalPages) return;
+
+        const btn = els.loadEarlierBtn;
+        btn.disabled    = true;
+        btn.textContent = 'Caricamento…';
+
+        const prevScrollHeight = els.chatMsgs.scrollHeight;
+
+        try {
+            const nextPage = msgPage + 1;
+            const url = `${INBOX_API}?thread=${encodeURIComponent(activePhone)}&page=${nextPage}&limit=${MSG_LIMIT}`;
+            const res  = await fetch(url);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            const data     = json.data;
+            const messages = data?.items ?? [];
+            msgPage        = nextPage;
+            msgTotalPages  = data?.pages ?? msgTotalPages;
+
+            // Prepend older messages at top
+            els.chatMsgs.insertAdjacentHTML('afterbegin', renderBubbles(messages));
+
+            // Restore scroll position so user stays at the same spot
+            els.chatMsgs.scrollTop = els.chatMsgs.scrollHeight - prevScrollHeight;
+
+            // Hide button if no more pages
+            if (msgPage >= msgTotalPages) {
+                els.loadEarlierBar.style.display = 'none';
+            }
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled    = false;
+            btn.textContent = '⬆ Carica messaggi precedenti';
         }
     }
 

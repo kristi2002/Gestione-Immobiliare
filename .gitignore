@@ -9,3 +9,6 @@ uploads/social/*
 !uploads/branding/.gitkeep
 !uploads/documents/generated/.gitkeep
 .setup_complete
+vendor/
+.phpunit.result.cache
+*.log

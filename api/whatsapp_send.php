@@ -5,10 +5,14 @@
  */
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/whatsapp.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 
 apiHandleOptions();
 apiRequireMethod('POST');
 requireRole('admin', 'agent', 'super_admin');
+
+// Rate limit: 20 outbound WhatsApp messages per user per minute (no admin bypass — Twilio costs money)
+checkRateLimit('whatsapp_send', 20, 60, false);
 
 $data    = apiGetJsonBody();
 $phone   = trim($data['phone'] ?? '');

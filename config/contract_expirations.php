@@ -47,38 +47,39 @@ function processContractExpirations(PDO $db): array
     $skipped = 0;
     $results = [];
 
+    // Dedup: skip if a pending reminder with same title already exists within 90 days
     $dupStmt = $db->prepare(
         "SELECT id FROM reminders
-         WHERE entity_type = 'contract' AND entity_id = :cid AND status = 'pending'
+         WHERE title = :title AND status = 'pending'
            AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
          LIMIT 1"
     );
 
     $insStmt = $db->prepare(
         "INSERT INTO reminders
-            (title, reminder_date, frequency, status, client_id, property_id,
-             notify_admin, notify_client, entity_type, entity_id)
+            (title, description, reminder_date, frequency, status, client_id, property_id,
+             notify_admin, notify_client)
          VALUES
-            (:title, :reminder_date, 'once', 'pending', :client_id, :property_id,
-             1, 0, 'contract', :entity_id)"
+            (:title, :description, :reminder_date, 'once', 'pending', :client_id, :property_id,
+             1, 0)"
     );
 
     foreach ($contracts as $c) {
-        $dupStmt->execute(['cid' => $c['id']]);
+        $reminderDate = date('Y-m-d H:i:s', strtotime($c['end_date'] . ' -30 days'));
+        $title        = 'Scadenza contratto: ' . $c['title'];
+
+        $dupStmt->execute(['title' => $title]);
         if ($dupStmt->fetch()) {
             $skipped++;
             continue;
         }
 
-        $reminderDate = date('Y-m-d H:i:s', strtotime($c['end_date'] . ' -30 days'));
-        $title        = 'Scadenza contratto: ' . $c['title'];
-
         $insStmt->execute([
             'title'         => $title,
+            'description'   => 'Il contratto scadrà il ' . date('d/m/Y', strtotime($c['end_date'])) . '. (contratto #' . $c['id'] . ')',
             'reminder_date' => $reminderDate,
             'client_id'     => $c['client_id'],
             'property_id'   => $c['property_id'],
-            'entity_id'     => $c['id'],
         ]);
         $created++;
 

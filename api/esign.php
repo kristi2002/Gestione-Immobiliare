@@ -16,6 +16,10 @@ require_once __DIR__ . '/../config/api_pagination.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/activity_log.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/../config/mail_html.php';
+require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 
 apiHandleOptions();
 
@@ -26,6 +30,11 @@ $action  = trim($_GET['action'] ?? '');
 // Public endpoints: token GET and sign POST — skip auth
 $isPublicGet  = $method === 'GET' && $token !== '';
 $isPublicSign = $method === 'POST' && $token !== '' && $action === 'sign';
+
+// Rate-limit the public sign endpoint to prevent token brute-force / spam
+if ($isPublicSign) {
+    checkRateLimit('esign_sign', 10, 60, false);
+}
 
 if (!$isPublicGet && !$isPublicSign) {
     requireAuthApi();
@@ -155,10 +164,23 @@ function createEsignRequest(PDO $db): void
     $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
     $link    = $baseUrl . '/sign.php?token=' . $token;
 
+    // Send signing invitation email to the signer
+    $agencyName = getSetting('agency_name', 'Gestionale Immobiliare');
+    $emailSubject = $agencyName . ' — Richiesta di firma documento';
+    $emailBody    = "Gentile {$signerName},\n\n"
+        . "Le è stato inviato un documento da firmare elettronicamente.\n\n"
+        . "Clicchi sul link seguente per visualizzare e firmare il documento:\n"
+        . $link . "\n\n"
+        . "Il link è valido fino al " . date('d/m/Y', strtotime($expiresAt)) . ".\n\n"
+        . "Cordiali saluti,\n" . $agencyName;
+    $emailResult = sendHtmlEmail($signerEmail, $emailSubject, $emailBody);
+    $emailSent   = $emailResult['success'] ?? false;
+
     $stmt = $db->prepare("SELECT * FROM esign_requests WHERE id = :id");
     $stmt->execute(['id' => $newId]);
     $request = $stmt->fetch();
-    $request['sign_link'] = $link;
+    $request['sign_link']   = $link;
+    $request['email_sent']  = $emailSent;
 
     apiSuccess($request);
 }

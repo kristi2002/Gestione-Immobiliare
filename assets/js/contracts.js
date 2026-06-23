@@ -383,7 +383,15 @@
             document.getElementById('esign-link-url').value = signUrl;
             document.getElementById('esign-link-result').hidden = false;
             btn.hidden = true;
-            showAlert('Link di firma generato.', 'success');
+            const emailSent = json.data.email_sent;
+            const alertMsg  = emailSent
+                ? 'Link di firma generato e email inviata automaticamente al firmatario.'
+                : 'Link di firma generato. Copia e invia il link manualmente al firmatario.';
+            showAlert(alertMsg, emailSent ? 'success' : 'warning');
+            const hintEl = document.getElementById('esign-link-hint');
+            if (hintEl) hintEl.textContent = emailSent
+                ? '✉️ Email di invito inviata automaticamente al firmatario.'
+                : '⚠️ Email non configurata — invia questo link al firmatario via email o WhatsApp.';
         } catch (err) {
             showAlert(err.message, 'error');
             btn.disabled = false;

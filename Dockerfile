@@ -1,18 +1,27 @@
 FROM php:8.3-apache-bookworm
 
+# System dependencies + PHP extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
         default-mysql-client \
         libzip-dev \
+        libicu-dev \
+        libonig-dev \
         unzip \
-    && docker-php-ext-install pdo pdo_mysql \
+        curl \
+        git \
+    && docker-php-ext-install pdo pdo_mysql zip intl mbstring \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
+# PHP config
 RUN { \
         echo 'upload_max_filesize = 25M'; \
         echo 'post_max_size = 26M'; \
         echo 'max_execution_time = 120'; \
     } > /usr/local/etc/php/conf.d/uploads.ini
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
@@ -58,8 +67,12 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/
 
 COPY . /var/www/html/
 
+# Install PHP dependencies (production only — no dev tools in image)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
+    && rm -rf /root/.composer
+
 RUN mkdir -p uploads/properties uploads/documents uploads/social uploads/branding uploads/documents/generated backups \
-    && chown -R www-data:www-data uploads backups
+    && chown -R www-data:www-data uploads backups vendor
 
 EXPOSE 80
 

@@ -9,10 +9,14 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 requireRole('admin', 'agent', 'super_admin', 'readonly');
 
 apiHandleOptions();
 apiRequireMethod('POST');
+
+// Rate limit: 5 Stripe checkout sessions per user per minute (prevents runaway billing)
+checkRateLimit('stripe_checkout', 5, 60, false);
 
 try {
     $db   = getDB();
