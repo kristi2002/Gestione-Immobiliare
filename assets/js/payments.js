@@ -368,4 +368,27 @@
     }
 
     function formatPrice(value) {
-        const n 
+        const n = Number(value);
+        if (!isFinite(n)) return value;
+        return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function truncate(str, len) {
+        return str.length > len ? str.slice(0, len) + '…' : str;
+    }
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        const div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
+    }
+
+    init();
+    document.getElementById('payment-tenant').addEventListener('change', onTenantChange);
+})();

@@ -253,4 +253,8 @@
 
     function formatDate(str) {
         if (!str) return '—';
-        return new Date(str).toLocaleDateString('it-IT'
+        return new Date(str).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    init();
+})();

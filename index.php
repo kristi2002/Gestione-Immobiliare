@@ -234,4 +234,14 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
         const hadController = !!navigator.serviceWorker.controller;
         let swReloaded = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-         
+            if (swReloaded || !hadController) return;
+            swReloaded = true;
+            window.location.reload();
+        });
+        navigator.serviceWorker.register('sw.js')
+            .then((reg) => { reg.update(); })
+            .catch(() => {});
+    }
+    </script>
+</body>
+</html>

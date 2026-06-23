@@ -210,3 +210,20 @@ function validatePaymentInput(array $data): array
     }
 
     return [
+        'tenant_id'   => $tenantId,
+        'property_id' => $propertyId,
+        'contract_id' => $contractId,
+        'amount'      => $amount,
+        'due_date'    => $dueDate,
+        'paid_date'   => $paidDate,
+        'status'      => $status,
+        'notes'       => $notes,
+    ];
+}
+
+function paymentExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM payments WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
+}

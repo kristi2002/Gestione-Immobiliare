@@ -275,4 +275,6 @@ function validateCommissionInput(array $data): array
         'status'          => $status,
         'notes'           => $notes,
         'due_date'        => $dueDate,
-        'paid_at'         => $paid
+        'paid_at'         => $paidAt,
+    ];
+}

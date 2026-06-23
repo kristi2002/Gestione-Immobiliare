@@ -249,4 +249,9 @@ function validateBuildingInput(array $data): array
 
     return [
         'name'        => $name,
-        
+        'address'     => $address,
+        'city'        => $city,
+        'total_units' => $totalUnits,
+        'notes'       => $notes,
+    ];
+}

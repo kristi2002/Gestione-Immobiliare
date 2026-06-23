@@ -485,4 +485,24 @@ function importProperties(PDO $db): void
             continue;
         }
         $status    = trim((string) ($row['stato'] ?? 'available'));
-        $priceType = trim((s
+        $priceType = trim((string) ($row['tipo_prezzo'] ?? 'affitto'));
+        if (!in_array($status, PROPERTY_STATUSES, true))    $status = 'available';
+        if (!in_array($priceType, ['affitto', 'vendita'], true)) $priceType = 'affitto';
+
+        $stmt->execute([
+            'client_id'  => $clientId,
+            'address'    => $address,
+            'city'       => $city,
+            'cap'        => trim((string) ($row['cap'] ?? '')) ?: null,
+            'sqm'        => ($row['mq'] ?? '') !== '' ? (float) $row['mq'] : null,
+            'rooms'      => ($row['stanze'] ?? '') !== '' ? (int) $row['stanze'] : null,
+            'bathrooms'  => ($row['bagni'] ?? '') !== '' ? (int) $row['bagni'] : null,
+            'status'     => $status,
+            'price'      => ($row['prezzo'] ?? '') !== '' ? (float) $row['prezzo'] : null,
+            'price_type' => $priceType,
+        ]);
+        $imported++;
+    }
+
+    apiSuccess(['imported' => $imported, 'errors' => $errors]);
+}

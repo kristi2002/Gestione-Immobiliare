@@ -1324,4 +1324,21 @@
         return lines;
     }
 
-    function 
+    function parseCsvLine(line) {
+        const out = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+                else inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+                out.push(cur); cur = '';
+            } else { cur += ch; }
+        }
+        out.push(cur);
+        return out;
+    }
+
+    init();
+})();

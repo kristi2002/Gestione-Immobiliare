@@ -293,4 +293,12 @@ function generatePayments(PDO $db, int $id): void
     }
 
     logActivity('create', 'contract', $id, "Scadenzario generato: $count pagamenti per contratto #$id");
-    apiSuccess(['con
+    apiSuccess(['contract_id' => $id, 'payments_created' => $count, 'message' => "$count pagamenti creati."]);
+}
+
+function contractExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM contracts WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
+}

@@ -278,4 +278,10 @@ function importClients(PDO $db): void
 
         $stmt->execute([
             'name' => $name, 'surname' => $surname,
-            'phone
+            'phone' => $phone, 'email' => $email, 'status' => $status,
+        ]);
+        $imported++;
+    }
+
+    apiSuccess(['imported' => $imported, 'errors' => $errors]);
+}

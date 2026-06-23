@@ -322,4 +322,47 @@
         return json.data;
     }
 
-    async function del
+    async function deleteExpense(id) {
+        try {
+            const res  = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert('Spesa eliminata.', 'success');
+            loadExpenses();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Utilities
+    // -------------------------------------------------------------------------
+
+    function showAlert(message, type) {
+        els.alert.textContent = message;
+        els.alert.className   = `alert alert--${type}`;
+        els.alert.style.display = 'block';
+        clearTimeout(els.alert._t);
+        els.alert._t = setTimeout(() => { els.alert.style.display = 'none'; }, 4000);
+    }
+
+    function formatPrice(value) {
+        const n = Number(value);
+        if (!isFinite(n)) return value;
+        return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        const div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
+    }
+
+    init();
+})();
