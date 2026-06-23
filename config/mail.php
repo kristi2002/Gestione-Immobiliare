@@ -87,7 +87,7 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
             fclose($socket);
             return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP STARTTLS fallito.'];
         }
-        stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+        stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT);
         if (!$cmd('EHLO localhost', [250])) {
             fclose($socket);
             return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP EHLO post-TLS fallito.'];
