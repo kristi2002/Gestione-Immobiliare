@@ -110,9 +110,13 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
         fclose($socket);
         return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP RCPT TO fallito (destinatario rifiutato: ' . $to . ').'];
     }
-    if (!$cmd('DATA', [354])) {
+    fwrite($socket, "DATA\r\n");
+    $dataResp = $read();
+    $dataCode = (int) substr($dataResp, 0, 3);
+    if ($dataCode !== 354) {
         fclose($socket);
-        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP DATA fallito.'];
+        $dataText = trim(substr($dataResp, 4));
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => "SMTP DATA fallito ({$dataCode}: {$dataText})."];
     }
 
     $message  = "From: " . $cfg['agency_name'] . " <{$agencyEmail}>\r\n";
