@@ -249,7 +249,7 @@ CREATE TABLE `contracts` (
   KEY `fk_contracts_client` (`client_id`),
   KEY `idx_contracts_status` (`status`),
   KEY `idx_ct_created_by` (`created_by`),
-  KEY `idx_contracts_dates` (`start_date`,`end_date`),
+  KEY `idx_contracts_dates` (`end_date`),
   CONSTRAINT `fk_contracts_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_contracts_created_by` FOREIGN KEY (`created_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_contracts_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE RESTRICT,

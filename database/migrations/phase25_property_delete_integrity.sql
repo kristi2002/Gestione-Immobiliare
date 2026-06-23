@@ -59,13 +59,27 @@ ALTER TABLE payments
 -- ------------------------------------------------------------
 -- 3. Missing date-range indexes
 -- ------------------------------------------------------------
+-- Drop the old (start_date, end_date) composite if it exists — start_date is never
+-- in a WHERE clause alone, so the left-prefix rule made that index unusable for the
+-- contract-expiry cron which only filters on end_date.
+SET @exists := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contracts'
+      AND INDEX_NAME = 'idx_contracts_dates'
+);
+SET @sql := IF(@exists > 0,
+    'ALTER TABLE contracts DROP INDEX idx_contracts_dates',
+    'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Re-create as single-column (end_date) index.
 SET @exists := (
     SELECT COUNT(*) FROM information_schema.STATISTICS
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contracts'
       AND INDEX_NAME = 'idx_contracts_dates'
 );
 SET @sql := IF(@exists = 0,
-    'ALTER TABLE contracts ADD INDEX idx_contracts_dates (start_date, end_date)',
+    'ALTER TABLE contracts ADD INDEX idx_contracts_dates (end_date)',
     'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

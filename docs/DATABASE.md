@@ -524,9 +524,9 @@ Lead pipeline with statuses from `new` to `converted` or `lost`.
 `lead_property_matches` is a many-to-many pivot table linking leads to candidate properties.
 
 ### `reminders` — Multi-purpose reminder system
-Overloaded table: used for tenant maintenance requests AND generic reminders.  
-Has `maintenance_status`, `request_type`, and `category` fields for maintenance use case.  
-See GAPS.md — this dual-use creates confusion.
+Dual-use table: handles both generic reminders and maintenance ticket tracking (filtered by `type = 'maintenance'`).  
+Maintenance-specific columns: `maintenance_status`, `request_type`, `category`, `supplier_id`, `supplier_name`, `priority`, `tenant_name`, and `tenant_id` (FK to `tenants` — added phase24).  
+The `tenant_id` FK means maintenance tickets are now properly linked to the submitting tenant by foreign key, not just by free-text name.
 
 ### `whatsapp_messages` — Twilio message log
 Stores inbound (from Twilio webhook) and outbound messages.  

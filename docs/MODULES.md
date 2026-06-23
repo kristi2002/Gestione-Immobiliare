@@ -135,7 +135,7 @@ A per-property checklist of furniture and fittings: item name, category (furnitu
 
 Formal agreements between the agency and its clients or tenants. Types include lease, sale, preliminary, mandate, and other. Each contract links a property to a tenant and/or owner, has start/end dates, and tracks its status (draft → sent → signed → expired). Supports e-signature: generate a link, send it to the signer, and the system records when they sign. A contract can also reference a stored PDF from Documents.
 
-> **Note:** Contracts do NOT automatically generate Payment records. Payments are created independently and carry their own rent amount. The contract is a reference document; the tenant record itself also stores the monthly rent and lease dates.
+> **Note:** Contracts can auto-generate the full payment schedule via the **"Genera scadenzario"** button (visible on `locazione` contracts that have a tenant, monthly rent, and start/end dates set). This calls `api/contracts.php?action=generate_payments` which inserts one payment row per month, each linked back to the contract via `contract_id`.
 
 **Connects to:** Properties (required), Tenants (optional), Clients (as landlord, optional), Documents (optional — the signed PDF), Commissions (agency fee for the deal), Reminders (manually created expiry alerts).
 
@@ -163,9 +163,7 @@ Invoices issued by the agency, addressed to a client or a lead. Includes amount,
 
 The rent payment schedule. Each record represents one month's rent for a tenant at a property: amount due, due date, and whether it has been paid, is pending, or is late. The view includes a monthly calendar to spot overdue payments at a glance.
 
-> **Platform gap:** Payment records are NOT linked to a contract and are NOT auto-generated. Even though a lease contract stores `monthly_rent` and start/end dates, and the tenant record also stores `monthly_rent`, no payment records are created automatically. Every monthly payment entry must be created manually. There is also no FK to the contract on a payment row — you cannot tell from a payment which contract period it belongs to.
-
-**Connects to:** Tenants (required), Properties (required), Forecast (feeds revenue projections), Reports (collected revenue totals).
+**Connects to:** Tenants (required), Properties (required), Contracts (via `contract_id` FK — links each payment to its lease period), Forecast (feeds revenue projections), Reports (collected revenue totals).
 
 ---
 
@@ -207,13 +205,11 @@ A yearly financial summary: total expected vs. collected revenue, total expenses
 
 A kanban/table view for tracking repair and maintenance requests. Tickets can be created by the agency manually, or by tenants through the tenant portal.
 
-**Important architectural note:** There is no separate maintenance table in the database. Maintenance tickets are stored as rows in the **Reminders** table, filtered by `type = 'maintenance'`. The reminders table has extra columns specifically for this purpose: `maintenance_status`, `supplier_id`, `supplier_name`, `priority`, `request_type`, `tenant_name`.
-
-When a tenant submits a request via the portal, it inserts a row into `reminders` linked to the property and its owner (client). The tenant's name is stored as a text string in the description — there is **no FK link to the tenant** in that record.
+**Architectural note:** There is no separate maintenance table. Maintenance tickets are stored as rows in the **Reminders** table filtered by `type = 'maintenance'`. The reminders table has dedicated columns for this: `maintenance_status`, `supplier_id`, `supplier_name`, `priority`, `request_type`, `tenant_name`, and a `tenant_id` FK (added in phase24) that links the ticket to the specific tenant who submitted it.
 
 The kanban board columns map to `maintenance_status` values: aperta → in_lavorazione → completata → chiusa.
 
-**Connects to:** Properties (required), Clients/owners (via property), Suppliers (assigned via supplier_id in the reminders row). The link to the specific Tenant is by name text only, not by foreign key.
+**Connects to:** Properties (required), Clients/owners (via property), Tenants (via `tenant_id` FK), Suppliers (assigned via `supplier_id`).
 
 ---
 
