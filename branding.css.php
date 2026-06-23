@@ -5,8 +5,8 @@ require_once __DIR__ . '/config/settings.php';
 header('Content-Type: text/css; charset=utf-8');
 header('Cache-Control: public, max-age=300');
 
-$primary = preg_replace('/[^#a-fA-F0-9]/', '', getSetting('primary_color', '#2563eb')) ?: '#2563eb';
-$sidebar = preg_replace('/[^#a-fA-F0-9]/', '', getSetting('sidebar_color', '#1e293b')) ?: '#1e293b';
+$primary = preg_replace('/[^#a-fA-F0-9]/', '', getSetting('primary_color', '#206bac')) ?: '#206bac';
+$sidebar = preg_replace('/[^#a-fA-F0-9]/', '', getSetting('sidebar_color', '#0d2140')) ?: '#0d2140';
 
 if (!str_starts_with($primary, '#')) $primary = '#' . $primary;
 if (!str_starts_with($sidebar, '#')) $sidebar = '#' . $sidebar;
