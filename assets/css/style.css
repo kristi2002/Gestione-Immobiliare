@@ -64,7 +64,7 @@ body {
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
-    margin-left: 0;
+    margin-left: var(--sidebar-width);
     transition: margin-left var(--transition);
 }
 
@@ -83,7 +83,6 @@ body {
     flex-direction: column;
     z-index: 1100;
     transition: transform var(--transition);
-    transform: translateX(-100%);
 }
 
 .sidebar.open {
@@ -239,7 +238,7 @@ details.nav-group[open] > summary .nav-group-arrow {
 }
 
 .sidebar-toggle {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 5px;
     background: none;
@@ -2088,7 +2087,16 @@ body.nav-open {
     }
 
     .sidebar {
+        transform: translateX(-100%);
         box-shadow: var(--shadow-md);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+        display: flex;
     }
 
     .app-content {

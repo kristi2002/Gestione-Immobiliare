@@ -50,7 +50,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     <li><a href="view.php?name=dashboard" class="nav-link active" data-view="dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a></li>
                 </ul>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Persone</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <li><a href="view.php?name=clients" class="nav-link" data-view="clients"><span class="nav-icon">👥</span><span class="nav-label">Proprietari</span></a></li>
@@ -66,7 +66,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Immobili</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <li><a href="view.php?name=properties" class="nav-link" data-view="properties"><span class="nav-icon">🏢</span><span class="nav-label">Immobili</span></a></li>
@@ -88,7 +88,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Documenti</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('contracts')): ?>
@@ -101,7 +101,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Finanze</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('payments')): ?>
@@ -122,7 +122,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Gestione</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('maintenance_workflow')): ?>
@@ -140,7 +140,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Comunicazioni</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <li><a href="view.php?name=communications" class="nav-link" data-view="communications"><span class="nav-icon">✉️</span><span class="nav-label">Comunicazioni</span></a></li>
@@ -156,7 +156,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Agenda</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('appointments')): ?>
@@ -172,7 +172,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group" open>
+                <details class="nav-group">
                     <summary><span class="nav-group-label">Sistema</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('activity_log')): ?>
