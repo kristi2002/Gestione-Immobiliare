@@ -68,7 +68,9 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/
 COPY . /var/www/html/
 
 # Install PHP dependencies (production only — no dev tools in image)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
+# Using `composer update` so Docker regenerates composer.lock from composer.json
+# (avoids stale lock file errors when new packages are added without local PHP)
+RUN composer update --no-dev --optimize-autoloader --no-interaction --no-progress \
     && rm -rf /root/.composer
 
 RUN mkdir -p uploads/properties uploads/documents uploads/social uploads/branding uploads/documents/generated backups \
