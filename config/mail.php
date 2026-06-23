@@ -102,9 +102,17 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
     }
 
     $agencyEmail = $cfg['agency_email'];
-    if (!$cmd('MAIL FROM:<' . $agencyEmail . '>', [250]) || !$cmd('RCPT TO:<' . $to . '>', [250, 251]) || !$cmd('DATA', [354])) {
+    if (!$cmd('MAIL FROM:<' . $agencyEmail . '>', [250])) {
         fclose($socket);
-        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP envelope fallito.'];
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP MAIL FROM fallito (mittente non autorizzato: ' . $agencyEmail . ').'];
+    }
+    if (!$cmd('RCPT TO:<' . $to . '>', [250, 251])) {
+        fclose($socket);
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP RCPT TO fallito (destinatario rifiutato: ' . $to . ').'];
+    }
+    if (!$cmd('DATA', [354])) {
+        fclose($socket);
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP DATA fallito.'];
     }
 
     $message  = "From: " . $cfg['agency_name'] . " <{$agencyEmail}>\r\n";
