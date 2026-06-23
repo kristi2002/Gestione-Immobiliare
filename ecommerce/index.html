@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orlandi Immobiliare – Case in Vendita e Affitto a Civitanova Marche</title>
+    <meta name="description" content="Orlandi Immobiliare: compra, vendi o affitta casa a Civitanova Marche. 25 annunci attivi, 39 immobili venduti/affittati. Agenzia di fiducia da 7 anni.">
+    <link rel="icon" href="assets/img/logo.jpg">
+    <style>
+/* ============================================================
+   ORLANDI IMMOBILIARE – Brand Design System
+   Primary: #206bac (Orlandi Blue)  Navy: #0d2140  Gold: #c8921a
+   ============================================================ */
+:root {
+    --primary:       #206bac;
+    --primary-dark:  #174f82;
+    --primary-light: #deeef9;
+    --gold:          #c8921a;
+    --gold-light:    #fff4df;
+    --navy:          #0d2140;
+    --navy-mid:      #1a3a6e;
+    --bg:            #f2f6fb;
+    --surface:       #ffffff;
+    --text:          #1a2535;
+    --text-muted:    #5a7291;
+    --border:        #d3e0ef;
+    --shadow:        0 2px 12px rgba(13,33,64,.08);
+    --shadow-md:     0 6px 24px rgba(13,33,64,.12);
+    --shadow-lg:     0 12px 48px rgba(13,33,64,.18);
+    --radius:        12px;
+    --radius-sm:     8px;
+    --header-h:      72px;
+    --transition:    .2s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+}
+
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 16px rgba(13,33,64,.07);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 32px;
+    z-index: 1000;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+.header-brand img {
+    height: 44px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 6px;
+}
+.header-brand-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.2;
+}
+.header-brand-tag {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    justify-content: center;
+}
+.header-nav a {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color var(--transition), background var(--transition);
+}
+.header-nav a:hover, .header-nav a.active {
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+}
+.header-phone {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+.header-phone svg { color: var(--primary); }
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition);
+    text-decoration: none;
+}
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(32,107,172,.35); }
+.btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+}
+.btn-outline:hover { background: var(--primary); color: #fff; }
+.btn-white {
+    background: #fff;
+    color: var(--primary);
+}
+.btn-white:hover { background: var(--primary-light); }
+
+/* ─── HERO ───────────────────────────────────────────────── */
+.hero {
+    margin-top: var(--header-h);
+    background: linear-gradient(135deg, var(--navy) 0%, #1a4d88 60%, #206bac 100%);
+    padding: 80px 32px;
+    position: relative;
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    position: relative;
+    text-align: center;
+}
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,.12);
+    color: #93c5fd;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 20px;
+}
+.hero h1 {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 16px;
+}
+.hero h1 span { color: #93c5fd; }
+.hero-sub {
+    font-size: 17px;
+    color: rgba(255,255,255,.75);
+    margin-bottom: 40px;
+}
+
+/* Search box */
+.search-box {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    box-shadow: var(--shadow-lg);
+    max-width: 800px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+}
+.search-select-wrap {
+    flex: 1;
+    min-width: 160px;
+}
+.search-select-wrap label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    padding: 4px 12px 0;
+}
+.search-select-wrap select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 4px 12px 8px;
+    cursor: pointer;
+    appearance: none;
+    outline: none;
+}
+.search-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+.search-box .btn { flex-shrink: 0; padding: 14px 28px; font-size: 15px; border-radius: var(--radius-sm); }
+
+/* ─── STATS BAR ──────────────────────────────────────────── */
+.stats {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+}
+.stats-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    text-align: center;
+}
+.stat-item {
+    padding: 28px 16px;
+    border-right: 1px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-number {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    display: block;
+}
+.stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* ─── SECTION SHELL ──────────────────────────────────────── */
+.section { padding: 64px 32px; }
+.section-inner { max-width: 1200px; margin: 0 auto; }
+
+.section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+}
+.section-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--navy);
+}
+.section-sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ─── FILTER TABS ────────────────────────────────────────── */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+.filter-tab {
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    transition: all var(--transition);
+}
+.filter-tab:hover { border-color: var(--primary); color: var(--primary); }
+.filter-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(0,0,0,.08);
+    margin-left: 4px;
+}
+.filter-tab.active .filter-count { background: rgba(255,255,255,.25); }
+
+.sort-select {
+    margin-left: auto;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+}
+
+/* ─── PROPERTY GRID ──────────────────────────────────────── */
+.prop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.prop-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform var(--transition), box-shadow var(--transition);
+    cursor: pointer;
+    border: 1px solid var(--border);
+}
+.prop-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.prop-photo-wrap {
+    position: relative;
+    padding-bottom: 66%;
+    overflow: hidden;
+    background: var(--bg);
+}
+.prop-photo-wrap img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .4s ease;
+}
+.prop-card:hover .prop-photo-wrap img { transform: scale(1.05); }
+
+.badge {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+.badge-type {
+    top: 12px; left: 12px;
+}
+.badge-vendita { background: var(--primary); color: #fff; }
+.badge-affitto { background: #059669; color: #fff; }
+.badge-commercial { background: #7c3aed; color: #fff; }
+.badge-premium {
+    top: 12px; right: 12px;
+    background: var(--gold);
+    color: #fff;
+}
+.badge-discount {
+    bottom: 12px; right: 12px;
+    background: #dc2626;
+    color: #fff;
+}
+.photo-count {
+    position: absolute;
+    bottom: 12px; left: 12px;
+    background: rgba(13,33,64,.7);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.prop-body { padding: 18px 20px 20px; }
+
+.prop-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.prop-price {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--navy);
+}
+.prop-price-old {
+    font-size: 14px;
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.prop-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+    line-height: 1.3;
+}
+.prop-address {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.prop-features {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+.prop-feat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.prop-feat svg { color: var(--primary); flex-shrink: 0; }
+
+.prop-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.prop-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.prop-actions {
+    display: flex;
+    gap: 8px;
+}
+.prop-actions .btn { flex: 1; justify-content: center; padding: 9px 12px; font-size: 13px; }
+
+/* ─── AGENCY SECTION ─────────────────────────────────────── */
+.agency-section { background: var(--surface); }
+.agency-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+}
+.agency-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 12px;
+}
+.agency-grid h2 {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1.2;
+    margin-bottom: 16px;
+}
+.agency-grid p {
+    color: var(--text-muted);
+    line-height: 1.8;
+    margin-bottom: 16px;
+}
+.agency-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 24px;
+}
+.agency-fact {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+}
+.agency-fact-num { font-size: 28px; font-weight: 800; color: var(--primary); }
+.agency-fact-label { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+.agent-card {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 32px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+.agent-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 40px;
+    color: var(--primary);
+    border: 3px solid var(--primary);
+}
+.agent-name { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.agent-role { font-size: 13px; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.agent-desc { font-size: 14px; color: var(--text-muted); margin: 12px 0 20px; line-height: 1.7; }
+.agent-contact { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+/* ─── CTA SECTION ────────────────────────────────────────── */
+.cta-section {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--primary-dark) 100%);
+    text-align: center;
+}
+.cta-section h2 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+}
+.cta-section p { font-size: 17px; color: rgba(255,255,255,.75); margin-bottom: 32px; }
+.cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+/* ─── VALUTA SECTION ─────────────────────────────────────── */
+.valuta-section {
+    background: var(--primary-light);
+    text-align: center;
+}
+.valuta-section h2 { font-size: 28px; font-weight: 800; color: var(--navy); margin-bottom: 8px; }
+.valuta-section p { color: var(--text-muted); margin-bottom: 24px; }
+
+/* ─── FOOTER ─────────────────────────────────────────────── */
+.footer {
+    background: var(--navy);
+    color: rgba(255,255,255,.7);
+    padding: 56px 32px 0;
+}
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.footer-brand { }
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.footer-logo img { height: 40px; width: auto; object-fit: contain; border-radius: 6px; }
+.footer-logo-name { font-size: 16px; font-weight: 700; color: #fff; }
+.footer-brand p { font-size: 14px; line-height: 1.8; }
+.footer-brand address { font-style: normal; font-size: 14px; margin-top: 16px; line-height: 1.8; }
+.footer-brand address a { color: rgba(255,255,255,.7); transition: color var(--transition); }
+.footer-brand address a:hover { color: #93c5fd; }
+
+.footer-col h4 { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: 16px; }
+.footer-col ul { list-style: none; }
+.footer-col ul li { margin-bottom: 10px; }
+.footer-col ul li a { font-size: 14px; color: rgba(255,255,255,.7); transition: color var(--transition); }
+.footer-col ul li a:hover { color: #93c5fd; }
+
+.footer-bottom {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.footer-bottom a { color: rgba(255,255,255,.5); transition: color var(--transition); }
+.footer-bottom a:hover { color: #93c5fd; }
+
+/* ─── NO RESULTS ─────────────────────────────────────────── */
+.no-results {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 80px 32px;
+    color: var(--text-muted);
+}
+.no-results svg { margin: 0 auto 16px; opacity: .35; }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .prop-grid { grid-template-columns: repeat(2, 1fr); }
+    .agency-grid { grid-template-columns: 1fr; gap: 40px; }
+    .footer-inner { grid-template-columns: 1fr 1fr; }
+    .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    .stat-item:nth-child(2) { border-right: none; }
+    .stat-item:nth-child(3) { border-top: 1px solid var(--border); }
+    .stat-item:nth-child(4) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 768px) {
+    .header { padding: 0 16px; }
+    .header-nav { display: none; }
+    .hero { padding: 56px 16px; }
+    .search-box { flex-direction: column; }
+    .search-divider { display: none; }
+    .search-select-wrap { width: 100%; }
+    .prop-grid { grid-template-columns: 1fr; }
+    .section { padding: 48px 16px; }
+    .stats { padding: 0 16px; }
+    .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+    .footer { padding: 40px 16px 0; }
+    .cta-section h2 { font-size: 26px; }
+    .agency-facts { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════ -->
+<header class="header">
+    <a href="#" class="header-brand">
+        <img src="assets/img/logo.jpg" alt="Orlandi Immobiliare Logo">
+        <div>
+            <div class="header-brand-name">Orlandi Immobiliare</div>
+            <div class="header-brand-tag">Civitanova Marche</div>
+        </div>
+    </a>
+
+    <nav class="header-nav">
+        <a href="#listings" class="active">Compra</a>
+        <a href="#listings">Affitta</a>
+        <a href="#agenzia">Chi Siamo</a>
+        <a href="#contatti">Contattaci</a>
+        <a href="#valuta">Valuta il Tuo Immobile</a>
+    </nav>
+
+    <div class="header-right">
+        <div class="header-phone">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+            +39 0733 000000
+        </div>
+        <a href="#contatti" class="btn btn-primary">Contattaci</a>
+    </div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-eyebrow">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Agenzia immobiliare a Civitanova Marche dal 2018
+        </div>
+        <h1>Trova la tua casa<br><span>a Civitanova Marche</span></h1>
+        <p class="hero-sub">25 annunci attivi tra vendita e affitto. Residenziale, commerciale e ville di pregio.</p>
+
+        <div class="search-box">
+            <div class="search-select-wrap">
+                <label>Tipologia</label>
+                <select id="s-tipo" onchange="applySearch()">
+                    <option value="">Tutti gli immobili</option>
+                    <option value="vendita">In Vendita</option>
+                    <option value="affitto">In Affitto</option>
+                </select>
+            </div>
+            <div class="search-divider"></div>
+            <div class="search-select-wrap">
+                <label>Zona</label>
+                <select id="s-zona" onchange="applySearch()">
+                    <option value="">Tutte le zone</option>
+                    <option value="Civitanova Marche">Civitanova Marche</option>
+                    <option value="Civitanova Nord">Civitanova Nord</option>
+                    <option value="Civitanova Sud">Civitanova Sud</option>
+                    <option value="Porto Sant'Elpidio">Porto Sant'Elpidio</option>
+                    <option value="Fermo">Fermo</option>
+                </select>
+            </div>
+            <div class="search-divider"></div>
+            <div class="search-select-wrap">
+                <label>Budget</label>
+                <select id="s-budget" onchange="applySearch()">
+                    <option value="">Qualsiasi budget</option>
+                    <option value="100000">Fino a €100.000</option>
+                    <option value="200000">Fino a €200.000</option>
+                    <option value="500000">Fino a €500.000</option>
+                    <option value="999000">Fino a €999.000</option>
+                    <option value="affitto-1000">Affitto fino a €1.000/mese</option>
+                </select>
+            </div>
+            <a href="#listings" class="btn btn-primary" onclick="applySearch()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Cerca
+            </a>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     STATS BAR
+═══════════════════════════════════════════════════════ -->
+<div class="stats">
+    <div class="stats-inner">
+        <div class="stat-item">
+            <span class="stat-number" id="cnt-annunci">25</span>
+            <div class="stat-label">Annunci attivi</div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">39</span>
+            <div class="stat-label">Venduti / Affittati</div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">7+</span>
+            <div class="stat-label">Anni di esperienza</div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">★ 4.8</span>
+            <div class="stat-label">Valutazione clienti</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     LISTINGS
+═══════════════════════════════════════════════════════ -->
+<section class="section" id="listings">
+    <div class="section-inner">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">I Nostri Immobili</h2>
+                <p class="section-sub" id="results-count">Tutti gli annunci disponibili</p>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <button class="filter-tab active" data-filter="tutti" onclick="setFilter(this,'tutti')">
+                Tutti <span class="filter-count" id="cnt-tutti">12</span>
+            </button>
+            <button class="filter-tab" data-filter="vendita" onclick="setFilter(this,'vendita')">
+                In Vendita <span class="filter-count" id="cnt-vendita">7</span>
+            </button>
+            <button class="filter-tab" data-filter="affitto" onclick="setFilter(this,'affitto')">
+                In Affitto <span class="filter-count" id="cnt-affitto">5</span>
+            </button>
+            <select class="sort-select" onchange="sortProps(this.value)">
+                <option value="rilevanza">Ordina: Rilevanti</option>
+                <option value="prezzo-asc">Prezzo: crescente</option>
+                <option value="prezzo-desc">Prezzo: decrescente</option>
+                <option value="mq-desc">Superficie: maggiore</option>
+            </select>
+        </div>
+
+        <div class="prop-grid" id="prop-grid">
+            <!-- rendered by JS -->
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     AGENCY / CHI SIAMO
+═══════════════════════════════════════════════════════ -->
+<section class="section agency-section" id="agenzia">
+    <div class="section-inner">
+        <div class="agency-grid">
+            <div>
+                <span class="agency-label">Chi Siamo</span>
+                <h2>Serietà, competenza<br>e professionalità</h2>
+                <p>Orlandi Immobiliare offre servizi immobiliari con serietà, competenza e professionalità. Assistiamo i clienti in tutte le fasi di acquisto, vendita e locazione di immobili, garantendo una consulenza chiara e affidabile.</p>
+                <p>Ci occupiamo di proprietà residenziali e commerciali, fornendo valutazioni, assistenza contrattuale e supporto personalizzato. Conosciamo bene il territorio e collaboriamo con partner locali per trovare le migliori soluzioni abitative e di investimento.</p>
+                <p>Affidati a Orlandi Immobiliare per un processo di compravendita semplice e sicuro: siamo al tuo fianco per rendere tutto più facile.</p>
+
+                <div class="agency-facts">
+                    <div class="agency-fact">
+                        <div class="agency-fact-num">25</div>
+                        <div class="agency-fact-label">Annunci attivi</div>
+                    </div>
+                    <div class="agency-fact">
+                        <div class="agency-fact-num">39</div>
+                        <div class="agency-fact-label">Immobili conclusi</div>
+                    </div>
+                    <div class="agency-fact">
+                        <div class="agency-fact-num">7+</div>
+                        <div class="agency-fact-label">Anni su Immobiliare.it</div>
+                    </div>
+                    <div class="agency-fact">
+                        <div class="agency-fact-num">100%</div>
+                        <div class="agency-fact-label">Soddisfazione clienti</div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="agent-card">
+                    <div class="agent-avatar">👤</div>
+                    <div class="agent-name">Angelo Orlandi</div>
+                    <div class="agent-role">Agente Immobiliare · Titolare</div>
+                    <p class="agent-desc">Con anni di esperienza nel mercato immobiliare della provincia di Macerata, Angelo guida il team di Orlandi Immobiliare con passione e dedizione verso ogni cliente.</p>
+                    <div class="agent-contact">
+                        <a href="#contatti" class="btn btn-primary">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                            Chiama
+                        </a>
+                        <a href="#contatti" class="btn btn-outline">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            Scrivi
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     VALUTA IL TUO IMMOBILE
+═══════════════════════════════════════════════════════ -->
+<section class="section valuta-section" id="valuta">
+    <div class="section-inner">
+        <h2>Vuoi vendere o affittare il tuo immobile?</h2>
+        <p>Offriamo valutazioni gratuite e senza impegno. Scopri il valore reale del tuo immobile.</p>
+        <a href="#contatti" class="btn btn-primary" style="margin:0 auto;display:inline-flex;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            Richiedi Valutazione Gratuita
+        </a>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CTA SECTION
+═══════════════════════════════════════════════════════ -->
+<section class="section cta-section" id="contatti">
+    <div class="section-inner">
+        <h2>Pronto a trovare casa?</h2>
+        <p>Contattaci oggi — rispondiamo entro poche ore.</p>
+        <div class="cta-buttons">
+            <a href="tel:+390733000000" class="btn btn-white">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                Chiama ora
+            </a>
+            <a href="mailto:info@orlandiimmobiliare.it" class="btn btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Invia messaggio
+            </a>
+        </div>
+        <p style="margin-top:24px;font-size:13px;opacity:.6;">
+            📍 Via Gabriele D'Annunzio 49, 62012 – Civitanova Marche (MC)
+        </p>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════ -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="footer-logo">
+                <img src="assets/img/logo.jpg" alt="Orlandi Immobiliare">
+                <span class="footer-logo-name">Orlandi Immobiliare</span>
+            </div>
+            <p>Agenzia immobiliare a Civitanova Marche. Compra, vendi o affitta con professionalità e serietà.</p>
+            <address>
+                📍 Via Gabriele D'Annunzio 49<br>
+                62012 Civitanova Marche (MC)<br>
+                📞 <a href="tel:+390733000000">+39 0733 000000</a><br>
+                ✉️ <a href="mailto:info@orlandiimmobiliare.it">info@orlandiimmobiliare.it</a>
+            </address>
+        </div>
+
+        <div class="footer-col">
+            <h4>Immobili</h4>
+            <ul>
+                <li><a href="#listings" onclick="setFilter(document.querySelector('[data-filter=vendita]'),'vendita')">In Vendita</a></li>
+                <li><a href="#listings" onclick="setFilter(document.querySelector('[data-filter=affitto]'),'affitto')">In Affitto</a></li>
+                <li><a href="#listings">Ville e Lusso</a></li>
+                <li><a href="#listings">Commerciali</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4>Agenzia</h4>
+            <ul>
+                <li><a href="#agenzia">Chi Siamo</a></li>
+                <li><a href="#valuta">Valuta il Tuo Immobile</a></li>
+                <li><a href="#contatti">Contattaci</a></li>
+                <li><a href="https://www.immobiliare.it/agenzie-immobiliari/238374/orlandi-civitanova/" target="_blank" rel="noopener">Profilo Immobiliare.it</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4>Gestionale</h4>
+            <ul>
+                <li><a href="../index.php">Accedi al Gestionale</a></li>
+                <li><a href="../login.php">Login Agenti</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <span>© 2024 Orlandi Immobiliare · P.IVA 0000000000</span>
+        <span style="display:flex;gap:16px;">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Cookie Policy</a>
+        </span>
+    </div>
+</footer>
+
+
+<script>
+/* ============================================================
+   PROPERTY DATA  (25 listings from Orlandi Immobiliare)
+   ============================================================ */
+const PROPS = [
+    {
+        id: 1, type: 'vendita', cat: 'Quadrilocale',
+        title: 'Quadrilocale corso Garibaldi',
+        address: 'Casette D\'ete, Sant\'Elpidio a Mare',
+        price: 112000, priceOld: 125000, discount: '-10,4%',
+        sqm: 92, rooms: 4, baths: 1, floor: '1°',
+        tags: ['Ascensore', 'Balcone', 'Arredato'],
+        photos: 76,
+        img: 'https://pwm.im-cdn.it/image/1864569925/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 2, type: 'vendita', cat: 'Attività commerciale',
+        title: 'Attività commerciale con laboratorio',
+        address: 'P.za San Marone, Civitanova Marche',
+        price: 135000,
+        sqm: 85, rooms: 4, baths: 1, floor: 'T',
+        tags: ['Con mura', 'Piano terra'],
+        photos: 105,
+        img: 'https://pwm.im-cdn.it/image/1865874805/xxs-c.jpg',
+        premium: true, commercial: true
+    },
+    {
+        id: 3, type: 'affitto', cat: 'Trilocale',
+        title: 'Trilocale via Cristoforo Colombo',
+        address: 'Civitanova Nord, Civitanova Marche',
+        price: 950, monthly: true,
+        sqm: 84, rooms: 3, baths: 1, floor: '1°',
+        tags: ['Ascensore', 'Balcone', 'Terrazzo', 'Arredato'],
+        photos: 29,
+        img: 'https://pwm.im-cdn.it/image/1824851941/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 4, type: 'affitto', cat: 'Appartamento',
+        title: 'Appartamento via Carena',
+        address: 'Centro, Civitanova Marche',
+        price: 1250, monthly: true,
+        sqm: 120, rooms: 5, baths: 3, floor: 'T',
+        tags: ['Balcone', 'Arredato'],
+        photos: 14,
+        img: 'https://pwm.im-cdn.it/image/1723323800/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 5, type: 'vendita', cat: 'Quadrilocale',
+        title: 'Quadrilocale Lido Di Fermo',
+        address: 'Via A. Usodimare 21, Fermo',
+        price: 190000,
+        sqm: 80, rooms: 4, baths: 1, floor: '2°',
+        tags: ['Balcone', 'Arredato', 'Cantina'],
+        photos: 63,
+        img: 'https://pwm.im-cdn.it/image/1724401618/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 6, type: 'affitto', cat: 'Trilocale',
+        title: 'Trilocale via del Vallone',
+        address: 'Centro, Civitanova Marche',
+        price: 750, monthly: true,
+        sqm: 55, rooms: 3, baths: 1, floor: '1°',
+        tags: ['Balcone', 'Terrazzo', 'Arredato'],
+        photos: 8,
+        img: 'https://pwm.im-cdn.it/image/1813147453/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 7, type: 'vendita', cat: 'Trilocale',
+        title: 'Trilocale via E. De Amicis',
+        address: 'San Marone, Civitanova Marche',
+        price: 209000,
+        sqm: 70, rooms: 3, baths: 1, floor: '2°',
+        tags: ['Arredato'],
+        photos: 13,
+        img: 'https://pwm.im-cdn.it/image/1690419812/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 8, type: 'vendita', cat: 'Villa unifamiliare',
+        title: 'Villa unifamiliare via Michelangelo',
+        address: 'Santa Maria Apparente, Civitanova Marche',
+        price: 550000,
+        sqm: 460, rooms: 6, baths: 3, floor: 'Villa',
+        tags: ['Giardino', 'Balcone', 'Terrazzo', 'Arredato'],
+        photos: 52,
+        img: 'https://pwm.im-cdn.it/image/1673369469/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 9, type: 'vendita', cat: 'Villa plurifamiliare',
+        title: 'Villa plurifamiliare Contrada Grazie',
+        address: 'Civitanova Alta, Civitanova Marche',
+        price: 799000,
+        sqm: 10230, rooms: 6, baths: 3, floor: 'Villa',
+        tags: ['Terreno', 'Balcone', 'Terrazzo', 'Arredato'],
+        photos: 55,
+        img: 'https://pwm.im-cdn.it/image/1661329347/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 10, type: 'vendita', cat: 'Villa bifamiliare',
+        title: 'Villa bifamiliare via G. Mameli',
+        address: 'Centro, Porto Sant\'Elpidio',
+        price: 565000,
+        sqm: 300, rooms: 5, baths: 2, floor: 'Villa',
+        tags: ['Balcone', 'Arredato'],
+        photos: 56,
+        img: 'https://pwm.im-cdn.it/image/1724385552/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 11, type: 'affitto', cat: 'Bilocale',
+        title: 'Bilocale via Martiri di Belfiore',
+        address: 'San Marone, Civitanova Marche',
+        price: 700, monthly: true,
+        sqm: 50, rooms: 2, baths: 1, floor: '2°',
+        tags: ['Ascensore', 'Balcone', 'Arredato'],
+        photos: 37,
+        img: 'https://pwm.im-cdn.it/image/1637473965/xxs-c.jpg',
+        premium: true
+    },
+    {
+        id: 12, type: 'vendita', cat: 'Appartamento',
+        title: 'Appartamento via Carlo Pisacane',
+        address: 'San Marone, Civitanova Marche',
+        price: 179000,
+        sqm: 118, rooms: 5, baths: 1, floor: '2°',
+        tags: ['Balcone', 'Arredato'],
+        photos: 9,
+        img: 'https://pwm.im-cdn.it/image/1588891231/xxs-c.jpg',
+        premium: true
+    }
+];
+
+let currentFilter = 'tutti';
+let currentSort = 'rilevanza';
+
+function formatPrice(p, monthly) {
+    if (monthly) {
+        return '€ ' + p.toLocaleString('it-IT') + '<span style="font-size:14px;font-weight:500;color:var(--text-muted)">/mese</span>';
+    }
+    if (p >= 1000000) return '€ ' + (p/1000000).toFixed(2).replace('.',',') + ' M';
+    return '€ ' + p.toLocaleString('it-IT');
+}
+
+function renderCard(p) {
+    const typeBadge = p.commercial
+        ? `<span class="badge badge-type badge-commercial">Commerciale</span>`
+        : `<span class="badge badge-type badge-${p.type}">${p.type === 'vendita' ? 'Vendita' : 'Affitto'}</span>`;
+
+    const premiumBadge = p.premium ? `<span class="badge badge-premium">⭐ Premium</span>` : '';
+    const discountBadge = p.discount ? `<span class="badge badge-discount">${p.discount}</span>` : '';
+
+    const priceOld = p.priceOld ? `<span class="prop-price-old">€ ${p.priceOld.toLocaleString('it-IT')}</span>` : '';
+
+    const tags = p.tags.map(t => `<span class="prop-tag">${t}</span>`).join('');
+
+    const sqmStr = p.sqm >= 1000 ? (p.sqm/1000).toFixed(3).replace('.',',') + ' m²' : p.sqm + ' m²';
+
+    return `
+<div class="prop-card" onclick="openListing(${p.id})">
+    <div class="prop-photo-wrap">
+        <img src="${p.img}" alt="${p.title}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22240%22><rect fill=%22%23e3eff9%22 width=%22360%22 height=%22240%22/><text fill=%22%23206bac%22 x=%22180%22 y=%22125%22 text-anchor=%22middle%22 font-size=%2218%22>🏠 Foto non disponibile</text></svg>'">
+        ${typeBadge}
+        ${premiumBadge}
+        ${discountBadge}
+        <span class="photo-count">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            1 / ${p.photos}
+        </span>
+    </div>
+    <div class="prop-body">
+        <div class="prop-price-row">
+            <span class="prop-price">${formatPrice(p.price, p.monthly)}</span>
+            ${priceOld}
+        </div>
+        <div class="prop-title">${p.cat}</div>
+        <div class="prop-address">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            ${p.address}
+        </div>
+        <div class="prop-features">
+            <span class="prop-feat">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                ${p.rooms} locali
+            </span>
+            <span class="prop-feat">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/></svg>
+                ${sqmStr}
+            </span>
+            <span class="prop-feat">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 9H2"/><path d="M2 9v10a1 1 0 001 1h18a1 1 0 001-1V9"/><path d="M20 9V7a2 2 0 00-2-2H6a2 2 0 00-2 2v2"/><circle cx="12" cy="13" r="1"/></svg>
+                ${p.baths} bagno
+            </span>
+            <span class="prop-feat">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                Piano ${p.floor}
+            </span>
+        </div>
+        <div class="prop-tags">${tags}</div>
+        <div class="prop-actions">
+            <a href="#contatti" class="btn btn-outline" onclick="event.stopPropagation()">Dettagli</a>
+            <a href="#contatti" class="btn btn-primary" onclick="event.stopPropagation()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                Contatta
+            </a>
+        </div>
+    </div>
+</div>`;
+}
+
+function getFiltered() {
+    let list = currentFilter === 'tutti' ? PROPS : PROPS.filter(p => p.type === currentFilter);
+    if (currentSort === 'prezzo-asc') list = [...list].sort((a,b) => a.price - b.price);
+    if (currentSort === 'prezzo-desc') list = [...list].sort((a,b) => b.price - a.price);
+    if (currentSort === 'mq-desc') list = [...list].sort((a,b) => b.sqm - a.sqm);
+    return list;
+}
+
+function renderGrid() {
+    const grid = document.getElementById('prop-grid');
+    const list = getFiltered();
+    document.getElementById('results-count').textContent =
+        list.length + (list.length === 1 ? ' immobile trovato' : ' immobili trovati');
+    if (list.length === 0) {
+        grid.innerHTML = `<div class="no-results">
+            <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <p>Nessun immobile trovato con questi criteri.</p>
+        </div>`;
+    } else {
+        grid.innerHTML = list.map(renderCard).join('');
+    }
+}
+
+function setFilter(el, filter) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    currentFilter = filter;
+    renderGrid();
+}
+
+function sortProps(val) {
+    currentSort = val;
+    renderGrid();
+}
+
+function applySearch() {
+    const tipo = document.getElementById('s-tipo').value;
+    if (tipo) { setFilter(document.querySelector(`[data-filter="${tipo}"]`), tipo); }
+    document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
+}
+
+function openListing(id) {
+    document.getElementById('contatti').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* Update counts */
+function updateCounts() {
+    document.getElementById('cnt-tutti').textContent  = PROPS.length;
+    document.getElementById('cnt-vendita').textContent = PROPS.filter(p=>p.type==='vendita').length;
+    document.getElementById('cnt-affitto').textContent = PROPS.filter(p=>p.type==='affitto').length;
+    document.getElementById('cnt-annunci').textContent = PROPS.length;
+}
+
+/* Active nav link on scroll */
+const sections = ['listings','agenzia','valuta','contatti'];
+window.addEventListener('scroll', () => {
+    const y = window.scrollY + 100;
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (y >= el.offsetTop && y < el.offsetTop + el.offsetHeight) {
+            document.querySelectorAll('.header-nav a').forEach(a => a.classList.remove('active'));
+        }
+    });
+});
+
+/* Init */
+updateCounts();
+renderGrid();
+</script>
+</body>
+</html>

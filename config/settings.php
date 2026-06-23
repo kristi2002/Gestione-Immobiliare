@@ -6,13 +6,13 @@
 require_once __DIR__ . '/db.php';
 
 const SETTINGS_DEFAULTS = [
-    'agency_name'           => 'Gestionale Immobiliare',
-    'agency_tagline'        => 'Immobiliare',
+    'agency_name'           => 'Gestionale Immobiliare Orlandi',
+    'agency_tagline'        => 'Orlandi Immobiliare',
     'agency_phone'          => '',
-    'agency_address'        => '',
-    'logo_path'             => '',
-    'primary_color'         => '#2563eb',
-    'sidebar_color'         => '#1e293b',
+    'agency_address'        => 'Via Gabriele D\'Annunzio 49, 62012 Civitanova Marche',
+    'logo_path'             => 'uploads/branding/logo.jpg',
+    'primary_color'         => '#206bac',
+    'sidebar_color'         => '#0d2140',
     'mail_enabled'          => 'false',
     'agency_email'          => 'admin@agenzia.it',
     'smtp_host'             => '',

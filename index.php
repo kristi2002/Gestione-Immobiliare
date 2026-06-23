@@ -181,6 +181,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                         <?php if (canAccessView('settings')): ?>
                         <li><a href="view.php?name=settings" class="nav-link" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Impostazioni</span></a></li>
                         <?php endif; ?>
+                        <li><a href="ecommerce/index.html" class="nav-link" target="_blank"><span class="nav-icon">🌐</span><span class="nav-label">Sito Web Demo</span></a></li>
                     </ul>
                 </details>
             </nav>
