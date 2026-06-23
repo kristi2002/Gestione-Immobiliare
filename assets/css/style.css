@@ -137,9 +137,6 @@ body.sidebar-collapsed .sidebar-toggle {
     font-weight: 700;
     color: #f8fafc;
     line-height: 1.35;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .logo-text small {
