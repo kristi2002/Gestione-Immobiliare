@@ -104,12 +104,12 @@
                 : '<span class="text-muted">—</span>';
 
             return `<tr>
-                <td>${esc(r.property_address || r.property_title || `#${r.property_id}`)}</td>
-                <td><span class="badge">${esc(typeLabel)}</span></td>
-                <td>${esc(reading)}</td>
-                <td>${deltaHtml}</td>
-                <td>${formatDate(r.reading_date)}</td>
-                <td style="white-space:nowrap;">
+                <td data-label="Immobile">${esc(r.property_address || r.property_title || `#${r.property_id}`)}</td>
+                <td data-label="Tipo"><span class="badge">${esc(typeLabel)}</span></td>
+                <td data-label="Lettura">${esc(reading)}</td>
+                <td data-label="Consumo">${deltaHtml}</td>
+                <td data-label="Data">${formatDate(r.reading_date)}</td>
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-m-edit" data-id="${r.id}" title="Modifica">✏️</button>
                     <button class="btn btn--sm btn--ghost btn-m-del" data-id="${r.id}" title="Elimina">🗑️</button>
                 </td>

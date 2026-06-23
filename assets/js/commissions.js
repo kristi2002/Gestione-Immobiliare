@@ -111,14 +111,14 @@
             const isPending   = c.status === 'pending';
 
             return `<tr>
-                <td>${esc(agentName)}</td>
-                <td><span class="badge">${esc(c.commission_type || '—')}</span></td>
-                <td><strong>${fmt(c.amount)}</strong></td>
-                <td>${c.percentage != null ? esc(c.percentage) + '%' : '—'}</td>
-                <td>${c.contract_title ? esc(c.contract_title) : (c.contract_id ? `<code>#${esc(c.contract_id)}</code>` : '<span class="text-muted">—</span>')}</td>
-                <td>${formatDate(c.due_date)}</td>
-                <td><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
-                <td style="white-space:nowrap;">
+                <td data-label="Agente">${esc(agentName)}</td>
+                <td data-label="Tipo"><span class="badge">${esc(c.commission_type || '—')}</span></td>
+                <td data-label="Importo"><strong>${fmt(c.amount)}</strong></td>
+                <td data-label="Percentuale">${c.percentage != null ? esc(c.percentage) + '%' : '—'}</td>
+                <td data-label="Contratto">${c.contract_title ? esc(c.contract_title) : (c.contract_id ? `<code>#${esc(c.contract_id)}</code>` : '<span class="text-muted">—</span>')}</td>
+                <td data-label="Scadenza">${formatDate(c.due_date)}</td>
+                <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     ${window.canWrite !== false && isPending ? `<button class="btn btn--sm btn--ghost btn-mark-paid" data-id="${c.id}" title="Segna come pagata" style="color:var(--color-success,#27ae60);">✓ Pagata</button>` : ''}
                     ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-c-edit" data-id="${c.id}" title="Modifica">✏️</button>
                     <button class="btn btn--sm btn--ghost btn-c-del" data-id="${c.id}" title="Elimina">🗑️</button>` : ''}

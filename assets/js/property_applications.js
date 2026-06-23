@@ -172,14 +172,14 @@
             const applicant   = a.applicant_name || `${a.first_name || ''} ${a.last_name || ''}`.trim() || a.name || '—';
 
             return `<tr>
-                <td>${esc(propLabel)}</td>
-                <td><strong>${esc(applicant)}</strong></td>
-                <td>${a.applicant_email ? `<a href="mailto:${esc(a.applicant_email)}">${esc(a.applicant_email)}</a>` : '—'}</td>
-                <td>${esc(a.applicant_phone || '—')}</td>
-                <td><span class="badge">${esc(a.application_type || a.type || '—')}</span></td>
-                <td>${formatDate(a.created_at || a.submitted_at)}</td>
-                <td><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
-                <td style="white-space:nowrap;">
+                <td data-label="Immobile">${esc(propLabel)}</td>
+                <td data-label="Richiedente"><strong>${esc(applicant)}</strong></td>
+                <td data-label="Email">${a.applicant_email ? `<a href="mailto:${esc(a.applicant_email)}">${esc(a.applicant_email)}</a>` : '—'}</td>
+                <td data-label="Telefono">${esc(a.applicant_phone || '—')}</td>
+                <td data-label="Tipo"><span class="badge">${esc(a.application_type || a.type || '—')}</span></td>
+                <td data-label="Data">${formatDate(a.created_at || a.submitted_at)}</td>
+                <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-pa-view" data-id="${a.id}" title="Visualizza">👁️ Dettagli</button>
                     <button class="btn btn--sm btn--ghost btn-pa-lead" data-id="${a.id}" title="Converti in lead" style="color:var(--color-primary,#3b82f6);">→ Lead</button>
                 </td>

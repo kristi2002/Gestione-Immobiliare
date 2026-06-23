@@ -161,17 +161,17 @@
             const tenantName   = r.tenant_name || extractTenantFromNote(r.description) || '—';
 
             return `<tr>
-                <td>${esc(tenantName)}</td>
-                <td>${esc(r.property_address || `#${r.property_id}` || '—')}</td>
-                <td title="${esc(r.note || '')}">${esc(r.title || (r.note ? r.note.substring(0, 50) : '—'))}</td>
-                <td>${esc(r.request_type || r.category || '—')}</td>
-                <td><span style="color:${priorityColor};font-weight:600;">${esc(priority)}</span></td>
-                <td><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
-                <td>${supplierName !== '—'
+                <td data-label="Inquilino">${esc(tenantName)}</td>
+                <td data-label="Immobile">${esc(r.property_address || `#${r.property_id}` || '—')}</td>
+                <td data-label="Descrizione" title="${esc(r.note || '')}">${esc(r.title || (r.note ? r.note.substring(0, 50) : '—'))}</td>
+                <td data-label="Tipo">${esc(r.request_type || r.category || '—')}</td>
+                <td data-label="Priorità"><span style="color:${priorityColor};font-weight:600;">${esc(priority)}</span></td>
+                <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
+                <td data-label="Fornitore">${supplierName !== '—'
                     ? `<a href="#" class="btn-view-supplier text-muted" style="font-size:0.85rem;" data-supplier-id="${esc(r.supplier_id || '')}">${esc(supplierName)}</a>`
                     : '<span class="text-muted">—</span>'}</td>
-                <td>${formatDate(r.created_at || r.due_date)}</td>
-                <td style="white-space:nowrap;">
+                <td data-label="Data">${formatDate(r.created_at || r.due_date)}</td>
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore">🔧 Fornitore</button>
                     <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" title="Cambia stato">↻ Stato</button>
                 </td>

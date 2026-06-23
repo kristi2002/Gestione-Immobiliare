@@ -117,14 +117,14 @@
                 : '—';
 
             return `<tr class="${rowClass}">
-                <td>${esc(p.property_address || p.property_title || `#${p.property_id}`)}</td>
-                <td>${esc(p.client_surname && p.client_name ? `${p.client_surname} ${p.client_name}` : (p.client_surname || p.client_name || '—'))}</td>
-                <td>${esc(p.insurer_name)}</td>
-                <td>${esc(p.policy_number || '—')}</td>
-                <td><span class="badge">${esc(p.policy_type || '—')}</span></td>
-                <td>${premium}</td>
-                <td>${isExpired ? `<span style="color:var(--color-danger);">${dateLabel}</span>` : isExpiring ? `<strong>${dateLabel}</strong>` : dateLabel}</td>
-                <td style="white-space:nowrap;">
+                <td data-label="Immobile">${esc(p.property_address || p.property_title || `#${p.property_id}`)}</td>
+                <td data-label="Proprietario">${esc(p.client_surname && p.client_name ? `${p.client_surname} ${p.client_name}` : (p.client_surname || p.client_name || '—'))}</td>
+                <td data-label="Compagnia">${esc(p.insurer_name)}</td>
+                <td data-label="N° polizza">${esc(p.policy_number || '—')}</td>
+                <td data-label="Tipo"><span class="badge">${esc(p.policy_type || '—')}</span></td>
+                <td data-label="Premio annuo">${premium}</td>
+                <td data-label="Scadenza">${isExpired ? `<span style="color:var(--color-danger);">${dateLabel}</span>` : isExpiring ? `<strong>${dateLabel}</strong>` : dateLabel}</td>
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-ins-edit" data-id="${p.id}" title="Modifica">✏️</button>
                     <button class="btn btn--sm btn--ghost btn-ins-del" data-id="${p.id}" data-name="${esc(p.policy_number || p.insurer_name)}" title="Elimina">🗑️</button>
                 </td>

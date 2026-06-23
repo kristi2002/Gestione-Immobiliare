@@ -136,12 +136,12 @@
         }
 
         els.tbody.innerHTML = items.map(item => `<tr>
-            <td>${esc(item.item_name)}</td>
-            <td>${item.category ? `<span class="badge">${esc(item.category)}</span>` : '<span class="text-muted">—</span>'}</td>
-            <td>${esc(item.quantity ?? 1)}</td>
-            <td title="${esc(CONDITION_LABELS[item.condition_rating] || '')}">${starsHtml(item.condition_rating)}</td>
-            <td>${esc(item.notes || '—')}</td>
-            <td style="white-space:nowrap;">
+            <td data-label="Articolo">${esc(item.item_name)}</td>
+            <td data-label="Categoria">${item.category ? `<span class="badge">${esc(item.category)}</span>` : '<span class="text-muted">—</span>'}</td>
+            <td data-label="Quantità">${esc(item.quantity ?? 1)}</td>
+            <td data-label="Condizione" title="${esc(CONDITION_LABELS[item.condition_rating] || '')}">${starsHtml(item.condition_rating)}</td>
+            <td data-label="Note">${esc(item.notes || '—')}</td>
+            <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                 <button class="btn btn--sm btn--ghost btn-inv-edit" data-id="${item.id}" title="Modifica">✏️</button>
                 <button class="btn btn--sm btn--ghost btn-inv-del" data-id="${item.id}" data-name="${esc(item.item_name)}" title="Elimina">🗑️</button>
             </td>

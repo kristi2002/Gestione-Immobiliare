@@ -96,13 +96,13 @@
         items.forEach(b => {
             const isExpanded = expandedId === b.id;
             rows.push(`<tr class="building-row" data-id="${b.id}" style="cursor:pointer;">
-                <td style="text-align:center;font-size:0.85rem;">${isExpanded ? '▼' : '▶'}</td>
-                <td><strong>${esc(b.name)}</strong></td>
-                <td>${esc(b.address || '—')}</td>
-                <td>${esc(b.city || '—')}</td>
-                <td>${esc(b.total_units ?? '—')}</td>
-                <td>${esc(b.occupancy_count ?? '—')}</td>
-                <td style="white-space:nowrap;">
+                <td data-label=""></td>
+                <td data-label="Nome"><strong>${esc(b.name)}</strong></td>
+                <td data-label="Indirizzo">${esc(b.address || '—')}</td>
+                <td data-label="Città">${esc(b.city || '—')}</td>
+                <td data-label="Unità totali">${esc(b.total_units ?? '—')}</td>
+                <td data-label="Occupate">${esc(b.occupancy_count ?? '—')}</td>
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-b-edit" data-id="${b.id}" title="Modifica">✏️</button>
                     <button class="btn btn--sm btn--ghost btn-b-del" data-id="${b.id}" data-name="${esc(b.name)}" title="Elimina">🗑️</button>
                 </td>
