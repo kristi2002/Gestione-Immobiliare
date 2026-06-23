@@ -37,12 +37,13 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
             <div class="sidebar-header">
                 <div class="logo">
                     <?php if (!empty($branding['logo_path'])): ?>
-                        <img src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="Logo" class="logo-img" style="max-height:36px;max-width:120px">
+                        <img src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="Logo" class="logo-img">
                     <?php else: ?>
                         <span class="logo-icon">🏠</span>
                     <?php endif; ?>
-                    <span class="logo-text"><?= htmlspecialchars($agencyName) ?><br><small><?= htmlspecialchars($tagline) ?></small></span>
+                    <span class="logo-text"><?= htmlspecialchars($agencyName) ?><small><?= htmlspecialchars($tagline) ?></small></span>
                 </div>
+                <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Chiudi menu">&#x2715;</button>
             </div>
 
             <nav class="sidebar-nav">

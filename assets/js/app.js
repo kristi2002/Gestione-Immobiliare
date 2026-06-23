@@ -125,6 +125,7 @@
             const toggle   = document.getElementById('sidebar-toggle');
             const sidebar  = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
+            const closeBtn = document.getElementById('sidebar-close-btn');
 
             if (!toggle || !sidebar) return;
 
@@ -140,6 +141,10 @@
 
             if (backdrop) {
                 backdrop.addEventListener('click', () => this.closeSidebar());
+            }
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.closeSidebar());
             }
         },
 
