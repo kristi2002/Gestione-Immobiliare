@@ -23,46 +23,25 @@ Each item includes severity, affected code, recommended fix, and implementation 
 
 > **Note:** Security gaps were intentionally left for a separate hardening pass. They do not affect the functional demo.
 
-### 🔴 Twilio webhook not validated
+### ✅ Twilio webhook not validated
 
-**File:** `api/whatsapp_webhook.php`  
-**Problem:** The webhook accepts any POST request without validating the `X-Twilio-Signature` header. Anyone who knows the URL can inject fake WhatsApp messages into the database.  
-**Fix:** Validate the HMAC-SHA1 signature using Twilio Auth Token:
-
-```php
-// Add at top of whatsapp_webhook.php:
-$authToken  = getSetting('twilio_auth_token') ?: $_ENV['TWILIO_AUTH_TOKEN'];
-$signature  = $_SERVER['HTTP_X_TWILIO_SIGNATURE'] ?? '';
-$url        = (defined('APP_URL') ? APP_URL : '') . '/api/whatsapp_webhook.php';
-$params     = $_POST;
-
-$expectedSig = base64_encode(hash_hmac('sha1', $url . implode('', array_map(
-    fn($k, $v) => $k . $v,
-    array_keys($params),
-    array_values($params)
-)), $authToken, true));
-
-if (!hash_equals($expectedSig, $signature)) {
-    http_response_code(403);
-    exit;
-}
-```
+~~**File:** `api/whatsapp_webhook.php`~~  
+~~**Problem:** The webhook accepted any POST request without validating the `X-Twilio-Signature` header.~~  
+**Status: Fixed (June 2026).** `api/whatsapp_webhook.php` now validates the `X-Twilio-Signature` HMAC-SHA1 header on every inbound request. Validation is skipped only when `TWILIO_AUTH_TOKEN` is not configured (local dev). Algorithm: sort POST params by key, concatenate `APP_URL + /api/whatsapp_webhook.php + key + value...`, HMAC-SHA1 with auth token, base64 compare. Requires `TWILIO_AUTH_TOKEN` set in Coolify env vars.
 
 ---
 
-### 🔴 ADMIN_PASSWORD still "admin"
+### ✅ ADMIN_PASSWORD still "admin"
 
-**File:** `.env` / Coolify env vars  
-**Problem:** The default admin password has not been changed from the placeholder "admin".  
-**Fix:** Log in as admin, go to Settings → Users, change the password immediately.
+~~**Problem:** The default admin password had not been changed from the placeholder "admin".~~  
+**Status: Fixed (June 2026).** Password changed in Coolify env vars and updated in Settings → Users.
 
 ---
 
-### 🔴 CRON_SECRET is a placeholder
+### ✅ CRON_SECRET is a placeholder
 
-**File:** Coolify env vars  
-**Problem:** `CRON_SECRET=CHANGE_THIS_CRON_SECRET` means anyone can trigger cron jobs via HTTP.  
-**Fix:** Set `CRON_SECRET` to a long random string (e.g. `openssl rand -hex 32`).
+~~**Problem:** `CRON_SECRET=CHANGE_THIS_CRON_SECRET` means anyone can trigger cron jobs via HTTP.~~  
+**Status: Fixed (June 2026).** Replaced with a 64-character cryptographically random hex string generated via PowerShell `RandomNumberGenerator`. Set in Coolify env vars.
 
 ---
 
@@ -123,11 +102,16 @@ The `api_rate_limits` table is created automatically on first use (`CREATE TABLE
 
 ---
 
-### 🟠 Cron jobs not running on production
+### ✅ Cron jobs not running on production
 
-**Problem:** The cron scripts (`process_reminders.php`, `publish_social_posts.php`, `send_payment_reminders.php`, `backup_database.php`) have not been set up on the Hetzner VPS.  
-**Impact:** Reminders are not sent, social posts are not published, backups are not made.  
-**Fix:** See DEPLOY.md — add crontab entries on the VPS using `docker exec`.
+~~**Problem:** The cron scripts had not been set up on the Hetzner VPS.~~  
+**Status: Fixed (June 2026).** 4 cron jobs added to root crontab on `91.99.137.240` via `crontab -`:
+- Every hour — `process_reminders.php` (reminders + contract expirations)
+- Daily 8am — `send_payment_reminders.php` (tenant rent notifications)
+- Every 15 min — `publish_social_posts.php` (scheduled social posts)
+- Daily 2am — `backup_database.php` (MySQL backup)
+
+All output logged to `/var/log/gestione-cron.log`.
 
 ---
 
@@ -150,11 +134,10 @@ The `api_rate_limits` table is created automatically on first use (`CREATE TABLE
 
 ---
 
-### 🟡 Social post image must be public HTTPS URL
+### ✅ Social post image must be public HTTPS URL
 
-**Problem:** Instagram requires a publicly accessible image URL. If `META_PUBLIC_BASE_URL` is not set or the image isn't publicly accessible, Instagram publishing fails silently.  
-**Impact:** Instagram posts fail with a confusing error.  
-**Fix:** Ensure `META_PUBLIC_BASE_URL` is set in Coolify env vars. Files under `uploads/` are served by Apache directly (no auth required), so the path is accessible as long as the env var is correct.
+~~**Problem:** Instagram requires a publicly accessible image URL. If `META_PUBLIC_BASE_URL` is not set or the image isn't publicly accessible, Instagram publishing fails silently.~~  
+**Status: Fixed (June 2026).** `META_PUBLIC_BASE_URL=https://testdemo.it` is set in Coolify env vars. Files under `uploads/` are served by Apache without auth, so Instagram can fetch them directly.
 
 ---
 
@@ -217,15 +200,16 @@ Coolify creates the MySQL container with DB named `default`. The app originally 
 
 | Gap | Severity | Status |
 |-----|----------|--------|
-| Twilio webhook validation | 🔴 | Open — security hardening pass |
-| Change ADMIN_PASSWORD | 🔴 | Open — manual action required |
-| Change CRON_SECRET | 🔴 | Open — manual action required |
+| Twilio webhook validation | 🔴 | ✅ Fixed June 2026 |
+| Change ADMIN_PASSWORD | 🔴 | ✅ Fixed June 2026 |
+| Change CRON_SECRET | 🔴 | ✅ Fixed June 2026 |
 | CSRF on all endpoints | 🟠 | ✅ Already implemented (api_bootstrap.php) |
-| Cron jobs on VPS | 🟠 | Open — see DEPLOY.md |
+| Cron jobs on VPS | 🟠 | ✅ Fixed June 2026 |
 | Rate limiting | 🟡 | ✅ Fixed June 2026 |
 | Meta token expiry alert | 🟡 | ✅ Fixed June 2026 |
 | Stripe webhook validation | 🟡 | ✅ Fixed June 2026 |
 | Owner portal | 🟡 | ✅ Already implemented (owner/) |
+| Social post image public URL | 🟡 | ✅ Fixed June 2026 |
 | Instagram image warning | 🟡 | ✅ Fixed June 2026 |
 | Contract expiry bug (entity_type) | 🟢 | ✅ Fixed June 2026 |
 | E-sign email to signer | 🟢 | ✅ Fixed June 2026 |

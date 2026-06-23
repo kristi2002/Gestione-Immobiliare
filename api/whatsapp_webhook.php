@@ -16,6 +16,37 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// ── Twilio signature validation ───────────────────────────────────────────────
+// Twilio signs every webhook with HMAC-SHA1. We reject requests that lack a
+// valid signature to prevent fake messages being injected into the database.
+// Skip when no auth token is configured (local dev only).
+$twilioAuthToken = getSetting('twilio_auth_token') ?: (getenv('TWILIO_AUTH_TOKEN') ?: '');
+
+if ($twilioAuthToken !== '') {
+    $twilioSignature = $_SERVER['HTTP_X_TWILIO_SIGNATURE'] ?? '';
+
+    // Build the canonical URL exactly as Twilio sees it
+    $appUrl       = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+    $canonicalUrl = $appUrl . '/api/whatsapp_webhook.php';
+
+    // Twilio algorithm: sort POST params alphabetically, concatenate key+value, append to URL, HMAC-SHA1
+    $params = $_POST;
+    ksort($params);
+    $sigBase = $canonicalUrl;
+    foreach ($params as $key => $value) {
+        $sigBase .= $key . $value;
+    }
+
+    $expectedSignature = base64_encode(hash_hmac('sha1', $sigBase, $twilioAuthToken, true));
+
+    if ($twilioSignature === '' || !hash_equals($expectedSignature, $twilioSignature)) {
+        http_response_code(403);
+        echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+        exit;
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 $data      = parseTwilioWebhook($_POST);
 $from      = preg_replace('/^whatsapp:/', '', $data['from'] ?? '');
 $to        = preg_replace('/^whatsapp:/', '', $data['to'] ?? '');
