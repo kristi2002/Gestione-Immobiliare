@@ -8,7 +8,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Skip deploy when token is missing
+        if: ${{ secrets.COOLIFY_TOKEN == '' }}
+        run: echo "COOLIFY_TOKEN is not configured; skipping deploy trigger."
+
       - name: Trigger Coolify deploy
+        if: ${{ secrets.COOLIFY_TOKEN != '' }}
         run: |
           curl -s "http://91.99.137.240:8000/api/v1/deploy?uuid=bs555w5mvdeffngi7vxab4qo&force=false" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
