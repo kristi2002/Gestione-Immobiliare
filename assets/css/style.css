@@ -85,6 +85,19 @@ body {
     transition: transform var(--transition);
 }
 
+/* Desktop: X button collapses the sidebar; hamburger re-opens it */
+body.sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+}
+
+body.sidebar-collapsed .main-wrapper {
+    margin-left: 0;
+}
+
+body.sidebar-collapsed .sidebar-toggle {
+    display: flex;
+}
+
 .sidebar.open {
     transform: translateX(0);
 }

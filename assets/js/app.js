@@ -120,7 +120,7 @@
             });
         },
 
-        /** Mobile sidebar toggle + backdrop */
+        /** Sidebar toggle — handles both mobile overlay and desktop collapse */
         bindSidebarToggle() {
             const toggle   = document.getElementById('sidebar-toggle');
             const sidebar  = document.getElementById('sidebar');
@@ -129,13 +129,28 @@
 
             if (!toggle || !sidebar) return;
 
+            // Restore desktop collapsed state from last session
+            try {
+                if (localStorage.getItem('sidebarCollapsed') === '1') {
+                    document.body.classList.add('sidebar-collapsed');
+                }
+            } catch(e) {}
+
             toggle.addEventListener('click', () => {
-                if (sidebar.classList.contains('open')) {
-                    this.closeSidebar();
+                if (window.innerWidth <= 768) {
+                    // Mobile: toggle overlay
+                    if (sidebar.classList.contains('open')) {
+                        this.closeSidebar();
+                    } else {
+                        this.openSidebar();
+                    }
                 } else {
-                    sidebar.classList.add('open');
-                    if (backdrop) backdrop.hidden = false;
-                    document.body.classList.add('nav-open');
+                    // Desktop: toggle collapse
+                    if (document.body.classList.contains('sidebar-collapsed')) {
+                        this.openSidebar();
+                    } else {
+                        this.closeSidebar();
+                    }
                 }
             });
 
@@ -148,12 +163,27 @@
             }
         },
 
+        openSidebar() {
+            const sidebar  = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (!sidebar) return;
+            document.body.classList.remove('sidebar-collapsed');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('open');
+                if (backdrop) backdrop.hidden = false;
+                document.body.classList.add('nav-open');
+            }
+            try { localStorage.removeItem('sidebarCollapsed'); } catch(e) {}
+        },
+
         closeSidebar() {
             const sidebar  = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar) sidebar.classList.remove('open');
             if (backdrop) backdrop.hidden = true;
             document.body.classList.remove('nav-open');
+            document.body.classList.add('sidebar-collapsed');
+            try { localStorage.setItem('sidebarCollapsed', '1'); } catch(e) {}
         },
 
         setActiveNav(activeLink) {
