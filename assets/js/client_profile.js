@@ -166,7 +166,7 @@
 
             grid.innerHTML = items.map(p => {
                 const photo = p.cover_url
-                    ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy">`
+                    ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;prop-card-thumb prop-card-thumb--empty&quot;>&#x1F3E2;</div>'">`
                     : `<div class="prop-card-thumb prop-card-thumb--empty">🏢</div>`;
                 const color = PROP_COLOR[p.status] || '#94a3b8';
                 const price = p.price ? `<span class="profile-prop-rent">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';

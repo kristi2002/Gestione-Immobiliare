@@ -337,7 +337,7 @@
                 : '';
             const inCompare = compareIds.has(p.id);
             const coverHtml = p.cover_url
-                ? `<img src="${escapeHtml(mediaUrl(p.cover_url))}" alt="Anteprima ${escapeHtml(p.address)}" class="entity-card__cover-img" loading="lazy">`
+                ? `<img src="${escapeHtml(mediaUrl(p.cover_url))}" alt="Anteprima ${escapeHtml(p.address)}" class="entity-card__cover-img" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;entity-card__cover-placeholder&quot; aria-hidden=&quot;true&quot;><span class=&quot;entity-card__cover-icon&quot;>&#x1F3E0;</span><span>Nessuna foto</span></div>'">`
                 : `<div class="entity-card__cover-placeholder" aria-hidden="true"><span class="entity-card__cover-icon">🏠</span><span>Nessuna foto</span></div>`;
 
             return `
