@@ -5878,6 +5878,29 @@ body.nav-open {
 }
 
 /* ── Immobili: column-count toggle (#12) ──────────────────────────────────── */
+/* Horizontal colored status filter pills (contratti) */
+.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 4px; }
+.filter-pill {
+    border: 1px solid var(--pill, var(--color-border));
+    color: var(--pill, var(--color-text-muted, #64748b));
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 15px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.filter-pill:hover:not(.is-active) { background: var(--color-bg, #f1f5f9); }
+.filter-pill.is-active { background: var(--pill, var(--color-primary)); color: #fff; border-color: var(--pill, var(--color-primary)); }
+.filter-pill--all     { --pill: #2563eb; }
+.filter-pill--sent    { --pill: #2563eb; }
+.filter-pill--signed  { --pill: #16a34a; }
+.filter-pill--expired { --pill: #dc2626; }
+.filter-pill--draft,
+.filter-pill--cancelled { --pill: #94a3b8; }
+
 .view-cols-row { display: flex; justify-content: flex-end; margin: 4px 0 14px; }
 .view-cols-toggle { display: inline-flex; gap: 2px; border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
 .view-cols-btn {
@@ -5972,6 +5995,8 @@ body.nav-open {
 .nav-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: 0 0 auto; }
 .nav-icon svg { width: 18px; height: 18px; stroke-width: 2; }
 .logo-icon svg { width: 26px; height: 26px; }
+.quick-action__icon svg { width: 22px; height: 22px; }
+.ql-option__icon svg { width: 18px; height: 18px; vertical-align: -3px; }
 
 /* Buttons — weight, smooth transitions, subtle hover lift, focus ring */
 .btn {

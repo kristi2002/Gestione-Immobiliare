@@ -167,8 +167,8 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${e.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${e.id}" title="Elimina">🗑️</button>` : ''}
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${e.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${e.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;

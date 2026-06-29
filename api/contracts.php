@@ -89,6 +89,10 @@ function listContracts(PDO $db): void
         $where .= ' AND ct.contract_type = :type';
         $params['type'] = $type;
     }
+    // Dedicated "Scaduti" filter: contracts past their end date (not cancelled).
+    if (($_GET['expired'] ?? '') === '1') {
+        $where .= " AND ct.end_date IS NOT NULL AND ct.end_date < CURDATE() AND ct.status != 'cancelled'";
+    }
 
     $countSql = "SELECT COUNT(*) FROM contracts ct
                  INNER JOIN properties p ON p.id = ct.property_id

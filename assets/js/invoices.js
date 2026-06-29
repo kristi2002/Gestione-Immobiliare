@@ -130,11 +130,11 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${i.id}" title="Anteprima PDF">📄</button>
-                        ${i.status === 'draft' ? `<button class="btn btn--sm btn--ghost btn-send" data-id="${i.id}" title="Segna come inviata">📤</button>` : ''}
-                        ${i.status !== 'paid' && i.status !== 'cancelled' ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${i.id}" title="Segna come pagata">✓</button>` : ''}
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${i.id}" title="Modifica">✏️</button>
-                        ${i.status === 'draft' ? `<button class="btn btn--sm btn--ghost btn-delete" data-id="${i.id}" title="Elimina">🗑️</button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${i.id}" title="Anteprima PDF"><i data-lucide="file-text"></i></button>
+                        ${i.status === 'draft' ? `<button class="btn btn--sm btn--ghost btn-send" data-id="${i.id}" title="Segna come inviata"><i data-lucide="send"></i></button>` : ''}
+                        ${i.status !== 'paid' && i.status !== 'cancelled' ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${i.id}" title="Segna come pagata"><i data-lucide="check"></i></button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${i.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        ${i.status === 'draft' ? `<button class="btn btn--sm btn--ghost btn-delete" data-id="${i.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;

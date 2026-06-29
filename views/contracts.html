@@ -26,14 +26,15 @@
             <option value="mandato">Mandato</option>
             <option value="altro">Altro</option>
         </select>
-        <select id="contract-status-filter" class="form-select">
-            <option value="">Tutti gli stati</option>
-            <option value="draft">Bozza</option>
-            <option value="sent">Inviato</option>
-            <option value="signed">Firmato</option>
-            <option value="expired">Scaduto</option>
-            <option value="cancelled">Annullato</option>
-        </select>
+    </div>
+
+    <div class="filter-pills" id="contract-status-pills" role="group" aria-label="Filtra per stato">
+        <button type="button" class="filter-pill filter-pill--all is-active" data-status="">Tutti</button>
+        <button type="button" class="filter-pill filter-pill--draft" data-status="draft">Bozza</button>
+        <button type="button" class="filter-pill filter-pill--sent" data-status="sent">Inviato</button>
+        <button type="button" class="filter-pill filter-pill--signed" data-status="signed">Firmato</button>
+        <button type="button" class="filter-pill filter-pill--expired" data-status="__expired">Scaduti</button>
+        <button type="button" class="filter-pill filter-pill--cancelled" data-status="cancelled">Annullato</button>
     </div>
 
     <div id="contracts-grid" class="entity-grid">

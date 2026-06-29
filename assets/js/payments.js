@@ -132,7 +132,7 @@
 
         els.grid.innerHTML = payments.map(p => {
             const markPaidBtn = window.canWrite !== false && (p.status === 'pending' || p.status === 'late')
-                ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${p.id}" title="Segna come pagato">✓ Pagato</button>`
+                ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${p.id}" title="Segna come pagato"><i data-lucide="check"></i> Pagato</button>`
                 : '';
 
             return `
@@ -153,8 +153,8 @@
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
                         ${markPaidBtn}
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${p.id}" title="Annulla">🗑️</button>` : ''}
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${p.id}" title="Annulla"><i data-lucide="x"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;

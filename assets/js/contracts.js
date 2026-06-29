@@ -79,7 +79,17 @@
             searchTimer = setTimeout(() => { currentPage = 1; loadContracts(); }, 300);
         });
 
-        [els.propFilter, els.typeFilter, els.statusFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadContracts(); }));
+        [els.propFilter, els.typeFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadContracts(); }));
+
+        // Status filter as horizontal colored pills (includes a dedicated "Scaduti").
+        document.querySelectorAll('#contract-status-pills .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#contract-status-pills .filter-pill').forEach(p => p.classList.remove('is-active'));
+                pill.classList.add('is-active');
+                currentPage = 1;
+                loadContracts();
+            });
+        });
 
         document.getElementById('esign-modal-close').addEventListener('click', closeEsignModal);
         document.getElementById('esign-modal-cancel').addEventListener('click', closeEsignModal);
@@ -150,7 +160,9 @@
         if (els.search?.value.trim()) params.set('search', els.search.value.trim());
         if (els.propFilter.value)     params.set('property_id', els.propFilter.value);
         if (els.typeFilter.value)     params.set('type', els.typeFilter.value);
-        if (els.statusFilter.value)   params.set('status', els.statusFilter.value);
+        const activeStatus = document.querySelector('#contract-status-pills .filter-pill.is-active')?.dataset.status || '';
+        if (activeStatus === '__expired') params.set('expired', '1');
+        else if (activeStatus)            params.set('status', activeStatus);
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
@@ -212,8 +224,8 @@
                     <div class="entity-card__actions">
                         ${window.canWrite !== false ? advanceBtn : ''}
                         ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale">✍️</button>
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina">🗑️</button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;

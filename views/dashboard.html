@@ -314,7 +314,7 @@
     function renderUpcoming(reminders) {
         const container = document.getElementById('upcoming-reminders-list');
         if (reminders.length === 0) {
-            container.innerHTML = '<p class="text-muted" style="padding:16px 0;">Nessun promemoria in arrivo.</p>';
+            container.innerHTML = '<p class="text-muted" style="padding:24px 16px;text-align:center;">Nessun promemoria in arrivo.</p>';
             return;
         }
         container.innerHTML = reminders.map(r => {
@@ -351,12 +351,25 @@
 
     // Build the catalog from the sidebar nav: this is exactly what the current
     // user is allowed to access (icon + label included), minus the dashboard itself.
+    // view -> Lucide icon name (matches the sidebar icons)
+    const VIEW_ICONS = {
+        clients: 'users', leads: 'target', tenants: 'key-round', agents: 'user-round',
+        properties: 'building-2', buildings: 'building', map: 'map', keys: 'key',
+        meters: 'gauge', inventory: 'package', contracts: 'scroll-text', documents: 'file-text',
+        invoices: 'receipt', payments: 'banknote', expenses: 'wallet', commissions: 'briefcase',
+        forecast: 'trending-up', reports: 'bar-chart-3', maintenance_workflow: 'wrench',
+        insurance: 'shield-check', suppliers: 'truck', property_applications: 'clipboard-list',
+        communications: 'mail', whatsapp_inbox: 'message-circle', social: 'megaphone',
+        surveys: 'star', appointments: 'calendar-check', calendar: 'calendar', reminders: 'bell',
+        automations: 'workflow', activity_log: 'history', settings: 'settings',
+    };
+
     function buildCatalog() {
         const catalog = [];
         document.querySelectorAll('.sidebar-nav .nav-link[data-view]').forEach(link => {
             const view = link.dataset.view;
             if (!view || view === 'dashboard') return;
-            const icon  = link.querySelector('.nav-icon')?.textContent?.trim() || '🔗';
+            const icon  = VIEW_ICONS[view] || 'link';
             const label = link.querySelector('.nav-label')?.textContent?.trim() || view;
             catalog.push({ view, icon, label });
         });
@@ -382,7 +395,7 @@
         container.innerHTML = links.map(v => {
             const item = map[v];
             return `<a href="view.php?name=${item.view}" class="quick-action" data-view="${item.view}">
-                <span class="quick-action__icon">${item.icon}</span>
+                <i class="quick-action__icon" data-lucide="${item.icon}"></i>
                 <span class="quick-action__label">${esc(item.label)}</span>
             </a>`;
         }).join('');
@@ -417,7 +430,7 @@
         picker.innerHTML = buildCatalog().map(item => `
             <label class="ql-option">
                 <input type="checkbox" value="${item.view}" ${selected.has(item.view) ? 'checked' : ''}>
-                <span class="ql-option__icon">${item.icon}</span>
+                <i class="ql-option__icon" data-lucide="${item.icon}"></i>
                 <span class="ql-option__label">${esc(item.label)}</span>
             </label>`).join('');
 

@@ -146,10 +146,10 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${a.status === 'scheduled' ? `<button class="btn btn--sm btn--ghost btn-complete" data-id="${a.id}" title="Completa">✓</button>
-                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${a.id}" title="Annulla">✕</button>` : ''}
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${a.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${a.id}" title="Elimina">🗑️</button>
+                        ${a.status === 'scheduled' ? `<button class="btn btn--sm btn--ghost btn-complete" data-id="${a.id}" title="Completa"><i data-lucide="check"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${a.id}" title="Annulla"><i data-lucide="x"></i></button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${a.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${a.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>
             </div>`;

@@ -156,16 +156,16 @@
                     <div class="entity-card__info text-muted">Fonte: ${SOURCE_LABELS[l.source] || l.source}${l.agent_name ? ' · Agente: ' + escapeHtml(l.agent_name) : ''}</div>
                 </div>
                 <div class="entity-card__footer">
-                    <button class="btn btn--sm btn--ghost btn-match" data-id="${l.id}">🔎 Trova immobili compatibili</button>
+                    <button class="btn btn--sm btn--ghost btn-match" data-id="${l.id}"><i data-lucide="search"></i> Trova immobili compatibili</button>
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${l.id}" title="Modifica">✏️</button>
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${l.id}" title="Modifica"><i data-lucide="pencil"></i></button>
                         ${(l.interest_type === 'acquisto' || l.interest_type === 'entrambi')
-                            ? `<button class="btn btn--sm btn--ghost btn-convert" data-id="${l.id}" title="Converti in proprietario">👤</button>`
+                            ? `<button class="btn btn--sm btn--ghost btn-convert" data-id="${l.id}" title="Converti in proprietario"><i data-lucide="user-round"></i></button>`
                             : ''}
                         ${(l.interest_type === 'affitto' || l.interest_type === 'entrambi')
-                            ? `<button class="btn btn--sm btn--ghost btn-convert-tenant" data-id="${l.id}" title="Converti in inquilino">🔑</button>`
+                            ? `<button class="btn btn--sm btn--ghost btn-convert-tenant" data-id="${l.id}" title="Converti in inquilino"><i data-lucide="key-round"></i></button>`
                             : ''}
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${l.id}" title="Archivia">🗑️</button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${l.id}" title="Archivia"><i data-lucide="archive"></i></button>
                     </div>
                 </div>
             </div>`;
