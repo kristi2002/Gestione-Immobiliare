@@ -172,7 +172,7 @@
                     : '<span class="text-muted">—</span>'}</td>
                 <td data-label="Data">${formatDate(r.created_at || r.due_date)}</td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore">🔧 Fornitore</button>
+                    <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore"><i data-lucide="wrench"></i> Fornitore</button>
                     <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" title="Cambia stato">↻ Stato</button>
                 </td>
             </tr>`;
@@ -210,12 +210,12 @@
 
                 return `<div class="card" style="padding:0.75rem;font-size:0.85rem;cursor:default;" data-id="${r.id}">
                     <div style="font-weight:600;margin-bottom:4px;">${esc(title)}</div>
-                    <div class="text-muted" style="margin-bottom:6px;">👤 ${esc(tenantName)}</div>
-                    ${r.property_address ? `<div class="text-muted" style="margin-bottom:6px;">🏠 ${esc(r.property_address)}</div>` : ''}
+                    <div class="text-muted" style="margin-bottom:6px;"><i data-lucide="user"></i> ${esc(tenantName)}</div>
+                    ${r.property_address ? `<div class="text-muted" style="margin-bottom:6px;"><i data-lucide="home"></i> ${esc(r.property_address)}</div>` : ''}
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
                         <span style="color:${priorityColor};font-weight:600;font-size:0.75rem;">${esc(priority.toUpperCase())}</span>
                         <div style="display:flex;gap:4px;">
-                            <button class="btn btn--sm btn--ghost btn-k-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" style="font-size:0.7rem;padding:2px 6px;" title="Fornitore">🔧</button>
+                            <button class="btn btn--sm btn--ghost btn-k-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" style="font-size:0.7rem;padding:2px 6px;" title="Fornitore"><i data-lucide="wrench"></i></button>
                             <button class="btn btn--sm btn--ghost btn-k-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" style="font-size:0.7rem;padding:2px 6px;" title="Stato">↻</button>
                         </div>
                     </div>

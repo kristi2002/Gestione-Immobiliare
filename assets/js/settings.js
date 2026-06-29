@@ -246,7 +246,7 @@
                 <td data-label="Email">${esc(u.email || '—')}</td>
                 <td data-label="Ruolo"><span class="badge">${esc(u.role)}</span></td>
                 <td data-label="Stato">${u.is_active ? 'Attivo' : 'Disattivo'}</td>
-                <td class="col-actions" data-label="Azioni"><button class="btn btn--sm btn--ghost" data-edit-user="${u.id}">✏️</button></td>
+                <td class="col-actions" data-label="Azioni"><button class="btn btn--sm btn--ghost" data-edit-user="${u.id}"><i data-lucide="pencil"></i></button></td>
             </tr>`).join('');
         tbody.querySelectorAll('[data-edit-user]').forEach(btn => {
             btn.addEventListener('click', () => openUserModal(users.find(u => u.id == btn.dataset.editUser)));
@@ -368,7 +368,7 @@
             showAlert('Errore di rete durante il backup.', 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = '💾 Backup ora';
+            btn.innerHTML = '<i data-lucide="save"></i> Backup ora';
         }
     }
 
@@ -405,9 +405,9 @@
                     <td data-label="Nome">${esc(t.name)}</td>
                     <td data-label="Categoria"><span class="badge">${esc(CATEGORY_LABELS[t.category] || t.category)}</span></td>
                     <td data-label="Oggetto">${esc(t.subject)}</td>
-                    <td data-label="Attivo">${t.is_active ? '✅' : '—'}</td>
-                    <td class="col-actions"><button class="btn btn--sm btn--ghost" data-edit-tpl="${t.id}">✏️</button>
-                        <button class="btn btn--sm btn--ghost" data-del-tpl="${t.id}" style="color:var(--color-danger)">🗑️</button></td>
+                    <td data-label="Attivo">${t.is_active ? '<i data-lucide="check-circle"></i>' : '—'}</td>
+                    <td class="col-actions"><button class="btn btn--sm btn--ghost" data-edit-tpl="${t.id}"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost" data-del-tpl="${t.id}" style="color:var(--color-danger)"><i data-lucide="trash-2"></i></button></td>
                 </tr>`).join('')
             : '<tr><td colspan="5" class="text-muted">Nessun template.</td></tr>';
 

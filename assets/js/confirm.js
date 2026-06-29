@@ -21,7 +21,7 @@
         overlay.hidden = true;
         overlay.innerHTML = `
             <div class="confirm-dialog" role="dialog" aria-modal="true">
-                <div class="confirm-dialog__icon" id="confirm-icon">🗑️</div>
+                <div class="confirm-dialog__icon" id="confirm-icon"><i data-lucide="trash-2"></i></div>
                 <h3 class="confirm-dialog__title" id="confirm-title">Conferma</h3>
                 <p class="confirm-dialog__message" id="confirm-message"></p>
                 <div class="confirm-dialog__actions">
@@ -59,7 +59,8 @@
         if (activeResolve) close(false);
 
         const danger = opts.danger !== false; // default to danger (most uses are deletions)
-        overlay.querySelector('#confirm-icon').textContent   = opts.icon || (danger ? '🗑️' : '❓');
+        // opts.icon is a Lucide icon name (e.g. 'trash-2', 'user'); fall back by intent.
+        overlay.querySelector('#confirm-icon').innerHTML = '<i data-lucide="' + (opts.icon || (danger ? 'trash-2' : 'help-circle')) + '"></i>';
         overlay.querySelector('#confirm-title').textContent  = opts.title || 'Conferma';
         overlay.querySelector('#confirm-message').textContent = message || 'Sei sicuro?';
 
@@ -70,6 +71,7 @@
         overlay.querySelector('#confirm-cancel').textContent = opts.cancelText || 'Annulla';
 
         overlay.hidden = false;
+        window.lucide?.createIcons();
         document.body.classList.add('confirm-open');
         setTimeout(() => okBtn.focus(), 30);
 

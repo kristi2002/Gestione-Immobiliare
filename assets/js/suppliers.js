@@ -119,13 +119,13 @@
                     <span class="badge" style="flex-shrink:0;">${esc(s.category || '—')}</span>
                 </div>
                 <div style="font-size:1.1rem;">${starsHtml(s.rating)}</div>
-                ${s.phone ? `<div class="text-muted" style="font-size:0.9rem;">📞 ${esc(s.phone)}</div>` : ''}
-                ${s.email ? `<div class="text-muted" style="font-size:0.9rem;">✉️ <a href="mailto:${esc(s.email)}">${esc(s.email)}</a></div>` : ''}
-                ${s.address ? `<div class="text-muted" style="font-size:0.85rem;">📍 ${esc(s.address)}</div>` : ''}
+                ${s.phone ? `<div class="text-muted" style="font-size:0.9rem;"><i data-lucide="phone"></i> ${esc(s.phone)}</div>` : ''}
+                ${s.email ? `<div class="text-muted" style="font-size:0.9rem;"><i data-lucide="mail"></i> <a href="mailto:${esc(s.email)}">${esc(s.email)}</a></div>` : ''}
+                ${s.address ? `<div class="text-muted" style="font-size:0.85rem;"><i data-lucide="map-pin"></i> ${esc(s.address)}</div>` : ''}
                 ${s.notes ? `<div style="font-size:0.85rem;color:var(--color-text-muted,#888);margin-top:0.25rem;">${esc(s.notes)}</div>` : ''}
                 <div style="display:flex;gap:0.5rem;margin-top:auto;padding-top:0.5rem;border-top:1px solid var(--color-border,#eee);">
-                    <button class="btn btn--sm btn--ghost btn-s-edit" data-id="${s.id}" title="Modifica">✏️ Modifica</button>
-                    <button class="btn btn--sm btn--ghost btn-s-del" data-id="${s.id}" data-name="${esc(s.name)}" title="Elimina">🗑️</button>
+                    <button class="btn btn--sm btn--ghost btn-s-edit" data-id="${s.id}" title="Modifica"><i data-lucide="pencil"></i> Modifica</button>
+                    <button class="btn btn--sm btn--ghost btn-s-del" data-id="${s.id}" data-name="${esc(s.name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>
         `).join('');

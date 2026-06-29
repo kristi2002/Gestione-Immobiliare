@@ -212,9 +212,9 @@
             const typeLabel     = DOC_TYPE_LABELS[d.doc_type] || d.doc_type;
 
             const actions = isContract
-                ? `<button class="btn btn--sm btn--ghost btn-open-contract" data-id="${d.contract_id}" title="Apri contratto">📋 Apri</button>`
-                : `<a href="${escapeHtml(d.download_url)}" class="btn btn--sm btn--ghost" title="Scarica" download>⬇️</a>
-                   <button class="btn btn--sm btn--ghost btn-delete-doc" data-id="${d.id}" title="Elimina">🗑️</button>`;
+                ? `<button class="btn btn--sm btn--ghost btn-open-contract" data-id="${d.contract_id}" title="Apri contratto"><i data-lucide="copy"></i> Apri</button>`
+                : `<a href="${escapeHtml(d.download_url)}" class="btn btn--sm btn--ghost" title="Scarica" download><i data-lucide="download"></i></a>
+                   <button class="btn btn--sm btn--ghost btn-delete-doc" data-id="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>`;
 
             return `
                 <tr>
@@ -225,7 +225,7 @@
                         ${isContract ? `<br><small class="text-muted">${escapeHtml(d.original_name)}</small>` : ''}
                     </td>
                     <td data-label="Proprietario">${clientLabel ? escapeHtml(clientLabel) : '<span class="text-muted">—</span>'}</td>
-                    <td data-label="Immobile">${propertyLabel ? escapeHtml(propertyLabel) : '<span class="text-muted">—</span>'}${contractLabel ? `<br><small class="text-muted">📋 ${escapeHtml(contractLabel)}</small>` : ''}</td>
+                    <td data-label="Immobile">${propertyLabel ? escapeHtml(propertyLabel) : '<span class="text-muted">—</span>'}${contractLabel ? `<br><small class="text-muted"><i data-lucide="copy"></i> ${escapeHtml(contractLabel)}</small>` : ''}</td>
                     <td data-label="Dimensione">${isContract ? '—' : formatFileSize(d.file_size)}</td>
                     <td data-label="Data">${formatDate(d.created_at)}</td>
                     <td class="col-actions" data-label="Azioni">${actions}</td>

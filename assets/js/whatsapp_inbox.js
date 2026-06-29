@@ -226,7 +226,7 @@
             showAlert(err.message, 'error');
         } finally {
             btn.disabled    = false;
-            btn.textContent = '⬆ Carica messaggi precedenti';
+            btn.innerHTML = '<i data-lucide="upload"></i> Carica messaggi precedenti';
         }
     }
 

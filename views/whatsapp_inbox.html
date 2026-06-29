@@ -241,14 +241,14 @@
     <div class="wa-inbox-layout">
         <!-- Left: thread list -->
         <div class="wa-thread-list" id="wa-thread-list">
-            <div class="wa-thread-list-header">💬 Conversazioni</div>
+            <div class="wa-thread-list-header"><i data-lucide="message-circle"></i> Conversazioni</div>
             <div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>
         </div>
 
         <!-- Right: chat panel -->
         <div class="wa-chat-panel" id="wa-chat-panel">
             <div class="wa-empty-state" id="wa-empty-state">
-                <div class="wa-empty-state-icon">💬</div>
+                <div class="wa-empty-state-icon"><i data-lucide="message-circle"></i></div>
                 <div class="wa-empty-state-text">Seleziona una conversazione</div>
             </div>
             <div id="wa-active-chat" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
@@ -260,7 +260,7 @@
                     </div>
                 </div>
                 <div id="wa-load-earlier-bar" style="display:none;text-align:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
-                    <button id="wa-load-earlier-btn" class="btn btn--ghost btn--sm" style="font-size:0.8rem;">⬆ Carica messaggi precedenti</button>
+                    <button id="wa-load-earlier-btn" class="btn btn--ghost btn--sm" style="font-size:0.8rem;"><i data-lucide="upload"></i> Carica messaggi precedenti</button>
                 </div>
                 <div class="wa-chat-messages" id="wa-chat-messages"></div>
                 <div class="wa-reply-bar">

@@ -180,15 +180,15 @@
                 : null;
 
             const notifyIcons = [
-                r.notify_admin  ? '<span title="Notifica admin">🔔</span>' : '',
-                r.notify_client ? '<span title="Email proprietario">✉️</span>' : '',
+                r.notify_admin  ? '<span title="Notifica admin"><i data-lucide="bell"></i></span>' : '',
+                r.notify_client ? '<span title="Email proprietario"><i data-lucide="mail"></i></span>' : '',
             ].filter(Boolean).join(' ') || '<span class="text-muted">—</span>';
 
             const actions = r.status === 'pending'
-                ? `<button class="btn btn--sm btn--ghost btn-complete" data-id="${r.id}" title="Completa">✓</button>
-                   <button class="btn btn--sm btn--ghost btn-edit" data-id="${r.id}" title="Modifica">✏️</button>
-                   <button class="btn btn--sm btn--ghost btn-cancel" data-id="${r.id}" title="Annulla">✕</button>`
-                : `<button class="btn btn--sm btn--ghost btn-edit" data-id="${r.id}" title="Modifica">✏️</button>
+                ? `<button class="btn btn--sm btn--ghost btn-complete" data-id="${r.id}" title="Completa"><i data-lucide="check"></i></button>
+                   <button class="btn btn--sm btn--ghost btn-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                   <button class="btn btn--sm btn--ghost btn-cancel" data-id="${r.id}" title="Annulla"><i data-lucide="x"></i></button>`
+                : `<button class="btn btn--sm btn--ghost btn-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
                    ${r.status === 'cancelled' ? `<button class="btn btn--sm btn--ghost btn-reopen" data-id="${r.id}" title="Riapri">↩</button>` : ''}`;
 
             return `
@@ -360,7 +360,7 @@
             showAlert(err.message, 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = '⚡ Elabora scaduti';
+            btn.innerHTML = '<i data-lucide="zap"></i> Elabora scaduti';
         }
     }
 

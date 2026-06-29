@@ -160,10 +160,10 @@
                 </div>
                 <div class="entity-card__body">
                     <div class="entity-card__info"><strong>${escapeHtml(e.description)}</strong></div>
-                    <div class="entity-card__info"><span class="entity-card__info-icon">📅</span>${formatDate(e.expense_date)}</div>
-                    ${link ? `<div class="entity-card__info"><span class="entity-card__info-icon">🏢</span>${link}</div>` : ''}
-                    ${e.supplier_name ? `<div class="entity-card__info"><span class="entity-card__info-icon">🔧</span>${escapeHtml(e.supplier_name)}</div>` : ''}
-                    ${e.receipt_url ? `<div class="entity-card__info"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener">📎 Ricevuta</a></div>` : ''}
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="calendar"></i></span>${formatDate(e.expense_date)}</div>
+                    ${link ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="building-2"></i></span>${link}</div>` : ''}
+                    ${e.supplier_name ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="wrench"></i></span>${escapeHtml(e.supplier_name)}</div>` : ''}
+                    ${e.receipt_url ? `<div class="entity-card__info"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener"><i data-lucide="paperclip"></i> Ricevuta</a></div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
@@ -207,17 +207,17 @@
             `<span class="badge badge--expense badge--expense-${e.category}">${CATEGORY_LABELS[e.category] || e.category}</span>`;
 
         const linked = e.property_address
-            ? `🏢 ${e.property_address}, ${e.property_city}`
-            : (e.client_surname ? `👤 ${e.client_surname} ${e.client_name}` : null);
+            ? `<i data-lucide="building-2"></i> ${e.property_address}, ${e.property_city}`
+            : (e.client_surname ? `<i data-lucide="user"></i> ${e.client_surname} ${e.client_name}` : null);
 
         document.getElementById('scheda-exp-body').innerHTML = `
             <div class="scheda-rows">
-                <div class="scheda-row"><span class="scheda-row__label">📝 Descrizione</span><span class="scheda-row__value"><strong>${escapeHtml(e.description)}</strong></span></div>
-                <div class="scheda-row"><span class="scheda-row__label">📅 Data</span><span class="scheda-row__value">${formatDate(e.expense_date)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Descrizione</span><span class="scheda-row__value"><strong>${escapeHtml(e.description)}</strong></span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Data</span><span class="scheda-row__value">${formatDate(e.expense_date)}</span></div>
                 ${linked ? `<div class="scheda-row"><span class="scheda-row__label">Associato a</span><span class="scheda-row__value">${escapeHtml(linked)}</span></div>` : ''}
-                ${e.supplier_name ? `<div class="scheda-row"><span class="scheda-row__label">🔧 Fornitore</span><span class="scheda-row__value">${escapeHtml(e.supplier_name)}</span></div>` : ''}
-                ${e.receipt_url ? `<div class="scheda-row"><span class="scheda-row__label">📎 Ricevuta</span><span class="scheda-row__value"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener">Apri ricevuta</a></span></div>` : ''}
-                ${e.notes ? `<div class="scheda-row"><span class="scheda-row__label">📄 Note</span><span class="scheda-row__value">${escapeHtml(e.notes)}</span></div>` : ''}
+                ${e.supplier_name ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="wrench"></i> Fornitore</span><span class="scheda-row__value">${escapeHtml(e.supplier_name)}</span></div>` : ''}
+                ${e.receipt_url ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="paperclip"></i> Ricevuta</span><span class="scheda-row__value"><a href="${escapeHtml(e.receipt_url)}" target="_blank" rel="noopener">Apri ricevuta</a></span></div>` : ''}
+                ${e.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-text"></i> Note</span><span class="scheda-row__value">${escapeHtml(e.notes)}</span></div>` : ''}
             </div>`;
 
         const editBtn = document.getElementById('scheda-exp-edit');

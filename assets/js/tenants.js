@@ -78,10 +78,10 @@
                 <td data-label="Immobile">${esc(t.property_address)}, ${esc(t.property_city)}</td>
                 <td data-label="Canone">${t.monthly_rent ? '€ ' + Number(t.monthly_rent).toFixed(2) : '—'}</td>
                 <td data-label="Contratto">${fmtDate(t.lease_start)} → ${fmtDate(t.lease_end)}</td>
-                <td data-label="Portale">${t.has_portal_access ? '✅' : '—'}</td>
+                <td data-label="Portale">${t.has_portal_access ? '<i data-lucide="check-circle"></i>' : '—'}</td>
                 <td class="col-actions" data-label="Azioni">
-                    <button class="btn btn--sm btn--ghost" data-edit="${t.id}">✏️</button>
-                    <button class="btn btn--sm btn--ghost" data-wa="${t.id}" title="Invia WhatsApp">📱</button>
+                    <button class="btn btn--sm btn--ghost" data-edit="${t.id}"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost" data-wa="${t.id}" title="Invia WhatsApp"><i data-lucide="smartphone"></i></button>
                 </td>
             </tr>`;
         }).join('');

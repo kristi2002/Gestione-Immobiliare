@@ -450,6 +450,13 @@ details.nav-group[open] > summary .nav-group-arrow {
 .stat-icon--reminders  { background: #fef3c7; }
 .stat-icon--overdue    { background: #fef2f2; }
 .stat-icon--sold       { background: #f3e8ff; }
+/* Lucide icons inside the stat tiles: size + per-type tint */
+.stat-icon svg { width: 24px; height: 24px; }
+.stat-icon--clients svg, .stat-icon--rented svg     { color: #2563eb; }
+.stat-icon--properties svg, .stat-icon--available svg { color: #16a34a; }
+.stat-icon--tenants svg, .stat-icon--sold svg        { color: #7c3aed; }
+.stat-icon--reminders svg { color: #d97706; }
+.stat-icon--overdue svg   { color: #dc2626; }
 
 .stat-card--alert {
     border-color: #fecaca;
@@ -1043,7 +1050,9 @@ details.nav-group[open] > summary .nav-group-arrow {
     font-size: 26px;
     border-radius: 50%;
     background: #fef2f2;
+    color: #dc2626;
 }
+.confirm-dialog__icon svg { width: 26px; height: 26px; }
 
 .confirm-dialog__title {
     font-size: 18px;
@@ -2502,7 +2511,10 @@ body.nav-open {
 .upcoming-item__icon {
     font-size: 20px;
     flex-shrink: 0;
+    color: #d97706;
+    display: inline-flex;
 }
+.upcoming-item__icon svg { width: 20px; height: 20px; }
 
 .upcoming-item__body {
     flex: 1;
@@ -2812,7 +2824,17 @@ body.nav-open {
 .entity-card__info-icon {
     font-size: 14px;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-text-muted);
 }
+/* Sizing for Lucide icons that replaced inline emoji across cards/labels/stats */
+.entity-card__info-icon svg { width: 15px; height: 15px; }
+.entity-card__stat-icon svg { width: 16px; height: 16px; vertical-align: -3px; }
+.scheda-row__label svg { width: 15px; height: 15px; vertical-align: -2px; margin-right: 3px; }
+.agent-stat__icon svg { width: 22px; height: 22px; }
+.reminder-item__icon svg { width: 18px; height: 18px; vertical-align: -3px; }
+.doc-item__icon svg, .doc-row__name svg { width: 15px; height: 15px; vertical-align: -2px; }
 
 /* Property chips */
 .prop-chips {

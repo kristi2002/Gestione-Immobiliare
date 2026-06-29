@@ -142,8 +142,8 @@
             <td data-label="Condizione" title="${esc(CONDITION_LABELS[item.condition_rating] || '')}">${starsHtml(item.condition_rating)}</td>
             <td data-label="Note">${esc(item.notes || '—')}</td>
             <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                <button class="btn btn--sm btn--ghost btn-inv-edit" data-id="${item.id}" title="Modifica">✏️</button>
-                <button class="btn btn--sm btn--ghost btn-inv-del" data-id="${item.id}" data-name="${esc(item.item_name)}" title="Elimina">🗑️</button>
+                <button class="btn btn--sm btn--ghost btn-inv-edit" data-id="${item.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                <button class="btn btn--sm btn--ghost btn-inv-del" data-id="${item.id}" data-name="${esc(item.item_name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
             </td>
         </tr>`).join('');
 

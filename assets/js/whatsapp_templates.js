@@ -50,8 +50,8 @@
                         <div class="text-muted">${esc(t.body)}</div>
                     </div>
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-tpl-edit" data-id="${t.id}">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-tpl-del" data-id="${t.id}">🗑️</button>
+                        <button class="btn btn--sm btn--ghost btn-tpl-edit" data-id="${t.id}"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-tpl-del" data-id="${t.id}"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>`).join('');
             list.querySelectorAll('.btn-tpl-edit').forEach(b =>

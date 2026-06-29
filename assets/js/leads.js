@@ -149,10 +149,10 @@
                 </div>
                 <div class="lead-card__body">
                     <div class="lead-meta"><span class="badge badge--interest">${INTEREST_LABELS[l.interest_type] || l.interest_type}</span>
-                        ${budget ? `<span class="prop-chip">💶 ${escapeHtml(budget)}</span>` : ''}</div>
-                    ${l.codice_fiscale ? `<div class="entity-card__info">🪪 <span style="font-family:monospace;font-size:12px">${escapeHtml(l.codice_fiscale)}</span></div>` : ''}
-                    ${l.phone ? `<div class="entity-card__info">📞 ${escapeHtml(l.phone)}</div>` : ''}
-                    ${l.email ? `<div class="entity-card__info">✉️ ${escapeHtml(l.email)}</div>` : ''}
+                        ${budget ? `<span class="prop-chip"><i data-lucide="euro"></i> ${escapeHtml(budget)}</span>` : ''}</div>
+                    ${l.codice_fiscale ? `<div class="entity-card__info"><i data-lucide="id-card"></i> <span style="font-family:monospace;font-size:12px">${escapeHtml(l.codice_fiscale)}</span></div>` : ''}
+                    ${l.phone ? `<div class="entity-card__info"><i data-lucide="phone"></i> ${escapeHtml(l.phone)}</div>` : ''}
+                    ${l.email ? `<div class="entity-card__info"><i data-lucide="mail"></i> ${escapeHtml(l.email)}</div>` : ''}
                     <div class="entity-card__info text-muted">Fonte: ${SOURCE_LABELS[l.source] || l.source}${l.agent_name ? ' · Agente: ' + escapeHtml(l.agent_name) : ''}</div>
                 </div>
                 <div class="entity-card__footer">
@@ -360,7 +360,7 @@
     }
 
     async function convertLead(id) {
-        if (!await confirmDialog('Vuoi convertire questo lead in proprietario?', { title: 'Converti lead', confirmText: 'Converti', danger: false, icon: '👤' })) return;
+        if (!await confirmDialog('Vuoi convertire questo lead in proprietario?', { title: 'Converti lead', confirmText: 'Converti', danger: false, icon: 'user' })) return;
         try {
             const res = await fetch(`${API}?action=convert&id=${id}`, { method: 'POST' });
             const json = await res.json();

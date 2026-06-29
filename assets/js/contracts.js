@@ -210,13 +210,13 @@
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">${escapeHtml(d.original_name || 'File contratto')}</div>
                         <div class="contract-card__badges">
-                            <span class="badge badge--contract-type">📎 File caricato</span>
+                            <span class="badge badge--contract-type"><i data-lucide="paperclip"></i> File caricato</span>
                         </div>
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    ${where ? `<div class="entity-card__info"><span class="entity-card__info-icon">🏢</span>${where}</div>` : ''}
-                    ${d.created_at ? `<div class="entity-card__info"><span class="entity-card__info-icon">📅</span>${formatDate(d.created_at)}</div>` : ''}
+                    ${where ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="building-2"></i></span>${where}</div>` : ''}
+                    ${d.created_at ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="calendar"></i></span>${formatDate(d.created_at)}</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
@@ -259,10 +259,10 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info"><span class="entity-card__info-icon">🏢</span>${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</div>
-                    ${who ? `<div class="entity-card__info"><span class="entity-card__info-icon">👤</span>${who}</div>` : ''}
-                    ${dateRange ? `<div class="entity-card__info"><span class="entity-card__info-icon">📅</span>${dateRange}</div>` : ''}
-                    ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="entity-card__info"><span class="entity-card__info-icon">💶</span>€ ${formatPrice(c.monthly_rent)}/mese</div>` : ''}
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="building-2"></i></span>${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</div>
+                    ${who ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="user"></i></span>${who}</div>` : ''}
+                    ${dateRange ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="calendar"></i></span>${dateRange}</div>` : ''}
+                    ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="euro"></i></span>€ ${formatPrice(c.monthly_rent)}/mese</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
@@ -340,13 +340,13 @@
 
         document.getElementById('scheda-ct-body').innerHTML = `
             <div class="scheda-rows">
-                <div class="scheda-row"><span class="scheda-row__label">🏢 Immobile</span><span class="scheda-row__value">${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">👤 Parte</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">📅 Durata</span><span class="scheda-row__value">${escapeHtml(dateRange)}</span></div>
-                ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="scheda-row"><span class="scheda-row__label">💶 Canone</span><span class="scheda-row__value">€ ${formatPrice(c.monthly_rent)}/mese</span></div>` : ''}
-                ${c.deposit ? `<div class="scheda-row"><span class="scheda-row__label">🔐 Deposito</span><span class="scheda-row__value">€ ${formatPrice(c.deposit)}</span></div>` : ''}
-                ${c.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(c.notes)}</span></div>` : ''}
-                <div class="scheda-row"><span class="scheda-row__label">📎 Documenti</span><span class="scheda-row__value" id="scheda-ct-docs">Caricamento…</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="building-2"></i> Immobile</span><span class="scheda-row__value">${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="user"></i> Parte</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Durata</span><span class="scheda-row__value">${escapeHtml(dateRange)}</span></div>
+                ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="euro"></i> Canone</span><span class="scheda-row__value">€ ${formatPrice(c.monthly_rent)}/mese</span></div>` : ''}
+                ${c.deposit ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="lock"></i> Deposito</span><span class="scheda-row__value">€ ${formatPrice(c.deposit)}</span></div>` : ''}
+                ${c.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Note</span><span class="scheda-row__value">${escapeHtml(c.notes)}</span></div>` : ''}
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="paperclip"></i> Documenti</span><span class="scheda-row__value" id="scheda-ct-docs">Caricamento…</span></div>
             </div>`;
 
         const advBtn = document.getElementById('scheda-ct-advance');
@@ -451,9 +451,9 @@
                 : 'Link di firma generato. Copia e invia il link manualmente al firmatario.';
             showAlert(alertMsg, emailSent ? 'success' : 'warning');
             const hintEl = document.getElementById('esign-link-hint');
-            if (hintEl) hintEl.textContent = emailSent
-                ? '✉️ Email di invito inviata automaticamente al firmatario.'
-                : '⚠️ Email non configurata — invia questo link al firmatario via email o WhatsApp.';
+            if (hintEl) hintEl.innerHTML = emailSent
+                ? '<i data-lucide="mail"></i> Email di invito inviata automaticamente al firmatario.'
+                : '<i data-lucide="alert-triangle"></i> Email non configurata — invia questo link al firmatario via email o WhatsApp.';
         } catch (err) {
             showAlert(err.message, 'error');
             btn.disabled = false;

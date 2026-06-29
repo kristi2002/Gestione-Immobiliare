@@ -14,7 +14,7 @@
 
     <div class="stats-grid stats-grid--8">
         <div class="stat-card">
-            <div class="stat-icon stat-icon--clients">👥</div>
+            <div class="stat-icon stat-icon--clients"><i data-lucide="users"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Proprietari</div>
                 <div class="stat-value loading" id="stat-clients">—</div>
@@ -22,7 +22,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--properties">🏢</div>
+            <div class="stat-icon stat-icon--properties"><i data-lucide="building-2"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Immobili</div>
                 <div class="stat-value loading" id="stat-properties">—</div>
@@ -30,7 +30,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--available">✅</div>
+            <div class="stat-icon stat-icon--available"><i data-lucide="check-circle"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Disponibili</div>
                 <div class="stat-value loading" id="stat-available">—</div>
@@ -38,7 +38,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--rented">🔑</div>
+            <div class="stat-icon stat-icon--rented"><i data-lucide="key"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Affittati</div>
                 <div class="stat-value loading" id="stat-rented">—</div>
@@ -46,7 +46,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--sold">🏷️</div>
+            <div class="stat-icon stat-icon--sold"><i data-lucide="tag"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Venduti</div>
                 <div class="stat-value loading" id="stat-sold">—</div>
@@ -54,7 +54,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--tenants">🧑‍🤝‍🧑</div>
+            <div class="stat-icon stat-icon--tenants"><i data-lucide="users-round"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Inquilini</div>
                 <div class="stat-value loading" id="stat-tenants">—</div>
@@ -62,7 +62,7 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed">🎯</div>
+            <div class="stat-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed"><i data-lucide="target"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Leads attivi</div>
                 <div class="stat-value loading" id="stat-leads">—</div>
@@ -70,7 +70,7 @@
             </div>
         </div>
         <div class="stat-card" id="stat-card-overdue" style="display:none;">
-            <div class="stat-icon stat-icon--overdue">⚠️</div>
+            <div class="stat-icon stat-icon--overdue"><i data-lucide="alert-triangle"></i></div>
             <div class="stat-body">
                 <div class="stat-label">Scaduti</div>
                 <div class="stat-value loading" id="stat-overdue">—</div>
@@ -78,7 +78,7 @@
             </div>
         </div>
         <div class="stat-card" id="stat-card-reminders">
-            <div class="stat-icon stat-icon--reminders">🔔</div>
+            <div class="stat-icon stat-icon--reminders"><i data-lucide="bell"></i></div>
             <div class="stat-body">
                 <div class="stat-label">In scadenza</div>
                 <div class="stat-value loading" id="stat-reminders">—</div>
@@ -123,7 +123,7 @@
         <div class="dashboard-section">
             <div class="section-header">
                 <h3>Accesso rapido</h3>
-                <button type="button" class="btn btn--ghost btn--sm" id="quick-actions-customize">⚙️ Personalizza</button>
+                <button type="button" class="btn btn--ghost btn--sm" id="quick-actions-customize"><i data-lucide="settings"></i> Personalizza</button>
             </div>
             <div class="quick-actions" id="quick-actions">
                 <div class="upcoming-loading" style="grid-column:1/-1;padding:16px;">Caricamento…</div>
@@ -323,7 +323,7 @@
                 : r.property_address ? esc(r.property_address) : '—';
             return `
             <div class="upcoming-item">
-                <div class="upcoming-item__icon">🔔</div>
+                <div class="upcoming-item__icon"><i data-lucide="bell"></i></div>
                 <div class="upcoming-item__body">
                     <div class="upcoming-item__title">${esc(r.title)}</div>
                     <div class="upcoming-item__meta">${who} · ${FREQ_LABELS[r.frequency] || r.frequency}</div>

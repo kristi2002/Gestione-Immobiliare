@@ -161,7 +161,7 @@
                         <div style="display:flex;gap:8px;flex-wrap:wrap">
                             <input type="number" id="property-latitude" class="form-input" step="0.00000001" placeholder="Lat" style="flex:1;min-width:100px">
                             <input type="number" id="property-longitude" class="form-input" step="0.00000001" placeholder="Lng" style="flex:1;min-width:100px">
-                            <button type="button" class="btn btn--ghost btn--sm" id="btn-property-geocode" title="Cerca coordinate da indirizzo, CAP e città">📍 Trova</button>
+                            <button type="button" class="btn btn--ghost btn--sm" id="btn-property-geocode" title="Cerca coordinate da indirizzo, CAP e città"><i data-lucide="map-pin"></i> Trova</button>
                         </div>
                         <p id="property-geo-confidence" class="text-muted" style="font-size:12px;margin-top:4px;display:none"></p>
                         <input type="hidden" id="property-geo-confidence-value">
@@ -212,7 +212,7 @@
             </p>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn--ghost" id="btn-property-mandato" hidden>📋 Mandato agenzia</button>
+                <button type="button" class="btn btn--ghost" id="btn-property-mandato" hidden><i data-lucide="copy"></i> Mandato agenzia</button>
                 <button type="button" class="btn btn--ghost" id="property-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="property-modal-save">Salva</button>
             </div>
@@ -351,7 +351,7 @@
                     <button class="btn btn--ghost btn--sm" id="btn-copy-qr-url">Copia</button>
                 </div>
             </div>
-            <a id="qr-download" download="qrcode.png" class="btn btn--ghost btn--sm" style="margin-top:8px">⬇️ Scarica QR</a>
+            <a id="qr-download" download="qrcode.png" class="btn btn--ghost btn--sm" style="margin-top:8px"><i data-lucide="download"></i> Scarica QR</a>
         </div>
     </div>
 </div>
@@ -375,14 +375,14 @@
 <div class="modal-overlay" id="portal-export-modal" hidden>
     <div class="modal modal--sm" role="dialog" aria-labelledby="portal-export-title">
         <div class="modal-header">
-            <h3 id="portal-export-title">🌐 Esporta per portali</h3>
+            <h3 id="portal-export-title"><i data-lucide="globe"></i> Esporta per portali</h3>
             <button class="modal-close" id="portal-export-close" aria-label="Chiudi">&times;</button>
         </div>
         <div class="modal-body">
             <p class="text-muted" style="margin-bottom:16px;font-size:13px;">Scegli il formato di esportazione per pubblicare gli immobili sui portali immobiliari.</p>
             <div class="portal-export-options">
                 <button class="portal-export-option" id="portal-export-json">
-                    <span class="portal-export-option__icon">📄</span>
+                    <span class="portal-export-option__icon"><i data-lucide="file-text"></i></span>
                     <div class="portal-export-option__info">
                         <strong>JSON</strong>
                         <span>Immobiliare.it, Casa.it</span>
@@ -390,7 +390,7 @@
                     <span class="portal-export-option__arrow">→</span>
                 </button>
                 <button class="portal-export-option" id="portal-export-xml">
-                    <span class="portal-export-option__icon">🔗</span>
+                    <span class="portal-export-option__icon"><i data-lucide="link"></i></span>
                     <div class="portal-export-option__info">
                         <strong>XML</strong>
                         <span>Feed MLS / altri portali</span>
@@ -413,7 +413,7 @@
 <div class="modal-overlay" id="social-modal" hidden>
     <div class="modal modal--lg" role="dialog" aria-labelledby="social-modal-title">
         <div class="modal-header">
-            <h3 id="social-modal-title">📣 Crea post social</h3>
+            <h3 id="social-modal-title"><i data-lucide="megaphone"></i> Crea post social</h3>
             <button class="modal-close" id="social-modal-close" aria-label="Chiudi">&times;</button>
         </div>
         <form id="social-form" class="modal-body">

@@ -123,17 +123,17 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info"><span class="entity-card__info-icon">👤</span>${who}</div>
-                    <div class="entity-card__info"><span class="entity-card__info-icon">🔁</span>${freq}</div>
-                    <div class="entity-card__info"><span class="entity-card__info-icon">📅</span>${start} → ${end}</div>
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="user"></i></span>${who}</div>
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="repeat"></i></span>${freq}</div>
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="calendar"></i></span>${start} → ${end}</div>
                     ${a.email_body ? `<div class="automation-preview">${esc(a.email_body.substring(0, 100))}${a.email_body.length > 100 ? '…' : ''}</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${a.status === 'pending' ? `<button class="btn btn--sm btn--ghost btn-pause" data-id="${a.id}" title="Metti in pausa">⏸️</button>` : ''}
+                        ${a.status === 'pending' ? `<button class="btn btn--sm btn--ghost btn-pause" data-id="${a.id}" title="Metti in pausa"><i data-lucide="pause"></i></button>` : ''}
                         ${a.status !== 'pending' ? `<button class="btn btn--sm btn--ghost btn-resume" data-id="${a.id}" title="Riattiva">▶️</button>` : ''}
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${a.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${a.id}" title="Elimina">🗑️</button>
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${a.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${a.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>
             </div>`;

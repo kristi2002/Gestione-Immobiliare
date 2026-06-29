@@ -203,16 +203,16 @@
 
             const canEdit = p.status !== 'published';
             const actions = canEdit
-                ? `<button class="btn btn--sm btn--ghost btn-publish" data-id="${p.id}" title="Pubblica ora">🚀</button>
-                   <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica">✏️</button>
-                   <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Elimina">🗑️</button>`
-                : `<span class="text-muted" title="${escapeHtml(p.facebook_post_id || '')}">✓ Pubblicato</span>`;
+                ? `<button class="btn btn--sm btn--ghost btn-publish" data-id="${p.id}" title="Pubblica ora"><i data-lucide="rocket"></i></button>
+                   <button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                   <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Elimina"><i data-lucide="trash-2"></i></button>`
+                : `<span class="text-muted" title="${escapeHtml(p.facebook_post_id || '')}"><i data-lucide="check"></i> Pubblicato</span>`;
 
             return `
                 <tr>
                     <td data-label="Didascalia">
                         <div class="post-caption-cell">
-                            ${p.image_path ? '<span class="post-has-image" title="Con immagine">🖼</span>' : ''}
+                            ${p.image_path ? '<span class="post-has-image" title="Con immagine"><i data-lucide="image"></i></span>' : ''}
                             <span title="${escapeHtml(p.caption)}">${escapeHtml(truncate(p.caption, 60))}</span>
                         </div>
                         ${p.error_message ? `<small class="text-muted post-error">${escapeHtml(truncate(p.error_message, 50))}</small>` : ''}
@@ -459,7 +459,7 @@
             showAlert(err.message, 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = '⚡ Pubblica programmati';
+            btn.innerHTML = '<i data-lucide="zap"></i> Pubblica programmati';
         }
     }
 

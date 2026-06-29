@@ -144,10 +144,10 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info"><span class="entity-card__info-icon">🔑</span>${escapeHtml(p.tenant_surname)} ${escapeHtml(p.tenant_name)}</div>
-                    <div class="entity-card__info"><span class="entity-card__info-icon">🏢</span>${escapeHtml(p.property_address)}, ${escapeHtml(p.property_city)}</div>
-                    <div class="entity-card__info"><span class="entity-card__info-icon">📅</span>Scadenza: ${formatDate(p.due_date)}</div>
-                    ${p.paid_date ? `<div class="entity-card__info"><span class="entity-card__info-icon">✅</span>Pagato il: ${formatDate(p.paid_date)}</div>` : ''}
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="key"></i></span>${escapeHtml(p.tenant_surname)} ${escapeHtml(p.tenant_name)}</div>
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="building-2"></i></span>${escapeHtml(p.property_address)}, ${escapeHtml(p.property_city)}</div>
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="calendar"></i></span>Scadenza: ${formatDate(p.due_date)}</div>
+                    ${p.paid_date ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="check-circle"></i></span>Pagato il: ${formatDate(p.paid_date)}</div>` : ''}
                     ${p.notes ? `<div class="entity-card__info text-muted">${escapeHtml(truncate(p.notes, 60))}</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
@@ -198,11 +198,11 @@
 
         document.getElementById('scheda-pay-body').innerHTML = `
             <div class="scheda-rows">
-                <div class="scheda-row"><span class="scheda-row__label">🔑 Inquilino</span><span class="scheda-row__value">${escapeHtml(p.tenant_surname)} ${escapeHtml(p.tenant_name)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">🏢 Immobile</span><span class="scheda-row__value">${escapeHtml(p.property_address)}, ${escapeHtml(p.property_city)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">📅 Scadenza</span><span class="scheda-row__value">${formatDate(p.due_date)}</span></div>
-                ${p.paid_date ? `<div class="scheda-row"><span class="scheda-row__label">✅ Pagato il</span><span class="scheda-row__value">${formatDate(p.paid_date)}</span></div>` : ''}
-                ${p.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(p.notes)}</span></div>` : ''}
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="key"></i> Inquilino</span><span class="scheda-row__value">${escapeHtml(p.tenant_surname)} ${escapeHtml(p.tenant_name)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="building-2"></i> Immobile</span><span class="scheda-row__value">${escapeHtml(p.property_address)}, ${escapeHtml(p.property_city)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Scadenza</span><span class="scheda-row__value">${formatDate(p.due_date)}</span></div>
+                ${p.paid_date ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="check-circle"></i> Pagato il</span><span class="scheda-row__value">${formatDate(p.paid_date)}</span></div>` : ''}
+                ${p.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Note</span><span class="scheda-row__value">${escapeHtml(p.notes)}</span></div>` : ''}
             </div>`;
 
         const paidBtn = document.getElementById('scheda-pay-paid');

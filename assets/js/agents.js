@@ -13,12 +13,12 @@
     };
 
     const STAT_ITEMS = [
-        { key: 'leads_total',     label: 'Lead totali', icon: '📋' },
-        { key: 'leads_converted', label: 'Convertiti',  icon: '✅' },
-        { key: 'appointments',    label: 'Visite',      icon: '📅' },
-        { key: 'properties',      label: 'Immobili',    icon: '🏢' },
-        { key: 'keys_out',        label: 'Chiavi fuori', icon: '🔑' },
-        { key: 'leads_new',       label: 'Nuovi lead',  icon: '🆕' },
+        { key: 'leads_total',     label: 'Lead totali', icon: '<i data-lucide="clipboard-list"></i>' },
+        { key: 'leads_converted', label: 'Convertiti',  icon: '<i data-lucide="check-circle"></i>' },
+        { key: 'appointments',    label: 'Visite',      icon: '<i data-lucide="calendar"></i>' },
+        { key: 'properties',      label: 'Immobili',    icon: '<i data-lucide="building-2"></i>' },
+        { key: 'keys_out',        label: 'Chiavi fuori', icon: '<i data-lucide="key"></i>' },
+        { key: 'leads_new',       label: 'Nuovi lead',  icon: '<i data-lucide="badge-plus"></i>' },
     ];
 
     const els = {};

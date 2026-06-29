@@ -174,14 +174,14 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    ${c.codice_fiscale ? `<div class="entity-card__info"><span class="entity-card__info-icon">🪪</span><span style="flex:1;min-width:0;font-family:monospace;font-size:12px">${escapeHtml(c.codice_fiscale)}</span></div>` : ''}
-                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon">📞</span><span style="flex:1;min-width:0">${escapeHtml(c.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.phone)}" title="Copia numero">📋</button></div>` : ''}
-                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon">✉️</span><a href="mailto:${escapeHtml(c.email)}" style="flex:1;min-width:0">${escapeHtml(c.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.email)}" title="Copia email">📋</button></div>` : ''}
+                    ${c.codice_fiscale ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="id-card"></i></span><span style="flex:1;min-width:0;font-family:monospace;font-size:12px">${escapeHtml(c.codice_fiscale)}</span></div>` : ''}
+                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="phone"></i></span><span style="flex:1;min-width:0">${escapeHtml(c.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.phone)}" title="Copia numero"><i data-lucide="copy"></i></button></div>` : ''}
+                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="mail"></i></span><a href="mailto:${escapeHtml(c.email)}" style="flex:1;min-width:0">${escapeHtml(c.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.email)}" title="Copia email"><i data-lucide="copy"></i></button></div>` : ''}
                     ${!c.codice_fiscale && !c.phone && !c.email ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__stat">
-                        <span class="entity-card__stat-icon">🏢</span>
+                        <span class="entity-card__stat-icon"><i data-lucide="building-2"></i></span>
                         <span class="entity-card__stat-label">${propLabel}</span>
                     </div>
                     <div class="entity-card__actions">
@@ -639,9 +639,9 @@
                 const doc = docs[0];
                 container.innerHTML = `
                     <div class="id-card-row">
-                        <span style="font-size:13px;">📄 ${escapeHtml(doc.original_name)}</span>
-                        <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--xs btn--ghost">🖨️ Stampa</a>
-                        <button type="button" class="btn btn--xs btn--ghost" data-del-id="${doc.id}" style="color:#b91c1c">🗑️</button>
+                        <span style="font-size:13px;"><i data-lucide="file-text"></i> ${escapeHtml(doc.original_name)}</span>
+                        <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--xs btn--ghost"><i data-lucide="printer"></i> Stampa</a>
+                        <button type="button" class="btn btn--xs btn--ghost" data-del-id="${doc.id}" style="color:#b91c1c"><i data-lucide="trash-2"></i></button>
                     </div>`;
                 container.querySelector('[data-del-id]')?.addEventListener('click', async () => {
                     if (!confirm('Rimuovere questo documento?')) return;
@@ -665,7 +665,7 @@
 
     async function uploadIdDocument(clientId, file, docType) {
         const btnId   = docType === 'id_front' ? 'btn-upload-id-front' : 'btn-upload-id-back';
-        const btnLabel = docType === 'id_front' ? '⬆️ Carica Fronte' : '⬆️ Carica Retro';
+        const btnLabel = docType === 'id_front' ? '<i data-lucide="upload"></i> Carica Fronte' : '<i data-lucide="upload"></i> Carica Retro';
         const title   = docType === 'id_front' ? 'CI - Fronte' : 'CI - Retro';
         const formData = new FormData();
         formData.append('file', file);
@@ -683,7 +683,7 @@
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
+            if (btn) { btn.disabled = false; btn.innerHTML = btnLabel; window.lucide?.createIcons(); }
         }
     }
 
@@ -714,7 +714,7 @@
         const finish = () => {
             if (!btn) return;
             const orig = btn.textContent;
-            btn.textContent = '✅';
+            btn.innerHTML = '<i data-lucide="check-circle"></i>';
             btn.classList.add('copied');
             setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
         };

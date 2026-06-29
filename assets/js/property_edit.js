@@ -200,7 +200,7 @@
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
-            btn.disabled = false; btn.textContent = '📍 Trova';
+            btn.disabled = false; btn.innerHTML = '<i data-lucide="map-pin"></i> Trova';
         }
     }
 

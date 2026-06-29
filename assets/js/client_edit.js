@@ -80,8 +80,8 @@
             }
             container.innerHTML = `
                 <div class="id-card-row">
-                    <span style="font-size:13px;">📄 ${escapeHtml(doc.original_name)}</span>
-                    <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--xs btn--ghost">🖨️ Stampa</a>
+                    <span style="font-size:13px;"><i data-lucide="file-text"></i> ${escapeHtml(doc.original_name)}</span>
+                    <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--xs btn--ghost"><i data-lucide="printer"></i> Stampa</a>
                 </div>`;
         } catch (_) {
             container.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>';

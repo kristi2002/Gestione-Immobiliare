@@ -110,8 +110,8 @@
                 <td data-label="Consumo">${deltaHtml}</td>
                 <td data-label="Data">${formatDate(r.reading_date)}</td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-m-edit" data-id="${r.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-m-del" data-id="${r.id}" title="Elimina">🗑️</button>
+                    <button class="btn btn--sm btn--ghost btn-m-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-m-del" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');

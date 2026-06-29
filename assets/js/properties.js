@@ -102,8 +102,8 @@
             bar.innerHTML = `
                 <div class="compare-float-bar__chips" id="compare-float-chips"></div>
                 <div class="compare-float-bar__actions">
-                    <button type="button" class="btn btn--sm compare-float-clear" id="compare-float-clear">✕ Cancella selezione</button>
-                    <button type="button" class="btn btn--sm compare-float-go" id="compare-float-go">📊 Confronta (<span id="compare-float-count">0</span>)</button>
+                    <button type="button" class="btn btn--sm compare-float-clear" id="compare-float-clear"><i data-lucide="x"></i> Cancella selezione</button>
+                    <button type="button" class="btn btn--sm compare-float-go" id="compare-float-go"><i data-lucide="bar-chart-3"></i> Confronta (<span id="compare-float-count">0</span>)</button>
                 </div>`;
             document.body.appendChild(bar);
         }
@@ -353,13 +353,13 @@
 
         els.grid.innerHTML = properties.map(p => {
             const chips = [];
-            if (p.sqm != null)      chips.push(`<span class="prop-chip">📐 ${p.sqm} mq</span>`);
-            if (p.rooms != null)     chips.push(`<span class="prop-chip">🛏 ${p.rooms} stanze</span>`);
-            if (p.bathrooms != null) chips.push(`<span class="prop-chip">🚿 ${p.bathrooms} bagni</span>`);
+            if (p.sqm != null)      chips.push(`<span class="prop-chip"><i data-lucide="ruler"></i> ${p.sqm} mq</span>`);
+            if (p.rooms != null)     chips.push(`<span class="prop-chip"><i data-lucide="bed"></i> ${p.rooms} stanze</span>`);
+            if (p.bathrooms != null) chips.push(`<span class="prop-chip"><i data-lucide="bath"></i> ${p.bathrooms} bagni</span>`);
             const roi = (p.price && p.price > 0 && p.monthly_rent)
                 ? ((parseFloat(p.monthly_rent) * 12 / parseFloat(p.price)) * 100).toFixed(1)
                 : null;
-            if (roi) chips.push(`<span class="prop-chip prop-chip--roi" title="ROI lordo annuo">📈 ${roi}% ROI</span>`);
+            if (roi) chips.push(`<span class="prop-chip prop-chip--roi" title="ROI lordo annuo"><i data-lucide="trending-up"></i> ${roi}% ROI</span>`);
             const photoCount = parseInt(p.photo_count, 10) || 0;
             const mediaTotal = parseInt(p.media_count, 10) || 0;
             const mediaLabel = photoCount === 1
@@ -371,7 +371,7 @@
             const inCompare = compareIds.has(p.id);
             const coverHtml = p.cover_url
                 ? `<img src="${escapeHtml(mediaUrl(p.cover_url))}" alt="Anteprima ${escapeHtml(p.address)}" class="entity-card__cover-img" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;entity-card__cover-placeholder&quot; aria-hidden=&quot;true&quot;><span class=&quot;entity-card__cover-icon&quot;>&#x1F3E0;</span><span>Nessuna foto</span></div>'">`
-                : `<div class="entity-card__cover-placeholder" aria-hidden="true"><span class="entity-card__cover-icon">🏠</span><span>Nessuna foto</span></div>`;
+                : `<div class="entity-card__cover-placeholder" aria-hidden="true"><span class="entity-card__cover-icon"><i data-lucide="home"></i></span><span>Nessuna foto</span></div>`;
 
             return `
             <div class="entity-card entity-card--property entity-card--clickable" data-id="${p.id}" tabindex="0" role="button" aria-label="Apri scheda ${escapeHtml(p.address)}">
@@ -387,13 +387,13 @@
                     </div>
                 </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info"><span class="entity-card__info-icon">👤</span>${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</div>
+                    <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="user"></i></span>${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</div>
                     ${chips.length ? `<div class="prop-chips">${chips.join('')}</div>` : ''}
                     ${p.description ? `<p class="entity-card__desc">${escapeHtml(p.description.length > 120 ? p.description.slice(0, 120) + '…' : p.description)}</p>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__stat">
-                        <span class="entity-card__stat-icon">📷</span>
+                        <span class="entity-card__stat-icon"><i data-lucide="camera"></i></span>
                         <span class="entity-card__stat-label">${mediaLabel}${filesLabel}</span>
                     </div>
                     <div class="entity-card__actions">
@@ -761,9 +761,9 @@
         } else if (isImage) {
             preview = `<img src="${escapeHtml(url)}" alt="${escapeHtml(m.original_name)}" class="gallery-item__img">`;
         } else if (isPdf) {
-            preview = `<div class="gallery-item__doc">📄 PDF</div>`;
+            preview = `<div class="gallery-item__doc"><i data-lucide="file-text"></i> PDF</div>`;
         } else {
-            preview = `<div class="gallery-item__doc">📎 File</div>`;
+            preview = `<div class="gallery-item__doc"><i data-lucide="paperclip"></i> File</div>`;
         }
 
         return `
@@ -777,7 +777,7 @@
                     <span class="gallery-item__name" title="${escapeHtml(m.original_name)}">${escapeHtml(truncate(m.original_name, 22))}</span>
                 </div>
                 <div class="gallery-item__actions">
-                    ${canCover && !m.is_cover ? `<button type="button" class="btn btn--xs btn--ghost btn-set-cover" data-id="${m.id}" title="Usa come anteprima card">⭐ Anteprima</button>` : ''}
+                    ${canCover && !m.is_cover ? `<button type="button" class="btn btn--xs btn--ghost btn-set-cover" data-id="${m.id}" title="Usa come anteprima card"><i data-lucide="star"></i> Anteprima</button>` : ''}
                     ${isVideo || isPdf || (!isImage && !isVideo) ? `<a href="${escapeHtml(url)}" class="btn btn--xs btn--ghost" target="_blank" rel="noopener"${isVideo || isPdf ? ' download' : ''}>${isVideo ? 'Apri' : 'Scarica'}</a>` : ''}
                     <button type="button" class="gallery-item__delete btn-delete-media" data-id="${m.id}" title="Elimina">&times;</button>
                 </div>
@@ -983,7 +983,7 @@
             showAlert(err.message, 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = '📍 Trova';
+            btn.innerHTML = '<i data-lucide="map-pin"></i> Trova';
         }
     }
 

@@ -128,7 +128,7 @@
             <div class="form-group"><label>Prefisso cartella</label><input type="text" id="set-s3-prefix" class="form-input" value="gestionale-backups/"></div>
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
                 <button type="submit" class="btn btn--primary">Salva backup</button>
-                <button type="button" class="btn btn--ghost" id="btn-backup-now">💾 Backup ora</button>
+                <button type="button" class="btn btn--ghost" id="btn-backup-now"><i data-lucide="save"></i> Backup ora</button>
             </div>
         </form>
     </div>
@@ -203,7 +203,7 @@
             </div>
 
             <div id="totp-enabled-view" hidden>
-                <p class="alert alert--success" style="display:block">✅ La 2FA è attiva sul tuo account.</p>
+                <p class="alert alert--success" style="display:block"><i data-lucide="check-circle"></i> La 2FA è attiva sul tuo account.</p>
                 <div class="form-group">
                     <label for="totp-disable-pass">Per disattivare, inserisci la tua password</label>
                     <input type="password" id="totp-disable-pass" class="form-input" autocomplete="off">

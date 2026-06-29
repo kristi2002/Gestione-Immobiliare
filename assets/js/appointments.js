@@ -139,8 +139,8 @@
                     <span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
                 </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info">📅 ${formatDateTime(a.appointment_date)} · ${a.duration_minutes} min</div>
-                    <div class="entity-card__info">👤 ${escapeHtml(who)}</div>
+                    <div class="entity-card__info"><i data-lucide="calendar"></i> ${formatDateTime(a.appointment_date)} · ${a.duration_minutes} min</div>
+                    <div class="entity-card__info"><i data-lucide="user"></i> ${escapeHtml(who)}</div>
                     ${a.agent_name ? `<div class="entity-card__info text-muted">Agente: ${escapeHtml(a.agent_name)}</div>` : ''}
                     ${a.notes ? `<div class="entity-card__info text-muted">${escapeHtml(a.notes)}</div>` : ''}
                 </div>
@@ -185,11 +185,11 @@
 
         document.getElementById('scheda-appt-body').innerHTML = `
             <div class="scheda-rows">
-                <div class="scheda-row"><span class="scheda-row__label">📅 Data e ora</span><span class="scheda-row__value">${formatDateTime(a.appointment_date)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">⏱ Durata</span><span class="scheda-row__value">${a.duration_minutes} minuti</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">👤 Visitatore</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
-                ${a.agent_name ? `<div class="scheda-row"><span class="scheda-row__label">🧑‍💼 Agente</span><span class="scheda-row__value">${escapeHtml(a.agent_name)}</span></div>` : ''}
-                ${a.notes ? `<div class="scheda-row"><span class="scheda-row__label">📝 Note</span><span class="scheda-row__value">${escapeHtml(a.notes)}</span></div>` : ''}
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Data e ora</span><span class="scheda-row__value">${formatDateTime(a.appointment_date)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="timer"></i> Durata</span><span class="scheda-row__value">${a.duration_minutes} minuti</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="user"></i> Visitatore</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
+                ${a.agent_name ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="briefcase"></i> Agente</span><span class="scheda-row__value">${escapeHtml(a.agent_name)}</span></div>` : ''}
+                ${a.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Note</span><span class="scheda-row__value">${escapeHtml(a.notes)}</span></div>` : ''}
             </div>`;
 
         const isScheduled = a.status === 'scheduled';

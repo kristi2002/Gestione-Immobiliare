@@ -30,7 +30,7 @@
         <!-- Chat panel -->
         <section class="chat-panel">
             <div class="chat-panel__empty" id="chat-empty">
-                <span class="chat-panel__empty-icon">✉️</span>
+                <span class="chat-panel__empty-icon"><i data-lucide="mail"></i></span>
                 <p>Seleziona un proprietario per visualizzare la conversazione.</p>
             </div>
 
@@ -47,8 +47,8 @@
 
                 <footer class="chat-compose">
                     <div class="chat-compose__tabs">
-                        <button type="button" class="chat-tab chat-tab--active" data-mode="send" data-channel="email" id="tab-send-email">📧 Email</button>
-                        <button type="button" class="chat-tab" data-mode="send" data-channel="whatsapp" id="tab-send-wa">💬 WhatsApp</button>
+                        <button type="button" class="chat-tab chat-tab--active" data-mode="send" data-channel="email" id="tab-send-email"><i data-lucide="mail"></i> Email</button>
+                        <button type="button" class="chat-tab" data-mode="send" data-channel="whatsapp" id="tab-send-wa"><i data-lucide="message-circle"></i> WhatsApp</button>
                         <button type="button" class="chat-tab" data-mode="receive" id="tab-receive">Registra ricevuta</button>
                     </div>
 
@@ -63,7 +63,7 @@
                         </div>
                         <div class="chat-compose__actions">
                             <span class="text-muted chat-compose__hint" id="compose-hint">Il messaggio verrà inviato e salvato nello storico.</span>
-                            <button type="button" class="btn btn--ghost" id="btn-use-template" hidden>📋 Usa template</button>
+                            <button type="button" class="btn btn--ghost" id="btn-use-template" hidden><i data-lucide="copy"></i> Usa template</button>
                             <button type="submit" class="btn btn--primary" id="chat-submit">Invia</button>
                         </div>
                     </form>

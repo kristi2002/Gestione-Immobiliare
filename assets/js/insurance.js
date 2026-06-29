@@ -125,8 +125,8 @@
                 <td data-label="Premio annuo">${premium}</td>
                 <td data-label="Scadenza">${isExpired ? `<span style="color:var(--color-danger);">${dateLabel}</span>` : isExpiring ? `<strong>${dateLabel}</strong>` : dateLabel}</td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-ins-edit" data-id="${p.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-ins-del" data-id="${p.id}" data-name="${esc(p.policy_number || p.insurer_name)}" title="Elimina">🗑️</button>
+                    <button class="btn btn--sm btn--ghost btn-ins-edit" data-id="${p.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-ins-del" data-id="${p.id}" data-name="${esc(p.policy_number || p.insurer_name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');

@@ -48,7 +48,7 @@
         els.geocodeBtn.addEventListener('click', () => geocodeBatch(false));
         if (els.regeocodeBtn) {
             els.regeocodeBtn.addEventListener('click', async () => {
-                if (await confirmDialog('Vuoi ricalcolare le coordinate di tutti gli immobili? Le posizioni attuali verranno sostituite.', { title: 'Ricalcola coordinate', confirmText: 'Ricalcola', danger: false, icon: '📍' })) {
+                if (await confirmDialog('Vuoi ricalcolare le coordinate di tutti gli immobili? Le posizioni attuali verranno sostituite.', { title: 'Ricalcola coordinate', confirmText: 'Ricalcola', danger: false, icon: 'map-pin' })) {
                     geocodeBatch(true);
                 }
             });
@@ -166,7 +166,7 @@
 
         els.geocodeBtn.disabled = false;
         if (els.regeocodeBtn) els.regeocodeBtn.disabled = false;
-        els.geocodeBtn.textContent = '📍 Geocodifica indirizzi';
+        els.geocodeBtn.innerHTML = '<i data-lucide="map-pin"></i> Geocodifica indirizzi';
 
         let msg = `Geocodifica: ${matched}/${done} immobili posizionati.`;
         if (failed.length) {

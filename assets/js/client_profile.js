@@ -17,8 +17,8 @@
     const FREQ_LABELS   = { once: 'Una volta', weekly: 'Settimanale', biweekly: 'Quindicinale', monthly: 'Mensile', quarterly: 'Trimestrale', yearly: 'Annuale' };
     const PROP_STATUS   = { available: 'Disponibile', rented: 'Affittato', sold: 'Venduto', maintenance: 'Manutenzione', archived: 'Archiviato' };
     const PROP_COLOR    = { available: '#16a34a', rented: '#2563eb', sold: '#7c3aed', maintenance: '#d97706', archived: '#94a3b8' };
-    const DOC_ICONS     = { pdf: '📄', doc: '📝', docx: '📝', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', webp: '🖼️' };
-    const REM_ICONS     = { pending: '🟡', completed: '✅', cancelled: '❌' };
+    const DOC_ICONS     = { pdf: '<i data-lucide="file-text"></i>', doc: '<i data-lucide="file-pen"></i>', docx: '<i data-lucide="file-pen"></i>', jpg: '<i data-lucide="image"></i>', jpeg: '<i data-lucide="image"></i>', png: '<i data-lucide="image"></i>', webp: '<i data-lucide="image"></i>' };
+    const REM_ICONS     = { pending: '<i data-lucide="clock"></i>', completed: '<i data-lucide="check-circle"></i>', cancelled: '<i data-lucide="x-circle"></i>' };
 
     let client   = null;
     let clientId = null;
@@ -117,11 +117,11 @@
         badge.className = `badge badge--${client.status}`;
 
         const meta = [];
-        if (client.phone) meta.push(`<span>📞 <a href="tel:${esc(client.phone)}">${esc(client.phone)}</a></span>`);
-        if (client.email) meta.push(`<span>✉️ <a href="mailto:${esc(client.email)}">${esc(client.email)}</a></span>`);
-        if (client.creation_date) meta.push(`<span>📅 Cliente dal ${fmtDate(client.creation_date)}</span>`);
+        if (client.phone) meta.push(`<span><i data-lucide="phone"></i> <a href="tel:${esc(client.phone)}">${esc(client.phone)}</a></span>`);
+        if (client.email) meta.push(`<span><i data-lucide="mail"></i> <a href="mailto:${esc(client.email)}">${esc(client.email)}</a></span>`);
+        if (client.creation_date) meta.push(`<span><i data-lucide="calendar"></i> Cliente dal ${fmtDate(client.creation_date)}</span>`);
         const cnt = parseInt(client.property_count, 10) || 0;
-        if (cnt > 0) meta.push(`<span>🏢 ${cnt} immobil${cnt === 1 ? 'e' : 'i'}</span>`);
+        if (cnt > 0) meta.push(`<span><i data-lucide="building-2"></i> ${cnt} immobil${cnt === 1 ? 'e' : 'i'}</span>`);
         document.getElementById('profile-meta').innerHTML = meta.join('');
 
         const notesEl = document.getElementById('profile-notes');
@@ -176,7 +176,7 @@
             grid.innerHTML = items.map(p => {
                 const photo = p.cover_url
                     ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;prop-card-thumb prop-card-thumb--empty&quot;>&#x1F3E2;</div>'">`
-                    : `<div class="prop-card-thumb prop-card-thumb--empty">🏢</div>`;
+                    : `<div class="prop-card-thumb prop-card-thumb--empty"><i data-lucide="building-2"></i></div>`;
                 const color = PROP_COLOR[p.status] || '#94a3b8';
                 const price = p.price ? `<span class="profile-prop-rent">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';
                 return `
@@ -210,13 +210,13 @@
         if (!docs.length) return '';
         return docs.map(d => `
             <div class="doc-item">
-                <span class="doc-item__icon">📎</span>
+                <span class="doc-item__icon"><i data-lucide="paperclip"></i></span>
                 <div class="doc-item__info">
                     <a class="doc-item__name" href="${esc(d.file_path)}" target="_blank">${esc(d.original_name || d.title || 'File')}</a>
                     <div class="doc-item__meta">File caricato${d.created_at ? ' · ' + fmtDate(d.created_at) : ''}</div>
                 </div>
                 <div class="doc-item__actions">
-                    <button class="btn btn--sm btn--danger btn-cdoc-del" data-id="${d.id}" title="Elimina">🗑</button>
+                    <button class="btn btn--sm btn--danger btn-cdoc-del" data-id="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>`).join('');
     }
@@ -291,7 +291,7 @@
                 const desc   = (i.description || '').length > 60 ? i.description.slice(0, 60) + '…' : (i.description || '');
                 return `
                 <div class="doc-item">
-                    <span class="doc-item__icon">💶</span>
+                    <span class="doc-item__icon"><i data-lucide="euro"></i></span>
                     <div class="doc-item__info">
                         <div class="doc-item__name">${esc(i.invoice_number)} — € ${total}</div>
                         <div class="doc-item__meta">
@@ -300,7 +300,7 @@
                         </div>
                     </div>
                     <div class="doc-item__actions">
-                        <button class="btn btn--sm btn--ghost btn-fattura-pdf" data-id="${i.id}" title="PDF fattura">📄</button>
+                        <button class="btn btn--sm btn--ghost btn-fattura-pdf" data-id="${i.id}" title="PDF fattura"><i data-lucide="file-text"></i></button>
                     </div>
                 </div>`;
             }).join('');
@@ -378,12 +378,12 @@
                 const period = [c.start_date ? fmtDate(c.start_date) : null, c.end_date ? fmtDate(c.end_date) : null].filter(Boolean).join(' → ');
                 return `
                 <div class="doc-item">
-                    <span class="doc-item__icon">📋</span>
+                    <span class="doc-item__icon"><i data-lucide="copy"></i></span>
                     <div class="doc-item__info">
                         <div class="doc-item__name">${esc(c.title || type)} — ${where}</div>
                         <div class="doc-item__meta">
                             <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;font-size:11px;">${label}</span>
-                            · ${type}${tenant ? ' · 👤 ' + tenant : ''}${rent ? ' · ' + rent : ''}${period ? ' · ' + period : ''}
+                            · ${type}${tenant ? ' · <i data-lucide="user"></i> ' + tenant : ''}${rent ? ' · ' + rent : ''}${period ? ' · ' + period : ''}
                         </div>
                     </div>
                 </div>`;
@@ -417,7 +417,7 @@
             const DOC_TYPE_LABELS = { invoice: 'Fattura', contract: 'Contratto', id: 'Documento ID', other: 'Altro' };
             list.innerHTML = items.map(d => {
                 const ext  = (d.original_name || d.title || '').split('.').pop().toLowerCase();
-                const icon = DOC_ICONS[ext] || '📎';
+                const icon = DOC_ICONS[ext] || '<i data-lucide="paperclip"></i>';
                 const name = d.title || d.original_name || 'Documento';
                 return `
                 <div class="doc-item">
@@ -427,8 +427,8 @@
                         <div class="doc-item__meta">${DOC_TYPE_LABELS[d.doc_type] || d.doc_type || ''} · ${fmtDate(d.created_at)}</div>
                     </div>
                     <div class="doc-item__actions">
-                        <a href="api/download_document.php?id=${d.id}" class="btn btn--sm btn--ghost" target="_blank" title="Scarica">⬇️</a>
-                        <button class="btn btn--sm btn--ghost btn-del-doc" data-id="${d.id}" title="Elimina">🗑️</button>
+                        <a href="api/download_document.php?id=${d.id}" class="btn btn--sm btn--ghost" target="_blank" title="Scarica"><i data-lucide="download"></i></a>
+                        <button class="btn btn--sm btn--ghost btn-del-doc" data-id="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>`;
             }).join('');
@@ -500,7 +500,7 @@
                         <span>${sent ? '↗ Inviata' : '↙ Ricevuta'}</span>
                         <span>${fmtDateTime(m.created_at)}</span>
                     </div>
-                    ${m.subject ? `<div class="chat-bubble__subject">📧 ${esc(m.subject)}</div>` : ''}
+                    ${m.subject ? `<div class="chat-bubble__subject"><i data-lucide="mail"></i> ${esc(m.subject)}</div>` : ''}
                     <div class="chat-bubble__body">${esc(m.body)}</div>
                 </div>`;
             }).join('');
@@ -564,18 +564,18 @@
 
             list.innerHTML = reminders.map(r => `
                 <div class="reminder-item reminder-item--${r.status}">
-                    <span class="reminder-item__icon">${REM_ICONS[r.status] || '🔔'}</span>
+                    <span class="reminder-item__icon">${REM_ICONS[r.status] || '<i data-lucide="bell"></i>'}</span>
                     <div class="reminder-item__info">
                         <div class="reminder-item__title">${esc(r.title)}</div>
                         <div class="reminder-item__meta">
-                            ${r.reminder_date ? `📅 ${fmtDate(r.reminder_date)}` : ''}
+                            ${r.reminder_date ? `<i data-lucide="calendar"></i> ${fmtDate(r.reminder_date)}` : ''}
                             ${r.frequency ? ` · ${FREQ_LABELS[r.frequency] || r.frequency}` : ''}
                         </div>
                     </div>
                     <div class="reminder-item__actions">
-                        ${r.status === 'pending' ? `<button class="btn btn--sm btn--ghost btn-done-rem" data-id="${r.id}" title="Segna completato">✅</button>` : ''}
-                        <button class="btn btn--sm btn--ghost btn-edit-rem" data-id="${r.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-del-rem" data-id="${r.id}" title="Elimina">🗑️</button>
+                        ${r.status === 'pending' ? `<button class="btn btn--sm btn--ghost btn-done-rem" data-id="${r.id}" title="Segna completato"><i data-lucide="check-circle"></i></button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-edit-rem" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-del-rem" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>`).join('');
 

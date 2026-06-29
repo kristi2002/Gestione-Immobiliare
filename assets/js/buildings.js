@@ -103,8 +103,8 @@
                 <td data-label="Unità totali">${esc(b.total_units ?? '—')}</td>
                 <td data-label="Occupate">${esc(b.occupancy_count ?? '—')}</td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-b-edit" data-id="${b.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-b-del" data-id="${b.id}" data-name="${esc(b.name)}" title="Elimina">🗑️</button>
+                    <button class="btn btn--sm btn--ghost btn-b-edit" data-id="${b.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-b-del" data-id="${b.id}" data-name="${esc(b.name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`);
 
@@ -186,13 +186,13 @@
                 ${props.map(p => `<li style="background:white;border:1px solid var(--color-border,#e0e0e0);border-radius:6px;padding:0.3rem 0.75rem;font-size:0.875rem;">
                     ${esc(p.address || p.title || `#${p.id}`)}
                     <button class="btn btn--sm" style="margin-left:0.5rem;padding:0 4px;font-size:0.7rem;color:var(--color-danger,#c0392b);background:none;border:none;cursor:pointer;"
-                        data-building="${buildingId}" data-prop="${p.id}" title="Scollega">✕</button>
+                        data-building="${buildingId}" data-prop="${p.id}" title="Scollega"><i data-lucide="x"></i></button>
                 </li>`).join('')}
             </ul>`;
 
             container.querySelectorAll('[data-prop]').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    if (!await confirmDialog('Vuoi scollegare questo immobile dall\'edificio?', { title: 'Scollega immobile', confirmText: 'Scollega', danger: false, icon: '🔗' })) return;
+                    if (!await confirmDialog('Vuoi scollegare questo immobile dall\'edificio?', { title: 'Scollega immobile', confirmText: 'Scollega', danger: false, icon: 'link' })) return;
                     try {
                         const r = await fetch(`${API}?id=${btn.dataset.building}&action=unlink_property&property_id=${btn.dataset.prop}`, {
                             method: 'DELETE',

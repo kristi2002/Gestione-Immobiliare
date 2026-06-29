@@ -123,7 +123,7 @@
                     <span class="badge badge--invoice-${i.status}">${STATUS_LABELS[i.status] || i.status}</span>
                 </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info">👤 ${escapeHtml(who)}</div>
+                    <div class="entity-card__info"><i data-lucide="user"></i> ${escapeHtml(who)}</div>
                     <div class="entity-card__info">Imponibile: € ${fmt(i.amount)} · IVA: € ${fmt(i.vat_amount)}</div>
                     <div class="entity-card__info"><strong>Totale: € ${fmt(i.total)}</strong></div>
                     <div class="entity-card__info text-muted">Emessa: ${formatDate(i.issue_date)}${i.due_date ? ' · Scad.: ' + formatDate(i.due_date) : ''}</div>
@@ -169,14 +169,14 @@
 
         document.getElementById('scheda-inv-body').innerHTML = `
             <div class="scheda-rows">
-                <div class="scheda-row"><span class="scheda-row__label">👤 Intestatario</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">💶 Imponibile</span><span class="scheda-row__value">€ ${fmt(i.amount)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">📊 IVA (${i.vat_rate}%)</span><span class="scheda-row__value">€ ${fmt(i.vat_amount)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label">💰 Totale</span><span class="scheda-row__value"><strong>€ ${fmt(i.total)}</strong></span></div>
-                <div class="scheda-row"><span class="scheda-row__label">📅 Emessa</span><span class="scheda-row__value">${formatDate(i.issue_date)}${i.due_date ? ' · Scad. ' + formatDate(i.due_date) : ''}</span></div>
-                ${i.paid_date ? `<div class="scheda-row"><span class="scheda-row__label">✅ Pagata il</span><span class="scheda-row__value">${formatDate(i.paid_date)}</span></div>` : ''}
-                ${i.description ? `<div class="scheda-row"><span class="scheda-row__label">📝 Descrizione</span><span class="scheda-row__value">${escapeHtml(i.description)}</span></div>` : ''}
-                ${i.notes ? `<div class="scheda-row"><span class="scheda-row__label">📄 Note</span><span class="scheda-row__value">${escapeHtml(i.notes)}</span></div>` : ''}
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="user"></i> Intestatario</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="euro"></i> Imponibile</span><span class="scheda-row__value">€ ${fmt(i.amount)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="bar-chart-3"></i> IVA (${i.vat_rate}%)</span><span class="scheda-row__value">€ ${fmt(i.vat_amount)}</span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="wallet"></i> Totale</span><span class="scheda-row__value"><strong>€ ${fmt(i.total)}</strong></span></div>
+                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Emessa</span><span class="scheda-row__value">${formatDate(i.issue_date)}${i.due_date ? ' · Scad. ' + formatDate(i.due_date) : ''}</span></div>
+                ${i.paid_date ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="check-circle"></i> Pagata il</span><span class="scheda-row__value">${formatDate(i.paid_date)}</span></div>` : ''}
+                ${i.description ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Descrizione</span><span class="scheda-row__value">${escapeHtml(i.description)}</span></div>` : ''}
+                ${i.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-text"></i> Note</span><span class="scheda-row__value">${escapeHtml(i.notes)}</span></div>` : ''}
             </div>`;
 
         document.getElementById('scheda-inv-send').hidden = i.status !== 'draft';

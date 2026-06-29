@@ -119,9 +119,9 @@
                 <td data-label="Scadenza">${formatDate(c.due_date)}</td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    ${window.canWrite !== false && isPending ? `<button class="btn btn--sm btn--ghost btn-mark-paid" data-id="${c.id}" title="Segna come pagata" style="color:var(--color-success,#27ae60);">✓ Pagata</button>` : ''}
-                    ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-c-edit" data-id="${c.id}" title="Modifica">✏️</button>
-                    <button class="btn btn--sm btn--ghost btn-c-del" data-id="${c.id}" title="Elimina">🗑️</button>` : ''}
+                    ${window.canWrite !== false && isPending ? `<button class="btn btn--sm btn--ghost btn-mark-paid" data-id="${c.id}" title="Segna come pagata" style="color:var(--color-success,#27ae60);"><i data-lucide="check"></i> Pagata</button>` : ''}
+                    ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-c-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-c-del" data-id="${c.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');
@@ -164,7 +164,7 @@
             loadCommissions();
         } catch (err) {
             showAlert(err.message, 'error');
-            btn.disabled = false; btn.textContent = '✓ Pagata';
+            btn.disabled = false; btn.innerHTML = '<i data-lucide="check"></i> Pagata';
         }
     }
 
