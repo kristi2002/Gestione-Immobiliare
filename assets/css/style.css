@@ -147,6 +147,7 @@ body.sidebar-collapsed .sidebar-toggle {
 }
 
 .sidebar-close-btn {
+    display: none; /* Desktop: sidebar always open, no close button. Shown on mobile only. */
     background: none;
     border: none;
     color: #64748b;
@@ -2145,6 +2146,10 @@ body.nav-open {
 
     .sidebar-toggle {
         display: flex;
+    }
+
+    .sidebar-close-btn {
+        display: block; /* Mobile: allow closing the overlay sidebar */
     }
 
     .app-content {
@@ -5735,12 +5740,4 @@ body.nav-open {
     font-size: 28px;
     font-weight: 800;
     color: var(--color-primary, #2563eb);
-    margin-bottom: 4px;
-}
-
-/* ── Soft-load: dim existing content while re-fetching (no flash) ── */
-.is-loading {
-    opacity: 0.45;
-    pointer-events: none;
-    transition: opacity 0.12s ease;
-}
+    margin-

@@ -120,7 +120,7 @@
             });
         },
 
-        /** Sidebar toggle — handles both mobile overlay and desktop collapse */
+        /** Sidebar toggle — desktop sidebar stays open permanently; mobile uses an overlay */
         bindSidebarToggle() {
             const toggle   = document.getElementById('sidebar-toggle');
             const sidebar  = document.getElementById('sidebar');
@@ -129,28 +129,18 @@
 
             if (!toggle || !sidebar) return;
 
-            // Restore desktop collapsed state from last session
-            try {
-                if (localStorage.getItem('sidebarCollapsed') === '1') {
-                    document.body.classList.add('sidebar-collapsed');
-                }
-            } catch(e) {}
+            // Desktop: the sidebar is always open. Clear any "collapsed" state saved by
+            // older versions so it can never start hidden on a desktop viewport.
+            document.body.classList.remove('sidebar-collapsed');
+            try { localStorage.removeItem('sidebarCollapsed'); } catch(e) {}
 
+            // The hamburger only acts on mobile (it is hidden on desktop via CSS).
             toggle.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    // Mobile: toggle overlay
-                    if (sidebar.classList.contains('open')) {
-                        this.closeSidebar();
-                    } else {
-                        this.openSidebar();
-                    }
+                if (window.innerWidth > 768) return;
+                if (sidebar.classList.contains('open')) {
+                    this.closeSidebar();
                 } else {
-                    // Desktop: toggle collapse
-                    if (document.body.classList.contains('sidebar-collapsed')) {
-                        this.openSidebar();
-                    } else {
-                        this.closeSidebar();
-                    }
+                    this.openSidebar();
                 }
             });
 
@@ -164,26 +154,24 @@
         },
 
         openSidebar() {
+            // Overlay "open" is a mobile-only concept; the desktop sidebar is always visible.
             const sidebar  = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
             if (!sidebar) return;
-            document.body.classList.remove('sidebar-collapsed');
             if (window.innerWidth <= 768) {
                 sidebar.classList.add('open');
                 if (backdrop) backdrop.hidden = false;
                 document.body.classList.add('nav-open');
             }
-            try { localStorage.removeItem('sidebarCollapsed'); } catch(e) {}
         },
 
         closeSidebar() {
+            // Only collapses the mobile overlay. On desktop the sidebar never closes.
             const sidebar  = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar) sidebar.classList.remove('open');
             if (backdrop) backdrop.hidden = true;
             document.body.classList.remove('nav-open');
-            document.body.classList.add('sidebar-collapsed');
-            try { localStorage.setItem('sidebarCollapsed', '1'); } catch(e) {}
         },
 
         setActiveNav(activeLink) {

@@ -20,7 +20,6 @@
     let deleteTargetId = null;
     let searchTimer   = null;
     let editingClientId = null;
-    let schedaClientId  = null;
     let currentPage = 1;
     const PAGE_LIMIT = 25;
 
@@ -83,25 +82,6 @@
             if (editingClientId && window.App) {
                 closeModal();
                 window.App.navigateTo('communications', { clientId: editingClientId });
-            }
-        });
-
-        // Scheda modal
-        const schedaModal = document.getElementById('scheda-modal');
-        document.getElementById('scheda-modal-close').addEventListener('click', closeSchedaModal);
-        document.getElementById('scheda-close').addEventListener('click', closeSchedaModal);
-        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
-        document.getElementById('scheda-btn-profile').addEventListener('click', () => {
-            if (schedaClientId && window.App) { const id = schedaClientId; closeSchedaModal(); window.App.navigateTo('client_profile', { clientId: id }); }
-        });
-        document.getElementById('scheda-btn-report').addEventListener('click', () => {
-            if (schedaClientId) { const id = schedaClientId; closeSchedaModal(); editingClientId = id; openReportModal(); }
-        });
-        document.getElementById('scheda-btn-edit').addEventListener('click', () => {
-            if (schedaClientId) {
-                const client = clients.find(c => c.id === schedaClientId);
-                closeSchedaModal();
-                if (client) openModal(client);
             }
         });
 
@@ -296,8 +276,7 @@
         els.grid.querySelectorAll('.entity-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (!e.target.closest('button, input, a')) {
-                    const client = clients.find(c => c.id == card.dataset.id);
-                    if (client) openSchedaModal(client);
+                    if (window.App) window.App.navigateTo('client_profile', { clientId: Number(card.dataset.id) });
                 }
             });
         });
@@ -669,81 +648,6 @@
         }
         out.push(cur);
         return out;
-    }
-
-    // -------------------------------------------------------------------------
-    // Scheda Proprietario modal
-    // -------------------------------------------------------------------------
-
-    function openSchedaModal(client) {
-        schedaClientId = client.id;
-        const initials  = ((client.name || '')[0] || '') + ((client.surname || '')[0] || '');
-        const propLabel = client.property_count === 1 ? '1 immobile' : `${client.property_count} immobili`;
-
-        document.getElementById('scheda-modal-body').innerHTML = `
-            <div class="scheda-hero">
-                <div class="scheda-hero__avatar">${escapeHtml(initials.toUpperCase())}</div>
-                <div class="scheda-hero__info">
-                    <div class="scheda-hero__name">
-                        <span>${escapeHtml(client.name)} ${escapeHtml(client.surname)}</span>
-                        <span class="badge badge--${client.status}">${STATUS_LABELS[client.status] || client.status}</span>
-                    </div>
-                    ${client.codice_fiscale ? `<div class="scheda-contact"><span>🪪</span><span style="font-family:monospace;font-size:13px">${escapeHtml(client.codice_fiscale)}</span></div>` : ''}
-                    ${client.phone ? `<div class="scheda-contact"><span>📞</span><span>${escapeHtml(client.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(client.phone)}" title="Copia numero">📋</button></div>` : ''}
-                    ${client.email ? `<div class="scheda-contact"><span>✉️</span><a href="mailto:${escapeHtml(client.email)}">${escapeHtml(client.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(client.email)}" title="Copia email">📋</button></div>` : ''}
-                </div>
-            </div>
-            ${client.internal_notes ? `<div class="scheda-notes"><strong>Note interne</strong><p>${escapeHtml(client.internal_notes)}</p></div>` : ''}
-            <div class="scheda-stats">
-                <span class="entity-card__stat"><span class="entity-card__stat-icon">🏢</span><span class="entity-card__stat-label">${propLabel}</span></span>
-            </div>
-            <div class="scheda-id-info">
-                <div class="scheda-id-info__label">Carta di Identità</div>
-                <div id="scheda-id-card-status"><p class="text-muted">Caricamento...</p></div>
-            </div>
-        `;
-
-        document.querySelectorAll('#scheda-modal-body .btn-copy').forEach(btn => {
-            btn.addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(btn.dataset.copy, btn); });
-        });
-
-        document.getElementById('scheda-modal').hidden = false;
-        loadSchedaIdDoc(client.id);
-    }
-
-    function closeSchedaModal() {
-        document.getElementById('scheda-modal').hidden = true;
-        schedaClientId = null;
-    }
-
-    async function loadSchedaIdDoc(clientId) {
-        const container = document.getElementById('scheda-id-card-status');
-        if (!container) return;
-        try {
-            const [frontRes, backRes] = await Promise.all([
-                fetch(`api/documents.php?doc_type=id_front&client_id=${clientId}&limit=1`).then(r => r.json()),
-                fetch(`api/documents.php?doc_type=id_back&client_id=${clientId}&limit=1`).then(r => r.json()),
-            ]);
-            const front = frontRes.data?.items?.[0] || null;
-            const back  = backRes.data?.items?.[0] || null;
-            if (!front && !back) {
-                container.innerHTML = '<p class="text-muted">Nessuna carta di identità caricata.</p>';
-                return;
-            }
-            container.innerHTML = `
-                <div class="id-card-sides" style="gap:12px;">
-                    <div class="id-card-side">
-                        <div class="id-card-side-label">Fronte</div>
-                        ${front ? `<div class="id-card-row"><span>📄 ${escapeHtml(front.original_name)}</span><a href="${escapeHtml(front.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza</a></div>` : '<p class="text-muted" style="margin:0;font-size:13px;">Non caricato</p>'}
-                    </div>
-                    <div class="id-card-side">
-                        <div class="id-card-side-label">Retro</div>
-                        ${back ? `<div class="id-card-row"><span>📄 ${escapeHtml(back.original_name)}</span><a href="${escapeHtml(back.download_url)}" target="_blank" class="btn btn--sm btn--ghost">🖨️ Visualizza</a></div>` : '<p class="text-muted" style="margin:0;font-size:13px;">Non caricato</p>'}
-                    </div>
-                </div>`;
-        } catch (_) {
-            if (container) container.innerHTML = '<p class="text-muted">Impossibile caricare.</p>';
-        }
     }
 
     // -------------------------------------------------------------------------
