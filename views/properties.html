@@ -30,6 +30,11 @@
             <option value="sold">Venduti</option>
             <option value="archived">Archiviati</option>
         </select>
+        <div class="view-cols-toggle" id="property-cols-toggle" title="Numero di colonne" role="group" aria-label="Vista colonne">
+            <button type="button" class="view-cols-btn" data-cols="2">▦ 2</button>
+            <button type="button" class="view-cols-btn" data-cols="3">▦ 3</button>
+            <button type="button" class="view-cols-btn" data-cols="4">▦ 4</button>
+        </div>
     </div>
 
     <div id="properties-bulk-toolbar" class="bulk-toolbar" hidden>
@@ -399,6 +404,60 @@
     <button type="button" class="media-lightbox__close" id="media-lightbox-close" aria-label="Chiudi">&times;</button>
     <div class="media-lightbox__content" id="media-lightbox-content"></div>
     <p class="media-lightbox__caption" id="media-lightbox-caption"></p>
+</div>
+
+<!-- Social post modal (#13) -->
+<div class="modal-overlay" id="social-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="social-modal-title">
+        <div class="modal-header">
+            <h3 id="social-modal-title">📣 Crea post social</h3>
+            <button class="modal-close" id="social-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="social-form" class="modal-body">
+            <input type="hidden" id="social-property-id">
+            <input type="hidden" id="social-media-id">
+            <p class="text-muted" id="social-property-label" style="margin:0 0 14px;font-size:13px;"></p>
+
+            <div class="form-group">
+                <label for="social-platform">Piattaforma</label>
+                <select id="social-platform" class="form-select">
+                    <option value="both">Facebook + Instagram</option>
+                    <option value="facebook">Solo Facebook</option>
+                    <option value="instagram">Solo Instagram</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="social-caption">Testo del post</label>
+                <textarea id="social-caption" class="form-textarea" rows="6" maxlength="2200"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Immagine</label>
+                <div id="social-media-picker" class="social-media-picker">
+                    <p class="text-muted" style="font-size:13px;margin:0;">Caricamento foto…</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Quando pubblicare</label>
+                <div class="social-when">
+                    <label class="social-when__opt"><input type="radio" name="social-when" value="now" checked> Pubblica ora</label>
+                    <label class="social-when__opt"><input type="radio" name="social-when" value="later"> Programma</label>
+                </div>
+            </div>
+            <div class="form-group" id="social-schedule-group" hidden>
+                <label for="social-scheduled">Data e ora pubblicazione</label>
+                <input type="datetime-local" id="social-scheduled" class="form-input">
+            </div>
+
+            <div id="social-modal-error" class="alert alert--error" style="display:none;margin:0 0 12px 0"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="social-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="social-modal-save">Pubblica ora</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script src="assets/js/properties.js"></script>

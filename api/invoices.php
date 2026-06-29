@@ -49,9 +49,10 @@ try {
 function listInvoices(PDO $db): void
 {
     $pagination = apiGetPagination();
-    $status   = trim($_GET['status'] ?? '');
-    $clientId = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
-    $year     = isset($_GET['year']) ? (int) $_GET['year'] : null;
+    $status     = trim($_GET['status'] ?? '');
+    $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
+    $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $year       = isset($_GET['year']) ? (int) $_GET['year'] : null;
 
     $where = 'WHERE 1=1';
     $params = [];
@@ -59,8 +60,9 @@ function listInvoices(PDO $db): void
     if ($status !== '' && in_array($status, INVOICE_STATUSES, true)) {
         $where .= ' AND i.status = :status'; $params['status'] = $status;
     }
-    if ($clientId) { $where .= ' AND i.client_id = :cid'; $params['cid'] = $clientId; }
-    if ($year)     { $where .= ' AND YEAR(i.issue_date) = :year'; $params['year'] = $year; }
+    if ($clientId)   { $where .= ' AND i.client_id = :cid'; $params['cid'] = $clientId; }
+    if ($propertyId) { $where .= ' AND i.property_id = :pid'; $params['pid'] = $propertyId; }
+    if ($year)       { $where .= ' AND YEAR(i.issue_date) = :year'; $params['year'] = $year; }
 
     $countSql = "SELECT COUNT(*) FROM invoices i $where";
 

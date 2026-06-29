@@ -28,6 +28,9 @@
                 renderTitle(currentProperty);
                 renderGalleryHero([]);   // show placeholder while media loads
                 renderInfoSection(currentProperty);
+                renderHighlights(currentProperty);
+                loadContracts();
+                loadInvoices();
                 document.getElementById('property-profile-tabs').hidden = false;
                 switchTab('media');
                 loadMedia();
@@ -176,7 +179,9 @@
                 if (window.App) window.App.navigateTo('client_profile', { clientId: ownerId });
             });
         }
-        document.getElementById('btn-pp-edit')?.addEventListener('click', openEditModal);
+        document.getElementById('btn-pp-edit')?.addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('property_edit', { propertyId });
+        });
         document.getElementById('btn-pp-pdf')?.addEventListener('click', generatePdf);
         document.getElementById('btn-pp-qr')?.addEventListener('click', openQrModal);
         document.getElementById('btn-pp-archive')?.addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = false; });
@@ -189,6 +194,133 @@
         if (p.bathrooms) chips.push('🚿 ' + p.bathrooms + ' bagni');
         if (p.features) p.features.split(',').map(f => f.trim()).filter(Boolean).forEach(f => chips.push(f));
         return chips;
+    }
+
+    // ── Highlights under gallery (#8) ─────────────────────────────────────────
+    function renderHighlights(p) {
+        const el = document.getElementById('pp-highlights');
+        if (!el) return;
+        const FURN = { no: 'Non arredato', si: 'Arredato', parziale: 'Parz. arredato' };
+        const GARD = { no: 'No', privato: 'Privato', comune: 'Comune' };
+        const COND = { nuovo: 'Nuovo', ottimo: 'Ottimo', buono: 'Buono', da_ristrutturare: 'Da ristrutturare' };
+        const HEAT = { autonomo: 'Autonomo', centralizzato: 'Centralizzato', assente: 'Assente' };
+        const num = v => v !== null && v !== undefined && v !== '' && Number(v) > 0;
+        const items = [];
+        const add = (cond, icon, value, label) => { if (cond) items.push({ icon, value, label }); };
+
+        add(num(p.sqm), '📐', p.sqm + ' m²', 'Superficie');
+        add(num(p.locali), '🏠', p.locali, p.locali == 1 ? 'Locale' : 'Locali');
+        add(num(p.rooms), '🛏️', p.rooms, p.rooms == 1 ? 'Camera' : 'Camere');
+        add(num(p.bathrooms), '🚿', p.bathrooms, p.bathrooms == 1 ? 'Bagno' : 'Bagni');
+        add(num(p.balconies), '🪟', p.balconies, p.balconies == 1 ? 'Balcone' : 'Balconi');
+        add(num(p.terraces), '☀️', p.terraces, p.terraces == 1 ? 'Terrazzo' : 'Terrazzi');
+        add(num(p.parking_spaces), '🚗', p.parking_spaces, 'Posti auto');
+        add(!!p.floor, '🏢', p.floor + (num(p.total_floors) ? '/' + p.total_floors : ''), 'Piano');
+        add(p.elevator !== null && p.elevator !== undefined && p.elevator !== '', '🛗', Number(p.elevator) ? 'Sì' : 'No', 'Ascensore');
+        add(!!p.energy_class, '⚡', String(p.energy_class || '').toUpperCase(), 'Classe en.');
+        add(!!p.heating, '🔥', HEAT[p.heating] || p.heating, 'Riscaldamento');
+        add(!!p.furnished, '🛋️', FURN[p.furnished] || p.furnished, 'Arredamento');
+        add(!!p.garden && p.garden !== 'no', '🌳', GARD[p.garden] || p.garden, 'Giardino');
+        add(num(p.year_built), '🏗️', p.year_built, 'Anno');
+        add(!!p.condition_state, '🛠️', COND[p.condition_state] || p.condition_state, 'Stato');
+        add(num(p.condo_fees), '🏷️', '€ ' + Number(p.condo_fees).toLocaleString('it-IT'), 'Spese cond.');
+
+        if (!items.length) { el.hidden = true; return; }
+        el.innerHTML = items.map(it =>
+            `<div class="pp-hl"><span class="pp-hl__icon">${it.icon}</span>` +
+            `<span class="pp-hl__value">${esc(String(it.value))}</span>` +
+            `<span class="pp-hl__label">${esc(it.label)}</span></div>`
+        ).join('');
+        el.hidden = false;
+    }
+
+    // ── Contratti & Fatture side sections (#6, #7, #9) ────────────────────────
+    function ppFmtDate(d) { return d ? new Date(d).toLocaleDateString('it-IT') : ''; }
+    function ppMoney(v) { return v != null && v !== '' ? '€ ' + Number(v).toLocaleString('it-IT') : ''; }
+
+    function docFilesHtml(docs, reload) {
+        if (!docs.length) return '';
+        return docs.map(d => `
+            <div class="pp-side-item pp-side-item--file">
+                <a href="${esc(d.file_path)}" target="_blank" class="pp-side-item__name">📎 ${esc(d.original_name || 'File')}</a>
+                <button class="btn btn--xs btn--danger" data-del-doc="${d.id}" title="Elimina">🗑</button>
+            </div>`).join('');
+    }
+
+    function bindDocDeletes(container, reload) {
+        container.querySelectorAll('[data-del-doc]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!confirm('Eliminare questo file?')) return;
+                fetch('api/documents.php?id=' + btn.dataset.delDoc, { method: 'DELETE' })
+                    .then(r => r.json())
+                    .then(j => { if (!j.success) throw new Error(); reload(); })
+                    .catch(() => showAlert('Impossibile eliminare il file.', 'error'));
+            });
+        });
+    }
+
+    function loadContracts() {
+        const list = document.getElementById('pp-contracts-list');
+        if (!list) return;
+        const TYPE = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
+        Promise.all([
+            fetch('api/contracts.php?property_id=' + propertyId + '&limit=100').then(r => r.json()).catch(() => ({})),
+            fetch('api/documents.php?property_id=' + propertyId + '&doc_type=contract&limit=100').then(r => r.json()).catch(() => ({})),
+        ]).then(([cRes, dRes]) => {
+            const contracts = cRes.data?.items || cRes.data || [];
+            const docs = dRes.data?.items || dRes.data || [];
+            let html = contracts.map(c => `
+                <div class="pp-side-item">
+                    <div class="pp-side-item__main">
+                        <strong>${esc(c.title || TYPE[c.contract_type] || 'Contratto')}</strong>
+                        <span class="text-muted">${esc(TYPE[c.contract_type] || c.contract_type || '')}${c.monthly_rent ? ' · ' + ppMoney(c.monthly_rent) + '/mese' : ''}</span>
+                        <span class="text-muted">${ppFmtDate(c.start_date)}${c.end_date ? ' → ' + ppFmtDate(c.end_date) : ''}</span>
+                    </div>
+                    <span class="badge badge--${esc(c.status || 'draft')}">${esc(c.status || '')}</span>
+                </div>`).join('');
+            html += docFilesHtml(docs, loadContracts);
+            if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun contratto. Usa ⬆️ per caricarne uno.</p>';
+            list.innerHTML = html;
+            bindDocDeletes(list, loadContracts);
+        }).catch(() => { list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>'; });
+    }
+
+    function loadInvoices() {
+        const list = document.getElementById('pp-invoices-list');
+        if (!list) return;
+        Promise.all([
+            fetch('api/invoices.php?property_id=' + propertyId + '&limit=100').then(r => r.json()).catch(() => ({})),
+            fetch('api/documents.php?property_id=' + propertyId + '&doc_type=invoice&limit=100').then(r => r.json()).catch(() => ({})),
+        ]).then(([iRes, dRes]) => {
+            const invoices = iRes.data?.items || iRes.data || [];
+            const docs = dRes.data?.items || dRes.data || [];
+            let html = invoices.map(i => `
+                <div class="pp-side-item">
+                    <div class="pp-side-item__main">
+                        <strong>${esc(i.invoice_number || 'Fattura')}</strong>
+                        <span class="text-muted">${esc(i.description || '')}</span>
+                        <span class="text-muted">${ppFmtDate(i.issue_date)}${i.total ? ' · ' + ppMoney(i.total) : (i.amount ? ' · ' + ppMoney(i.amount) : '')}</span>
+                    </div>
+                    <span class="badge badge--${esc(i.status || 'draft')}">${esc(i.status || '')}</span>
+                </div>`).join('');
+            html += docFilesHtml(docs, loadInvoices);
+            if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessuna fattura. Usa ⬆️ per caricarne una.</p>';
+            list.innerHTML = html;
+            bindDocDeletes(list, loadInvoices);
+        }).catch(() => { list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>'; });
+    }
+
+    function uploadSideDoc(file, docType, reload) {
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('property_id', propertyId);
+        fd.append('doc_type', docType);
+        fd.append('file', file);
+        fd.append('title', docType === 'contract' ? 'Contratto' : 'Fattura');
+        fetch('api/documents.php', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(j => { if (!j.success) throw new Error(j.error || 'Errore'); showAlert('File caricato.', 'success'); reload(); })
+            .catch(err => showAlert('Caricamento non riuscito: ' + (err.message || ''), 'error'));
     }
 
     // ── Gallery grid (management tab) ─────────────────────────────────────────
@@ -625,6 +757,15 @@
 
         document.getElementById('pp-doc-upload').addEventListener('change', e => {
             if (e.target.files.length) uploadDocuments(e.target.files);
+            e.target.value = '';
+        });
+
+        document.getElementById('pp-contract-upload')?.addEventListener('change', e => {
+            if (e.target.files[0]) uploadSideDoc(e.target.files[0], 'contract', loadContracts);
+            e.target.value = '';
+        });
+        document.getElementById('pp-invoice-upload')?.addEventListener('change', e => {
+            if (e.target.files[0]) uploadSideDoc(e.target.files[0], 'invoice', loadInvoices);
             e.target.value = '';
         });
 

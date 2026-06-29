@@ -179,11 +179,15 @@ function createProperty(PDO $db): void
         "INSERT INTO properties
             (client_id, building_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
              year_built, property_type, description, additional_features, internal_notes, status,
-             price, price_type, latitude, longitude, geo_confidence)
+             price, price_type, latitude, longitude, geo_confidence,
+             locali, total_floors, energy_class, heating, elevator, furnished, balconies, terraces,
+             garden, parking_spaces, condition_state, exposure, condo_fees, reference_code)
          VALUES
             (:client_id, :building_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
              :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
-             :price, :price_type, :latitude, :longitude, :geo_confidence)"
+             :price, :price_type, :latitude, :longitude, :geo_confidence,
+             :locali, :total_floors, :energy_class, :heating, :elevator, :furnished, :balconies, :terraces,
+             :garden, :parking_spaces, :condition_state, :exposure, :condo_fees, :reference_code)"
     );
     $stmt->execute($validated);
 
@@ -241,7 +245,12 @@ function updateProperty(PDO $db, int $id): void
              description = :description, additional_features = :additional_features,
              internal_notes = :internal_notes, status = :status,
              price = :price, price_type = :price_type,
-             latitude = :latitude, longitude = :longitude, geo_confidence = :geo_confidence
+             latitude = :latitude, longitude = :longitude, geo_confidence = :geo_confidence,
+             locali = :locali, total_floors = :total_floors, energy_class = :energy_class,
+             heating = :heating, elevator = :elevator, furnished = :furnished,
+             balconies = :balconies, terraces = :terraces, garden = :garden,
+             parking_spaces = :parking_spaces, condition_state = :condition_state,
+             exposure = :exposure, condo_fees = :condo_fees, reference_code = :reference_code
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -337,6 +346,23 @@ function validatePropertyInput(PDO $db, array $data): array
         $geoConf = null;
     }
 
+    // immobiliare.it-compatible fields (all optional)
+    $intOrNull = static fn($v) => isset($v) && $v !== '' ? (int) $v : null;
+    $locali         = $intOrNull($data['locali'] ?? null);
+    $totalFloors    = $intOrNull($data['total_floors'] ?? null);
+    $balconies      = $intOrNull($data['balconies'] ?? null);
+    $terraces       = $intOrNull($data['terraces'] ?? null);
+    $parkingSpaces  = $intOrNull($data['parking_spaces'] ?? null);
+    $elevator       = isset($data['elevator']) && $data['elevator'] !== '' ? (int) (bool) $data['elevator'] : null;
+    $condoFees      = isset($data['condo_fees']) && $data['condo_fees'] !== '' ? (float) $data['condo_fees'] : null;
+    $energyClass    = trim($data['energy_class'] ?? '') ?: null;
+    $heating        = trim($data['heating'] ?? '') ?: null;
+    $furnished      = trim($data['furnished'] ?? '') ?: null;
+    $garden         = trim($data['garden'] ?? '') ?: null;
+    $conditionState = trim($data['condition_state'] ?? '') ?: null;
+    $exposure       = trim($data['exposure'] ?? '') ?: null;
+    $referenceCode  = trim($data['reference_code'] ?? '') ?: null;
+
     if ($clientId <= 0) {
         apiError('Seleziona un proprietario.');
     }
@@ -405,6 +431,20 @@ function validatePropertyInput(PDO $db, array $data): array
         'latitude'            => $latitude,
         'longitude'           => $longitude,
         'geo_confidence'      => $geoConf,
+        'locali'              => $locali,
+        'total_floors'        => $totalFloors,
+        'energy_class'        => $energyClass,
+        'heating'             => $heating,
+        'elevator'            => $elevator,
+        'furnished'           => $furnished,
+        'balconies'           => $balconies,
+        'terraces'            => $terraces,
+        'garden'              => $garden,
+        'parking_spaces'      => $parkingSpaces,
+        'condition_state'     => $conditionState,
+        'exposure'            => $exposure,
+        'condo_fees'          => $condoFees,
+        'reference_code'      => $referenceCode,
     ];
 }
 

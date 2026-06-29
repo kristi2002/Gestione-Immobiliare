@@ -5740,4 +5740,107 @@ body.nav-open {
     font-size: 28px;
     font-weight: 800;
     color: var(--color-primary, #2563eb);
-    margin-
+    margin-bottom: 8px;
+}
+
+/* ── Property profile: highlights, columns, side cards (contratti/fatture) ── */
+.pp-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 10px;
+    margin: 0 0 20px;
+}
+.pp-hl {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 12px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.pp-hl__icon { font-size: 20px; line-height: 1; }
+.pp-hl__value { font-weight: 700; font-size: 0.95rem; }
+.pp-hl__label { font-size: 0.72rem; color: var(--color-text-muted, #64748b); text-transform: uppercase; letter-spacing: .02em; }
+
+.pp-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 8px;
+}
+.pp-col-side { display: flex; flex-direction: column; gap: 16px; }
+.pp-side-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.pp-side-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.pp-side-card__head h3 { margin: 0; font-size: 0.95rem; }
+.pp-side-upload { cursor: pointer; margin: 0; }
+.pp-side-list { display: flex; flex-direction: column; gap: 8px; }
+.pp-side-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+.pp-side-item__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pp-side-item__main strong { font-size: 0.85rem; }
+.pp-side-item__name { word-break: break-all; }
+.pp-side-item--file { background: var(--color-bg, #f8fafc); }
+
+@media (max-width: 900px) {
+    .pp-columns { grid-template-columns: 1fr; }
+}
+
+/* ── Immobili: column-count toggle (#12) ──────────────────────────────────── */
+.view-cols-toggle { display: inline-flex; gap: 2px; border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+.view-cols-btn {
+    background: var(--color-surface);
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #64748b);
+}
+.view-cols-btn:hover { background: var(--color-bg, #f1f5f9); }
+.view-cols-btn.active { background: var(--color-primary, #2563eb); color: #fff; }
+
+/* Column-count overrides for the properties grid (desktop) */
+.properties-view .entity-grid.entity-grid--cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.properties-view .entity-grid.entity-grid--cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.properties-view .entity-grid.entity-grid--cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+    .properties-view .entity-grid.entity-grid--cols-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+    .properties-view .entity-grid.entity-grid--cols-3,
+    .properties-view .entity-grid.entity-grid--cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+    .properties-view .entity-grid[class*="entity-grid--cols-"] { grid-template-columns: 1fr; }
+}
+
+/* ── Social post modal (#13) ──────────────────────────────────────────────── */
+.social-media-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.social-thumb {
+    width: 84px; height: 64px; border-radius: 8px; overflow: hidden;
+    border: 2px solid var(--color-border); padding: 0; cursor: pointer; background: none;
+}
+.social-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.social-thumb.selected { border-color: var(--color-primary, #2563eb); box-shadow: 0 0 0 2px rgba(37,99,235,.25); }
+.social-when { display: flex; gap: 18px; }
+.social-when__opt { display: flex; align-items: center; gap: 6px; cursor: pointer; }

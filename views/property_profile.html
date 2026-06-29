@@ -18,8 +18,40 @@
         <div class="entity-loading" style="padding:60px 0;">Caricamento gallery…</div>
     </div>
 
-    <!-- Info section below gallery — populated by JS -->
-    <div id="pp-info-section" hidden></div>
+    <!-- Key highlights under the gallery — populated by JS (#8) -->
+    <div id="pp-highlights" class="pp-highlights" hidden></div>
+
+    <!-- Two columns: info (left) + related sections (right) -->
+    <div class="pp-columns">
+        <div class="pp-col-main">
+            <!-- Info section — populated by JS -->
+            <div id="pp-info-section" hidden></div>
+        </div>
+        <aside class="pp-col-side">
+            <section class="pp-side-card">
+                <div class="pp-side-card__head">
+                    <h3>📑 Contratti</h3>
+                    <label class="btn btn--xs btn--ghost pp-side-upload" title="Carica un contratto dal computer">⬆️
+                        <input type="file" id="pp-contract-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    </label>
+                </div>
+                <div id="pp-contracts-list" class="pp-side-list">
+                    <p class="text-muted" style="font-size:13px;margin:0;">Caricamento…</p>
+                </div>
+            </section>
+            <section class="pp-side-card">
+                <div class="pp-side-card__head">
+                    <h3>🧾 Fatture</h3>
+                    <label class="btn btn--xs btn--ghost pp-side-upload" title="Carica una fattura dal computer">⬆️
+                        <input type="file" id="pp-invoice-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    </label>
+                </div>
+                <div id="pp-invoices-list" class="pp-side-list">
+                    <p class="text-muted" style="font-size:13px;margin:0;">Caricamento…</p>
+                </div>
+            </section>
+        </aside>
+    </div>
 
     <div id="property-profile-alert" class="alert" style="display:none;"></div>
 

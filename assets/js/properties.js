@@ -140,7 +140,25 @@
     }
 
     function bindEvents() {
-        bindClick('btn-new-property', () => openModal());
+        // "Nuovo Immobile" now opens a dedicated page (not a modal).
+        bindClick('btn-new-property', () => { if (window.App) window.App.navigateTo('property_edit'); });
+
+        // Column-count toggle (#12) — remembers the choice across sessions.
+        (function setupColumnToggle() {
+            const grid = document.getElementById('properties-grid');
+            const toggle = document.getElementById('property-cols-toggle');
+            if (!grid || !toggle) return;
+            let cols = '2';
+            try { cols = localStorage.getItem('propertyCols') || '2'; } catch (e) {}
+            const apply = (n) => {
+                grid.classList.remove('entity-grid--cols-2', 'entity-grid--cols-3', 'entity-grid--cols-4');
+                grid.classList.add('entity-grid--cols-' + n);
+                toggle.querySelectorAll('.view-cols-btn').forEach(b => b.classList.toggle('active', b.dataset.cols === String(n)));
+                try { localStorage.setItem('propertyCols', String(n)); } catch (e) {}
+            };
+            toggle.querySelectorAll('.view-cols-btn').forEach(b => b.addEventListener('click', () => apply(b.dataset.cols)));
+            apply(cols);
+        })();
         bindClick('property-modal-close', closeModal);
         bindClick('property-modal-cancel', closeModal);
         bindClick('btn-property-mandato', generateMandato);
@@ -160,6 +178,21 @@
         bindClick('btn-property-geocode', geocodeFromForm);
 
         els.form.addEventListener('submit', handleFormSubmit);
+
+        // Social post modal (#13)
+        bindClick('social-modal-close', closeSocialModal);
+        bindClick('social-modal-cancel', closeSocialModal);
+        const socialModal = document.getElementById('social-modal');
+        if (socialModal) socialModal.addEventListener('click', (e) => { if (e.target === socialModal) closeSocialModal(); });
+        document.querySelectorAll('input[name="social-when"]').forEach(r => {
+            r.addEventListener('change', () => {
+                const later = document.querySelector('input[name="social-when"]:checked')?.value === 'later';
+                document.getElementById('social-schedule-group').hidden = !later;
+                document.getElementById('social-modal-save').textContent = later ? 'Programma' : 'Pubblica ora';
+            });
+        });
+        const socialForm = document.getElementById('social-form');
+        if (socialForm) socialForm.addEventListener('submit', submitSocialPost);
 
         // CSV export / import
         bindClick('btn-export-properties', () => {
@@ -367,7 +400,8 @@
                         <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto">📊</button>
                         <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
                         ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
+                        <button class="btn btn--sm btn--ghost btn-social" data-id="${p.id}" title="Crea post social">📣</button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -430,6 +464,14 @@
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 openAppraisalModal(btn.dataset.id);
+            });
+        });
+
+        els.grid.querySelectorAll('.btn-social').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const prop = properties.find(p => p.id == btn.dataset.id);
+                if (prop) openSocialModal(prop);
             });
         });
 
@@ -953,6 +995,133 @@
         if (el) {
             el.textContent = '';
             el.style.display = 'none';
+        }
+    }
+
+    // ── Social post modal (#13) ───────────────────────────────────────────────
+    function buildSocialCaption(p) {
+        const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box/Garage', terreno:'Terreno', altro:'Immobile' };
+        const lines = [];
+        const head = `${TYPE[p.property_type] || 'Immobile'} in ${p.price_type === 'vendita' ? 'vendita' : 'affitto'}`;
+        lines.push(`✨ ${head}${p.city ? ' — ' + p.city : ''}`);
+        lines.push('');
+        if (p.address) lines.push(`📍 ${p.address}${p.city ? ', ' + p.city : ''}`);
+        const specs = [];
+        if (p.sqm) specs.push(`${p.sqm} m²`);
+        if (p.locali) specs.push(`${p.locali} locali`);
+        if (p.rooms) specs.push(`${p.rooms} camere`);
+        if (p.bathrooms) specs.push(`${p.bathrooms} bagni`);
+        if (specs.length) lines.push(`🏠 ${specs.join(' · ')}`);
+        if (p.price) lines.push(`💶 € ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}`);
+        if (p.description) { lines.push(''); lines.push(p.description); }
+        lines.push('');
+        lines.push('📞 Contattaci per maggiori informazioni!');
+        return lines.join('\n');
+    }
+
+    function loadSocialMedia(propertyId) {
+        const picker = document.getElementById('social-media-picker');
+        fetch(`api/property_media.php?property_id=${propertyId}`)
+            .then(r => r.json())
+            .then(json => {
+                const media = (Array.isArray(json.data) ? json.data : (json.data?.items || []))
+                    .filter(m => (m.mime_type || '').startsWith('image/') || ['photo','image'].includes(m.media_type));
+                if (!media.length) {
+                    picker.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Nessuna foto disponibile. Carica foto nella scheda immobile.</p>';
+                    document.getElementById('social-media-id').value = '';
+                    return;
+                }
+                picker.innerHTML = media.map((m, i) =>
+                    `<button type="button" class="social-thumb${i === 0 ? ' selected' : ''}" data-media-id="${m.id}"><img src="${escapeHtml(m.file_path)}" alt=""></button>`
+                ).join('');
+                document.getElementById('social-media-id').value = media[0].id;
+                picker.querySelectorAll('.social-thumb').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        picker.querySelectorAll('.social-thumb').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        document.getElementById('social-media-id').value = btn.dataset.mediaId;
+                    });
+                });
+            })
+            .catch(() => { picker.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Impossibile caricare le foto.</p>'; });
+    }
+
+    function openSocialModal(property) {
+        document.getElementById('social-property-id').value = property.id;
+        document.getElementById('social-media-id').value = '';
+        document.getElementById('social-property-label').textContent = `${property.address || ''}${property.city ? ', ' + property.city : ''}`;
+        document.getElementById('social-platform').value = 'both';
+        document.getElementById('social-caption').value = buildSocialCaption(property);
+        const nowRadio = document.querySelector('input[name="social-when"][value="now"]');
+        if (nowRadio) nowRadio.checked = true;
+        document.getElementById('social-schedule-group').hidden = true;
+        document.getElementById('social-modal-save').textContent = 'Pubblica ora';
+        const err = document.getElementById('social-modal-error');
+        if (err) err.style.display = 'none';
+        loadSocialMedia(property.id);
+        document.getElementById('social-modal').hidden = false;
+    }
+
+    function closeSocialModal() {
+        const m = document.getElementById('social-modal');
+        if (m) m.hidden = true;
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function nowLocalDatetime() {
+        const d = new Date();
+        return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    async function submitSocialPost(e) {
+        e.preventDefault();
+        const errEl = document.getElementById('social-modal-error');
+        errEl.style.display = 'none';
+        const platform   = document.getElementById('social-platform').value;
+        const caption    = document.getElementById('social-caption').value.trim();
+        const mediaId    = document.getElementById('social-media-id').value;
+        const when       = document.querySelector('input[name="social-when"]:checked')?.value || 'now';
+        const propertyId = document.getElementById('social-property-id').value;
+
+        if (!caption) { errEl.textContent = 'Inserisci il testo del post.'; errEl.style.display = 'block'; return; }
+        if ((platform === 'instagram' || platform === 'both') && !mediaId) {
+            errEl.textContent = 'Instagram richiede un\'immagine: seleziona o carica una foto nella scheda immobile.'; errEl.style.display = 'block'; return;
+        }
+        let scheduledAt;
+        if (when === 'later') {
+            scheduledAt = document.getElementById('social-scheduled').value;
+            if (!scheduledAt) { errEl.textContent = 'Scegli data e ora di pubblicazione.'; errEl.style.display = 'block'; return; }
+        } else {
+            scheduledAt = nowLocalDatetime();
+        }
+
+        const saveBtn = document.getElementById('social-modal-save');
+        saveBtn.disabled = true; saveBtn.textContent = 'Invio...';
+        try {
+            const fd = new FormData();
+            fd.append('platform', platform);
+            fd.append('property_id', propertyId);
+            fd.append('caption', caption);
+            fd.append('scheduled_at', scheduledAt);
+            fd.append('status', 'scheduled');
+            if (mediaId) fd.append('property_media_id', mediaId);
+
+            const res = await fetch('api/social_posts.php', { method: 'POST', body: fd });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore creazione post.');
+
+            if (when === 'now' && json.data?.id) {
+                const pubRes = await fetch(`api/social_posts.php?id=${json.data.id}&action=publish`, { method: 'PATCH' });
+                const pubJson = await pubRes.json();
+                if (!pubJson.success) throw new Error(pubJson.error || 'Post creato ma pubblicazione non riuscita.');
+            }
+            closeSocialModal();
+            showAlert(when === 'now' ? 'Post inviato.' : 'Post programmato.', 'success');
+        } catch (err) {
+            errEl.textContent = err.message; errEl.style.display = 'block';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = when === 'later' ? 'Programma' : 'Pubblica ora';
         }
     }
 
