@@ -238,7 +238,13 @@ function uploadDocument(PDO $db): void
     $mime = function_exists('mime_content_type')
         ? (mime_content_type($file['tmp_name']) ?: $file['type'])
         : $file['type'];
-    if (!in_array($mime, ALLOWED_MIMES, true)) {
+    $uploadExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    // mime_content_type() frequently misreports Office files — a .docx is a ZIP
+    // archive so it sniffs as application/zip, and a .doc as application/CDFV2 or
+    // application/x-ole-storage. Accept Word/ODT by their (trusted) extension in
+    // that case so legitimate documents aren't rejected.
+    $docExtFallback = ['doc', 'docx', 'odt'];
+    if (!in_array($mime, ALLOWED_MIMES, true) && !in_array($uploadExt, $docExtFallback, true)) {
         apiError('Tipo di file non consentito. Formati: PDF, immagini, Word, testo.');
     }
 

@@ -281,7 +281,7 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-contract-pdf" data-id="${c.id}" title="Scarica contratto PDF"><i data-lucide="file-down"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-contract-pdf" data-id="${c.id}" title="Scarica contratto"><i data-lucide="file-down"></i></button>
                         ${window.canWrite !== false ? advanceBtn : ''}
                         ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale"><i data-lucide="pen-tool"></i></button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
@@ -617,6 +617,18 @@
     async function downloadContractPdf(id) {
         const c = contracts.find(x => x.id == id);
         if (!c) return;
+        // If the contract has an uploaded file attached (e.g. imported via "Carica"),
+        // download that original file instead of generating a template PDF.
+        try {
+            const dRes  = await fetch(`api/documents.php?contract_id=${id}&doc_type=contract&limit=1`);
+            const dJson = await dRes.json();
+            const items = dJson.data?.items || dJson.data || [];
+            const doc   = Array.isArray(items) ? items[0] : null;
+            if (doc && doc.id) {
+                window.open(doc.download_url || ('api/download_document.php?id=' + doc.id), '_blank');
+                return;
+            }
+        } catch (_) { /* no attached file — fall through to PDF generation */ }
         try {
             const res = await fetch('api/generate_pdf.php', {
                 method: 'POST',
