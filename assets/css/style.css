@@ -123,8 +123,11 @@ body.sidebar-collapsed .sidebar-toggle {
 }
 
 .logo-img {
-    max-height: 44px;
-    max-width: 150px;
+    display: block;
+    width: auto;
+    height: auto;
+    max-height: 64px;
+    max-width: 100%;
     object-fit: contain;
     object-position: left center;
 }

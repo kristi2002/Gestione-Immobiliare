@@ -67,7 +67,7 @@
     function renderTable() {
         const tbody = document.getElementById('tenants-tbody');
         if (!tenants.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-muted">Nessun inquilino.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:40px 16px;">Nessun inquilino.</td></tr>';
             return;
         }
         tbody.innerHTML = tenants.map(t => {
