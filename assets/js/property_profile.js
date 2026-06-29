@@ -191,6 +191,7 @@
                 <button class="btn btn--ghost" id="btn-pp-pdf">📄 Scheda PDF</button>
                 <button class="btn btn--ghost" id="btn-pp-mandato">📋 Mandato agenzia</button>
                 <button class="btn btn--ghost" id="btn-pp-qr">🔗 QR Code</button>
+                <button class="btn btn--ghost" id="btn-pp-social">📣 Pubblica post</button>
                 <button class="btn btn--danger" id="btn-pp-archive">📦 Archivia</button>
             </div>`;
 
@@ -205,7 +206,86 @@
         document.getElementById('btn-pp-pdf')?.addEventListener('click', generatePdf);
         document.getElementById('btn-pp-mandato')?.addEventListener('click', generateMandato);
         document.getElementById('btn-pp-qr')?.addEventListener('click', openQrModal);
+        document.getElementById('btn-pp-social')?.addEventListener('click', openSocialPublish);
         document.getElementById('btn-pp-archive')?.addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = false; });
+    }
+
+    // ── Social: confirm + publish now (listing info only — never fatture/contratti) ──
+    function buildSocialCaption(p) {
+        const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box/Garage', terreno:'Terreno', altro:'Immobile' };
+        const lines = [];
+        lines.push(`✨ ${TYPE[p.property_type] || 'Immobile'} in ${p.price_type === 'vendita' ? 'vendita' : 'affitto'}${p.city ? ' — ' + p.city : ''}`);
+        lines.push('');
+        if (p.address) lines.push(`📍 ${p.address}${p.city ? ', ' + p.city : ''}`);
+        const specs = [];
+        if (p.sqm) specs.push(`${p.sqm} m²`);
+        if (p.locali) specs.push(`${p.locali} locali`);
+        if (p.rooms) specs.push(`${p.rooms} camere`);
+        if (p.bathrooms) specs.push(`${p.bathrooms} bagni`);
+        if (specs.length) lines.push(`🏠 ${specs.join(' · ')}`);
+        if (p.energy_class) lines.push(`⚡ Classe energetica ${String(p.energy_class).toUpperCase()}`);
+        if (p.price) lines.push(`💶 € ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}`);
+        if (p.description) { lines.push(''); lines.push(p.description); }
+        lines.push('');
+        lines.push('📞 Contattaci per maggiori informazioni!');
+        return lines.join('\n');
+    }
+
+    function firstImageMedia() {
+        return (allMedia || []).find(m => (m.mime_type || '').startsWith('image/') || ['photo', 'image'].includes(m.media_type)) || null;
+    }
+
+    function openSocialPublish() {
+        if (!currentProperty) return;
+        document.getElementById('pp-social-caption').textContent = buildSocialCaption(currentProperty);
+        const img = firstImageMedia();
+        const imgEl = document.getElementById('pp-social-image');
+        imgEl.innerHTML = img
+            ? `<img src="${esc(img.file_path)}" alt="">`
+            : '<div class="pp-social-preview__noimg">Nessuna foto disponibile — il post andrà solo su Facebook.</div>';
+        document.getElementById('pp-social-error').style.display = 'none';
+        document.getElementById('pp-social-modal').hidden = false;
+    }
+
+    function closeSocialPublish() {
+        document.getElementById('pp-social-modal').hidden = true;
+    }
+
+    async function confirmSocialPublish() {
+        const btn = document.getElementById('pp-social-publish');
+        const errEl = document.getElementById('pp-social-error');
+        errEl.style.display = 'none';
+        const img = firstImageMedia();
+        const platform = img ? 'both' : 'facebook';
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const now = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+        btn.disabled = true; btn.textContent = 'Pubblicazione...';
+        try {
+            const fd = new FormData();
+            fd.append('platform', platform);
+            fd.append('property_id', propertyId);
+            fd.append('caption', buildSocialCaption(currentProperty));
+            fd.append('scheduled_at', now);
+            fd.append('status', 'scheduled');
+            if (img) fd.append('property_media_id', img.id);
+
+            const res = await fetch('api/social_posts.php', { method: 'POST', body: fd });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore creazione post.');
+            if (json.data?.id) {
+                const pub = await fetch(`api/social_posts.php?id=${json.data.id}&action=publish`, { method: 'PATCH' });
+                const pj = await pub.json();
+                if (!pj.success) throw new Error(pj.error || 'Pubblicazione non riuscita.');
+            }
+            closeSocialPublish();
+            showAlert('Post pubblicato sui social.', 'success');
+        } catch (err) {
+            errEl.textContent = err.message; errEl.style.display = 'block';
+        } finally {
+            btn.disabled = false; btn.textContent = '📣 Pubblica ora';
+        }
     }
 
     function generateMandato() {
@@ -815,6 +895,14 @@
         document.getElementById('pp-archive-close').addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = true; });
         document.getElementById('pp-archive-cancel').addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = true; });
         document.getElementById('pp-archive-confirm').addEventListener('click', confirmArchive);
+
+        // Social publish modal
+        document.getElementById('pp-social-close')?.addEventListener('click', closeSocialPublish);
+        document.getElementById('pp-social-cancel')?.addEventListener('click', closeSocialPublish);
+        document.getElementById('pp-social-publish')?.addEventListener('click', confirmSocialPublish);
+        document.getElementById('pp-social-modal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('pp-social-modal')) closeSocialPublish();
+        });
 
         document.getElementById('pp-qr-close').addEventListener('click', closeQrModal);
         document.getElementById('pp-qr-cancel').addEventListener('click', closeQrModal);

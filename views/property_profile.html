@@ -337,4 +337,26 @@
     </div>
 </div>
 
+<!-- ── Social publish confirmation modal ───────────────────────── -->
+<div class="modal-overlay" id="pp-social-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="pp-social-title">
+        <div class="modal-header">
+            <h3 id="pp-social-title">📣 Pubblica sui social</h3>
+            <button class="modal-close" id="pp-social-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Vuoi davvero pubblicare questo immobile su <strong>Facebook e Instagram</strong> adesso?</p>
+            <div class="pp-social-preview">
+                <div id="pp-social-image" class="pp-social-preview__img"></div>
+                <pre id="pp-social-caption" class="pp-social-preview__caption"></pre>
+            </div>
+            <div id="pp-social-error" class="alert alert--error" style="display:none;margin:0;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="pp-social-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="pp-social-publish">📣 Pubblica ora</button>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/property_profile.js?v=3"></script>
