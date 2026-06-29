@@ -5245,6 +5245,26 @@ body.nav-open {
 }
 
 /* ── Property Profile — title section ────────────────────────── */
+/* Clean, subtle back link (replaces the boxed button) on the property page */
+.profile-topbar--pp { margin-bottom: 8px; }
+.pp-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 4px 2px;
+    margin-left: -2px;
+    cursor: pointer;
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1;
+    transition: color .15s ease, gap .15s ease;
+}
+.pp-back-link:hover { color: var(--color-primary, #2563eb); gap: 9px; }
+.pp-back-link svg { width: 16px; height: 16px; }
+
 .pp-title-section {
     margin-bottom: 16px;
 }
