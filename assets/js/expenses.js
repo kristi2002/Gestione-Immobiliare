@@ -54,20 +54,14 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-expense').addEventListener('click', () => openModal());
-        document.getElementById('expense-modal-close').addEventListener('click', closeModal);
-        document.getElementById('expense-modal-cancel').addEventListener('click', closeModal);
-
-        els.form.addEventListener('submit', handleFormSubmit);
+        document.getElementById('btn-new-expense').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('expense_edit');
+        });
 
         [els.propFilter, els.clientFilter, els.supplierFilter, els.categoryFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadExpenses(); }));
         els.yearFilter.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadExpenses(); }, 400);
-        });
-
-        els.modal.addEventListener('click', (e) => {
-            if (e.target === els.modal) closeModal();
         });
 
         // Scheda quick-view
@@ -78,8 +72,7 @@
         document.getElementById('scheda-exp-edit').addEventListener('click', () => {
             const id = schedaExpenseId;
             closeSchedaModal();
-            const e = expenses.find(x => x.id === id);
-            if (e) openModal(e);
+            if (window.App) window.App.navigateTo('expense_edit', { expenseId: id });
         });
     }
 
@@ -92,7 +85,7 @@
         const opts = properties.map(p =>
             `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
         ).join('');
-        els.propSelect.innerHTML   = '<option value="">— Nessuno —</option>' + opts;
+        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.propFilter.innerHTML   = '<option value="">Tutti gli immobili</option>' + opts;
     }
 
@@ -101,7 +94,7 @@
         const opts = clients.map(c =>
             `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`
         ).join('');
-        els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
+        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.clientFilter.innerHTML = '<option value="">Tutti i proprietari</option>' + opts;
     }
 
@@ -110,7 +103,7 @@
         const opts = suppliers.map(s =>
             `<option value="${s.id}">${escapeHtml(s.name)}</option>`
         ).join('');
-        els.supplierSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
+        if (els.supplierSelect) els.supplierSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.supplierFilter.innerHTML = '<option value="">Tutti i fornitori</option>' + opts;
     }
 
@@ -182,9 +175,9 @@
         }).join('');
 
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const e = expenses.find(x => x.id == btn.dataset.id);
-                if (e) openModal(e);
+            btn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                if (window.App) window.App.navigateTo('expense_edit', { expenseId: Number(btn.dataset.id) });
             });
         });
 

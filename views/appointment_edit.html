@@ -1,0 +1,59 @@
+<div class="appointment-edit-view entity-edit-view">
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="ape-back"><i data-lucide="arrow-left"></i> Indietro</button>
+    </div>
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2 id="ape-title">Nuova Visita</h2>
+            <p>Pianifica un sopralluogo: immobile, parti coinvolte, data e durata.</p>
+        </div>
+    </div>
+
+    <div id="ape-alert" class="alert" style="display:none;"></div>
+
+    <div class="card" style="padding:8px 28px 24px;">
+        <form id="ape-form">
+            <input type="hidden" id="ape-id">
+
+            <fieldset class="form-section">
+                <legend>Dettagli</legend>
+                <div class="form-group">
+                    <label for="ape-property">Immobile <span class="required">*</span></label>
+                    <select id="ape-property" class="form-select" required><option value="">— Seleziona immobile —</option></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="ape-lead">Lead</label><select id="ape-lead" class="form-select"><option value="">— Nessuno —</option></select></div>
+                    <div class="form-group"><label for="ape-client">Proprietario</label><select id="ape-client" class="form-select"><option value="">— Nessuno —</option></select></div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group"><label for="ape-date">Data e ora <span class="required">*</span></label><input type="datetime-local" id="ape-date" class="form-input" required></div>
+                    <div class="form-group"><label for="ape-duration">Durata (min)</label><input type="number" id="ape-duration" class="form-input" min="1" step="5" value="60"></div>
+                    <div class="form-group">
+                        <label for="ape-status">Stato</label>
+                        <select id="ape-status" class="form-select">
+                            <option value="scheduled">Programmata</option>
+                            <option value="completed">Completata</option>
+                            <option value="cancelled">Annullata</option>
+                            <option value="no_show">Mancata presentazione</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="max-width:420px">
+                    <label for="ape-agent">Agente</label>
+                    <select id="ape-agent" class="form-select"><option value="">— Nessuno —</option></select>
+                </div>
+                <div class="form-group"><label for="ape-notes">Note</label><textarea id="ape-notes" class="form-textarea" rows="3"></textarea></div>
+            </fieldset>
+
+            <div id="ape-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
+
+            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn--ghost" id="ape-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="ape-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/appointment_edit.js?v=1"></script>

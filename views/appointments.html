@@ -27,68 +27,6 @@
     <div id="appointments-pagination" class="pagination-container"></div>
 </div>
 
-<div class="modal-overlay" id="appointment-modal" hidden>
-    <div class="modal modal--lg" role="dialog" aria-labelledby="appointment-modal-title">
-        <div class="modal-header">
-            <h3 id="appointment-modal-title">Nuova Visita</h3>
-            <button class="modal-close" id="appointment-modal-close" aria-label="Chiudi">&times;</button>
-        </div>
-        <form id="appointment-form" class="modal-body">
-            <input type="hidden" id="appointment-id">
-            <fieldset class="form-section">
-                <legend>Dettagli</legend>
-                <div class="form-group">
-                    <label for="appt-property">Immobile <span class="required">*</span></label>
-                    <select id="appt-property" class="form-select" required>
-                        <option value="">— Seleziona immobile —</option>
-                    </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="appt-lead">Lead</label>
-                        <select id="appt-lead" class="form-select"><option value="">— Nessuno —</option></select>
-                    </div>
-                    <div class="form-group">
-                        <label for="appt-client">Proprietario</label>
-                        <select id="appt-client" class="form-select"><option value="">— Nessuno —</option></select>
-                    </div>
-                </div>
-                <div class="form-row form-row--3">
-                    <div class="form-group">
-                        <label for="appt-date">Data e ora <span class="required">*</span></label>
-                        <input type="datetime-local" id="appt-date" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="appt-duration">Durata (min)</label>
-                        <input type="number" id="appt-duration" class="form-input" min="1" step="5" value="60">
-                    </div>
-                    <div class="form-group">
-                        <label for="appt-status">Stato</label>
-                        <select id="appt-status" class="form-select">
-                            <option value="scheduled">Programmata</option>
-                            <option value="completed">Completata</option>
-                            <option value="cancelled">Annullata</option>
-                            <option value="no_show">Mancata presentazione</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="appt-agent">Agente</label>
-                    <select id="appt-agent" class="form-select"><option value="">— Nessuno —</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="appt-notes">Note</label>
-                    <textarea id="appt-notes" class="form-textarea" rows="3"></textarea>
-                </div>
-            </fieldset>
-            <div class="modal-footer">
-                <button type="button" class="btn btn--ghost" id="appointment-modal-cancel">Annulla</button>
-                <button type="submit" class="btn btn--primary" id="appointment-modal-save">Salva</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- Scheda Visita quick-view -->
 <div class="modal-overlay" id="appointment-scheda-modal" hidden>
     <div class="modal" role="dialog">

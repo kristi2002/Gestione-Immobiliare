@@ -1,0 +1,61 @@
+<div class="payment-edit-view entity-edit-view">
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="pye-back"><i data-lucide="arrow-left"></i> Indietro</button>
+    </div>
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2 id="pye-title">Nuovo Pagamento</h2>
+            <p>Registra un canone: inquilino, immobile, importo e scadenza.</p>
+        </div>
+    </div>
+
+    <div id="pye-alert" class="alert" style="display:none;"></div>
+
+    <div class="card" style="padding:24px 28px;">
+        <form id="pye-form">
+            <input type="hidden" id="pye-id">
+            <input type="hidden" id="pye-contract-id">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pye-tenant">Inquilino <span class="required">*</span></label>
+                    <select id="pye-tenant" class="form-select" required><option value="">— Seleziona inquilino —</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="pye-property">Immobile <span class="required">*</span></label>
+                    <select id="pye-property" class="form-select" required><option value="">— Seleziona immobile —</option></select>
+                </div>
+            </div>
+
+            <div class="form-row form-row--3">
+                <div class="form-group"><label for="pye-amount">Importo (€) <span class="required">*</span></label><input type="number" id="pye-amount" class="form-input" min="0" step="0.01" required></div>
+                <div class="form-group"><label for="pye-due-date">Scadenza <span class="required">*</span></label><input type="date" id="pye-due-date" class="form-input" required></div>
+                <div class="form-group">
+                    <label for="pye-status">Stato</label>
+                    <select id="pye-status" class="form-select">
+                        <option value="pending">In attesa</option>
+                        <option value="paid">Pagato</option>
+                        <option value="late">In ritardo</option>
+                        <option value="cancelled">Annullato</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group"><label for="pye-paid-date">Data pagamento</label><input type="date" id="pye-paid-date" class="form-input"></div>
+            </div>
+
+            <div class="form-group"><label for="pye-notes">Note</label><textarea id="pye-notes" class="form-textarea" rows="2"></textarea></div>
+
+            <div id="pye-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
+
+            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn--ghost" id="pye-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="pye-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/payment_edit.js?v=1"></script>

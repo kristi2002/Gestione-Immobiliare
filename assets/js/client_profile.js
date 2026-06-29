@@ -48,10 +48,10 @@
             if (window.App) window.App.navigateTo('property_edit', { clientId });
         });
         document.getElementById('btn-profile-new-fattura').addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('invoices', { openNew: true, clientId });
+            if (window.App) window.App.navigateTo('invoice_edit', { clientId });
         });
         document.getElementById('btn-profile-new-contratto')?.addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('contracts', { openNew: true, clientId });
+            if (window.App) window.App.navigateTo('contract_edit', { clientId });
         });
         document.getElementById('btn-profile-new-reminder').addEventListener('click', () => openReminderModal());
 

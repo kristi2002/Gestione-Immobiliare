@@ -1,0 +1,109 @@
+<div class="lead-edit-view entity-edit-view">
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="lde-back"><i data-lucide="arrow-left"></i> Indietro</button>
+    </div>
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2 id="lde-title">Nuovo Lead</h2>
+            <p>Dati del potenziale cliente, preferenze immobiliari e gestione.</p>
+        </div>
+    </div>
+
+    <div id="lde-alert" class="alert" style="display:none;"></div>
+
+    <div class="card" style="padding:8px 28px 24px;">
+        <form id="lde-form">
+            <input type="hidden" id="lde-id">
+
+            <fieldset class="form-section">
+                <legend>Anagrafica</legend>
+                <div class="form-row">
+                    <div class="form-group"><label for="lde-name">Nome <span class="required">*</span></label><input type="text" id="lde-name" class="form-input" required maxlength="100"></div>
+                    <div class="form-group"><label for="lde-surname">Cognome <span class="required">*</span></label><input type="text" id="lde-surname" class="form-input" required maxlength="100"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="lde-cf">Codice Fiscale <span class="required">*</span></label><input type="text" id="lde-cf" class="form-input" required maxlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase"></div>
+                    <div class="form-group"><label for="lde-phone">Telefono</label><input type="text" id="lde-phone" class="form-input" maxlength="30"></div>
+                    <div class="form-group"><label for="lde-email">Email</label><input type="email" id="lde-email" class="form-input" maxlength="255"></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Preferenze immobile</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="lde-interest">Interesse</label>
+                        <select id="lde-interest" class="form-select">
+                            <option value="affitto">Affitto</option>
+                            <option value="acquisto">Acquisto</option>
+                            <option value="entrambi">Entrambi</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="lde-budget-min">Budget min (€)</label><input type="number" id="lde-budget-min" class="form-input" min="0" step="0.01"></div>
+                    <div class="form-group"><label for="lde-budget-max">Budget max (€)</label><input type="number" id="lde-budget-max" class="form-input" min="0" step="0.01"></div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group"><label for="lde-city">Città preferita</label><input type="text" id="lde-city" class="form-input" maxlength="100"></div>
+                    <div class="form-group">
+                        <label for="lde-type">Tipo immobile</label>
+                        <select id="lde-type" class="form-select">
+                            <option value="">— Indifferente —</option>
+                            <option value="appartamento">Appartamento</option>
+                            <option value="villa">Villa</option>
+                            <option value="ufficio">Ufficio</option>
+                            <option value="negozio">Negozio</option>
+                            <option value="box">Box</option>
+                            <option value="terreno">Terreno</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="lde-min-rooms">Stanze min</label><input type="number" id="lde-min-rooms" class="form-input" min="0" step="1"></div>
+                </div>
+                <div class="form-group" style="max-width:320px"><label for="lde-min-sqm">Metri quadri minimi</label><input type="number" id="lde-min-sqm" class="form-input" min="0" step="0.01"></div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Gestione</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="lde-status">Stato</label>
+                        <select id="lde-status" class="form-select">
+                            <option value="new">Nuovo</option>
+                            <option value="contacted">Contattato</option>
+                            <option value="interested">Interessato</option>
+                            <option value="negotiating">In trattativa</option>
+                            <option value="converted">Convertito</option>
+                            <option value="lost">Perso</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lde-source">Fonte</label>
+                        <select id="lde-source" class="form-select">
+                            <option value="telefono">Telefono</option>
+                            <option value="email">Email</option>
+                            <option value="web">Web</option>
+                            <option value="passaparola">Passaparola</option>
+                            <option value="social">Social</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lde-assigned">Agente assegnato</label>
+                        <select id="lde-assigned" class="form-select"><option value="">— Nessuno —</option></select>
+                    </div>
+                </div>
+                <div class="form-group"><label for="lde-notes">Note</label><textarea id="lde-notes" class="form-textarea" rows="3"></textarea></div>
+            </fieldset>
+
+            <div id="lde-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
+
+            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn--ghost" id="lde-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="lde-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/lead_edit.js?v=1"></script>

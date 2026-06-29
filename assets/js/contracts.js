@@ -57,17 +57,10 @@
         Promise.all([loadProperties(), loadTenants(), loadClients()])
             .then(() => loadContracts())
             .then(() => {
+                // Legacy entry points now redirect to the dedicated contract page.
                 const vp = window.App?.viewParams || {};
-                const targetId = vp.contractId;
-                if (targetId) {
-                    const match = contracts.find(c => c.id === targetId);
-                    if (match) openModal(match);
-                    else fetch(`api/contracts.php?id=${targetId}`).then(r => r.json()).then(j => { if (j.success) openModal(j.data); });
-                } else if (vp.openNew) {
-                    // Opened from a proprietario profile with "+ Nuovo Contratto".
-                    openModal();
-                    if (vp.clientId) { const cs = document.getElementById('contract-client'); if (cs) cs.value = String(vp.clientId); }
-                }
+                if (vp.contractId && window.App) window.App.navigateTo('contract_edit', { contractId: vp.contractId });
+                else if (vp.openNew && window.App) window.App.navigateTo('contract_edit', vp.clientId ? { clientId: vp.clientId } : {});
             })
             .catch(err => {
                 if (!els.alert?.isConnected) return;
@@ -76,11 +69,9 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-contract').addEventListener('click', () => openModal());
-        document.getElementById('contract-modal-close').addEventListener('click', closeModal);
-        document.getElementById('contract-modal-cancel').addEventListener('click', closeModal);
-
-        els.form.addEventListener('submit', handleFormSubmit);
+        document.getElementById('btn-new-contract').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('contract_edit');
+        });
 
         let searchTimer = null;
         els.search.addEventListener('input', () => {
@@ -89,10 +80,6 @@
         });
 
         [els.propFilter, els.typeFilter, els.statusFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadContracts(); }));
-
-        els.modal.addEventListener('click', (e) => {
-            if (e.target === els.modal) closeModal();
-        });
 
         document.getElementById('esign-modal-close').addEventListener('click', closeEsignModal);
         document.getElementById('esign-modal-cancel').addEventListener('click', closeEsignModal);
@@ -110,8 +97,7 @@
         document.getElementById('scheda-ct-edit').addEventListener('click', () => {
             const id = schedaContractId;
             closeSchedaModal();
-            const c = contracts.find(x => x.id === id);
-            if (c) openModal(c);
+            if (window.App) window.App.navigateTo('contract_edit', { contractId: id });
         });
         document.getElementById('scheda-ct-esign').addEventListener('click', () => {
             const id = schedaContractId;
@@ -139,19 +125,19 @@
         const opts = properties.map(p =>
             `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
         ).join('');
-        els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' + opts;
-        els.propFilter.innerHTML = '<option value="">Tutti gli immobili</option>' + opts;
+        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' + opts;
+        if (els.propFilter) els.propFilter.innerHTML = '<option value="">Tutti gli immobili</option>' + opts;
     }
 
     async function loadTenants() {
         tenants = await Pagination.fetchList(TENANTS_API);
-        els.tenantSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+        if (els.tenantSelect) els.tenantSelect.innerHTML = '<option value="">— Nessuno —</option>' +
             tenants.map(t => `<option value="${t.id}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`).join('');
     }
 
     async function loadClients() {
         clients = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
-        els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
             clients.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
     }
 

@@ -17,11 +17,9 @@
         els.pagination = document.getElementById('tenants-pagination');
         await loadProperties();
         await loadTenants();
-        document.getElementById('btn-new-tenant').addEventListener('click', () => openModal());
-        document.getElementById('tenant-modal-close').addEventListener('click', closeModal);
-        document.getElementById('tenant-modal-cancel').addEventListener('click', closeModal);
-        document.getElementById('tenant-form').addEventListener('submit', saveTenant);
-        document.getElementById('btn-pdf-contract').addEventListener('click', generateContract);
+        document.getElementById('btn-new-tenant').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('tenant_edit');
+        });
         document.getElementById('tenant-search').addEventListener('input', debounce(() => { currentPage = 1; loadTenants(); }, 300));
         document.getElementById('tenants-select-all').addEventListener('change', e => {
             document.querySelectorAll('.tenant-checkbox').forEach(cb => {
@@ -44,7 +42,7 @@
         if (json.success) {
             properties = Pagination.parseResponse(json).items.filter(p => p.status !== 'archived');
             const sel = document.getElementById('tenant-property');
-            sel.innerHTML = '<option value="">— Seleziona —</option>' +
+            if (sel) sel.innerHTML = '<option value="">— Seleziona —</option>' +
                 properties.map(p => `<option value="${p.id}">${esc(p.address)}, ${esc(p.city)}</option>`).join('');
         }
     }
@@ -88,7 +86,9 @@
             </tr>`;
         }).join('');
         tbody.querySelectorAll('[data-edit]').forEach(btn => {
-            btn.addEventListener('click', () => openModal(tenants.find(x => x.id == btn.dataset.edit)));
+            btn.addEventListener('click', () => {
+                if (window.App) window.App.navigateTo('tenant_edit', { tenantId: Number(btn.dataset.edit) });
+            });
         });
         tbody.querySelectorAll('[data-wa]').forEach(btn => {
             btn.addEventListener('click', () => {

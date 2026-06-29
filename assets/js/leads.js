@@ -51,12 +51,11 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-lead').addEventListener('click', () => openModal());
-        document.getElementById('lead-modal-close').addEventListener('click', closeModal);
-        document.getElementById('lead-modal-cancel').addEventListener('click', closeModal);
+        document.getElementById('btn-new-lead').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('lead_edit');
+        });
         document.getElementById('lead-match-close').addEventListener('click', closeMatchModal);
         document.getElementById('lead-match-ok').addEventListener('click', closeMatchModal);
-        els.form.addEventListener('submit', handleFormSubmit);
 
         document.getElementById('bulk-archive-leads').addEventListener('click', () => bulkAction('archive'));
         document.getElementById('bulk-assign-leads').addEventListener('click', () => bulkAction('assign'));
@@ -69,7 +68,6 @@
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadLeads(); });
         els.interestFilter.addEventListener('change', () => { currentPage = 1; loadLeads(); });
 
-        els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
         els.matchModal.addEventListener('click', (e) => { if (e.target === els.matchModal) closeMatchModal(); });
 
         document.getElementById('lead-tenant-modal-close').addEventListener('click', closeTenantModal);
@@ -84,7 +82,7 @@
             const json = await res.json();
             if (json.success) {
                 agents = json.data;
-                els.assigned.innerHTML = '<option value="">— Nessuno —</option>' +
+                if (els.assigned) els.assigned.innerHTML = '<option value="">— Nessuno —</option>' +
                     agents.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
                 els.bulkAssignAgent.innerHTML = '<option value="">— Agente —</option>' +
                     agents.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
@@ -182,8 +180,9 @@
             });
         });
 
-        els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
-            const l = leads.find(x => x.id == b.dataset.id); if (l) openModal(l);
+        els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(b.dataset.id) });
         }));
         els.grid.querySelectorAll('.btn-match').forEach(b => b.addEventListener('click', () => showMatches(b.dataset.id)));
         els.grid.querySelectorAll('.btn-convert').forEach(b => b.addEventListener('click', () => convertLead(b.dataset.id)));

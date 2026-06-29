@@ -32,23 +32,18 @@
         bindEvents();
         Promise.all([loadClients(), loadLeads()]).then(() => {
             loadInvoices();
-            // Opened from a proprietario profile with "+ Nuova Fattura": open the form preselected.
+            // Legacy "+ Nuova Fattura" entry now redirects to the dedicated page.
             const vp = window.App?.viewParams;
-            if (vp && vp.openNew) {
-                openModal();
-                if (vp.clientId && els.clientSelect) els.clientSelect.value = String(vp.clientId);
-            }
+            if (vp && vp.openNew && window.App) window.App.navigateTo('invoice_edit', vp.clientId ? { clientId: vp.clientId } : {});
         });
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-invoice').addEventListener('click', () => openModal());
-        document.getElementById('invoice-modal-close').addEventListener('click', closeModal);
-        document.getElementById('invoice-modal-cancel').addEventListener('click', closeModal);
-        els.form.addEventListener('submit', handleFormSubmit);
+        document.getElementById('btn-new-invoice').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('invoice_edit');
+        });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadInvoices(); });
         els.yearFilter.addEventListener('input', () => { clearTimeout(els._t); els._t = setTimeout(() => { currentPage = 1; loadInvoices(); }, 300); });
-        els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
 
         // Scheda quick-view
         const schedaModal = document.getElementById('invoice-scheda-modal');
@@ -58,8 +53,7 @@
         document.getElementById('scheda-inv-edit').addEventListener('click', () => {
             const id = schedaInvoiceId;
             closeSchedaModal();
-            const i = invoices.find(x => x.id === id);
-            if (i) openModal(i);
+            if (window.App) window.App.navigateTo('invoice_edit', { invoiceId: id });
         });
         document.getElementById('scheda-inv-pdf').addEventListener('click', () => {
             if (schedaInvoiceId) generatePdf(schedaInvoiceId);
@@ -78,7 +72,7 @@
 
     async function loadClients() {
         const items = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
-        els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
             items.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
     }
     async function loadLeads() {
@@ -86,7 +80,7 @@
         const json = await res.json();
         if (json.success) {
             const items = Pagination.parseResponse(json).items;
-            els.leadSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+            if (els.leadSelect) els.leadSelect.innerHTML = '<option value="">— Nessuno —</option>' +
                 items.map(l => `<option value="${l.id}">${escapeHtml(l.surname)} ${escapeHtml(l.name)}</option>`).join('');
         }
     }

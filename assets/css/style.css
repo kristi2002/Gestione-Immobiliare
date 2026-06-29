@@ -6029,14 +6029,12 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 
 /* Dedicated Nuovo/Modifica pages — fill the page width like a real form
    (fields flow in a responsive grid instead of a narrow centered modal card). */
-.client-edit-view .form-row,
-.property-edit-view .form-row {
+.entity-edit-view .form-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 16px;
     align-items: start;
 }
-.client-edit-view .form-row .form-group,
-.property-edit-view .form-row .form-group { min-width: 0; }
-.client-edit-view .form-actions,
-.property-edit-view .form-actions { border-top: 1px solid var(--color-border); padding-top: 16px; }
+.entity-edit-view .form-row .form-group { min-width: 0; }
+.entity-edit-view .form-actions { border-top: 1px solid var(--color-border); padding-top: 16px; }
+.entity-edit-view .card { max-width: none; }

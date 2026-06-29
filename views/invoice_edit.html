@@ -1,0 +1,79 @@
+<div class="invoice-edit-view entity-edit-view">
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="ive-back"><i data-lucide="arrow-left"></i> Indietro</button>
+    </div>
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2 id="ive-title">Nuova Fattura</h2>
+            <p>Compila i dati della fattura.</p>
+        </div>
+    </div>
+
+    <div id="ive-alert" class="alert" style="display:none;"></div>
+
+    <div class="card" style="padding:8px 28px 24px;">
+        <form id="ive-form">
+            <input type="hidden" id="ive-id">
+
+            <fieldset class="form-section">
+                <legend>Intestatario</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ive-client">Proprietario</label>
+                        <select id="ive-client" class="form-select"><option value="">— Nessuno —</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ive-lead">Lead</label>
+                        <select id="ive-lead" class="form-select"><option value="">— Nessuno —</option></select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Dettagli</legend>
+                <div class="form-group">
+                    <label for="ive-description">Descrizione <span class="required">*</span></label>
+                    <textarea id="ive-description" class="form-textarea" rows="3" required></textarea>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="ive-amount">Imponibile (€) <span class="required">*</span></label>
+                        <input type="number" id="ive-amount" class="form-input" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ive-vat">Aliquota IVA (%)</label>
+                        <input type="number" id="ive-vat" class="form-input" min="0" step="0.01" value="22">
+                    </div>
+                    <div class="form-group">
+                        <label for="ive-status">Stato</label>
+                        <select id="ive-status" class="form-select">
+                            <option value="draft">Bozza</option>
+                            <option value="sent">Inviata</option>
+                            <option value="paid">Pagata</option>
+                            <option value="cancelled">Annullata</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group"><label for="ive-issue">Data emissione</label><input type="date" id="ive-issue" class="form-input"></div>
+                    <div class="form-group"><label for="ive-due">Scadenza</label><input type="date" id="ive-due" class="form-input"></div>
+                    <div class="form-group"><label for="ive-paid">Data pagamento</label><input type="date" id="ive-paid" class="form-input"></div>
+                </div>
+                <div class="form-group">
+                    <label for="ive-notes">Note</label>
+                    <textarea id="ive-notes" class="form-textarea" rows="2"></textarea>
+                </div>
+            </fieldset>
+
+            <div id="ive-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
+
+            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn--ghost" id="ive-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="ive-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/invoice_edit.js?v=1"></script>

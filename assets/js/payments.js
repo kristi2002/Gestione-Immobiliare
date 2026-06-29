@@ -47,20 +47,14 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-payment').addEventListener('click', () => openModal());
-        document.getElementById('payment-modal-close').addEventListener('click', closeModal);
-        document.getElementById('payment-modal-cancel').addEventListener('click', closeModal);
-
-        els.form.addEventListener('submit', handleFormSubmit);
+        document.getElementById('btn-new-payment').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('payment_edit');
+        });
 
         [els.statusFilter, els.monthFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadPayments(); }));
         els.yearFilter.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadPayments(); }, 400);
-        });
-
-        els.modal.addEventListener('click', (e) => {
-            if (e.target === els.modal) closeModal();
         });
 
         // Scheda quick-view
@@ -71,8 +65,7 @@
         document.getElementById('scheda-pay-edit').addEventListener('click', () => {
             const id = schedaPaymentId;
             closeSchedaModal();
-            const p = payments.find(x => x.id === id);
-            if (p) openModal(p);
+            if (window.App) window.App.navigateTo('payment_edit', { paymentId: id });
         });
         document.getElementById('scheda-pay-paid').addEventListener('click', () => {
             const id = schedaPaymentId;
@@ -87,7 +80,7 @@
 
     async function loadTenants() {
         tenants = await Pagination.fetchList(TENANTS_API);
-        els.tenantSelect.innerHTML = '<option value="">— Seleziona inquilino —</option>' +
+        if (els.tenantSelect) els.tenantSelect.innerHTML = '<option value="">— Seleziona inquilino —</option>' +
             tenants.map(t =>
                 `<option value="${t.id}" data-property="${t.property_id || ''}" data-contract="${t.contract_id || ''}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`
             ).join('');
@@ -95,7 +88,7 @@
 
     async function loadProperties() {
         properties = await Pagination.fetchList(PROPERTIES_API);
-        els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
+        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
             properties.map(p =>
                 `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
             ).join('');
@@ -168,9 +161,9 @@
         }).join('');
 
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const p = payments.find(x => x.id == btn.dataset.id);
-                if (p) openModal(p);
+            btn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                if (window.App) window.App.navigateTo('payment_edit', { paymentId: Number(btn.dataset.id) });
             });
         });
 
@@ -390,5 +383,5 @@
     }
 
     init();
-    document.getElementById('payment-tenant').addEventListener('change', onTenantChange);
+    document.getElementById('payment-tenant')?.addEventListener('change', onTenantChange);
 })();

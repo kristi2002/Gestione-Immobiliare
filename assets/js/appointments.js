@@ -41,12 +41,10 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-appointment').addEventListener('click', () => openModal());
-        document.getElementById('appointment-modal-close').addEventListener('click', closeModal);
-        document.getElementById('appointment-modal-cancel').addEventListener('click', closeModal);
-        els.form.addEventListener('submit', handleFormSubmit);
+        document.getElementById('btn-new-appointment').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('appointment_edit');
+        });
         [els.statusFilter, els.from, els.to].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
-        els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
 
         // Scheda quick-view
         const schedaModal = document.getElementById('appointment-scheda-modal');
@@ -56,8 +54,7 @@
         document.getElementById('scheda-appt-edit').addEventListener('click', () => {
             const id = schedaAppointmentId;
             closeSchedaModal();
-            const a = appointments.find(x => x.id === id);
-            if (a) openModal(a);
+            if (window.App) window.App.navigateTo('appointment_edit', { appointmentId: id });
         });
         document.getElementById('scheda-appt-complete').addEventListener('click', () => {
             const id = schedaAppointmentId;
@@ -76,7 +73,7 @@
         const json = await res.json();
         if (json.success) {
             const items = Pagination.parseResponse(json).items;
-            els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
+            if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
                 items.map(p => `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`).join('');
         }
     }
@@ -85,20 +82,20 @@
         const json = await res.json();
         if (json.success) {
             const items = Pagination.parseResponse(json).items;
-            els.leadSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+            if (els.leadSelect) els.leadSelect.innerHTML = '<option value="">— Nessuno —</option>' +
                 items.map(l => `<option value="${l.id}">${escapeHtml(l.surname)} ${escapeHtml(l.name)}</option>`).join('');
         }
     }
     async function loadClients() {
         const items = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
-        els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
             items.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
     }
     async function loadAgents() {
         const res = await fetch(`${LEADS_API}?action=agents`);
         const json = await res.json();
         if (json.success) {
-            els.agentSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+            if (els.agentSelect) els.agentSelect.innerHTML = '<option value="">— Nessuno —</option>' +
                 json.data.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
         }
     }
@@ -158,8 +155,9 @@
             </div>`;
         }).join('');
 
-        els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
-            const a = appointments.find(x => x.id == b.dataset.id); if (a) openModal(a);
+        els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (window.App) window.App.navigateTo('appointment_edit', { appointmentId: Number(b.dataset.id) });
         }));
         els.grid.querySelectorAll('.btn-complete').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'completed')));
         els.grid.querySelectorAll('.btn-cancel').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'cancelled')));
