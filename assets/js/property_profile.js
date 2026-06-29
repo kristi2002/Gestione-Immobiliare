@@ -435,6 +435,7 @@
                         ${att ? `<a href="${esc(att.download_url || ('api/download_document.php?id=' + att.id))}" target="_blank" class="pp-side-attach"><i data-lucide="paperclip"></i> File allegato</a>` : ''}
                     </div>
                     <span class="pp-side-status pp-side-status--${d.cls}">${esc(d.label)}</span>
+                    <button class="pp-side-del" data-del-contract="${c.id}" data-del-file="${att ? att.id : ''}" title="Elimina contratto" aria-label="Elimina contratto"><i data-lucide="trash-2"></i></button>
                 </div>`;
             }).join('');
             const looseDocs = docs.filter(d => !d.contract_id);
@@ -442,8 +443,30 @@
             if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun contratto. Usa il pulsante di caricamento per aggiungerne uno.</p>';
             list.innerHTML = html;
             bindDocDeletes(list, loadContracts);
+            list.querySelectorAll('[data-del-contract]').forEach(btn => {
+                btn.addEventListener('click', () => deleteContractRecord(btn.dataset.delContract, btn.dataset.delFile || null));
+            });
             window.lucide?.createIcons();
         }).catch(() => { list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>'; });
+    }
+
+    // Delete a contract record (and its attached file, if any), then refresh the list.
+    async function deleteContractRecord(id, fileId) {
+        if (!confirm('Eliminare definitivamente questo contratto?')) return;
+        try {
+            // Remove the attached file first so it doesn't linger as a loose document
+            // (and so the contract delete isn't blocked by a linked record).
+            if (fileId) {
+                await fetch('api/documents.php?id=' + fileId, { method: 'DELETE' }).catch(() => {});
+            }
+            const res  = await fetch('api/contracts.php?id=' + id, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore durante l\'eliminazione.');
+            showAlert('Contratto eliminato.', 'success');
+            loadContracts();
+        } catch (err) {
+            showAlert('Eliminazione non riuscita: ' + (err.message || ''), 'error');
+        }
     }
 
     function loadInvoices() {
