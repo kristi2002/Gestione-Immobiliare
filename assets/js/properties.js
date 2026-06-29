@@ -397,12 +397,12 @@
                         <span class="entity-card__stat-label">${mediaLabel}${filesLabel}</span>
                     </div>
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR">🔗</button>
-                        <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto">📊</button>
-                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF">📄</button>
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione">📋</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia">🗑️</button>
-                        <button class="btn btn--sm btn--ghost btn-social" data-id="${p.id}" title="Crea post social">📣</button>` : ''}
+                        <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR"><i data-lucide="qr-code"></i></button>
+                        <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto"><i data-lucide="bar-chart-2"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF"><i data-lucide="file-text"></i></button>
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione"><i data-lucide="calculator"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia"><i data-lucide="archive"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-social" data-id="${p.id}" title="Crea post social"><i data-lucide="megaphone"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;

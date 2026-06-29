@@ -187,12 +187,12 @@
             </dl>
 
             <div class="pp-summary-actions">
-                <button class="btn btn--primary" id="btn-pp-edit">✏️ Modifica</button>
-                <button class="btn btn--ghost" id="btn-pp-pdf">📄 Scheda PDF</button>
-                <button class="btn btn--ghost" id="btn-pp-mandato">📋 Mandato agenzia</button>
-                <button class="btn btn--ghost" id="btn-pp-qr">🔗 QR Code</button>
-                <button class="btn btn--ghost" id="btn-pp-social">📣 Pubblica post</button>
-                <button class="btn btn--danger" id="btn-pp-archive">📦 Archivia</button>
+                <button class="btn btn--primary" id="btn-pp-edit"><i data-lucide="pencil"></i> Modifica</button>
+                <button class="btn btn--ghost" id="btn-pp-pdf"><i data-lucide="file-text"></i> Scheda PDF</button>
+                <button class="btn btn--ghost" id="btn-pp-mandato"><i data-lucide="file-pen-line"></i> Mandato agenzia</button>
+                <button class="btn btn--ghost" id="btn-pp-qr"><i data-lucide="qr-code"></i> QR Code</button>
+                <button class="btn btn--ghost" id="btn-pp-social"><i data-lucide="megaphone"></i> Pubblica post</button>
+                <button class="btn btn--danger" id="btn-pp-archive"><i data-lucide="archive"></i> Archivia</button>
             </div>`;
 
         if (ownerId) {
@@ -259,7 +259,7 @@
         const pubBtn = document.getElementById('pp-social-publish');
         pubBtn.style.display = '';
         pubBtn.disabled = false;
-        pubBtn.textContent = '📣 Pubblica ora';
+        pubBtn.innerHTML = '<i data-lucide="megaphone"></i> Pubblica ora';
         document.getElementById('pp-social-cancel').textContent = 'Annulla';
         document.getElementById('pp-social-modal').hidden = false;
     }
@@ -311,7 +311,7 @@
             showAlert('Post pubblicato sui social.', 'success');
         } catch (err) {
             errEl.textContent = err.message; errEl.style.display = 'block';
-            btn.disabled = false; btn.textContent = '📣 Pubblica ora';
+            btn.disabled = false; btn.innerHTML = '<i data-lucide="megaphone"></i> Pubblica ora';
         }
     }
 

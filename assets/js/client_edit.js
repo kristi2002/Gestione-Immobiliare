@@ -95,7 +95,7 @@
 
     async function uploadId(file, docType) {
         const btnId    = docType === 'id_front' ? 'ce-btn-front' : 'ce-btn-back';
-        const btnLabel = docType === 'id_front' ? '⬆️ Carica Fronte' : '⬆️ Carica Retro';
+        const btnLabel = docType === 'id_front' ? '<i data-lucide="upload"></i> Carica Fronte' : '<i data-lucide="upload"></i> Carica Retro';
         const title    = docType === 'id_front' ? 'CI - Fronte' : 'CI - Retro';
         const fd = new FormData();
         fd.append('file', file);
@@ -113,7 +113,7 @@
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
+            if (btn) { btn.disabled = false; btn.innerHTML = btnLabel; }
         }
     }
 

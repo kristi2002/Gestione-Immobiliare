@@ -5982,6 +5982,13 @@ body.nav-open {
 .btn--primary { box-shadow: 0 2px 6px rgba(32, 107, 172, .25); }
 .btn--primary:hover { box-shadow: 0 5px 14px rgba(32, 107, 172, .32); }
 .btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+/* Inline icons inside buttons / tabs / section heads */
+.btn { gap: 6px; }
+.btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.btn--sm svg, .btn--xs svg { width: 15px; height: 15px; }
+.profile-tab svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+.pp-side-card__head h3 svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+.ce-ico, .inline-ico { width: 15px; height: 15px; vertical-align: -3px; }
 
 /* Cards & clickable surfaces */
 .card, .entity-card {

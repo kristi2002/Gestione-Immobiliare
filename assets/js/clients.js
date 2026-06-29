@@ -185,10 +185,10 @@
                         <span class="entity-card__stat-label">${propLabel}</span>
                     </div>
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni">✉️</button>
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica">✏️</button>
-                        <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità">🪪</button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia">🗑️</button>
+                        <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni"><i data-lucide="mail"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità"><i data-lucide="id-card"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia"><i data-lucide="archive"></i></button>
                     </div>
                 </div>
             </div>`;

@@ -31,10 +31,10 @@
 
             <!-- Management tabs -->
             <div class="profile-tabs" id="property-profile-tabs" role="tablist" hidden>
-                <button class="profile-tab profile-tab--active" role="tab" data-tab="media">📷 Gestione Foto</button>
-                <button class="profile-tab" role="tab" data-tab="documents">📄 Documenti</button>
-                <button class="profile-tab" role="tab" data-tab="reminders">🔔 Promemoria</button>
-                <button class="profile-tab" role="tab" data-tab="history">📜 Storico Prezzi</button>
+                <button class="profile-tab profile-tab--active" role="tab" data-tab="media"><i data-lucide="images"></i>Gestione Foto</button>
+                <button class="profile-tab" role="tab" data-tab="documents"><i data-lucide="file-text"></i>Documenti</button>
+                <button class="profile-tab" role="tab" data-tab="reminders"><i data-lucide="bell"></i>Promemoria</button>
+                <button class="profile-tab" role="tab" data-tab="history"><i data-lucide="history"></i>Storico Prezzi</button>
             </div>
 
             <!-- Panel: Media management -->
@@ -44,7 +44,7 @@
                     <div style="display:flex;gap:8px;align-items:center;">
                         <input type="hidden" id="pp-media-type" value="photo">
                         <label class="btn btn--sm btn--primary" style="cursor:pointer;margin:0;">
-                            ⬆️ Carica
+                            <i data-lucide="upload"></i> Carica
                             <input type="file" id="pp-media-upload" hidden multiple>
                         </label>
                     </div>
@@ -59,7 +59,7 @@
                 <div class="profile-panel__header">
                     <span class="text-muted" id="pp-docs-count"></span>
                     <label class="btn btn--sm btn--primary" style="cursor:pointer;margin:0;">
-                        ⬆️ Carica documento
+                        <i data-lucide="upload"></i> Carica documento
                         <input type="file" id="pp-doc-upload" hidden multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
                     </label>
                 </div>
@@ -93,8 +93,8 @@
 
             <section class="pp-side-card">
                 <div class="pp-side-card__head">
-                    <h3>📑 Contratti</h3>
-                    <label class="btn btn--xs btn--ghost pp-side-upload" title="Carica un contratto dal computer">⬆️
+                    <h3><i data-lucide="scroll-text"></i> Contratti</h3>
+                    <label class="btn btn--xs btn--ghost pp-side-upload" title="Carica un contratto dal computer"><i data-lucide="upload"></i>
                         <input type="file" id="pp-contract-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
                     </label>
                 </div>
@@ -104,8 +104,8 @@
             </section>
             <section class="pp-side-card">
                 <div class="pp-side-card__head">
-                    <h3>🧾 Fatture</h3>
-                    <label class="btn btn--xs btn--ghost pp-side-upload" title="Carica una fattura dal computer">⬆️
+                    <h3><i data-lucide="receipt"></i> Fatture</h3>
+                    <label class="btn btn--xs btn--ghost pp-side-upload" title="Carica una fattura dal computer"><i data-lucide="upload"></i>
                         <input type="file" id="pp-invoice-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
                     </label>
                 </div>
@@ -341,7 +341,7 @@
 <div class="modal-overlay" id="pp-social-modal" hidden>
     <div class="modal modal--lg" role="dialog" aria-labelledby="pp-social-title">
         <div class="modal-header">
-            <h3 id="pp-social-title">📣 Pubblica sui social</h3>
+            <h3 id="pp-social-title"><i data-lucide="megaphone"></i> Pubblica sui social</h3>
             <button class="modal-close" id="pp-social-close" aria-label="Chiudi">&times;</button>
         </div>
         <div class="modal-body">
@@ -360,7 +360,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="pp-social-cancel">Annulla</button>
-            <button type="button" class="btn btn--primary" id="pp-social-publish">📣 Pubblica ora</button>
+            <button type="button" class="btn btn--primary" id="pp-social-publish"><i data-lucide="megaphone"></i> Pubblica ora</button>
         </div>
     </div>
 </div>

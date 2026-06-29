@@ -20,8 +20,8 @@
             </div>
         </div>
         <div class="profile-hero__actions">
-            <button class="btn btn--ghost btn--sm" id="btn-profile-edit">✏️ Modifica</button>
-            <button class="btn btn--ghost btn--sm" id="btn-profile-report">📄 Rendiconto</button>
+            <button class="btn btn--ghost btn--sm" id="btn-profile-edit"><i data-lucide="pencil"></i> Modifica</button>
+            <button class="btn btn--ghost btn--sm" id="btn-profile-report"><i data-lucide="file-text"></i> Rendiconto</button>
         </div>
     </div>
 
@@ -29,12 +29,12 @@
 
     <!-- Tabs -->
     <div class="profile-tabs" role="tablist">
-        <button class="profile-tab profile-tab--active" role="tab" data-tab="properties">🏢 Immobili</button>
-        <button class="profile-tab" role="tab" data-tab="fatture">💶 Fatture</button>
-        <button class="profile-tab" role="tab" data-tab="contratti">📋 Contratti</button>
-        <button class="profile-tab" role="tab" data-tab="documents">📄 Documenti</button>
-        <button class="profile-tab" role="tab" data-tab="communications">💬 Comunicazioni</button>
-        <button class="profile-tab" role="tab" data-tab="reminders">🔔 Promemoria</button>
+        <button class="profile-tab profile-tab--active" role="tab" data-tab="properties"><i data-lucide="building-2"></i>Immobili</button>
+        <button class="profile-tab" role="tab" data-tab="fatture"><i data-lucide="receipt"></i>Fatture</button>
+        <button class="profile-tab" role="tab" data-tab="contratti"><i data-lucide="scroll-text"></i>Contratti</button>
+        <button class="profile-tab" role="tab" data-tab="documents"><i data-lucide="file-text"></i>Documenti</button>
+        <button class="profile-tab" role="tab" data-tab="communications"><i data-lucide="message-square"></i>Comunicazioni</button>
+        <button class="profile-tab" role="tab" data-tab="reminders"><i data-lucide="bell"></i>Promemoria</button>
     </div>
 
     <!-- Panel: Immobili -->
@@ -53,7 +53,7 @@
         <div class="profile-panel__header">
             <span class="text-muted" id="profile-fatture-count"></span>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <label class="btn btn--sm btn--ghost" style="cursor:pointer;margin:0;">⬆️ Carica fattura
+                <label class="btn btn--sm btn--ghost" style="cursor:pointer;margin:0;"><i data-lucide="upload"></i> Carica fattura
                     <input type="file" id="profile-fattura-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
                 </label>
                 <button class="btn btn--sm btn--primary" id="btn-profile-new-fattura">+ Nuova Fattura</button>
@@ -69,7 +69,7 @@
         <div class="profile-panel__header">
             <span class="text-muted" id="profile-contratti-count"></span>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <label class="btn btn--sm btn--ghost" style="cursor:pointer;margin:0;">⬆️ Carica contratto
+                <label class="btn btn--sm btn--ghost" style="cursor:pointer;margin:0;"><i data-lucide="upload"></i> Carica contratto
                     <input type="file" id="profile-contratto-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
                 </label>
                 <button class="btn btn--sm btn--primary" id="btn-profile-new-contratto">+ Nuovo Contratto</button>
@@ -85,7 +85,7 @@
         <div class="profile-panel__header">
             <span class="text-muted" id="profile-docs-count"></span>
             <label class="btn btn--sm btn--primary" style="cursor:pointer;">
-                ⬆️ Carica documento
+                <i data-lucide="upload"></i> Carica documento
                 <input type="file" id="profile-doc-upload" hidden multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
             </label>
         </div>

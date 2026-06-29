@@ -80,8 +80,16 @@
             this.bindContentNavigation();
             this.bindSidebarToggle();
 
-            // Render Lucide icons in the static chrome (sidebar, topbar).
-            if (window.lucide) window.lucide.createIcons();
+            // Render Lucide icons in the static chrome (sidebar, topbar) and keep
+            // any dynamically-injected [data-lucide] elements rendered (cards, modals…).
+            if (window.lucide) {
+                window.lucide.createIcons();
+                let iconTimer;
+                new MutationObserver(() => {
+                    clearTimeout(iconTimer);
+                    iconTimer = setTimeout(() => { try { window.lucide.createIcons(); } catch (e) {} }, 60);
+                }).observe(document.body, { childList: true, subtree: true });
+            }
 
             const startView = new URLSearchParams(window.location.search).get('view');
             if (startView && this.viewTitles[startView]) {
