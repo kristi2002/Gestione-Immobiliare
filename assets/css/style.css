@@ -5743,14 +5743,57 @@ body.nav-open {
     margin-bottom: 8px;
 }
 
-/* ── Property profile: highlights, columns, side cards (contratti/fatture) ── */
-.pp-highlights {
+/* ── Property profile: redesigned listing layout ──────────────────────────── */
+.pp-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-    gap: 10px;
-    margin: 0 0 20px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 24px;
+    align-items: start;
+    margin-top: 16px;
+}
+.pp-main { min-width: 0; }
+.pp-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 16px;
+}
+.pp-summary-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 18px 18px 16px;
+}
+.pp-summary-price { font-size: 1.6rem; font-weight: 800; color: var(--color-text); line-height: 1.1; }
+.pp-summary-price__type { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted, #64748b); }
+.pp-summary-badge { margin-top: 10px; }
+.pp-summary-owner { margin-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+.pp-summary-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--color-text-muted, #64748b); }
+.pp-summary-facts { margin: 14px 0 0; padding: 14px 0 0; border-top: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 8px; }
+.pp-summary-facts > div { display: flex; justify-content: space-between; gap: 12px; font-size: 0.85rem; }
+.pp-summary-facts dt { color: var(--color-text-muted, #64748b); margin: 0; }
+.pp-summary-facts dd { margin: 0; font-weight: 600; text-align: right; }
+.pp-summary-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.pp-summary-actions .btn { width: 100%; justify-content: center; }
+
+.pp-section-title { margin: 0 0 10px; font-size: 1.05rem; }
+.pp-section-subtitle { margin: 16px 0 8px; font-size: 0.9rem; color: var(--color-text-muted, #64748b); }
+.pp-feature-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-info-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 18px 20px; }
+.pp-info-description { margin: 0; white-space: pre-line; line-height: 1.6; }
+.pp-info-notes { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 0.85rem; color: var(--color-text-muted, #64748b); }
+
+/* Key facts strip under the gallery */
+.pp-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 20px;
 }
 .pp-hl {
+    flex: 1 1 104px;
+    max-width: 180px;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 10px;
@@ -5759,6 +5802,11 @@ body.nav-open {
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+
+@media (max-width: 980px) {
+    .pp-layout { grid-template-columns: 1fr; }
+    .pp-aside { position: static; }
 }
 .pp-hl__icon { font-size: 20px; line-height: 1; }
 .pp-hl__value { font-weight: 700; font-size: 0.95rem; }

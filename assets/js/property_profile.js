@@ -28,6 +28,7 @@
                 renderTitle(currentProperty);
                 renderGalleryHero([]);   // show placeholder while media loads
                 renderInfoSection(currentProperty);
+                renderSummaryCard(currentProperty);
                 renderHighlights(currentProperty);
                 loadContracts();
                 loadInvoices();
@@ -132,50 +133,69 @@
 
     // ── Info section (below gallery) ──────────────────────────────────────────
 
+    // Left column: description + features + internal notes.
     function renderInfoSection(p) {
         const sec = document.getElementById('pp-info-section');
+        const features = (p.additional_features || p.features || '')
+            .split(',').map(f => f.trim()).filter(Boolean);
+        const featuresHtml = features.length
+            ? `<div class="pp-feature-tags">${features.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : '';
 
-        const ownerName = p.client_name || p.owner_name || '—';
-        const ownerId = p.client_id || p.owner_id;
-        const priceFormatted = p.price ? '€ ' + parseFloat(p.price).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : null;
-        const priceTypeLabel = p.price_type === 'affitto' ? '/ mese' : ' vendita';
-
-        const chips = buildChips(p);
-        const chipsHtml = chips.length ? `<div class="pp-info-chips">${chips.map(c => `<span class="chip">${c}</span>`).join('')}</div>` : '';
-
+        const hasBody = p.description || features.length || p.internal_notes || p.notes;
         sec.innerHTML = `
         <div class="pp-info-card">
-            <div class="pp-info-main">
-                <div class="pp-info-left">
-                    ${priceFormatted ? `<div class="pp-info-price">${priceFormatted}<span class="pp-info-price-type">${priceTypeLabel}</span></div>` : ''}
-                    ${chipsHtml}
-                    ${p.description ? `<p class="pp-info-description">${esc(p.description)}</p>` : ''}
-                    ${p.notes ? `<p class="pp-info-notes"><strong>Note interne:</strong> ${esc(p.notes)}</p>` : ''}
-                </div>
-                <div class="pp-info-right">
-                    <div class="pp-info-detail-block">
-                        <span class="pp-info-detail-label">Proprietario</span>
-                        ${ownerId
-                            ? `<button class="btn-link pp-info-owner-btn" data-owner-id="${ownerId}">${esc(ownerName)}</button>`
-                            : `<span>${esc(ownerName)}</span>`
-                        }
-                    </div>
-                    ${p.floor ? `<div class="pp-info-detail-block"><span class="pp-info-detail-label">Piano</span><span>${esc(p.floor)}</span></div>` : ''}
-                    ${p.cap ? `<div class="pp-info-detail-block"><span class="pp-info-detail-label">CAP</span><span>${esc(p.cap)}</span></div>` : ''}
-                </div>
+            <h3 class="pp-section-title">Descrizione</h3>
+            ${p.description ? `<p class="pp-info-description">${esc(p.description)}</p>`
+                            : `<p class="text-muted" style="margin:0 0 8px;">Nessuna descrizione inserita.</p>`}
+            ${featuresHtml ? `<h4 class="pp-section-subtitle">Caratteristiche</h4>${featuresHtml}` : ''}
+            ${(p.internal_notes || p.notes) ? `<p class="pp-info-notes"><strong>Note interne:</strong> ${esc(p.internal_notes || p.notes)}</p>` : ''}
+        </div>`;
+        sec.hidden = false;
+    }
+
+    // Right column (sticky): price, status, owner, quick facts, actions.
+    function renderSummaryCard(p) {
+        const card = document.getElementById('pp-summary-card');
+        if (!card) return;
+        const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box / Garage', terreno:'Terreno', altro:'Altro' };
+        const STATUS = { available:'Disponibile', rented:'Affittato', sold:'Venduto', archived:'Archiviato' };
+        const ownerName = p.client_name ? `${p.client_name} ${p.client_surname || ''}`.trim() : (p.owner_name || '—');
+        const ownerId = p.client_id || p.owner_id;
+        const priceFormatted = p.price ? '€ ' + parseFloat(p.price).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : null;
+        const priceTypeLabel = p.price_type === 'affitto' ? ' /mese' : '';
+
+        const facts = [];
+        facts.push(['Tipologia', TYPE[p.property_type] || p.property_type || '—']);
+        if (p.floor) facts.push(['Piano', p.floor]);
+        if (p.cap) facts.push(['CAP', p.cap]);
+        if (p.reference_code) facts.push(['Riferimento', p.reference_code]);
+        if (p.condo_fees) facts.push(['Spese cond.', '€ ' + Number(p.condo_fees).toLocaleString('it-IT') + '/mese']);
+
+        card.innerHTML = `
+            <div class="pp-summary-price">
+                ${priceFormatted ? `${priceFormatted}<span class="pp-summary-price__type">${priceTypeLabel || ' ' + (p.price_type === 'vendita' ? 'vendita' : '')}</span>` : '<span class="text-muted" style="font-size:1rem;">Prezzo non indicato</span>'}
             </div>
-            <div class="pp-info-actions">
+            <span class="badge badge--${esc(p.status || 'available')} pp-summary-badge">${esc(STATUS[p.status] || p.status || '')}</span>
+
+            <div class="pp-summary-owner">
+                <span class="pp-summary-label">Proprietario</span>
+                ${ownerId ? `<button class="btn-link pp-summary-owner-btn" data-owner-id="${ownerId}">${esc(ownerName)}</button>` : `<span>${esc(ownerName)}</span>`}
+            </div>
+
+            <dl class="pp-summary-facts">
+                ${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(String(v))}</dd></div>`).join('')}
+            </dl>
+
+            <div class="pp-summary-actions">
                 <button class="btn btn--primary" id="btn-pp-edit">✏️ Modifica</button>
                 <button class="btn btn--ghost" id="btn-pp-pdf">📄 Scheda PDF</button>
+                <button class="btn btn--ghost" id="btn-pp-mandato">📋 Mandato agenzia</button>
                 <button class="btn btn--ghost" id="btn-pp-qr">🔗 QR Code</button>
                 <button class="btn btn--danger" id="btn-pp-archive">📦 Archivia</button>
-            </div>
-        </div>`;
-
-        sec.hidden = false;
+            </div>`;
 
         if (ownerId) {
-            sec.querySelector('.pp-info-owner-btn')?.addEventListener('click', () => {
+            card.querySelector('.pp-summary-owner-btn')?.addEventListener('click', () => {
                 if (window.App) window.App.navigateTo('client_profile', { clientId: ownerId });
             });
         }
@@ -183,8 +203,22 @@
             if (window.App) window.App.navigateTo('property_edit', { propertyId });
         });
         document.getElementById('btn-pp-pdf')?.addEventListener('click', generatePdf);
+        document.getElementById('btn-pp-mandato')?.addEventListener('click', generateMandato);
         document.getElementById('btn-pp-qr')?.addEventListener('click', openQrModal);
         document.getElementById('btn-pp-archive')?.addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = false; });
+    }
+
+    function generateMandato() {
+        if (!currentProperty) return;
+        const cid = currentProperty.client_id || currentProperty.owner_id;
+        if (!cid) { showAlert('Nessun proprietario associato all\'immobile.', 'error'); return; }
+        fetch('api/generate_pdf.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'mandato', property_id: propertyId, client_id: cid }),
+        })
+            .then(r => r.json())
+            .then(j => { if (j.success) window.open(j.data.download, '_blank'); else showAlert(j.error || 'Errore generazione mandato', 'error'); })
+            .catch(() => showAlert('Errore generazione mandato', 'error'));
     }
 
     function buildChips(p) {

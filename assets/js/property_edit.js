@@ -224,14 +224,10 @@
         $('pe-form').addEventListener('submit', save);
         $('pe-geocode').addEventListener('click', geocode);
         $('pe-mandato').addEventListener('click', generateMandato);
-        $('pe-photos').addEventListener('click', () => {
-            if (window.App && propertyId) window.App.navigateTo('property_profile', { propertyId });
-        });
 
         if (isEdit) {
             $('pe-title').textContent = 'Modifica Immobile';
             $('pe-mandato').hidden = false;
-            $('pe-photos').hidden = false;
             try { await loadProperty(); }
             catch (err) { showAlert('Impossibile caricare l\'immobile: ' + err.message, 'error'); }
         } else {
