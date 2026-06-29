@@ -927,7 +927,9 @@
         fetch('api/reminders.php?property_id=' + propertyId + '&limit=100')
             .then(r => r.json())
             .then(json => {
-                const items = json.data?.items || json.data || [];
+                // DELETE soft-cancels (status='cancelled'); hide those so deleting
+                // actually removes the reminder from view.
+                const items = (json.data?.items || json.data || []).filter(r => r.status !== 'cancelled');
                 document.getElementById('pp-reminders-count').textContent = items.length + ' promemoria';
                 if (!items.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun promemoria.</p>'; return; }
                 list.innerHTML = items.map(r => {

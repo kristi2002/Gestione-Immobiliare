@@ -41,5 +41,8 @@ try {
 
     apiSuccess($result);
 } catch (Throwable $e) {
+    // Log the real cause (often "uploads/ not writable") so it can be diagnosed
+    // from the server log instead of being hidden behind a generic 500.
+    error_log('generate_pdf failed: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
     apiError('Errore generazione PDF.', 500);
 }

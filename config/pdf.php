@@ -270,15 +270,17 @@ function savePdf(PDO $db, string $type, string $title, array $lines, ?int $clien
 function persistPdf(PDO $db, string $type, string $title, SimplePdf $pdf, ?int $clientId, ?int $propertyId, ?int $tenantId, int $adminId): array
 {
     $dir = dirname(__DIR__) . '/uploads/documents/generated';
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        return ['success' => false, 'error' => 'Cartella uploads non scrivibile sul server. Controlla i permessi della cartella uploads/.'];
     }
 
     $filename = $type . '_' . date('Ymd_His') . '_' . uniqid() . '.pdf';
     $fullPath = $dir . '/' . $filename;
     $relative = 'uploads/documents/generated/' . $filename;
 
-    file_put_contents($fullPath, $pdf->output());
+    if (@file_put_contents($fullPath, $pdf->output()) === false) {
+        return ['success' => false, 'error' => 'Impossibile salvare il PDF: la cartella uploads/ non è scrivibile sul server.'];
+    }
 
     $stmt = $db->prepare(
         'INSERT INTO pdf_documents (doc_type, title, client_id, property_id, tenant_id, file_path, created_by)
