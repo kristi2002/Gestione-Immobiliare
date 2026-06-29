@@ -203,19 +203,22 @@
 
 
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 if (window.App) window.App.navigateTo('client_edit', { clientId: Number(btn.dataset.id) });
             });
         });
 
         els.grid.querySelectorAll('.btn-comm').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 if (window.App) window.App.navigateTo('communications', { clientId: Number(btn.dataset.id) });
             });
         });
 
         els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const client = clients.find(c => c.id == btn.dataset.id);
                 if (client) openDeleteModal(client.id, `${client.name} ${client.surname}`);
             });

@@ -274,11 +274,19 @@
                 return;
             }
 
-            const INV_STATUS = { draft: 'Bozza', sent: 'Inviata', paid: 'Pagata', cancelled: 'Annullata' };
-            const INV_COLOR  = { draft: '#94a3b8', sent: '#2563eb', paid: '#16a34a', cancelled: '#dc2626' };
+            const invToday = new Date().toISOString().slice(0, 10);
+            // State derived from status + due date (scaduta = non pagata e oltre scadenza).
+            const invState = (i) => {
+                if (i.status === 'paid') return { label: 'Pagata', color: '#16a34a' };
+                if (i.status === 'cancelled') return { label: 'Annullata', color: '#94a3b8' };
+                if (i.due_date && i.due_date < invToday) return { label: 'Scaduta', color: '#dc2626' };
+                if (i.status === 'sent') return { label: 'Inviata', color: '#2563eb' };
+                return { label: 'Bozza', color: '#94a3b8' };
+            };
             let html = items.map(i => {
-                const color  = INV_COLOR[i.status] || '#94a3b8';
-                const label  = INV_STATUS[i.status] || i.status;
+                const st = invState(i);
+                const color  = st.color;
+                const label  = st.label;
                 const total  = Number(i.total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const desc   = (i.description || '').length > 60 ? i.description.slice(0, 60) + '…' : (i.description || '');
                 return `
@@ -345,13 +353,24 @@
                 return;
             }
 
-            const CT_STATUS = { draft: 'Bozza', sent: 'Inviato', signed: 'Firmato', expired: 'Scaduto', cancelled: 'Annullato' };
-            const CT_COLOR  = { draft: '#94a3b8', sent: '#2563eb', signed: '#16a34a', expired: '#d97706', cancelled: '#dc2626' };
             const CT_TYPE   = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
+            const ctToday = new Date().toISOString().slice(0, 10);
+            // State derived from status + start/end dates.
+            const ctState = (c) => {
+                if (c.status === 'cancelled') return { label: 'Annullato', color: '#94a3b8' };
+                if (c.status === 'expired' || (c.end_date && c.end_date < ctToday)) return { label: 'Scaduto', color: '#dc2626' };
+                if (c.status === 'signed') {
+                    if (c.start_date && c.start_date > ctToday) return { label: 'In attesa', color: '#d97706' };
+                    return { label: 'Attivo', color: '#16a34a' };
+                }
+                if (c.status === 'sent') return { label: 'Inviato', color: '#2563eb' };
+                return { label: 'Bozza', color: '#94a3b8' };
+            };
 
             let html = items.map(c => {
-                const color  = CT_COLOR[c.status] || '#94a3b8';
-                const label  = CT_STATUS[c.status] || c.status;
+                const st = ctState(c);
+                const color  = st.color;
+                const label  = st.label;
                 const type   = CT_TYPE[c.contract_type] || c.contract_type;
                 const where  = c.property_address ? `${esc(c.property_address)}, ${esc(c.property_city)}` : '—';
                 const tenant = c.tenant_name ? `${esc(c.tenant_name)} ${esc(c.tenant_surname)}` : '';
