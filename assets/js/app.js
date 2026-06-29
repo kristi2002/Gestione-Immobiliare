@@ -92,10 +92,22 @@
             if (window.lucide) {
                 window.lucide.createIcons();
                 let iconTimer;
-                new MutationObserver(() => {
+                // NOTE: createIcons() replaces every <i data-lucide> with an <svg>,
+                // which is itself a DOM mutation. If the observer reacts to that, it
+                // loops and keeps re-creating icon nodes — including the ones inside
+                // buttons — which eats clicks (mousedown/mouseup land on a node that
+                // got replaced mid-click). So we (a) skip when nothing is pending and
+                // (b) disconnect while rendering so our own changes don't re-trigger us.
+                const observer = new MutationObserver(() => {
                     clearTimeout(iconTimer);
-                    iconTimer = setTimeout(() => { try { window.lucide.createIcons(); } catch (e) {} }, 60);
-                }).observe(document.body, { childList: true, subtree: true });
+                    iconTimer = setTimeout(() => {
+                        if (!document.querySelector('[data-lucide]')) return;
+                        observer.disconnect();
+                        try { window.lucide.createIcons(); } catch (e) {}
+                        observer.observe(document.body, { childList: true, subtree: true });
+                    }, 80);
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
             }
 
             const startView = new URLSearchParams(window.location.search).get('view');
