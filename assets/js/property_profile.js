@@ -384,7 +384,7 @@
         if (!docs.length) return '';
         return docs.map(d => `
             <div class="pp-side-item pp-side-item--file">
-                <a href="${esc(d.file_path)}" target="_blank" class="pp-side-item__name"><i data-lucide="paperclip"></i> ${esc(d.original_name || 'File')}</a>
+                <a href="${esc(d.download_url || ('api/download_document.php?id=' + d.id))}" target="_blank" class="pp-side-item__name"><i data-lucide="paperclip"></i> ${esc(d.original_name || 'File')}</a>
                 <button class="btn btn--xs btn--danger" data-del-doc="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
             </div>`).join('');
     }
@@ -430,9 +430,9 @@
                     <span class="status-dot status-dot--${d.cls}" title="${esc(d.label)}"></span>
                     <div class="pp-side-item__main">
                         <strong>${esc(c.title || TYPE[c.contract_type] || 'Contratto')}</strong>
-                        <span class="text-muted">${esc(TYPE[c.contract_type] || c.contract_type || '')}${c.monthly_rent ? ' · ' + ppMoney(c.monthly_rent) + '/mese' : ''}</span>
+                        <span class="text-muted">${esc(TYPE[c.contract_type] || c.contract_type || '')}${c.monthly_rent ? ' · ' + ppMoney(c.monthly_rent) + (c.contract_type === 'locazione' ? '/mese' : '') : ''}</span>
                         <span class="text-muted">${ppFmtDate(c.start_date)}${c.end_date ? ' → ' + ppFmtDate(c.end_date) : ''}</span>
-                        ${att ? `<a href="${esc(att.file_path)}" target="_blank" class="pp-side-attach"><i data-lucide="paperclip"></i> File allegato</a>` : ''}
+                        ${att ? `<a href="${esc(att.download_url || ('api/download_document.php?id=' + att.id))}" target="_blank" class="pp-side-attach"><i data-lucide="paperclip"></i> File allegato</a>` : ''}
                     </div>
                     <span class="pp-side-status pp-side-status--${d.cls}">${esc(d.label)}</span>
                 </div>`;
@@ -856,12 +856,15 @@
             .then(r => r.json())
             .then(json => {
                 if (!json.success) throw new Error();
-                const docs = json.data?.items || json.data || [];
+                // The documents API also returns contract records as virtual entries
+                // (doc_type 'contratto', no downloadable file). Those belong in the
+                // Contratti panel, not here — keep only real uploaded files.
+                const docs = (json.data?.items || json.data || []).filter(d => d.doc_type !== 'contratto' && (d.download_url || d.id));
                 document.getElementById('pp-docs-count').textContent = docs.length + ' documenti';
                 if (!docs.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun documento caricato.</p>'; return; }
                 list.innerHTML = docs.map(d => `
                     <div class="doc-row">
-                        <a href="${esc(d.file_path)}" target="_blank" class="doc-row__name"><i data-lucide="file-text"></i> ${esc(d.original_name || d.file_name || 'Documento')}</a>
+                        <a href="${esc(d.download_url || ('api/download_document.php?id=' + d.id))}" target="_blank" class="doc-row__name"><i data-lucide="file-text"></i> ${esc(d.original_name || d.file_name || 'Documento')}</a>
                         <span class="doc-row__date text-muted">${d.created_at ? new Date(d.created_at).toLocaleDateString('it-IT') : ''}</span>
                         <button class="btn btn--xs btn--danger" data-doc-id="${d.id}"><i data-lucide="trash-2"></i></button>
                     </div>`).join('');
@@ -900,18 +903,21 @@
                 const items = json.data?.items || json.data || [];
                 document.getElementById('pp-reminders-count').textContent = items.length + ' promemoria';
                 if (!items.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun promemoria.</p>'; return; }
-                list.innerHTML = items.map(r => `
-                    <div class="reminder-row ${r.completed ? 'reminder-row--done' : ''}">
+                list.innerHTML = items.map(r => {
+                    const done = r.status === 'completed';
+                    return `
+                    <div class="reminder-row ${done ? 'reminder-row--done' : ''}">
                         <div class="reminder-row__info">
                             <strong>${esc(r.title)}</strong>
-                            ${r.due_date ? `<span class="text-muted">${new Date(r.due_date).toLocaleDateString('it-IT')}</span>` : ''}
-                            ${r.notes ? `<span class="text-muted">${esc(r.notes)}</span>` : ''}
+                            ${r.reminder_date ? `<span class="text-muted">${new Date(r.reminder_date).toLocaleDateString('it-IT')}</span>` : ''}
+                            ${r.description ? `<span class="text-muted">${esc(r.description)}</span>` : ''}
                         </div>
                         <div class="reminder-row__actions">
-                            ${!r.completed ? `<button class="btn btn--xs btn--ghost" data-rem-complete="${r.id}"><i data-lucide="check"></i></button>` : '<span class="badge badge--success">Fatto</span>'}
+                            ${!done ? `<button class="btn btn--xs btn--ghost" data-rem-complete="${r.id}"><i data-lucide="check"></i></button>` : '<span class="badge badge--success">Fatto</span>'}
                             <button class="btn btn--xs btn--danger" data-rem-delete="${r.id}"><i data-lucide="trash-2"></i></button>
                         </div>
-                    </div>`).join('');
+                    </div>`;
+                }).join('');
                 list.querySelectorAll('[data-rem-complete]').forEach(btn => btn.addEventListener('click', () => completeReminder(btn.dataset.remComplete)));
                 list.querySelectorAll('[data-rem-delete]').forEach(btn => btn.addEventListener('click', () => deleteReminder(btn.dataset.remDelete)));
             })
@@ -927,8 +933,9 @@
             .then(r => r.json())
             .then(json => {
                 let items = json.data?.items || json.data || [];
-                items = items.filter(r => !r.completed)
-                    .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999'))
+                // API contract: open reminders have status 'pending'; date field is reminder_date.
+                items = items.filter(r => r.status !== 'completed' && r.status !== 'cancelled')
+                    .sort((a, b) => (a.reminder_date || '9999').localeCompare(b.reminder_date || '9999'))
                     .slice(0, 6);
                 if (!items.length) {
                     list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun promemoria in programma.</p>';
@@ -936,13 +943,14 @@
                 }
                 const today = new Date().toISOString().slice(0, 10);
                 list.innerHTML = items.map(r => {
-                    const overdue = r.due_date && r.due_date < today;
+                    const datePart = (r.reminder_date || '').split(/[ T]/)[0];
+                    const overdue = datePart && datePart < today;
                     return `
                     <div class="pp-side-item">
                         <span class="status-dot status-dot--${overdue ? 'expired' : 'pending'}" title="${overdue ? 'Scaduto' : 'In programma'}"></span>
                         <div class="pp-side-item__main">
                             <strong>${esc(r.title || 'Promemoria')}</strong>
-                            ${r.due_date ? `<span class="text-muted">${ppFmtDate(r.due_date)}</span>` : ''}
+                            ${r.reminder_date ? `<span class="text-muted">${ppFmtDate(r.reminder_date)}</span>` : ''}
                         </div>
                     </div>`;
                 }).join('');
@@ -955,9 +963,10 @@
         document.getElementById('pp-rem-id').value = reminder?.id || '';
         document.getElementById('pp-rem-title').textContent = reminder ? 'Modifica promemoria' : 'Nuovo promemoria';
         document.getElementById('pp-rem-title-input').value = reminder?.title || '';
-        document.getElementById('pp-rem-date').value = reminder?.due_date?.split('T')[0] || '';
+        // reminder_date comes back as 'YYYY-MM-DD HH:MM:SS' (or with a T) — take the date part.
+        document.getElementById('pp-rem-date').value = (reminder?.reminder_date || '').split(/[ T]/)[0] || '';
         document.getElementById('pp-rem-freq').value = reminder?.frequency || 'once';
-        document.getElementById('pp-rem-notes').value = reminder?.notes || '';
+        document.getElementById('pp-rem-notes').value = reminder?.description || '';
         document.getElementById('pp-reminder-modal').hidden = false;
     }
 
@@ -968,25 +977,29 @@
     function handleReminderSubmit(e) {
         e.preventDefault();
         const id = document.getElementById('pp-rem-id').value;
+        const dateVal = document.getElementById('pp-rem-date').value;
+        if (!dateVal) { showAlert('Inserisci la data del promemoria.', 'error'); return; }
         const body = {
             property_id: propertyId,
             title: document.getElementById('pp-rem-title-input').value.trim(),
-            due_date: document.getElementById('pp-rem-date').value || null,
+            // API contract: reminders use reminder_date (datetime) + description, not due_date/notes.
+            reminder_date: dateVal,
             frequency: document.getElementById('pp-rem-freq').value,
-            notes: document.getElementById('pp-rem-notes').value.trim(),
+            description: document.getElementById('pp-rem-notes').value.trim(),
         };
         const method = id ? 'PUT' : 'POST';
         const url = id ? 'api/reminders.php?id=' + id : 'api/reminders.php';
         fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
             .then(r => r.json())
-            .then(json => { if (!json.success) throw new Error(json.error || 'Errore'); closeReminderModal(); loadReminders(); })
+            .then(json => { if (!json.success) throw new Error(json.error || 'Errore'); closeReminderModal(); loadReminders(); loadSideReminders(); })
             .catch(err => showAlert('Errore: ' + err.message, 'error'));
     }
 
     function completeReminder(id) {
-        fetch('api/reminders.php?id=' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completed: 1 }) })
+        // API contract: status changes go through PATCH ?action=complete.
+        fetch('api/reminders.php?id=' + id + '&action=complete', { method: 'PATCH' })
             .then(r => r.json())
-            .then(() => loadReminders())
+            .then(json => { if (!json.success) throw new Error(json.error || 'Errore'); loadReminders(); loadSideReminders(); })
             .catch(() => showAlert('Errore.', 'error'));
     }
 
@@ -994,7 +1007,7 @@
         if (!confirm('Eliminare questo promemoria?')) return;
         fetch('api/reminders.php?id=' + id, { method: 'DELETE' })
             .then(r => r.json())
-            .then(() => loadReminders())
+            .then(() => { loadReminders(); loadSideReminders(); })
             .catch(() => showAlert('Errore.', 'error'));
     }
 
