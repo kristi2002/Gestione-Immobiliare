@@ -657,20 +657,27 @@
         errEl.style.display = 'none';
         if (!_pciFile) { closeContractImport(); return; }
 
+        const startDate = document.getElementById('pci-start').value || null;
+        const endDate   = document.getElementById('pci-end').value || null;
+        // Only the two dates are required; title falls back to the file name so the
+        // record always has a label even when the field is left blank.
+        const title = document.getElementById('pci-title-input').value.trim()
+            || (_pciFile && _pciFile.name ? _pciFile.name.replace(/\.[^.]+$/, '') : '')
+            || 'Contratto importato';
         const payload = {
             property_id:   propertyId,
             client_id:     document.getElementById('pci-client').value || null,
             tenant_id:     document.getElementById('pci-tenant').value || null,
-            title:         document.getElementById('pci-title-input').value.trim(),
+            title:         title,
             contract_type: document.getElementById('pci-type').value,
             status:        document.getElementById('pci-status').value,
-            start_date:    document.getElementById('pci-start').value || null,
-            end_date:      document.getElementById('pci-end').value || null,
+            start_date:    startDate,
+            end_date:      endDate,
             monthly_rent:  document.getElementById('pci-rent').value || null,
             deposit:       document.getElementById('pci-deposit').value || null,
             notes:         document.getElementById('pci-notes').value.trim() || null,
         };
-        if (!payload.title) { errEl.textContent = 'Il titolo è obbligatorio.'; errEl.style.display = ''; return; }
+        if (!startDate || !endDate) { errEl.textContent = 'Data inizio e data fine sono obbligatorie.'; errEl.style.display = ''; return; }
 
         const btn = document.getElementById('pci-save');
         btn.disabled = true; btn.textContent = 'Salvataggio…';
