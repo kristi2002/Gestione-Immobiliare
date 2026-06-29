@@ -25,10 +25,11 @@
     --color-danger:        #dc2626;
     --sidebar-width:       260px;
     --topbar-height:       64px;
-    --radius:              10px;
-    --radius-sm:           6px;
-    --shadow:              0 1px 2px rgba(13, 33, 64, 0.06), 0 1px 3px rgba(13, 33, 64, 0.04);
-    --shadow-md:           0 4px 12px rgba(13, 33, 64, 0.10), 0 2px 4px rgba(13, 33, 64, 0.05);
+    --radius:              12px;
+    --radius-sm:           8px;
+    --shadow:              0 1px 2px rgba(13, 33, 64, 0.05), 0 1px 3px rgba(13, 33, 64, 0.05);
+    --shadow-md:           0 6px 18px rgba(13, 33, 64, 0.08), 0 2px 6px rgba(13, 33, 64, 0.05);
+    --shadow-lg:           0 18px 40px rgba(13, 33, 64, 0.16), 0 6px 14px rgba(13, 33, 64, 0.08);
     --section-gap:         28px;
     --transition:          0.18s ease;
 }
@@ -40,11 +41,14 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     font-size: 15px;
     line-height: 1.6;
     color: var(--color-text);
     background: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 .settings-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
@@ -5955,3 +5959,60 @@ body.nav-open {
     .pp-social-preview { flex-direction: column; }
     .pp-social-preview__img { width: 100%; }
 }
+
+/* ==========================================================================
+   UI polish layer — typography, depth, focus, hover (2026 refresh)
+   Loaded last so it gently refines the shared components.
+   ========================================================================== */
+
+/* Lucide icons in the sidebar */
+.nav-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: 0 0 auto; }
+.nav-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+.logo-icon svg { width: 26px; height: 26px; }
+
+/* Buttons — weight, smooth transitions, subtle hover lift, focus ring */
+.btn {
+    font-weight: 600;
+    letter-spacing: .01em;
+    transition: transform var(--transition), box-shadow var(--transition),
+                background var(--transition), border-color var(--transition), color var(--transition);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn--primary { box-shadow: 0 2px 6px rgba(32, 107, 172, .25); }
+.btn--primary:hover { box-shadow: 0 5px 14px rgba(32, 107, 172, .32); }
+.btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* Cards & clickable surfaces */
+.card, .entity-card {
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
+}
+.entity-card--clickable { cursor: pointer; }
+.entity-card--clickable:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--color-border-strong);
+}
+
+/* Form controls — consistent radius + a clear focus ring */
+.form-input, .form-select, .form-textarea {
+    border-radius: var(--radius-sm);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* Badges → pills */
+.badge { border-radius: 999px; font-weight: 600; letter-spacing: .02em; }
+
+/* Modals — softer, deeper, blurred backdrop */
+.modal { border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.modal-overlay { backdrop-filter: blur(2px); }
+
+/* Tighter, more deliberate headings */
+h1, h2, h3, h4 { letter-spacing: -0.01em; }

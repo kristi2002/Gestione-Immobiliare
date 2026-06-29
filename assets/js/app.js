@@ -80,6 +80,9 @@
             this.bindContentNavigation();
             this.bindSidebarToggle();
 
+            // Render Lucide icons in the static chrome (sidebar, topbar).
+            if (window.lucide) window.lucide.createIcons();
+
             const startView = new URLSearchParams(window.location.search).get('view');
             if (startView && this.viewTitles[startView]) {
                 this.navigateTo(startView);
@@ -222,6 +225,7 @@
                 if (token !== this._viewToken) return;
                 this.injectStyles(this.contentEl);
                 await this.executeScripts(this.contentEl);
+                if (window.lucide) window.lucide.createIcons();
                 if (window.FilterBar) {
                     FilterBar.setupIn(this.contentEl);
                 }
