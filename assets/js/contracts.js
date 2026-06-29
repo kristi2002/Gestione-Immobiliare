@@ -28,6 +28,16 @@
 
     const STATUS_FLOW = ['draft', 'sent', 'signed'];
 
+    // Time-aware state: a contract past its end date reads as "Scaduto" regardless
+    // of its stored status (unless it was cancelled). This keeps the badge and the
+    // filters consistent with the dates entered on the contract.
+    function effectiveStatus(c) {
+        if (c.status === 'cancelled') return 'cancelled';
+        const today = new Date().toISOString().slice(0, 10);
+        if (c.end_date && String(c.end_date).slice(0, 10) < today) return 'expired';
+        return c.status;
+    }
+
     let contracts  = [];
     let contractDocs = [];
     let properties = [];
@@ -247,14 +257,15 @@
                 ? `<button class="btn btn--sm btn--ghost btn-advance" data-id="${c.id}" title="Avanza stato">→ ${STATUS_LABELS[nextStatus(c.status)]}</button>`
                 : '';
 
+            const eff = effectiveStatus(c);
             return `
-            <div class="entity-card contract-card contract-card--${c.status} entity-card--clickable" data-id="${c.id}">
+            <div class="entity-card contract-card contract-card--${eff} entity-card--clickable" data-id="${c.id}">
                 <div class="entity-card__header">
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">${escapeHtml(c.title)}</div>
                         <div class="contract-card__badges">
                             <span class="badge badge--contract-type badge--contract-type-${c.contract_type}">${TYPE_LABELS[c.contract_type] || c.contract_type}</span>
-                            <span class="badge badge--contract-${c.status}">${STATUS_LABELS[c.status] || c.status}</span>
+                            <span class="badge badge--contract-${eff}">${STATUS_LABELS[eff] || eff}</span>
                         </div>
                     </div>
                 </div>
@@ -334,9 +345,10 @@
             : '—';
 
         document.getElementById('scheda-ct-title').textContent = c.title;
+        const schedaEff = effectiveStatus(c);
         document.getElementById('scheda-ct-badges').innerHTML =
             `<span class="badge badge--contract-type badge--contract-type-${c.contract_type}">${TYPE_LABELS[c.contract_type] || c.contract_type}</span>
-             <span class="badge badge--contract-${c.status}">${STATUS_LABELS[c.status] || c.status}</span>`;
+             <span class="badge badge--contract-${schedaEff}">${STATUS_LABELS[schedaEff] || schedaEff}</span>`;
 
         document.getElementById('scheda-ct-body').innerHTML = `
             <div class="scheda-rows">

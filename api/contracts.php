@@ -84,6 +84,11 @@ function listContracts(PDO $db): void
     if ($status !== '' && in_array($status, CONTRACT_STATUSES, true)) {
         $where .= ' AND ct.status = :status';
         $params['status'] = $status;
+        // Time-aware state: a contract past its end date counts as "Scaduto", so it
+        // should NOT show under draft/sent/signed — only under the "Scaduti" filter.
+        if ($status !== 'cancelled' && $status !== 'expired') {
+            $where .= " AND (ct.end_date IS NULL OR ct.end_date >= CURDATE())";
+        }
     }
     if ($type !== '' && in_array($type, CONTRACT_TYPES, true)) {
         $where .= ' AND ct.contract_type = :type';
