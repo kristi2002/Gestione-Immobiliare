@@ -94,6 +94,7 @@
     }
 
     async function uploadId(file, docType) {
+        if (!clientId) { showAlert('Salva prima il proprietario, poi potrai caricare la carta d\'identità.', 'error'); return; }
         const btnId    = docType === 'id_front' ? 'ce-btn-front' : 'ce-btn-back';
         const btnLabel = docType === 'id_front' ? '<i data-lucide="upload"></i> Carica Fronte' : '<i data-lucide="upload"></i> Carica Retro';
         const title    = docType === 'id_front' ? 'CI - Fronte' : 'CI - Retro';
@@ -220,6 +221,11 @@
             loadIdDocs();
         } else {
             $('ce-title').textContent = 'Nuovo Proprietario';
+            // Show the Carta di Identità card too, but uploads need a saved owner.
+            $('ce-id-card-section').hidden = false;
+            const hint = '<p class="text-muted" style="font-size:13px;margin:0;">Salva il proprietario per caricare</p>';
+            $('ce-id-front-status').innerHTML = hint;
+            $('ce-id-back-status').innerHTML = hint;
         }
         $('ce-name').focus();
     }

@@ -5781,7 +5781,8 @@ body.nav-open {
 .pp-summary-price { font-size: 1.6rem; font-weight: 800; color: var(--color-text); line-height: 1.1; }
 .pp-summary-price__type { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted, #64748b); }
 .pp-summary-badge { margin-top: 10px; }
-.pp-summary-owner { margin-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+.pp-summary-owner { margin-top: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.pp-summary-owner-btn { text-align: left; padding-left: 0; }
 .pp-summary-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--color-text-muted, #64748b); }
 .pp-summary-facts { margin: 14px 0 0; padding: 14px 0 0; border-top: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 8px; }
 .pp-summary-facts > div { display: flex; justify-content: space-between; gap: 12px; font-size: 0.85rem; }
@@ -5900,6 +5901,9 @@ body.nav-open {
 .filter-pill--expired { --pill: #dc2626; }
 .filter-pill--draft,
 .filter-pill--cancelled { --pill: #94a3b8; }
+
+/* Uploaded contract files shown in the Contratti list read as attachments */
+.contract-card--file { border-style: dashed; }
 
 .view-cols-row { display: flex; justify-content: flex-end; margin: 4px 0 14px; }
 .view-cols-toggle { display: inline-flex; gap: 2px; border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }

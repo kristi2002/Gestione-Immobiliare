@@ -29,6 +29,7 @@
     const STATUS_FLOW = ['draft', 'sent', 'signed'];
 
     let contracts  = [];
+    let contractDocs = [];
     let properties = [];
     let tenants    = [];
     let clients    = [];
@@ -175,6 +176,23 @@
             if (!json.success) throw new Error(json.error);
             const parsed = Pagination.parseResponse(json);
             contracts = parsed.items;
+
+            // Also surface uploaded contract files (documents) — only in the unfiltered
+            // "Tutti" view on page 1, since files have no status/type to filter on.
+            contractDocs = [];
+            const activeStatus = document.querySelector('#contract-status-pills .filter-pill.is-active')?.dataset.status || '';
+            if (currentPage === 1 && !activeStatus && !els.typeFilter.value) {
+                const dp = new URLSearchParams({ doc_type: 'contract', limit: '100', page: '1' });
+                if (els.propFilter.value) dp.set('property_id', els.propFilter.value);
+                try {
+                    const dj = await fetch(`api/documents.php?${dp}`).then(r => r.json());
+                    let docs = dj.data?.items || dj.data || [];
+                    const q = (els.search?.value || '').trim().toLowerCase();
+                    if (q) docs = docs.filter(d => (d.original_name || '').toLowerCase().includes(q));
+                    contractDocs = docs;
+                } catch (_) { contractDocs = []; }
+            }
+
             renderCards();
             Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadContracts(); });
         } catch (err) {
@@ -183,9 +201,35 @@
         }
     }
 
+    function renderDocCard(d) {
+        const prop = properties.find(p => p.id == d.property_id);
+        const where = prop ? `${escapeHtml(prop.address)}, ${escapeHtml(prop.city)}` : '';
+        return `
+            <div class="entity-card contract-card contract-card--file">
+                <div class="entity-card__header">
+                    <div class="entity-card__title-group">
+                        <div class="entity-card__name">${escapeHtml(d.original_name || 'File contratto')}</div>
+                        <div class="contract-card__badges">
+                            <span class="badge badge--contract-type">📎 File caricato</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="entity-card__body">
+                    ${where ? `<div class="entity-card__info"><span class="entity-card__info-icon">🏢</span>${where}</div>` : ''}
+                    ${d.created_at ? `<div class="entity-card__info"><span class="entity-card__info-icon">📅</span>${formatDate(d.created_at)}</div>` : ''}
+                </div>
+                <div class="entity-card__footer">
+                    <div class="entity-card__actions">
+                        <a class="btn btn--sm btn--ghost" href="${escapeHtml(d.file_path)}" target="_blank"><i data-lucide="external-link"></i> Apri</a>
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost" data-doc-del="${d.id}" title="Elimina file"><i data-lucide="trash-2"></i></button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+    }
+
     function renderCards() {
         els.grid.classList.remove('is-loading');
-        if (contracts.length === 0) {
+        if (contracts.length === 0 && contractDocs.length === 0) {
             els.grid.innerHTML = '<div class="entity-empty">Nessun contratto trovato.</div>';
             return;
         }
@@ -222,19 +266,34 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
+                        <button class="btn btn--sm btn--ghost btn-contract-pdf" data-id="${c.id}" title="Scarica contratto PDF"><i data-lucide="file-down"></i></button>
                         ${window.canWrite !== false ? advanceBtn : ''}
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale">✍️</button>
+                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale"><i data-lucide="pen-tool"></i></button>
                         <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;
-        }).join('');
+        }).join('') + contractDocs.map(renderDocCard).join('');
 
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const c = contracts.find(x => x.id == btn.dataset.id);
-                if (c) openModal(c);
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.App) window.App.navigateTo('contract_edit', { contractId: Number(btn.dataset.id) });
+            });
+        });
+
+        els.grid.querySelectorAll('[data-doc-del]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (await confirmDialog('Eliminare questo file contratto?', { title: 'Elimina file' })) deleteContractDoc(btn.dataset.docDel);
+            });
+        });
+
+        els.grid.querySelectorAll('.btn-contract-pdf').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                downloadContractPdf(btn.dataset.id);
             });
         });
 
@@ -533,6 +592,43 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             showAlert('Contratto eliminato.', 'success');
+            loadContracts();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    }
+
+    async function downloadContractPdf(id) {
+        const c = contracts.find(x => x.id == id);
+        if (!c) return;
+        try {
+            const res = await fetch('api/generate_pdf.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'contract',
+                    property_id: c.property_id,
+                    client_id: c.client_id,
+                    tenant_id: c.tenant_id,
+                    monthly_rent: c.monthly_rent,
+                    lease_start: c.start_date,
+                    lease_end: c.end_date,
+                }),
+            });
+            const json = await res.json();
+            if (json.success) window.open(json.data.download, '_blank');
+            else showAlert(json.error || 'Errore generazione PDF', 'error');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    }
+
+    async function deleteContractDoc(id) {
+        try {
+            const res  = await fetch(`api/documents.php?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert('File eliminato.', 'success');
             loadContracts();
         } catch (err) {
             showAlert(err.message, 'error');
