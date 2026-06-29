@@ -30,7 +30,15 @@
         els.pagination   = document.getElementById('invoices-pagination');
 
         bindEvents();
-        Promise.all([loadClients(), loadLeads()]).then(loadInvoices);
+        Promise.all([loadClients(), loadLeads()]).then(() => {
+            loadInvoices();
+            // Opened from a proprietario profile with "+ Nuova Fattura": open the form preselected.
+            const vp = window.App?.viewParams;
+            if (vp && vp.openNew) {
+                openModal();
+                if (vp.clientId && els.clientSelect) els.clientSelect.value = String(vp.clientId);
+            }
+        });
     }
 
     function bindEvents() {

@@ -57,11 +57,16 @@
         Promise.all([loadProperties(), loadTenants(), loadClients()])
             .then(() => loadContracts())
             .then(() => {
-                const targetId = window.App?.viewParams?.contractId;
+                const vp = window.App?.viewParams || {};
+                const targetId = vp.contractId;
                 if (targetId) {
                     const match = contracts.find(c => c.id === targetId);
                     if (match) openModal(match);
                     else fetch(`api/contracts.php?id=${targetId}`).then(r => r.json()).then(j => { if (j.success) openModal(j.data); });
+                } else if (vp.openNew) {
+                    // Opened from a proprietario profile with "+ Nuovo Contratto".
+                    openModal();
+                    if (vp.clientId) { const cs = document.getElementById('contract-client'); if (cs) cs.value = String(vp.clientId); }
                 }
             })
             .catch(err => {

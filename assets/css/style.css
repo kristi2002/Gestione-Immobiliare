@@ -4911,7 +4911,10 @@ body.nav-open {
 }
 
 /* ── Property Profile (Scheda Immobile) ──────────────────── */
-.property-profile-view { max-width: 960px; }
+/* Fill the available width so the sticky sidebar sits near the right edge.
+   The .pp-layout grid (1fr + 340px) distributes the space dynamically; on a
+   single-column fallback (<=980px) the cap is irrelevant. */
+.property-profile-view { max-width: 100%; }
 
 .property-profile-hero {
     display: flex;

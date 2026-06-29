@@ -52,7 +52,12 @@
     <div class="profile-panel" id="profile-panel-fatture" hidden>
         <div class="profile-panel__header">
             <span class="text-muted" id="profile-fatture-count"></span>
-            <button class="btn btn--sm btn--primary" id="btn-profile-new-fattura">+ Nuova Fattura</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <label class="btn btn--sm btn--ghost" style="cursor:pointer;margin:0;">⬆️ Carica fattura
+                    <input type="file" id="profile-fattura-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                </label>
+                <button class="btn btn--sm btn--primary" id="btn-profile-new-fattura">+ Nuova Fattura</button>
+            </div>
         </div>
         <div id="profile-fatture-list" class="docs-list">
             <div class="entity-loading">Caricamento…</div>
@@ -63,6 +68,12 @@
     <div class="profile-panel" id="profile-panel-contratti" hidden>
         <div class="profile-panel__header">
             <span class="text-muted" id="profile-contratti-count"></span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <label class="btn btn--sm btn--ghost" style="cursor:pointer;margin:0;">⬆️ Carica contratto
+                    <input type="file" id="profile-contratto-upload" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                </label>
+                <button class="btn btn--sm btn--primary" id="btn-profile-new-contratto">+ Nuovo Contratto</button>
+            </div>
         </div>
         <div id="profile-contratti-list" class="docs-list">
             <div class="entity-loading">Caricamento…</div>

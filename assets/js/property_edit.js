@@ -232,7 +232,7 @@
             catch (err) { showAlert('Impossibile caricare l\'immobile: ' + err.message, 'error'); }
         } else {
             $('pe-title').textContent = 'Nuovo Immobile';
-            await loadClients();
+            await loadClients(window.App?.viewParams?.clientId);
             $('pe-address').focus();
         }
     }

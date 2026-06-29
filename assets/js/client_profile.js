@@ -45,12 +45,19 @@
         });
         document.getElementById('btn-profile-report').addEventListener('click', openReportModal);
         document.getElementById('btn-profile-new-property').addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('properties');
+            if (window.App) window.App.navigateTo('property_edit', { clientId });
         });
         document.getElementById('btn-profile-new-fattura').addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('invoices');
+            if (window.App) window.App.navigateTo('invoices', { openNew: true, clientId });
+        });
+        document.getElementById('btn-profile-new-contratto')?.addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('contracts', { openNew: true, clientId });
         });
         document.getElementById('btn-profile-new-reminder').addEventListener('click', () => openReminderModal());
+
+        // Upload fattura / contratto files from PC (#3)
+        document.getElementById('profile-fattura-upload')?.addEventListener('change', (e) => uploadTypedDoc(e, 'invoice', loadFatture, 'fatture'));
+        document.getElementById('profile-contratto-upload')?.addEventListener('change', (e) => uploadTypedDoc(e, 'contract', loadContratti, 'contratti'));
 
         // Tab switching
         document.querySelectorAll('.profile-tab').forEach(tab => {
@@ -198,26 +205,78 @@
 
     // ── Fatture ──────────────────────────────────────────────────────
 
+    // Renders uploaded files (from the documents table) as list rows.
+    function clientDocFilesHtml(docs) {
+        if (!docs.length) return '';
+        return docs.map(d => `
+            <div class="doc-item">
+                <span class="doc-item__icon">📎</span>
+                <div class="doc-item__info">
+                    <a class="doc-item__name" href="${esc(d.file_path)}" target="_blank">${esc(d.original_name || d.title || 'File')}</a>
+                    <div class="doc-item__meta">File caricato${d.created_at ? ' · ' + fmtDate(d.created_at) : ''}</div>
+                </div>
+                <div class="doc-item__actions">
+                    <button class="btn btn--sm btn--danger btn-cdoc-del" data-id="${d.id}" title="Elimina">🗑</button>
+                </div>
+            </div>`).join('');
+    }
+
+    function bindClientDocDeletes(list, reload, tabKey) {
+        list.querySelectorAll('.btn-cdoc-del').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!confirm('Eliminare questo file?')) return;
+                fetch(`${DOCS_API}?id=${btn.dataset.id}`, { method: 'DELETE' })
+                    .then(r => r.json())
+                    .then(j => { if (!j.success) throw new Error(); if (tabKey) tabsLoaded.delete(tabKey); reload(); })
+                    .catch(() => showAlert('Impossibile eliminare il file.', 'error'));
+            });
+        });
+    }
+
+    async function uploadTypedDoc(e, docType, reload, tabKey) {
+        const file = e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('title', file.name);
+        fd.append('doc_type', docType);
+        fd.append('client_id', clientId);
+        try {
+            const res  = await fetch(DOCS_API, { method: 'POST', body: fd });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore');
+            showAlert('File caricato.', 'success');
+            if (tabKey) tabsLoaded.delete(tabKey);
+            await reload();
+        } catch (err) {
+            showAlert('Caricamento non riuscito: ' + (err.message || ''), 'error');
+        }
+    }
+
     async function loadFatture() {
         const list = document.getElementById('profile-fatture-list');
         list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
         try {
-            const res  = await fetch(`${INV_API}?client_id=${clientId}&limit=200&page=1`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
-            const cnt   = items.length;
+            const [invJson, docJson] = await Promise.all([
+                fetch(`${INV_API}?client_id=${clientId}&limit=200&page=1`).then(r => r.json()),
+                fetch(`${DOCS_API}?client_id=${clientId}&doc_type=invoice&limit=200&page=1`).then(r => r.json()).catch(() => ({})),
+            ]);
+            if (!invJson.success) throw new Error(invJson.error);
+            const items = invJson.data?.items ?? (Array.isArray(invJson.data) ? invJson.data : []);
+            const docs  = docJson.data?.items ?? (Array.isArray(docJson.data) ? docJson.data : []);
+            const cnt   = items.length + docs.length;
             document.getElementById('profile-fatture-count').textContent =
-                cnt ? `${cnt} fattur${cnt === 1 ? 'a' : 'e'}` : '';
+                cnt ? `${cnt} element${cnt === 1 ? 'o' : 'i'}` : '';
 
             if (!cnt) {
-                list.innerHTML = '<div class="entity-empty">Nessuna fattura associata a questo proprietario.</div>';
+                list.innerHTML = '<div class="entity-empty">Nessuna fattura. Usa "Carica fattura" per allegare un file o "Nuova Fattura".</div>';
                 return;
             }
 
             const INV_STATUS = { draft: 'Bozza', sent: 'Inviata', paid: 'Pagata', cancelled: 'Annullata' };
             const INV_COLOR  = { draft: '#94a3b8', sent: '#2563eb', paid: '#16a34a', cancelled: '#dc2626' };
-            list.innerHTML = items.map(i => {
+            let html = items.map(i => {
                 const color  = INV_COLOR[i.status] || '#94a3b8';
                 const label  = INV_STATUS[i.status] || i.status;
                 const total  = Number(i.total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -237,10 +296,13 @@
                     </div>
                 </div>`;
             }).join('');
+            html += clientDocFilesHtml(docs);
+            list.innerHTML = html;
 
             list.querySelectorAll('.btn-fattura-pdf').forEach(btn => {
                 btn.addEventListener('click', () => downloadFatturaPdf(btn.dataset.id));
             });
+            bindClientDocDeletes(list, loadFatture, 'fatture');
         } catch (err) {
             list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
         }
@@ -267,16 +329,19 @@
         const list = document.getElementById('profile-contratti-list');
         list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
         try {
-            const res  = await fetch(`${CONT_API}?client_id=${clientId}&limit=200&page=1`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
-            const cnt   = items.length;
+            const [ctJson, docJson] = await Promise.all([
+                fetch(`${CONT_API}?client_id=${clientId}&limit=200&page=1`).then(r => r.json()),
+                fetch(`${DOCS_API}?client_id=${clientId}&doc_type=contract&limit=200&page=1`).then(r => r.json()).catch(() => ({})),
+            ]);
+            if (!ctJson.success) throw new Error(ctJson.error);
+            const items = ctJson.data?.items ?? (Array.isArray(ctJson.data) ? ctJson.data : []);
+            const docs  = docJson.data?.items ?? (Array.isArray(docJson.data) ? docJson.data : []);
+            const cnt   = items.length + docs.length;
             document.getElementById('profile-contratti-count').textContent =
-                cnt ? `${cnt} contratt${cnt === 1 ? 'o' : 'i'}` : '';
+                cnt ? `${cnt} element${cnt === 1 ? 'o' : 'i'}` : '';
 
             if (!cnt) {
-                list.innerHTML = '<div class="entity-empty">Nessun contratto associato a questo proprietario.</div>';
+                list.innerHTML = '<div class="entity-empty">Nessun contratto. Usa "Carica contratto" per allegare un file o "Nuovo Contratto".</div>';
                 return;
             }
 
@@ -284,7 +349,7 @@
             const CT_COLOR  = { draft: '#94a3b8', sent: '#2563eb', signed: '#16a34a', expired: '#d97706', cancelled: '#dc2626' };
             const CT_TYPE   = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
 
-            list.innerHTML = items.map(c => {
+            let html = items.map(c => {
                 const color  = CT_COLOR[c.status] || '#94a3b8';
                 const label  = CT_STATUS[c.status] || c.status;
                 const type   = CT_TYPE[c.contract_type] || c.contract_type;
@@ -304,6 +369,9 @@
                     </div>
                 </div>`;
             }).join('');
+            html += clientDocFilesHtml(docs);
+            list.innerHTML = html;
+            bindClientDocDeletes(list, loadContratti, 'contratti');
         } catch (err) {
             list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
         }
