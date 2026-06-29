@@ -5933,27 +5933,30 @@ body.nav-open {
 
 /* ── Immobili: column-count toggle (#12) ──────────────────────────────────── */
 /* Horizontal colored status filter pills (contratti) */
-.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 4px; }
+.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 22px; }
 .filter-pill {
-    border: 1px solid var(--pill, var(--color-border));
-    color: var(--pill, var(--color-text-muted, #64748b));
-    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted, #64748b);
+    background: var(--color-surface, #fff);
     border-radius: 999px;
-    padding: 6px 15px;
+    padding: 7px 16px;
     font-size: 0.84rem;
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
     transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
-.filter-pill:hover:not(.is-active) { background: var(--color-bg, #f1f5f9); }
-.filter-pill.is-active { background: var(--pill, var(--color-primary)); color: #fff; border-color: var(--pill, var(--color-primary)); }
-.filter-pill--all     { --pill: #2563eb; }
-.filter-pill--sent    { --pill: #2563eb; }
-.filter-pill--signed  { --pill: #16a34a; }
-.filter-pill--expired { --pill: #dc2626; }
-.filter-pill--draft,
-.filter-pill--cancelled { --pill: #94a3b8; }
+.filter-pill:hover:not(.is-active) {
+    background: var(--color-bg, #f1f5f9);
+    color: var(--color-text);
+    border-color: var(--color-border-strong, #cbd5e1);
+}
+/* One quiet accent for the selected filter — no rainbow of status colors. */
+.filter-pill.is-active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
 
 /* Uploaded contract files shown in the Contratti list read as attachments */
 .contract-card--file { border-style: dashed; }
