@@ -32,6 +32,7 @@
                 renderHighlights(currentProperty);
                 loadContracts();
                 loadInvoices();
+                loadSideReminders();
                 document.getElementById('property-profile-tabs').hidden = false;
                 switchTab('media');
                 loadMedia();
@@ -87,7 +88,7 @@
 
     function buildGalleryHtml(photos) {
         if (photos.length === 0) {
-            return '<div class="pp-gallery-placeholder"><span class="pp-gallery-placeholder__icon">🏠</span><span>Nessuna foto disponibile</span></div>';
+            return '<div class="pp-gallery-placeholder"><span class="pp-gallery-placeholder__icon"><i data-lucide="image"></i></span><span>Nessuna foto disponibile</span></div>';
         }
 
         const coverIdx = photos.findIndex(p => p.is_cover == 1 || p.is_cover === true);
@@ -99,7 +100,7 @@
             return `<div class="pp-gallery-single">
                 <div class="pp-gallery-main-wrap" data-lightbox="0">
                     <img src="${esc(main.file_path)}" alt="Foto principale" class="pp-gallery-main-img">
-                    <button class="pp-gallery-btn-all" data-lightbox-all="1">🔍 Visualizza foto</button>
+                    <button class="pp-gallery-btn-all" data-lightbox-all="1"><i data-lucide="search"></i> Visualizza foto</button>
                 </div>
             </div>`;
         }
@@ -118,12 +119,12 @@
             thumbsHtml += `<div class="pp-gallery-thumb" data-lightbox="${realIndex}">${overlay}<img src="${esc(photo.file_path)}" alt="Foto ${i + 2}"></div>`;
         });
 
-        const gridClass = showCount <= 2 ? 'pp-gallery-thumbs--col' : 'pp-gallery-thumbs--grid';
+        const gridClass = (showCount <= 2 ? 'pp-gallery-thumbs--col' : 'pp-gallery-thumbs--grid') + ' pp-gallery-thumbs--c' + showCount;
 
         return `<div class="pp-gallery-split">
             <div class="pp-gallery-main-wrap" data-lightbox="0">
                 <img src="${esc(main.file_path)}" alt="Foto principale" class="pp-gallery-main-img">
-                <button class="pp-gallery-btn-all" data-lightbox-all="1">🔍 Tutte le foto (${photos.length})</button>
+                <button class="pp-gallery-btn-all" data-lightbox-all="1"><i data-lucide="images"></i> Tutte le foto (${photos.length})</button>
             </div>
             <div class="pp-gallery-thumbs ${gridClass}">
                 ${thumbsHtml}
@@ -349,26 +350,26 @@
         const items = [];
         const add = (cond, icon, value, label) => { if (cond) items.push({ icon, value, label }); };
 
-        add(num(p.sqm), '📐', p.sqm + ' m²', 'Superficie');
-        add(num(p.locali), '🏠', p.locali, p.locali == 1 ? 'Locale' : 'Locali');
-        add(num(p.rooms), '🛏️', p.rooms, p.rooms == 1 ? 'Camera' : 'Camere');
-        add(num(p.bathrooms), '🚿', p.bathrooms, p.bathrooms == 1 ? 'Bagno' : 'Bagni');
-        add(num(p.balconies), '🪟', p.balconies, p.balconies == 1 ? 'Balcone' : 'Balconi');
-        add(num(p.terraces), '☀️', p.terraces, p.terraces == 1 ? 'Terrazzo' : 'Terrazzi');
-        add(num(p.parking_spaces), '🚗', p.parking_spaces, 'Posti auto');
-        add(!!p.floor, '🏢', p.floor + (num(p.total_floors) ? '/' + p.total_floors : ''), 'Piano');
-        add(p.elevator !== null && p.elevator !== undefined && p.elevator !== '', '🛗', Number(p.elevator) ? 'Sì' : 'No', 'Ascensore');
-        add(!!p.energy_class, '⚡', String(p.energy_class || '').toUpperCase(), 'Classe en.');
-        add(!!p.heating, '🔥', HEAT[p.heating] || p.heating, 'Riscaldamento');
-        add(!!p.furnished, '🛋️', FURN[p.furnished] || p.furnished, 'Arredamento');
-        add(!!p.garden && p.garden !== 'no', '🌳', GARD[p.garden] || p.garden, 'Giardino');
-        add(num(p.year_built), '🏗️', p.year_built, 'Anno');
-        add(!!p.condition_state, '🛠️', COND[p.condition_state] || p.condition_state, 'Stato');
-        add(num(p.condo_fees), '🏷️', '€ ' + Number(p.condo_fees).toLocaleString('it-IT'), 'Spese cond.');
+        add(num(p.sqm), 'ruler', p.sqm + ' m²', 'Superficie');
+        add(num(p.locali), 'layout-grid', p.locali, p.locali == 1 ? 'Locale' : 'Locali');
+        add(num(p.rooms), 'bed', p.rooms, p.rooms == 1 ? 'Camera' : 'Camere');
+        add(num(p.bathrooms), 'bath', p.bathrooms, p.bathrooms == 1 ? 'Bagno' : 'Bagni');
+        add(num(p.balconies), 'blinds', p.balconies, p.balconies == 1 ? 'Balcone' : 'Balconi');
+        add(num(p.terraces), 'sun', p.terraces, p.terraces == 1 ? 'Terrazzo' : 'Terrazzi');
+        add(num(p.parking_spaces), 'car', p.parking_spaces, 'Posti auto');
+        add(!!p.floor, 'building', p.floor + (num(p.total_floors) ? '/' + p.total_floors : ''), 'Piano');
+        add(p.elevator !== null && p.elevator !== undefined && p.elevator !== '', 'move-vertical', Number(p.elevator) ? 'Sì' : 'No', 'Ascensore');
+        add(!!p.energy_class, 'zap', String(p.energy_class || '').toUpperCase(), 'Classe en.');
+        add(!!p.heating, 'flame', HEAT[p.heating] || p.heating, 'Riscaldamento');
+        add(!!p.furnished, 'sofa', FURN[p.furnished] || p.furnished, 'Arredamento');
+        add(!!p.garden && p.garden !== 'no', 'trees', GARD[p.garden] || p.garden, 'Giardino');
+        add(num(p.year_built), 'calendar', p.year_built, 'Anno');
+        add(!!p.condition_state, 'wrench', COND[p.condition_state] || p.condition_state, 'Stato');
+        add(num(p.condo_fees), 'receipt', '€ ' + Number(p.condo_fees).toLocaleString('it-IT'), 'Spese cond.');
 
         if (!items.length) { el.hidden = true; return; }
         el.innerHTML = items.map(it =>
-            `<div class="pp-hl"><span class="pp-hl__icon">${it.icon}</span>` +
+            `<div class="pp-hl"><span class="pp-hl__icon"><i data-lucide="${it.icon}"></i></span>` +
             `<span class="pp-hl__value">${esc(String(it.value))}</span>` +
             `<span class="pp-hl__label">${esc(it.label)}</span></div>`
         ).join('');
@@ -383,8 +384,8 @@
         if (!docs.length) return '';
         return docs.map(d => `
             <div class="pp-side-item pp-side-item--file">
-                <a href="${esc(d.file_path)}" target="_blank" class="pp-side-item__name">📎 ${esc(d.original_name || 'File')}</a>
-                <button class="btn btn--xs btn--danger" data-del-doc="${d.id}" title="Elimina">🗑</button>
+                <a href="${esc(d.file_path)}" target="_blank" class="pp-side-item__name"><i data-lucide="paperclip"></i> ${esc(d.original_name || 'File')}</a>
+                <button class="btn btn--xs btn--danger" data-del-doc="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
             </div>`).join('');
     }
 
@@ -411,6 +412,10 @@
             const contracts = cRes.data?.items || cRes.data || [];
             const docs = dRes.data?.items || dRes.data || [];
             const today = new Date().toISOString().slice(0, 10);
+            // Files attached to a contract record (contract_id set) are shown on that
+            // record, not as standalone file cards — avoids duplicate entries.
+            const linked = {};
+            docs.forEach(d => { if (d.contract_id) linked[d.contract_id] = d; });
             const dotFor = (c) => {
                 if (c.status === 'cancelled') return { cls: 'expired', label: 'Annullato' };
                 if (c.status === 'expired' || (c.end_date && c.end_date < today)) return { cls: 'expired', label: 'Scaduto' };
@@ -419,6 +424,7 @@
             };
             let html = contracts.map(c => {
                 const d = dotFor(c);
+                const att = linked[c.id];
                 return `
                 <div class="pp-side-item">
                     <span class="status-dot status-dot--${d.cls}" title="${esc(d.label)}"></span>
@@ -426,14 +432,17 @@
                         <strong>${esc(c.title || TYPE[c.contract_type] || 'Contratto')}</strong>
                         <span class="text-muted">${esc(TYPE[c.contract_type] || c.contract_type || '')}${c.monthly_rent ? ' · ' + ppMoney(c.monthly_rent) + '/mese' : ''}</span>
                         <span class="text-muted">${ppFmtDate(c.start_date)}${c.end_date ? ' → ' + ppFmtDate(c.end_date) : ''}</span>
+                        ${att ? `<a href="${esc(att.file_path)}" target="_blank" class="pp-side-attach"><i data-lucide="paperclip"></i> File allegato</a>` : ''}
                     </div>
                     <span class="pp-side-status pp-side-status--${d.cls}">${esc(d.label)}</span>
                 </div>`;
             }).join('');
-            html += docFilesHtml(docs, loadContracts);
-            if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun contratto. Usa ⬆️ per caricarne uno.</p>';
+            const looseDocs = docs.filter(d => !d.contract_id);
+            html += docFilesHtml(looseDocs, loadContracts);
+            if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun contratto. Usa il pulsante di caricamento per aggiungerne uno.</p>';
             list.innerHTML = html;
             bindDocDeletes(list, loadContracts);
+            window.lucide?.createIcons();
         }).catch(() => { list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>'; });
     }
 
@@ -456,7 +465,7 @@
                     <span class="badge badge--${esc(i.status || 'draft')}">${esc(i.status || '')}</span>
                 </div>`).join('');
             html += docFilesHtml(docs, loadInvoices);
-            if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessuna fattura. Usa ⬆️ per caricarne una.</p>';
+            if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessuna fattura. Usa il pulsante di caricamento per aggiungerne una.</p>';
             list.innerHTML = html;
             bindDocDeletes(list, loadInvoices);
         }).catch(() => { list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>'; });
@@ -475,6 +484,225 @@
             .catch(err => showAlert('Caricamento non riuscito: ' + (err.message || ''), 'error'));
     }
 
+    // ── Importa contratto (Carica → registra come record contratto) ───────────
+    let _pciFile = null;
+
+    function openContractImport(file) {
+        _pciFile = file;
+        const modal = document.getElementById('pp-contract-import-modal');
+        if (!modal) { uploadSideDoc(file, 'contract', loadContracts); return; }
+        // Reset form
+        document.getElementById('pci-error').style.display = 'none';
+        document.getElementById('pci-fileinfo').innerHTML =
+            `<i data-lucide="paperclip"></i> <strong>${esc(file.name)}</strong> <span class="text-muted">(${(file.size / 1024).toFixed(0)} KB)</span>`;
+        const baseName = file.name.replace(/\.[^.]+$/, '');
+        document.getElementById('pci-title-input').value = baseName || 'Contratto';
+        document.getElementById('pci-type').value = 'locazione';
+        document.getElementById('pci-start').value = '';
+        document.getElementById('pci-end').value = '';
+        document.getElementById('pci-rent').value = '';
+        document.getElementById('pci-deposit').value = '';
+        document.getElementById('pci-status').value = 'signed'; // uploaded contracts are usually already executed
+        document.getElementById('pci-notes').value = '';
+        ['pci-type', 'pci-start', 'pci-end', 'pci-rent', 'pci-deposit'].forEach(id =>
+            document.getElementById(id).classList.remove('pci-autofilled'));
+
+        loadPciDropdowns();
+        modal.hidden = false;
+        window.lucide?.createIcons();
+
+        // Best-effort auto-fill from the PDF text (PDFs only).
+        const scan = document.getElementById('pci-scan');
+        if (/\.pdf$/i.test(file.name)) {
+            scan.style.display = '';
+            scan.innerHTML = '<i data-lucide="loader"></i> Analisi del PDF in corso…';
+            window.lucide?.createIcons();
+            extractPdfText(file)
+                .then(text => { applyPdfHeuristics(text); scan.style.display = 'none'; })
+                .catch(() => {
+                    scan.className = 'alert alert--warning';
+                    scan.innerHTML = 'Impossibile leggere il PDF automaticamente. Inserisci i dati manualmente.';
+                });
+        } else {
+            scan.className = 'alert alert--info';
+            scan.innerHTML = 'File non PDF: inserisci i dati manualmente.';
+        }
+    }
+
+    function closeContractImport() {
+        const m = document.getElementById('pp-contract-import-modal');
+        if (m) m.hidden = true;
+        _pciFile = null;
+    }
+
+    function loadPciDropdowns() {
+        const cSel = document.getElementById('pci-client');
+        const tSel = document.getElementById('pci-tenant');
+        fetch('api/clients.php?limit=500').then(r => r.json()).then(j => {
+            const items = j.data?.items || j.data || [];
+            cSel.innerHTML = '<option value="">— Seleziona —</option>' +
+                items.map(c => `<option value="${c.id}">${esc((c.name || '') + ' ' + (c.surname || ''))}</option>`).join('');
+            // Prefill with the property's owner when known.
+            if (currentProperty?.client_id) cSel.value = String(currentProperty.client_id);
+        }).catch(() => {});
+        fetch('api/tenants.php?limit=500').then(r => r.json()).then(j => {
+            const items = j.data?.items || j.data || [];
+            tSel.innerHTML = '<option value="">— Seleziona —</option>' +
+                items.map(t => `<option value="${t.id}">${esc((t.name || '') + ' ' + (t.surname || ''))}</option>`).join('');
+        }).catch(() => {});
+    }
+
+    // Load pdf.js on demand and extract concatenated text from all pages.
+    function extractPdfText(file) {
+        return loadPdfJs()
+            .then(pdfjsLib => file.arrayBuffer().then(buf => pdfjsLib.getDocument({ data: buf }).promise))
+            .then(async pdf => {
+                let text = '';
+                const max = Math.min(pdf.numPages, 8); // first 8 pages are enough for the key terms
+                for (let i = 1; i <= max; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += ' ' + content.items.map(it => it.str).join(' ');
+                }
+                return text;
+            });
+    }
+
+    let _pdfjsPromise = null;
+    function loadPdfJs() {
+        if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+        if (_pdfjsPromise) return _pdfjsPromise;
+        const VER = '3.11.174';
+        _pdfjsPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${VER}/pdf.min.js`;
+            s.onload = () => {
+                if (!window.pdfjsLib) return reject(new Error('pdfjs non disponibile'));
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${VER}/pdf.worker.min.js`;
+                resolve(window.pdfjsLib);
+            };
+            s.onerror = () => reject(new Error('Caricamento pdf.js non riuscito'));
+            document.head.appendChild(s);
+        });
+        return _pdfjsPromise;
+    }
+
+    function pciItNumber(raw) {
+        if (!raw) return null;
+        // Italian formatting: 1.200,50 → 1200.50
+        let s = String(raw).trim().replace(/\./g, '').replace(',', '.');
+        const n = parseFloat(s);
+        return isNaN(n) ? null : n;
+    }
+    function pciItDate(raw) {
+        if (!raw) return null;
+        const m = String(raw).match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+        if (!m) return null;
+        let [, d, mo, y] = m;
+        if (y.length === 2) y = (parseInt(y, 10) > 50 ? '19' : '20') + y;
+        d = d.padStart(2, '0'); mo = mo.padStart(2, '0');
+        if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31) return null;
+        return `${y}-${mo}-${d}`;
+    }
+    function pciMark(id) { document.getElementById(id)?.classList.add('pci-autofilled'); }
+
+    function applyPdfHeuristics(text) {
+        const t = (text || '').replace(/\s+/g, ' ');
+        const low = t.toLowerCase();
+
+        // Contract type
+        let type = null;
+        if (/comprav|atto di vendita/.test(low)) type = 'compravendita';
+        else if (/prelimina/.test(low)) type = 'preliminare';
+        else if (/mandato/.test(low)) type = 'mandato';
+        else if (/locazion|affitt/.test(low)) type = 'locazione';
+        if (type) { document.getElementById('pci-type').value = type; pciMark('pci-type'); }
+
+        // Monthly rent (canone)
+        let rent = null;
+        let m = low.match(/canone[^0-9€]{0,40}(?:€|euro)?\s*([\d.]+,\d{2}|[\d.]+)/);
+        if (!m) m = low.match(/(?:€|euro)\s*([\d.]+,\d{2}|[\d.]+)\s*(?:mensil|al mese|\/\s*mese)/);
+        if (m) { rent = pciItNumber(m[1]); if (rent) { document.getElementById('pci-rent').value = rent; pciMark('pci-rent'); } }
+
+        // Deposit / cauzione
+        m = low.match(/(?:deposito cauzionale|cauzion|deposito)[^0-9€]{0,40}(?:€|euro)?\s*([\d.]+,\d{2}|[\d.]+)/);
+        if (m) { const dep = pciItNumber(m[1]); if (dep) { document.getElementById('pci-deposit').value = dep; pciMark('pci-deposit'); } }
+
+        // Dates
+        m = low.match(/(?:con decorrenza|decorrenza|a far data dal|dalla data del|dal)\s*(?:il\s*)?(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/);
+        const start = m ? pciItDate(m[1]) : null;
+        if (start) { document.getElementById('pci-start').value = start; pciMark('pci-start'); }
+
+        m = low.match(/(?:fino al|scadenza il|scadenza|scade il|termine del|al)\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/);
+        let end = m ? pciItDate(m[1]) : null;
+        // Avoid picking the same date as start for the "al" fallback
+        if (end && end === start) end = null;
+        if (end) { document.getElementById('pci-end').value = end; pciMark('pci-end'); }
+
+        suggestStatusFromDates();
+    }
+
+    function suggestStatusFromDates() {
+        const end = document.getElementById('pci-end')?.value;
+        const statusEl = document.getElementById('pci-status');
+        if (!end || !statusEl) return;
+        const today = new Date().toISOString().slice(0, 10);
+        if (end < today) statusEl.value = 'expired';
+    }
+
+    function saveContractImport(e) {
+        e.preventDefault();
+        const errEl = document.getElementById('pci-error');
+        errEl.style.display = 'none';
+        if (!_pciFile) { closeContractImport(); return; }
+
+        const payload = {
+            property_id:   propertyId,
+            client_id:     document.getElementById('pci-client').value || null,
+            tenant_id:     document.getElementById('pci-tenant').value || null,
+            title:         document.getElementById('pci-title-input').value.trim(),
+            contract_type: document.getElementById('pci-type').value,
+            status:        document.getElementById('pci-status').value,
+            start_date:    document.getElementById('pci-start').value || null,
+            end_date:      document.getElementById('pci-end').value || null,
+            monthly_rent:  document.getElementById('pci-rent').value || null,
+            deposit:       document.getElementById('pci-deposit').value || null,
+            notes:         document.getElementById('pci-notes').value.trim() || null,
+        };
+        if (!payload.title) { errEl.textContent = 'Il titolo è obbligatorio.'; errEl.style.display = ''; return; }
+
+        const btn = document.getElementById('pci-save');
+        btn.disabled = true; btn.textContent = 'Salvataggio…';
+        const file = _pciFile;
+
+        fetch('api/contracts.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+            .then(r => r.json())
+            .then(json => {
+                if (!json.success) throw new Error(json.error || 'Errore creazione contratto.');
+                const contractId = json.data?.id;
+                // Attach the original file to the new contract record.
+                const fd = new FormData();
+                fd.append('property_id', propertyId);
+                fd.append('doc_type', 'contract');
+                fd.append('file', file);
+                fd.append('title', payload.title);
+                if (contractId) fd.append('contract_id', contractId);
+                return fetch('api/documents.php', { method: 'POST', body: fd }).then(r => r.json());
+            })
+            .then(j => {
+                if (!j.success) throw new Error(j.error || 'Contratto creato, ma il file non è stato allegato.');
+                showAlert('Contratto importato e registrato.', 'success');
+                closeContractImport();
+                loadContracts();
+            })
+            .catch(err => { errEl.textContent = err.message; errEl.style.display = ''; })
+            .finally(() => { btn.disabled = false; btn.innerHTML = '<i data-lucide="save"></i> Salva contratto'; window.lucide?.createIcons(); });
+    }
+
     // ── Gallery grid (management tab) ─────────────────────────────────────────
 
     function renderGalleryGrid(media) {
@@ -485,7 +713,7 @@
         }
         grid.innerHTML = media.map((m, i) => {
             const isPhoto = !m.media_type || m.media_type === 'photo' || m.media_type === 'image';
-            const thumb = isPhoto ? `<img src="${esc(m.file_path)}" alt="">` : `<div class="gallery-item-icon">📄</div>`;
+            const thumb = isPhoto ? `<img src="${esc(m.file_path)}" alt="">` : `<div class="gallery-item-icon"><i data-lucide="file-text"></i></div>`;
             const coverBadge = m.is_cover ? '<span class="gallery-cover-badge">Copertina</span>' : '';
             return `<div class="gallery-item" data-id="${m.id}">
                 <div class="gallery-item-thumb" data-lightbox="${i}">${thumb}${coverBadge}</div>
@@ -493,7 +721,7 @@
                     <span class="gallery-item-name">${esc(m.original_name || m.file_name || '')}</span>
                     <div class="gallery-item-actions">
                         ${isPhoto && !m.is_cover ? `<button class="btn btn--xs btn--ghost" data-action="cover" data-id="${m.id}">Copertina</button>` : ''}
-                        <button class="btn btn--xs btn--danger" data-action="delete" data-id="${m.id}">🗑</button>
+                        <button class="btn btn--xs btn--danger" data-action="delete" data-id="${m.id}"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>
             </div>`;
@@ -593,7 +821,7 @@
         if (isPhoto && media?.file_path) {
             preview.innerHTML = `<img src="${esc(media.file_path)}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
         } else {
-            preview.innerHTML = '📄';
+            preview.innerHTML = '<i data-lucide="file-text"></i>';
         }
         nameEl.textContent = media?.original_name || media?.file_name || '';
 
@@ -633,9 +861,9 @@
                 if (!docs.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun documento caricato.</p>'; return; }
                 list.innerHTML = docs.map(d => `
                     <div class="doc-row">
-                        <a href="${esc(d.file_path)}" target="_blank" class="doc-row__name">📄 ${esc(d.original_name || d.file_name || 'Documento')}</a>
+                        <a href="${esc(d.file_path)}" target="_blank" class="doc-row__name"><i data-lucide="file-text"></i> ${esc(d.original_name || d.file_name || 'Documento')}</a>
                         <span class="doc-row__date text-muted">${d.created_at ? new Date(d.created_at).toLocaleDateString('it-IT') : ''}</span>
-                        <button class="btn btn--xs btn--danger" data-doc-id="${d.id}">🗑</button>
+                        <button class="btn btn--xs btn--danger" data-doc-id="${d.id}"><i data-lucide="trash-2"></i></button>
                     </div>`).join('');
                 list.querySelectorAll('[data-doc-id]').forEach(btn => btn.addEventListener('click', () => deleteDocument(btn.dataset.docId)));
             })
@@ -680,14 +908,47 @@
                             ${r.notes ? `<span class="text-muted">${esc(r.notes)}</span>` : ''}
                         </div>
                         <div class="reminder-row__actions">
-                            ${!r.completed ? `<button class="btn btn--xs btn--ghost" data-rem-complete="${r.id}">✓</button>` : '<span class="badge badge--success">Fatto</span>'}
-                            <button class="btn btn--xs btn--danger" data-rem-delete="${r.id}">🗑</button>
+                            ${!r.completed ? `<button class="btn btn--xs btn--ghost" data-rem-complete="${r.id}"><i data-lucide="check"></i></button>` : '<span class="badge badge--success">Fatto</span>'}
+                            <button class="btn btn--xs btn--danger" data-rem-delete="${r.id}"><i data-lucide="trash-2"></i></button>
                         </div>
                     </div>`).join('');
                 list.querySelectorAll('[data-rem-complete]').forEach(btn => btn.addEventListener('click', () => completeReminder(btn.dataset.remComplete)));
                 list.querySelectorAll('[data-rem-delete]').forEach(btn => btn.addEventListener('click', () => deleteReminder(btn.dataset.remDelete)));
             })
             .catch(() => { list.innerHTML = '<p class="text-muted" style="padding:16px;">Errore caricamento.</p>'; });
+        loadSideReminders();
+    }
+
+    // Compact upcoming-reminders card in the right column (balances the layout height).
+    function loadSideReminders() {
+        const list = document.getElementById('pp-side-reminders');
+        if (!list) return;
+        fetch('api/reminders.php?property_id=' + propertyId + '&limit=100')
+            .then(r => r.json())
+            .then(json => {
+                let items = json.data?.items || json.data || [];
+                items = items.filter(r => !r.completed)
+                    .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999'))
+                    .slice(0, 6);
+                if (!items.length) {
+                    list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun promemoria in programma.</p>';
+                    return;
+                }
+                const today = new Date().toISOString().slice(0, 10);
+                list.innerHTML = items.map(r => {
+                    const overdue = r.due_date && r.due_date < today;
+                    return `
+                    <div class="pp-side-item">
+                        <span class="status-dot status-dot--${overdue ? 'expired' : 'pending'}" title="${overdue ? 'Scaduto' : 'In programma'}"></span>
+                        <div class="pp-side-item__main">
+                            <strong>${esc(r.title || 'Promemoria')}</strong>
+                            ${r.due_date ? `<span class="text-muted">${ppFmtDate(r.due_date)}</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+                window.lucide?.createIcons();
+            })
+            .catch(() => { list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Errore di caricamento.</p>'; });
     }
 
     function openReminderModal(reminder) {
@@ -862,7 +1123,7 @@
         } catch (err) {
             showAlert('Errore generazione PDF: ' + err.message, 'error');
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '📄 Scheda PDF'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="file-text"></i> Scheda PDF'; window.lucide?.createIcons(); }
         }
     }
 
@@ -913,15 +1174,20 @@
         });
 
         document.getElementById('pp-contract-upload')?.addEventListener('change', e => {
-            if (e.target.files[0]) uploadSideDoc(e.target.files[0], 'contract', loadContracts);
+            if (e.target.files[0]) openContractImport(e.target.files[0]);
             e.target.value = '';
         });
+        document.getElementById('pci-close')?.addEventListener('click', closeContractImport);
+        document.getElementById('pci-cancel')?.addEventListener('click', closeContractImport);
+        document.getElementById('pci-form')?.addEventListener('submit', saveContractImport);
+        document.getElementById('pci-end')?.addEventListener('change', suggestStatusFromDates);
         document.getElementById('pp-invoice-upload')?.addEventListener('change', e => {
             if (e.target.files[0]) uploadSideDoc(e.target.files[0], 'invoice', loadInvoices);
             e.target.value = '';
         });
 
         document.getElementById('btn-pp-new-reminder').addEventListener('click', () => openReminderModal());
+        document.getElementById('btn-pp-side-reminder')?.addEventListener('click', () => openReminderModal());
         document.getElementById('pp-rem-close').addEventListener('click', closeReminderModal);
         document.getElementById('pp-rem-cancel').addEventListener('click', closeReminderModal);
         document.getElementById('pp-reminder-form').addEventListener('submit', handleReminderSubmit);

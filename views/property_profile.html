@@ -113,6 +113,15 @@
                     <p class="text-muted" style="font-size:13px;margin:0;">Caricamento…</p>
                 </div>
             </section>
+            <section class="pp-side-card pp-side-card--grow">
+                <div class="pp-side-card__head">
+                    <h3><i data-lucide="bell"></i> Promemoria</h3>
+                    <button class="btn btn--xs btn--ghost" id="btn-pp-side-reminder" title="Nuovo promemoria"><i data-lucide="plus"></i></button>
+                </div>
+                <div id="pp-side-reminders" class="pp-side-list">
+                    <p class="text-muted" style="font-size:13px;margin:0;">Caricamento…</p>
+                </div>
+            </section>
         </aside>
     </div>
 
@@ -265,9 +274,9 @@
             <img id="pp-qr-img" src="" alt="QR Code" style="width:180px;height:180px;display:block;margin:0 auto 16px;">
             <div style="display:flex;gap:8px;margin-bottom:12px;">
                 <input type="text" id="pp-qr-url" class="form-input" readonly style="flex:1;font-size:12px;">
-                <button class="btn btn--ghost btn--sm" id="pp-qr-copy">📋 Copia</button>
+                <button class="btn btn--ghost btn--sm" id="pp-qr-copy"><i data-lucide="copy"></i> Copia</button>
             </div>
-            <a id="pp-qr-download" href="" class="btn btn--ghost btn--sm">⬇️ Scarica QR</a>
+            <a id="pp-qr-download" href="" class="btn btn--ghost btn--sm"><i data-lucide="download"></i> Scarica QR</a>
         </div>
         <div class="modal-footer">
             <button class="btn btn--ghost" id="pp-qr-cancel">Chiudi</button>
@@ -354,7 +363,7 @@
                 <div id="pp-social-error" class="alert alert--error" style="display:none;margin:0;"></div>
             </div>
             <div id="pp-social-success" class="pp-social-success" hidden>
-                <div class="pp-social-success__icon">✅</div>
+                <div class="pp-social-success__icon"><i data-lucide="check-circle"></i></div>
                 <p id="pp-social-success-text">Post pubblicato con successo!</p>
             </div>
         </div>
@@ -365,4 +374,94 @@
     </div>
 </div>
 
-<script src="assets/js/property_profile.js?v=3"></script>
+<!-- ── Importa contratto (Carica → registra come contratto) ───────── -->
+<div class="modal-overlay" id="pp-contract-import-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="pci-title">
+        <div class="modal-header">
+            <h3 id="pci-title"><i data-lucide="file-up"></i> Importa contratto</h3>
+            <button class="modal-close" id="pci-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="pci-form" class="modal-body">
+            <div id="pci-fileinfo" class="pci-fileinfo"></div>
+            <div id="pci-scan" class="alert alert--info" style="margin:0 0 14px;">
+                <i data-lucide="loader"></i> Analisi del PDF in corso…
+            </div>
+            <p class="text-muted" style="margin:0 0 14px;font-size:13px;">
+                I campi rilevati automaticamente dal PDF sono evidenziati. Verifica e completa i dati prima di salvare.
+            </p>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:2">
+                    <label for="pci-title-input">Titolo <span class="required">*</span></label>
+                    <input type="text" id="pci-title-input" class="form-input" required maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="pci-type">Tipo <span class="required">*</span></label>
+                    <select id="pci-type" class="form-select">
+                        <option value="locazione">Locazione</option>
+                        <option value="compravendita">Compravendita</option>
+                        <option value="preliminare">Preliminare</option>
+                        <option value="mandato">Mandato</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pci-client">Proprietario</label>
+                    <select id="pci-client" class="form-select"><option value="">— Seleziona —</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="pci-tenant">Inquilino</label>
+                    <select id="pci-tenant" class="form-select"><option value="">— Seleziona —</option></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pci-start">Data inizio</label>
+                    <input type="date" id="pci-start" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="pci-end">Data fine</label>
+                    <input type="date" id="pci-end" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="pci-status">Stato</label>
+                    <select id="pci-status" class="form-select">
+                        <option value="draft">Bozza</option>
+                        <option value="sent">Inviato</option>
+                        <option value="signed">Firmato</option>
+                        <option value="expired">Scaduto</option>
+                        <option value="cancelled">Annullato</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pci-rent">Canone mensile (€)</label>
+                    <input type="number" id="pci-rent" class="form-input" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="pci-deposit">Deposito (€)</label>
+                    <input type="number" id="pci-deposit" class="form-input" min="0" step="0.01">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="pci-notes">Note</label>
+                <textarea id="pci-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+
+            <div id="pci-error" class="alert alert--error" style="display:none;margin:0;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="pci-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="pci-save"><i data-lucide="save"></i> Salva contratto</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="assets/js/property_profile.js?v=5"></script>
