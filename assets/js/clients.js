@@ -44,14 +44,13 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-client').addEventListener('click', () => openModal());
-        document.getElementById('modal-close').addEventListener('click', closeModal);
-        document.getElementById('modal-cancel').addEventListener('click', closeModal);
+        // "Nuovo Proprietario" and editing now open a dedicated page (not a modal).
+        document.getElementById('btn-new-client').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('client_edit');
+        });
         document.getElementById('delete-modal-close').addEventListener('click', closeDeleteModal);
         document.getElementById('delete-cancel').addEventListener('click', closeDeleteModal);
         document.getElementById('delete-confirm').addEventListener('click', confirmDelete);
-
-        els.form.addEventListener('submit', handleFormSubmit);
 
         els.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
@@ -71,38 +70,8 @@
 
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadClients(); });
 
-        els.modal.addEventListener('click', (e) => {
-            if (e.target === els.modal) closeModal();
-        });
         els.deleteModal.addEventListener('click', (e) => {
             if (e.target === els.deleteModal) closeDeleteModal();
-        });
-
-        document.getElementById('btn-open-chat').addEventListener('click', () => {
-            if (editingClientId && window.App) {
-                closeModal();
-                window.App.navigateTo('communications', { clientId: editingClientId });
-            }
-        });
-
-        // ID card front/back upload inside edit modal
-        document.getElementById('btn-upload-id-front').addEventListener('click', () => {
-            document.getElementById('client-id-front-file').click();
-        });
-        document.getElementById('client-id-front-file').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file || !editingClientId) return;
-            e.target.value = '';
-            uploadIdDocument(editingClientId, file, 'id_front');
-        });
-        document.getElementById('btn-upload-id-back').addEventListener('click', () => {
-            document.getElementById('client-id-back-file').click();
-        });
-        document.getElementById('client-id-back-file').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file || !editingClientId) return;
-            e.target.value = '';
-            uploadIdDocument(editingClientId, file, 'id_back');
         });
 
         // CSV export / import
@@ -116,12 +85,6 @@
         document.getElementById('import-modal-close').addEventListener('click', closeImportModal);
         document.getElementById('import-modal-cancel').addEventListener('click', closeImportModal);
         document.getElementById('import-confirm').addEventListener('click', confirmImport);
-
-        // Owner report
-        document.getElementById('btn-owner-report').addEventListener('click', openReportModal);
-        document.getElementById('report-modal-close').addEventListener('click', closeReportModal);
-        document.getElementById('report-cancel').addEventListener('click', closeReportModal);
-        document.getElementById('report-generate').addEventListener('click', generateReport);
     }
 
     // -------------------------------------------------------------------------
@@ -241,8 +204,7 @@
 
         els.grid.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
-                const client = clients.find(c => c.id == btn.dataset.id);
-                if (client) openModal(client);
+                if (window.App) window.App.navigateTo('client_edit', { clientId: Number(btn.dataset.id) });
             });
         });
 

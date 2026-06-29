@@ -1,0 +1,128 @@
+<div class="client-edit-view">
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="ce-back">← Indietro</button>
+    </div>
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2 id="ce-title">Nuovo Proprietario</h2>
+            <p>Inserisci o aggiorna i dati del proprietario.</p>
+        </div>
+    </div>
+
+    <div id="ce-alert" class="alert" style="display:none;"></div>
+
+    <div class="card" id="ce-card" style="max-width:860px;padding:24px 28px;">
+        <form id="ce-form">
+            <input type="hidden" id="ce-id">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ce-name">Nome <span class="required">*</span></label>
+                    <input type="text" id="ce-name" class="form-input" required maxlength="100" placeholder="es. Mario">
+                </div>
+                <div class="form-group">
+                    <label for="ce-surname">Cognome <span class="required">*</span></label>
+                    <input type="text" id="ce-surname" class="form-input" required maxlength="100" placeholder="es. Rossi">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ce-cf">Codice Fiscale <span class="required">*</span></label>
+                    <input type="text" id="ce-cf" class="form-input" required maxlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase">
+                </div>
+                <div class="form-group">
+                    <label for="ce-phone">Telefono</label>
+                    <input type="tel" id="ce-phone" class="form-input" maxlength="30">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1">
+                    <label for="ce-email">Email</label>
+                    <input type="email" id="ce-email" class="form-input" maxlength="255">
+                </div>
+                <div class="form-group">
+                    <label for="ce-status">Stato</label>
+                    <select id="ce-status" class="form-select">
+                        <option value="active">Attivo</option>
+                        <option value="inactive">Inattivo</option>
+                        <option value="archived">Archiviato</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ce-notes">Note interne</label>
+                <textarea id="ce-notes" class="form-textarea" rows="4"></textarea>
+            </div>
+
+            <fieldset class="form-section" id="ce-id-card-section" hidden>
+                <legend>Carta di Identità</legend>
+                <div class="id-card-sides">
+                    <div class="id-card-side">
+                        <div class="id-card-side-label">Fronte</div>
+                        <div id="ce-id-front-status" class="id-card-status-container"></div>
+                        <div style="margin-top:8px;">
+                            <input type="file" id="ce-id-front-file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+                            <button type="button" class="btn btn--ghost btn--sm" id="ce-btn-front">⬆️ Carica Fronte</button>
+                        </div>
+                    </div>
+                    <div class="id-card-side">
+                        <div class="id-card-side-label">Retro</div>
+                        <div id="ce-id-back-status" class="id-card-status-container"></div>
+                        <div style="margin-top:8px;">
+                            <input type="file" id="ce-id-back-file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+                            <button type="button" class="btn btn--ghost btn--sm" id="ce-btn-back">⬆️ Carica Retro</button>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div id="ce-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
+
+            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
+                <button type="button" class="btn btn--ghost" id="ce-report" hidden>📄 Genera Rendiconto</button>
+                <button type="button" class="btn btn--ghost" id="ce-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="ce-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Owner report mini modal -->
+<div class="modal-overlay" id="ce-report-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Rendiconto proprietario</h3>
+            <button class="modal-close" id="ce-report-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ce-report-month">Mese</label>
+                    <select id="ce-report-month" class="form-select">
+                        <option value="">Anno intero</option>
+                        <option value="1">Gennaio</option><option value="2">Febbraio</option>
+                        <option value="3">Marzo</option><option value="4">Aprile</option>
+                        <option value="5">Maggio</option><option value="6">Giugno</option>
+                        <option value="7">Luglio</option><option value="8">Agosto</option>
+                        <option value="9">Settembre</option><option value="10">Ottobre</option>
+                        <option value="11">Novembre</option><option value="12">Dicembre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ce-report-year">Anno</label>
+                    <input type="number" id="ce-report-year" class="form-input" min="2000" max="2100">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="ce-report-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="ce-report-generate">Genera PDF</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/client_edit.js?v=1"></script>

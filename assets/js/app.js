@@ -56,6 +56,8 @@
             activity_log:   'Log Attività',
             settings:       'Impostazioni',
             client_profile:        'Scheda Cliente',
+            client_edit:           'Modifica Proprietario',
+            property_edit:         'Modifica Immobile',
             automations:           'Automazioni Clienti',
             buildings:             'Edifici',
             insurance:             'Assicurazioni',

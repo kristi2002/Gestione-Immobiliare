@@ -40,7 +40,9 @@
             if (window.App) window.App.navigateTo('clients');
         });
 
-        document.getElementById('btn-profile-edit').addEventListener('click', openEditModal);
+        document.getElementById('btn-profile-edit').addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('client_edit', { clientId });
+        });
         document.getElementById('btn-profile-report').addEventListener('click', openReportModal);
         document.getElementById('btn-profile-new-property').addEventListener('click', () => {
             if (window.App) window.App.navigateTo('properties');

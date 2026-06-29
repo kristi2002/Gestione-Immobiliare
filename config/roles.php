@@ -7,9 +7,9 @@ const ADMIN_ROLES = ['super_admin', 'admin', 'agent', 'readonly'];
 
 const ROLE_PERMISSIONS = [
     'super_admin' => ['*'],
-    'admin'       => ['dashboard','clients','client_profile','leads','properties','contracts','documents','payments','expenses','invoices','communications','appointments','calendar','map','reminders','automations','tenants','keys','agents','reports','social','settings','pdf','buildings','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications'],
-    'agent'       => ['dashboard','clients','client_profile','leads','properties','contracts','documents','payments','expenses','communications','appointments','calendar','map','reminders','automations','tenants','keys','pdf','buildings','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications'],
-    'readonly'    => ['dashboard','clients','client_profile','leads','properties','contracts','documents','payments','expenses','communications','appointments','calendar','map','reminders','tenants','buildings','insurance','meters','suppliers','inventory','surveys','forecast','property_applications'],
+    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','properties','property_profile','property_edit','contracts','documents','payments','expenses','invoices','communications','appointments','calendar','map','reminders','automations','tenants','keys','agents','reports','social','settings','pdf','buildings','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications'],
+    'agent'       => ['dashboard','clients','client_profile','client_edit','leads','properties','property_profile','property_edit','contracts','documents','payments','expenses','communications','appointments','calendar','map','reminders','automations','tenants','keys','pdf','buildings','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications'],
+    'readonly'    => ['dashboard','clients','client_profile','client_edit','leads','properties','property_profile','property_edit','contracts','documents','payments','expenses','communications','appointments','calendar','map','reminders','tenants','buildings','insurance','meters','suppliers','inventory','surveys','forecast','property_applications'],
 ];
 
 const VIEW_MIN_ROLE = [
