@@ -35,12 +35,13 @@
                 <div class="form-group">
                     <label for="cte-status">Stato</label>
                     <select id="cte-status" class="form-select">
+                        <option value="">Automatico (in base alle date)</option>
                         <option value="draft">Bozza</option>
                         <option value="sent">Inviato</option>
                         <option value="signed">Firmato</option>
-                        <option value="expired">Scaduto</option>
                         <option value="cancelled">Annullato</option>
                     </select>
+                    <small class="text-muted">Lascia "Automatico" per far decidere alle date: Attivo entro il periodo, Scaduto dopo la data fine.</small>
                 </div>
                 <div class="form-group">
                     <label for="cte-property">Immobile <span class="required">*</span></label>

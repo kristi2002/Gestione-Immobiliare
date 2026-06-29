@@ -419,7 +419,7 @@
             const dotFor = (c) => {
                 if (c.status === 'cancelled') return { cls: 'expired', label: 'Annullato' };
                 if (c.status === 'expired' || (c.end_date && c.end_date < today)) return { cls: 'expired', label: 'Scaduto' };
-                if (c.status === 'signed') return { cls: 'active', label: 'Attivo' };
+                if (c.status === 'signed' || !c.status) return { cls: 'active', label: 'Attivo' }; // signed or Automatico
                 return { cls: 'pending', label: 'In corso' };
             };
             let html = contracts.map(c => {
@@ -502,7 +502,7 @@
         document.getElementById('pci-end').value = '';
         document.getElementById('pci-rent').value = '';
         document.getElementById('pci-deposit').value = '';
-        document.getElementById('pci-status').value = 'signed'; // uploaded contracts are usually already executed
+        document.getElementById('pci-status').value = ''; // Automatico: state derived from the dates
         document.getElementById('pci-notes').value = '';
         ['pci-type', 'pci-start', 'pci-end', 'pci-rent', 'pci-deposit'].forEach(id =>
             document.getElementById(id).classList.remove('pci-autofilled'));
@@ -644,11 +644,8 @@
     }
 
     function suggestStatusFromDates() {
-        const end = document.getElementById('pci-end')?.value;
-        const statusEl = document.getElementById('pci-status');
-        if (!end || !statusEl) return;
-        const today = new Date().toISOString().slice(0, 10);
-        if (end < today) statusEl.value = 'expired';
+        // No-op: with "Automatico" status the Scaduto/Attivo state is derived from
+        // the dates automatically, so we don't override the chosen status here.
     }
 
     function saveContractImport(e) {

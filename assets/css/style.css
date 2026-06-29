@@ -3056,7 +3056,8 @@ body.nav-open {
     background: linear-gradient(to bottom, #eff6ff 0%, var(--color-surface) 52px);
 }
 
-.contract-card--signed {
+.contract-card--signed,
+.contract-card--active {
     border-left-color: #16a34a;
     background: linear-gradient(to bottom, #ecfdf5 0%, var(--color-surface) 52px);
 }
@@ -3148,6 +3149,14 @@ body.nav-open {
     font-weight: 700;
 }
 
+/* Attivo = date-driven "in force" state (status left Automatico) */
+.badge--contract-active {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+    font-weight: 700;
+}
+
 .badge--contract-expired {
     background: #fef3c7;
     color: #b45309;
@@ -3170,7 +3179,8 @@ body.nav-open {
     background: #f0f7ff;
 }
 
-.contract-card--signed .entity-card__footer {
+.contract-card--signed .entity-card__footer,
+.contract-card--active .entity-card__footer {
     background: #f0fdf4;
 }
 

@@ -22,6 +22,7 @@
         draft:     'Bozza',
         sent:      'Inviato',
         signed:    'Firmato',
+        active:    'Attivo',
         expired:   'Scaduto',
         cancelled: 'Annullato',
     };
@@ -35,6 +36,8 @@
         if (c.status === 'cancelled') return 'cancelled';
         const today = new Date().toISOString().slice(0, 10);
         if (c.end_date && String(c.end_date).slice(0, 10) < today) return 'expired';
+        // No manual status set = "Automatico" -> in force = Attivo.
+        if (!c.status) return 'active';
         return c.status;
     }
 
@@ -172,8 +175,9 @@
         if (els.propFilter.value)     params.set('property_id', els.propFilter.value);
         if (els.typeFilter.value)     params.set('type', els.typeFilter.value);
         const activeStatus = document.querySelector('#contract-status-pills .filter-pill.is-active')?.dataset.status || '';
-        if (activeStatus === '__expired') params.set('expired', '1');
-        else if (activeStatus)            params.set('status', activeStatus);
+        if (activeStatus === '__expired')     params.set('expired', '1');
+        else if (activeStatus === '__active') params.set('active', '1');
+        else if (activeStatus)                params.set('status', activeStatus);
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 

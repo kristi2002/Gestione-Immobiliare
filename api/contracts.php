@@ -95,8 +95,16 @@ function listContracts(PDO $db): void
         $params['type'] = $type;
     }
     // Dedicated "Scaduti" filter: contracts past their end date (not cancelled).
+    // (ct.status can be NULL for "Automatico" contracts, so guard the != comparison.)
     if (($_GET['expired'] ?? '') === '1') {
-        $where .= " AND ct.end_date IS NOT NULL AND ct.end_date < CURDATE() AND ct.status != 'cancelled'";
+        $where .= " AND ct.end_date IS NOT NULL AND ct.end_date < CURDATE()
+                    AND (ct.status IS NULL OR ct.status <> 'cancelled')";
+    }
+    // "Attivi" filter: in force today — Automatico (NULL) or Firmato, within the
+    // date range (or open-ended) and not yet past the end date, and not cancelled.
+    if (($_GET['active'] ?? '') === '1') {
+        $where .= " AND (ct.status IS NULL OR ct.status = 'signed')
+                    AND (ct.end_date IS NULL OR ct.end_date >= CURDATE())";
     }
 
     $countSql = "SELECT COUNT(*) FROM contracts ct
@@ -214,7 +222,9 @@ function validateContractInput(array $data): array
     $clientId     = !empty($data['client_id']) ? (int) $data['client_id'] : null;
     $title        = trim($data['title'] ?? '');
     $contractType = trim($data['contract_type'] ?? 'locazione');
-    $status       = trim($data['status'] ?? 'draft');
+    // Empty status = "Automatico" (state derived from the dates). Stored as NULL.
+    $statusRaw    = trim($data['status'] ?? '');
+    $status       = ($statusRaw === '' || $statusRaw === 'auto') ? null : $statusRaw;
     $startDate    = trim($data['start_date'] ?? '') ?: null;
     $endDate      = trim($data['end_date'] ?? '') ?: null;
     $monthlyRent  = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? (float) $data['monthly_rent'] : null;
@@ -230,7 +240,7 @@ function validateContractInput(array $data): array
     if (!in_array($contractType, CONTRACT_TYPES, true)) {
         apiError('Tipo contratto non valido.');
     }
-    if (!in_array($status, CONTRACT_STATUSES, true)) {
+    if ($status !== null && !in_array($status, CONTRACT_STATUSES, true)) {
         apiError('Stato non valido.');
     }
     if ($startDate !== null && !DateTime::createFromFormat('Y-m-d', $startDate)) {

@@ -60,7 +60,7 @@
         $('cte-id').value = c.id;
         $('cte-title-input').value = c.title || '';
         $('cte-type').value = c.contract_type || 'locazione';
-        $('cte-status').value = c.status || 'draft';
+        $('cte-status').value = c.status || ''; // null/empty = Automatico
         $('cte-property').value = c.property_id || '';
         $('cte-tenant').value = c.tenant_id || '';
         $('cte-client').value = c.client_id || '';
@@ -123,7 +123,7 @@
         } else {
             $('cte-title').textContent = 'Nuovo Contratto';
             $('cte-type').value = 'locazione';
-            $('cte-status').value = 'draft';
+            $('cte-status').value = ''; // default new contracts to Automatico (date-driven)
             if (vp.propertyId) $('cte-property').value = String(vp.propertyId);
             if (vp.clientId) $('cte-client').value = String(vp.clientId);
             $('cte-title-input').focus();
