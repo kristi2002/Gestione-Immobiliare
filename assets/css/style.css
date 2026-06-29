@@ -5851,7 +5851,17 @@ body.nav-open {
     border-radius: 8px;
     font-size: 0.82rem;
 }
-.pp-side-item__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pp-side-item__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+
+/* Contract status dots (active / expired) */
+.status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.status-dot--active  { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+.status-dot--expired { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
+.status-dot--pending { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+.pp-side-status { font-size: 0.7rem; font-weight: 700; flex: 0 0 auto; text-transform: uppercase; letter-spacing: .02em; }
+.pp-side-status--active  { color: #16a34a; }
+.pp-side-status--expired { color: #dc2626; }
+.pp-side-status--pending { color: #b45309; }
 .pp-side-item__main strong { font-size: 0.85rem; }
 .pp-side-item__name { word-break: break-all; }
 .pp-side-item--file { background: var(--color-bg, #f8fafc); }
@@ -5873,6 +5883,18 @@ body.nav-open {
 }
 .view-cols-btn:hover { background: var(--color-bg, #f1f5f9); }
 .view-cols-btn.active { background: var(--color-primary, #2563eb); color: #fff; }
+
+/* Property card: description preview (clamped to 2 lines) */
+.entity-card__desc {
+    margin: 8px 0 0;
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #64748b);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
 
 /* Column-count overrides for the properties grid (desktop) */
 .properties-view .entity-grid.entity-grid--cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -5907,8 +5929,18 @@ body.nav-open {
     border-radius: 8px; overflow: hidden;
     background: var(--color-bg, #f8fafc);
     display: flex; align-items: center; justify-content: center;
+    position: relative;
 }
 .pp-social-preview__img img { width: 100%; height: 100%; object-fit: cover; }
+.pp-social-count {
+    position: absolute; bottom: 6px; right: 6px;
+    background: rgba(0,0,0,.72); color: #fff;
+    font-size: 0.72rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px;
+}
+.pp-social-success { text-align: center; padding: 26px 8px; }
+.pp-social-success__icon { font-size: 48px; line-height: 1; }
+.pp-social-success p { margin: 10px 0 0; font-weight: 600; font-size: 1.05rem; }
 .pp-social-preview__noimg { font-size: 0.78rem; color: var(--color-text-muted, #64748b); text-align: center; padding: 8px; }
 .pp-social-preview__caption {
     flex: 1; min-width: 0; margin: 0;

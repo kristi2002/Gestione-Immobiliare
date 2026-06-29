@@ -231,19 +231,36 @@
         return lines.join('\n');
     }
 
-    function firstImageMedia() {
-        return (allMedia || []).find(m => (m.mime_type || '').startsWith('image/') || ['photo', 'image'].includes(m.media_type)) || null;
+    function propertyImages() {
+        return (allMedia || []).filter(m => (m.mime_type || '').startsWith('image/') || ['photo', 'image'].includes(m.media_type));
     }
 
     function openSocialPublish() {
         if (!currentProperty) return;
+        const imgs = propertyImages();
+        const first = imgs[0] || null;
+
         document.getElementById('pp-social-caption').textContent = buildSocialCaption(currentProperty);
-        const img = firstImageMedia();
         const imgEl = document.getElementById('pp-social-image');
-        imgEl.innerHTML = img
-            ? `<img src="${esc(img.file_path)}" alt="">`
+        imgEl.innerHTML = first
+            ? `<img src="${esc(first.file_path)}" alt="">${imgs.length > 1 ? `<span class="pp-social-count">+${imgs.length - 1}</span>` : ''}`
             : '<div class="pp-social-preview__noimg">Nessuna foto disponibile — il post andrà solo su Facebook.</div>';
+
+        const fotoTxt = imgs.length === 0 ? 'senza foto'
+            : imgs.length === 1 ? 'con 1 foto'
+            : `con tutte le ${imgs.length} foto`;
+        document.getElementById('pp-social-intro').innerHTML =
+            `Vuoi pubblicare questo immobile ${fotoTxt} su <strong>Facebook${first ? ' e Instagram' : ''}</strong> adesso?`;
+
+        // Reset to the confirm view each time it opens.
         document.getElementById('pp-social-error').style.display = 'none';
+        document.getElementById('pp-social-confirm-view').hidden = false;
+        document.getElementById('pp-social-success').hidden = true;
+        const pubBtn = document.getElementById('pp-social-publish');
+        pubBtn.style.display = '';
+        pubBtn.disabled = false;
+        pubBtn.textContent = '📣 Pubblica ora';
+        document.getElementById('pp-social-cancel').textContent = 'Annulla';
         document.getElementById('pp-social-modal').hidden = false;
     }
 
@@ -255,13 +272,13 @@
         const btn = document.getElementById('pp-social-publish');
         const errEl = document.getElementById('pp-social-error');
         errEl.style.display = 'none';
-        const img = firstImageMedia();
-        const platform = img ? 'both' : 'facebook';
+        const imgs = propertyImages();
+        const platform = imgs.length ? 'both' : 'facebook';
         const d = new Date();
         const pad = n => String(n).padStart(2, '0');
         const now = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-        btn.disabled = true; btn.textContent = 'Pubblicazione...';
+        btn.disabled = true; btn.textContent = 'Pubblicazione…';
         try {
             const fd = new FormData();
             fd.append('platform', platform);
@@ -269,21 +286,31 @@
             fd.append('caption', buildSocialCaption(currentProperty));
             fd.append('scheduled_at', now);
             fd.append('status', 'scheduled');
-            if (img) fd.append('property_media_id', img.id);
+            if (imgs[0]) fd.append('property_media_id', imgs[0].id);
 
             const res = await fetch('api/social_posts.php', { method: 'POST', body: fd });
             const json = await res.json();
             if (!json.success) throw new Error(json.error || 'Errore creazione post.');
+
+            // Publish now, posting ALL the property's photos (all_media=1).
             if (json.data?.id) {
-                const pub = await fetch(`api/social_posts.php?id=${json.data.id}&action=publish`, { method: 'PATCH' });
+                const pub = await fetch(`api/social_posts.php?id=${json.data.id}&action=publish&all_media=1`, { method: 'PATCH' });
                 const pj = await pub.json();
                 if (!pj.success) throw new Error(pj.error || 'Pubblicazione non riuscita.');
+                if (pj.data && pj.data.status === 'failed') throw new Error(pj.data.error_message || 'Pubblicazione non riuscita.');
             }
-            closeSocialPublish();
+
+            // Show an explicit success confirmation inside the modal.
+            document.getElementById('pp-social-confirm-view').hidden = true;
+            document.getElementById('pp-social-success').hidden = false;
+            document.getElementById('pp-social-success-text').textContent =
+                (imgs.length > 1 ? `Post con ${imgs.length} foto pubblicato` : 'Post pubblicato') +
+                (platform === 'both' ? ' su Facebook e Instagram!' : ' su Facebook!');
+            btn.style.display = 'none';
+            document.getElementById('pp-social-cancel').textContent = 'Chiudi';
             showAlert('Post pubblicato sui social.', 'success');
         } catch (err) {
             errEl.textContent = err.message; errEl.style.display = 'block';
-        } finally {
             btn.disabled = false; btn.textContent = '📣 Pubblica ora';
         }
     }
@@ -383,15 +410,26 @@
         ]).then(([cRes, dRes]) => {
             const contracts = cRes.data?.items || cRes.data || [];
             const docs = dRes.data?.items || dRes.data || [];
-            let html = contracts.map(c => `
+            const today = new Date().toISOString().slice(0, 10);
+            const dotFor = (c) => {
+                if (c.status === 'cancelled') return { cls: 'expired', label: 'Annullato' };
+                if (c.status === 'expired' || (c.end_date && c.end_date < today)) return { cls: 'expired', label: 'Scaduto' };
+                if (c.status === 'signed') return { cls: 'active', label: 'Attivo' };
+                return { cls: 'pending', label: 'In corso' };
+            };
+            let html = contracts.map(c => {
+                const d = dotFor(c);
+                return `
                 <div class="pp-side-item">
+                    <span class="status-dot status-dot--${d.cls}" title="${esc(d.label)}"></span>
                     <div class="pp-side-item__main">
                         <strong>${esc(c.title || TYPE[c.contract_type] || 'Contratto')}</strong>
                         <span class="text-muted">${esc(TYPE[c.contract_type] || c.contract_type || '')}${c.monthly_rent ? ' · ' + ppMoney(c.monthly_rent) + '/mese' : ''}</span>
                         <span class="text-muted">${ppFmtDate(c.start_date)}${c.end_date ? ' → ' + ppFmtDate(c.end_date) : ''}</span>
                     </div>
-                    <span class="badge badge--${esc(c.status || 'draft')}">${esc(c.status || '')}</span>
-                </div>`).join('');
+                    <span class="pp-side-status pp-side-status--${d.cls}">${esc(d.label)}</span>
+                </div>`;
+            }).join('');
             html += docFilesHtml(docs, loadContracts);
             if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun contratto. Usa ⬆️ per caricarne uno.</p>';
             list.innerHTML = html;

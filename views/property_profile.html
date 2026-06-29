@@ -345,12 +345,18 @@
             <button class="modal-close" id="pp-social-close" aria-label="Chiudi">&times;</button>
         </div>
         <div class="modal-body">
-            <p>Vuoi davvero pubblicare questo immobile su <strong>Facebook e Instagram</strong> adesso?</p>
-            <div class="pp-social-preview">
-                <div id="pp-social-image" class="pp-social-preview__img"></div>
-                <pre id="pp-social-caption" class="pp-social-preview__caption"></pre>
+            <div id="pp-social-confirm-view">
+                <p id="pp-social-intro">Vuoi davvero pubblicare questo immobile su <strong>Facebook e Instagram</strong> adesso?</p>
+                <div class="pp-social-preview">
+                    <div id="pp-social-image" class="pp-social-preview__img"></div>
+                    <pre id="pp-social-caption" class="pp-social-preview__caption"></pre>
+                </div>
+                <div id="pp-social-error" class="alert alert--error" style="display:none;margin:0;"></div>
             </div>
-            <div id="pp-social-error" class="alert alert--error" style="display:none;margin:0;"></div>
+            <div id="pp-social-success" class="pp-social-success" hidden>
+                <div class="pp-social-success__icon">✅</div>
+                <p id="pp-social-success-text">Post pubblicato con successo!</p>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="pp-social-cancel">Annulla</button>

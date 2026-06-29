@@ -389,6 +389,7 @@
                 <div class="entity-card__body">
                     <div class="entity-card__info"><span class="entity-card__info-icon">👤</span>${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</div>
                     ${chips.length ? `<div class="prop-chips">${chips.join('')}</div>` : ''}
+                    ${p.description ? `<p class="entity-card__desc">${escapeHtml(p.description.length > 120 ? p.description.slice(0, 120) + '…' : p.description)}</p>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__stat">

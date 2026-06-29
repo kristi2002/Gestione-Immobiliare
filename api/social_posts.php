@@ -200,6 +200,22 @@ function patchPost(PDO $db, int $id): void
         apiError('Post già pubblicato.');
     }
 
+    // all_media=1 → publish ALL the property's photos (FB multi-photo / IG carousel),
+    // not just the single stored image. Capped at 10 for Instagram carousel limits.
+    if (!empty($_GET['all_media']) && !empty($post['property_id'])) {
+        $stmt = $db->prepare(
+            "SELECT file_path FROM property_media
+             WHERE property_id = :pid AND mime_type LIKE 'image/%'
+             ORDER BY sort_order ASC, created_at ASC
+             LIMIT 10"
+        );
+        $stmt->execute(['pid' => (int) $post['property_id']]);
+        $paths = array_column($stmt->fetchAll(), 'file_path');
+        if (!empty($paths)) {
+            $post['image_paths'] = $paths;
+        }
+    }
+
     $result = publishAndUpdatePost($db, $post);
     getPost($db, $id);
 }

@@ -77,6 +77,12 @@ function publishSocialPost(PDO $db, array $post): array
     $platform = $post['platform'];
     $imagePath = $post['image_path'] ?? null;
 
+    // Optional: post['image_paths'] = array of relative paths → multi-photo (FB) / carousel (IG).
+    $imagePaths = $post['image_paths'] ?? null;
+    $imagePaths = is_array($imagePaths) ? array_values(array_filter($imagePaths)) : null;
+    $multi      = is_array($imagePaths) && count($imagePaths) > 1;
+    $singlePath = $imagePath ?: ($imagePaths[0] ?? null);
+
     if (!isMetaConfigured($settings)) {
         return [
             'success'             => true,
@@ -97,7 +103,9 @@ function publishSocialPost(PDO $db, array $post): array
     $errors   = [];
 
     if (in_array($platform, ['facebook', 'both'], true)) {
-        $result = publishToFacebookPage($pageId, $token, $caption, $imagePath);
+        $result = $multi
+            ? publishToFacebookPageMulti($pageId, $token, $caption, $imagePaths)
+            : publishToFacebookPage($pageId, $token, $caption, $singlePath);
         if ($result['success']) {
             $fbPostId = $result['post_id'];
         } else {
@@ -109,7 +117,9 @@ function publishSocialPost(PDO $db, array $post): array
         if (!$igId) {
             $errors[] = 'Instagram: account ID non configurato.';
         } else {
-            $result = publishToInstagram($igId, $token, $caption, $imagePath);
+            $result = $multi
+                ? publishToInstagramCarousel($igId, $token, $caption, $imagePaths)
+                : publishToInstagram($igId, $token, $caption, $singlePath);
             if ($result['success']) {
                 $igMediaId = $result['media_id'];
             } else {
@@ -201,6 +211,96 @@ function publishToInstagram(string $igAccountId, string $token, string $caption,
     }
 
     return ['success' => false, 'media_id' => null, 'error' => $publish['error'] ?? 'Pubblicazione IG fallita'];
+}
+
+/**
+ * Publish a multi-photo post to a Facebook Page (all images in one post).
+ * Uploads each photo unpublished, then creates a feed story with attached_media.
+ */
+function publishToFacebookPageMulti(string $pageId, string $token, string $message, array $imagePaths): array
+{
+    $mediaFbids = [];
+    foreach ($imagePaths as $rel) {
+        $full = realpath(__DIR__ . '/../' . $rel);
+        if (!$full || !file_exists($full)) {
+            continue;
+        }
+        $up = metaApiRequest('POST', "/{$pageId}/photos", [
+            'published'    => 'false',
+            'access_token' => $token,
+            'source'       => new CURLFile($full),
+        ], true);
+        if (!empty($up['id'])) {
+            $mediaFbids[] = $up['id'];
+        }
+    }
+
+    if (empty($mediaFbids)) {
+        return ['success' => false, 'post_id' => null, 'error' => 'Nessuna immagine valida da pubblicare.'];
+    }
+
+    $params = ['message' => $message, 'access_token' => $token];
+    foreach ($mediaFbids as $i => $fbid) {
+        $params["attached_media[$i]"] = json_encode(['media_fbid' => $fbid]);
+    }
+
+    $response = metaApiRequest('POST', "/{$pageId}/feed", $params);
+    if ($response['success']) {
+        return ['success' => true, 'post_id' => $response['id'] ?? null, 'error' => null];
+    }
+    return ['success' => false, 'post_id' => null, 'error' => $response['error'] ?? 'Errore Facebook (multi-foto)'];
+}
+
+/**
+ * Publish an Instagram carousel (2–10 images) for a Business account.
+ * Creates an item container per image, a CAROUSEL container, then publishes.
+ */
+function publishToInstagramCarousel(string $igAccountId, string $token, string $caption, array $imagePaths): array
+{
+    $publicBase = getenv('META_PUBLIC_BASE_URL') ?: '';
+    if ($publicBase === '') {
+        return ['success' => false, 'media_id' => null, 'error' => 'Configura META_PUBLIC_BASE_URL per pubblicare su Instagram.'];
+    }
+
+    $childIds = [];
+    foreach (array_slice($imagePaths, 0, 10) as $rel) {
+        $full = realpath(__DIR__ . '/../' . $rel);
+        if (!$full || !file_exists($full)) {
+            continue;
+        }
+        $imageUrl = rtrim($publicBase, '/') . '/' . ltrim($rel, '/');
+        $c = metaApiRequest('POST', "/{$igAccountId}/media", [
+            'image_url'        => $imageUrl,
+            'is_carousel_item' => 'true',
+            'access_token'     => $token,
+        ]);
+        if (!empty($c['id'])) {
+            $childIds[] = $c['id'];
+        }
+    }
+
+    if (count($childIds) < 2) {
+        return ['success' => false, 'media_id' => null, 'error' => 'Carosello Instagram richiede almeno 2 immagini valide.'];
+    }
+
+    $carousel = metaApiRequest('POST', "/{$igAccountId}/media", [
+        'media_type'   => 'CAROUSEL',
+        'children'     => implode(',', $childIds),
+        'caption'      => $caption,
+        'access_token' => $token,
+    ]);
+    if (empty($carousel['id'])) {
+        return ['success' => false, 'media_id' => null, 'error' => $carousel['error'] ?? 'Creazione carosello IG fallita'];
+    }
+
+    $publish = metaApiRequest('POST', "/{$igAccountId}/media_publish", [
+        'creation_id'  => $carousel['id'],
+        'access_token' => $token,
+    ]);
+    if ($publish['success']) {
+        return ['success' => true, 'media_id' => $publish['id'] ?? $carousel['id'], 'error' => null];
+    }
+    return ['success' => false, 'media_id' => null, 'error' => $publish['error'] ?? 'Pubblicazione carosello IG fallita'];
 }
 
 /**
