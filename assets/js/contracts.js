@@ -201,6 +201,10 @@
                 try {
                     const dj = await fetch(`api/documents.php?${dp}`).then(r => r.json());
                     let docs = dj.data?.items || dj.data || [];
+                    // Files attached to a contract record (contract_id set) are already
+                    // represented by that filterable record — don't duplicate them here as
+                    // standalone "File caricato" cards. Only truly loose files remain.
+                    docs = docs.filter(d => !d.contract_id);
                     const q = (els.search?.value || '').trim().toLowerCase();
                     if (q) docs = docs.filter(d => (d.original_name || '').toLowerCase().includes(q));
                     contractDocs = docs;
