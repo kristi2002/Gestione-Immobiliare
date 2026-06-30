@@ -81,7 +81,7 @@
                 <td data-label="Portale">${t.has_portal_access ? '<i data-lucide="check-circle"></i>' : '—'}</td>
                 <td class="col-actions" data-label="Azioni">
                     <button class="btn btn--sm btn--ghost" data-edit="${t.id}"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost" data-wa="${t.id}" title="Invia WhatsApp"><i data-lucide="smartphone"></i></button>
+                    ${t.phone && window.WA ? window.WA.buttonHtml(t.phone) : ''}
                 </td>
             </tr>`;
         }).join('');

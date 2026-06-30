@@ -193,6 +193,7 @@
                 <button class="btn btn--ghost" id="btn-pp-mandato"><i data-lucide="file-pen-line"></i> Mandato agenzia</button>
                 <button class="btn btn--ghost" id="btn-pp-qr"><i data-lucide="qr-code"></i> QR Code</button>
                 <button class="btn btn--ghost" id="btn-pp-social"><i data-lucide="megaphone"></i> Pubblica post</button>
+                ${window.WA ? `<a href="${window.WA.shareLink((p.address || 'Immobile') + (p.city ? ', ' + p.city : '') + (p.price ? ' — € ' + Number(p.price).toLocaleString('it-IT') : '') + '\n' + window.location.origin + '/property/' + propertyId)}" target="_blank" rel="noopener" class="btn btn--whatsapp">${window.WA.icon} Condividi su WhatsApp</a>` : ''}
                 <button class="btn btn--danger" id="btn-pp-archive"><i data-lucide="archive"></i> Archivia</button>
             </div>`;
 

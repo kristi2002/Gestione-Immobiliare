@@ -124,6 +124,9 @@
         if (cnt > 0) meta.push(`<span><i data-lucide="building-2"></i> ${cnt} immobil${cnt === 1 ? 'e' : 'i'}</span>`);
         document.getElementById('profile-meta').innerHTML = meta.join('');
 
+        const waEl = document.getElementById('profile-wa-action');
+        if (waEl) waEl.innerHTML = (client.phone && window.WA) ? window.WA.buttonHtml(client.phone, '', { className: 'btn-wa--label', label: 'WhatsApp' }) : '';
+
         const notesEl = document.getElementById('profile-notes');
         if (client.internal_notes && client.internal_notes.trim()) {
             document.getElementById('profile-notes-text').textContent = client.internal_notes;

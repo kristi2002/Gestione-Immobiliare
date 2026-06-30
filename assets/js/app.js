@@ -5,6 +5,46 @@
 (function () {
     'use strict';
 
+    // ── WhatsApp click-to-chat (free, no API) ──────────────────────────────────
+    // Opens WhatsApp (app or web) with the contact + an optional pre-filled message.
+    window.WA = {
+        // WhatsApp brand glyph (inline SVG, inherits currentColor)
+        icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 6.32A7.85 7.85 0 0 0 12.05 4a7.94 7.94 0 0 0-6.9 11.9L4 20l4.2-1.1a7.9 7.9 0 0 0 3.8 1h.01a7.94 7.94 0 0 0 5.59-13.58Zm-5.55 12.2h-.01a6.56 6.56 0 0 1-3.35-.92l-.24-.14-2.5.66.67-2.43-.16-.25a6.59 6.59 0 1 1 5.59 3.08Zm3.62-4.93c-.2-.1-1.17-.58-1.35-.64s-.31-.1-.44.1-.5.64-.62.77-.23.15-.43.05a5.4 5.4 0 0 1-1.59-.98 6 6 0 0 1-1.1-1.37c-.11-.2 0-.3.09-.4l.3-.35a1.36 1.36 0 0 0 .2-.33.37.37 0 0 0 0-.35c-.05-.1-.44-1.06-.6-1.45s-.32-.33-.44-.34h-.38a.72.72 0 0 0-.52.24 2.2 2.2 0 0 0-.68 1.63 3.82 3.82 0 0 0 .8 2.03 8.75 8.75 0 0 0 3.35 2.96c.47.2.83.32 1.11.41a2.69 2.69 0 0 0 1.23.08 2 2 0 0 0 1.32-.93 1.65 1.65 0 0 0 .11-.93c-.05-.08-.18-.13-.38-.23Z"/></svg>',
+        // Normalize an Italian/other phone to wa.me digits (no +, spaces, dashes).
+        normalize(phone) {
+            let d = String(phone || '').replace(/\D+/g, '');
+            if (!d) return '';
+            if (d.startsWith('00')) d = d.slice(2);
+            else if (d.startsWith('0')) d = '39' + d.slice(1);
+            if (!d.startsWith('39') && d.length <= 10) d = '39' + d;
+            return d;
+        },
+        // Direct-message link to a specific number.
+        link(phone, text) {
+            const n = this.normalize(phone);
+            if (!n) return '';
+            return 'https://wa.me/' + n + (text ? '?text=' + encodeURIComponent(text) : '');
+        },
+        // Share link (no number) — opens WhatsApp's contact picker with text.
+        shareLink(text) {
+            return 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text || '');
+        },
+        // Returns an <a> button (or '' when there's no usable phone).
+        buttonHtml(phone, text, opts) {
+            const url = this.link(phone, text);
+            if (!url) return '';
+            const o = opts || {};
+            const cls = 'btn-wa' + (o.className ? ' ' + o.className : '');
+            const label = o.label ? '<span>' + o.label + '</span>' : '';
+            return `<a href="${url}" target="_blank" rel="noopener" class="${cls}" title="Scrivi su WhatsApp" aria-label="Scrivi su WhatsApp">${this.icon}${label}</a>`;
+        },
+        open(phone, text) {
+            const url = this.link(phone, text);
+            if (url) window.open(url, '_blank', 'noopener');
+            return !!url;
+        },
+    };
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     const originalFetch = window.fetch.bind(window);
