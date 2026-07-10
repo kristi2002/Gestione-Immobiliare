@@ -2789,9 +2789,10 @@ body.nav-open {
     word-break: break-word;
 }
 
-/* Card body */
+/* Card body — horizontal padding matches header (16px) & footer (16px)
+   so the avatar, info rows and footer content share one left edge. */
 .entity-card__body {
-    padding: 14px 18px;
+    padding: 14px 16px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -2958,7 +2959,9 @@ body.nav-open {
 
 .tenant-info-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* auto-fit avoids a lone orphan item on a second row (e.g. 4 fields in a
+       fixed 3-col grid left one item stranded); items fill each row evenly. */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
 }
 
@@ -4379,10 +4382,10 @@ body.nav-open {
 .profile-hero__meta a:hover { text-decoration: underline; }
 
 .profile-hero__notes {
-    background: var(--color-bg);
-    border-left: 3px solid var(--color-primary);
-    border-radius: 0 var(--radius) var(--radius) 0;
-    padding: 10px 14px;
+    background: var(--color-primary-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
     font-size: 14px;
 }
 
@@ -4464,7 +4467,7 @@ body.nav-open {
 .doc-item__info { flex: 1; min-width: 0; }
 .doc-item__name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .doc-item__meta { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
-.doc-item__actions { display: flex; gap: 4px; flex-shrink: 0; }
+.doc-item__actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* Chat thread in profile */
 .chat-container { display: flex; flex-direction: column; gap: 12px; }
@@ -4543,7 +4546,7 @@ body.nav-open {
 .reminder-item__info { flex: 1; min-width: 0; }
 .reminder-item__title { font-weight: 600; font-size: 14px; }
 .reminder-item__meta { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
-.reminder-item__actions { display: flex; gap: 4px; flex-shrink: 0; }
+.reminder-item__actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* Automation card */
 .automation-preview {
@@ -6185,3 +6188,24 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .entity-edit-view .form-row .form-group { min-width: 0; }
 .entity-edit-view .form-actions { border-top: 1px solid var(--color-border); padding-top: 16px; }
 .entity-edit-view .card { max-width: none; }
+
+/* ==========================================================================
+   Tap targets — icon-only action buttons in card clusters
+   The buttons render ~37x27px; that's below the 44px pointer-target minimum
+   (WCAG 2.5.5). Expand the hit area with a transparent pseudo-element so the
+   button stays visually identical (no layout shift) but is comfortably
+   tappable on touch devices.
+   ========================================================================== */
+.entity-card__actions .btn--sm,
+.doc-item__actions .btn--sm,
+.reminder-item__actions .btn--sm {
+    position: relative;
+}
+.entity-card__actions .btn--sm::before,
+.doc-item__actions .btn--sm::before,
+.reminder-item__actions .btn--sm::before {
+    content: "";
+    position: absolute;
+    inset: -9px -5px;
+    /* purely a hit area — no visual */
+}

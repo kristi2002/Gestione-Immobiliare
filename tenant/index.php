@@ -101,7 +101,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
         .portal-tab.active, .portal-tab:hover { color:var(--color-primary); border-bottom-color:var(--color-primary); }
         .portal-section { display:none; } .portal-section.active { display:block; }
         .pay-summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
-        .pay-summary-card { flex:1; min-width:120px; background:var(--color-bg); border-radius:var(--radius); padding:14px 16px; }
+        .pay-summary-card { flex:1; min-width:120px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius); padding:14px 16px; }
         .pay-summary-card__label { font-size:12px; color:var(--color-text-muted); }
         .pay-summary-card__value { font-size:20px; font-weight:700; margin-top:4px; }
         .pay-summary-card--green .pay-summary-card__value { color:var(--color-success); }
@@ -189,7 +189,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                         </div>
 
                         <?php if (!empty($upcoming)): ?>
-                        <div class="card" style="border-left:4px solid var(--color-danger)">
+                        <div class="card" style="border-color:#fecaca;background:#fff8f8">
                             <h3 style="font-size:15px;margin-bottom:12px">⚠️ Prossime scadenze</h3>
                             <ul style="list-style:none;padding:0;margin:0">
                                 <?php foreach ($upcoming as $u): ?>
