@@ -1,5 +1,7 @@
 .env
 .env.docker
+.env.production
+/vendor/
 backups/
 uploads/properties/*
 uploads/documents/*

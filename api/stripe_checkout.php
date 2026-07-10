@@ -9,8 +9,9 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/rate_limit.php';
-requireRole('admin', 'agent', 'super_admin', 'readonly');
+requireRole('admin', 'agent', 'super_admin');
 
 apiHandleOptions();
 apiRequireMethod('POST');
@@ -30,10 +31,19 @@ try {
     if (!$successUrl) apiError('success_url obbligatorio.');
     if (!$cancelUrl)  apiError('cancel_url obbligatorio.');
 
+    // ── Stripe secret key (fail fast when the integration is off) ───────────────
+    $stripeKey = getSetting('stripe_secret_key')
+              ?: (getenv('STRIPE_SECRET_KEY') ?: '');
+
+    if ($stripeKey === '') {
+        apiError('Stripe non configurato. Aggiungi stripe_secret_key nelle impostazioni o nel file .env.', 503);
+    }
+
     // ── Resolve payment ─────────────────────────────────────────────────────────
+    // NOTE: tenants columns are name/surname (not first_name/last_name).
     $stmt = $db->prepare(
         "SELECT p.id, p.amount, p.description, p.tenant_id,
-                t.first_name, t.last_name, t.email AS tenant_email
+                t.name AS first_name, t.surname AS last_name, t.email AS tenant_email
            FROM payments p
            LEFT JOIN tenants t ON t.id = p.tenant_id
           WHERE p.id = :id"
@@ -44,14 +54,6 @@ try {
 
     $tenantId = (int) ($payment['tenant_id'] ?? 0);
     if (!$tenantId) apiError('Pagamento non associato a un inquilino.');
-
-    // ── Stripe secret key ───────────────────────────────────────────────────────
-    $stripeKey = getSetting('stripe_secret_key')
-              ?? (getenv('STRIPE_SECRET_KEY') ?: '');
-
-    if (!$stripeKey || $stripeKey === '') {
-        apiError('Stripe non configurato. Aggiungi stripe_secret_key nelle impostazioni o nel file .env.', 503);
-    }
 
     // ── Amount in cents ─────────────────────────────────────────────────────────
     $amountCents = (int) round((float) $payment['amount'] * 100);

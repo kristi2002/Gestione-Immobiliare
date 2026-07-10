@@ -13,8 +13,11 @@ jobs:
         run: echo "COOLIFY_TOKEN is not configured; skipping deploy trigger."
 
       - name: Trigger Coolify deploy
-        if: ${{ secrets.COOLIFY_TOKEN != '' }}
+        if: ${{ secrets.COOLIFY_TOKEN != '' && secrets.COOLIFY_WEBHOOK_URL != '' }}
         run: |
-          curl -s "http://91.99.137.240:8000/api/v1/deploy?uuid=bs555w5mvdeffngi7vxab4qo&force=false" \
+          # COOLIFY_WEBHOOK_URL is a repo secret, e.g.
+          #   https://coolify.your-domain.it/api/v1/deploy?uuid=XXXX&force=false
+          # Prefer HTTPS so the bearer token isn't sent in clear text.
+          curl -s "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
             --fail

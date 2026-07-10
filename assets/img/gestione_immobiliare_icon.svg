@@ -1,0 +1,9 @@
+<svg viewBox="60 60 280 265" width="280" height="265" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gestione Immobiliare icon">
+  <path
+    fill-rule="evenodd"
+    fill="#C4622D"
+    d="M 90,305 L 90,200 A 110,110 0 0,1 310,200 L 310,305 Z
+       M 132,305 L 132,200 A 68,68 0 0,1 268,200 L 268,305 Z"
+  />
+  <polygon points="200,84 207,94 200,104 193,94" fill="#1A2B52" opacity="0.85" />
+</svg>

@@ -5,6 +5,13 @@ Web-based admin dashboard for real estate agencies. Manage property owners, list
 **Live:** https://testdemo.it | **Stack:** PHP 8.3 · MySQL 8 · Apache · Docker · Vanilla JavaScript
 
 > 📁 **Full documentation is in the [`/docs`](./docs/) folder** — architecture, database ERD, integrations, gaps, and deploy guide.
+>
+> 🟢 **Deployment-readiness (2026-07-10) — start here:**
+> [`docs/VERIFICATION_REPORT.md`](./docs/VERIFICATION_REPORT.md) (verified current state) ·
+> [`docs/CHANGES_2026-07.md`](./docs/CHANGES_2026-07.md) (all changes) ·
+> [`docs/DEPLOYMENT_PLAN.md`](./docs/DEPLOYMENT_PLAN.md) (plan + phase log) ·
+> [`docs/GDPR.md`](./docs/GDPR.md).
+> Fresh install: load `database/schema_production.sql`, then `php database/migrate.php` (the Docker entrypoint does this automatically).
 
 ---
 

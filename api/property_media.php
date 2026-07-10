@@ -91,7 +91,7 @@ function listMedia(PDO $db, int $propertyId): void
 
     $items = $stmt->fetchAll();
     foreach ($items as &$item) {
-        $item['url']      = $item['file_path'];
+        $item['url']      = mediaUrl($item);
         $item['is_cover'] = (bool) $item['is_cover'];
     }
 
@@ -132,7 +132,15 @@ function uploadMedia(PDO $db): void
         apiError('Tipo di file non consentito per questa categoria (' . $mime . '). Usa MP4, WebM o MOV per i video.');
     }
 
-    $uploadDir = __DIR__ . '/../uploads/properties/' . $propertyId;
+    // Attachments may hold sensitive files, so they live in the deny-all
+    // protected tree and are served only via api/media.php (auth-scoped).
+    // Presentation assets (photo/video/floor_plan/house_map) are public listing
+    // material and stay in the web-served uploads/properties tree.
+    $isPrivate = ($mediaType === 'attachment');
+    $relDir    = $isPrivate
+        ? 'uploads/documents/property_attachments/' . $propertyId
+        : 'uploads/properties/' . $propertyId;
+    $uploadDir = __DIR__ . '/../' . $relDir;
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
         apiError('Impossibile creare la cartella di upload.', 500);
     }
@@ -146,7 +154,7 @@ function uploadMedia(PDO $db): void
         apiError('Errore nel salvataggio del file.', 500);
     }
 
-    $relativePath = 'uploads/properties/' . $propertyId . '/' . $filename;
+    $relativePath = $relDir . '/' . $filename;
 
     $sortStmt = $db->prepare(
         'SELECT COALESCE(MAX(sort_order), 0) + 1 FROM property_media WHERE property_id = :id'
@@ -182,10 +190,21 @@ function uploadMedia(PDO $db): void
     );
     $getStmt->execute(['id' => $newId]);
     $item = $getStmt->fetch();
-    $item['url']      = $item['file_path'];
+    $item['url']      = mediaUrl($item);
     $item['is_cover'] = (bool) $item['is_cover'];
 
     apiSuccess($item, 201);
+}
+
+/**
+ * Public presentation media is served by its direct (web-served) path; private
+ * attachments are served only through the auth-scoped streamer api/media.php.
+ */
+function mediaUrl(array $item): string
+{
+    return ($item['media_type'] ?? '') === 'attachment'
+        ? 'api/media.php?id=' . (int) $item['id']
+        : (string) $item['file_path'];
 }
 
 function setCoverMedia(PDO $db): void

@@ -12,16 +12,7 @@
     "autoload": {
         "psr-4": {
             "App\\": "src/"
-        },
-        "files": [
-            "config/env.php",
-            "config/db.php",
-            "config/settings.php",
-            "config/mail.php",
-            "config/mail_html.php",
-            "config/whatsapp.php",
-            "config/meta.php"
-        ]
+        }
     },
     "autoload-dev": {
         "psr-4": {

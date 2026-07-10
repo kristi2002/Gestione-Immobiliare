@@ -360,5 +360,6 @@ function oEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
         });
     })();
     </script>
+    <script src="../assets/js/cookie_consent.js"></script>
 </body>
 </html>

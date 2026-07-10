@@ -15,6 +15,9 @@ require_once __DIR__ . '/../config/meta.php';
 
 apiHandleOptions();
 
+// Social posting is admin-and-above only (never agent/readonly).
+requireRole('super_admin', 'admin');
+
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 try {

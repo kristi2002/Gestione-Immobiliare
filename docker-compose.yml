@@ -57,16 +57,21 @@ services:
         - action: rebuild
           path: ./Dockerfile
 
-  # --- NGROK SERVICE ADDED HERE ---
+  # --- NGROK (local dev only) ---
+  # Runs only with: docker compose --profile dev up
   ngrok:
     image: ngrok/ngrok:latest
+    profiles: ["dev"]
     restart: unless-stopped
     command:
       - "http"
       - "app:8090"
       - "--pooling-enabled"
     environment:
-      NGROK_AUTHTOKEN: "3FEPAeDI1sUN5MVMSKFnwjgzaL3_5TY347LpqDDFFbc83fp1S"
+      # Set NGROK_AUTHTOKEN in your local .env (never commit it).
+      # NOTE: the previously hard-coded token has been removed and MUST be rotated
+      # in the ngrok dashboard — treat it as compromised (it was in git history).
+      NGROK_AUTHTOKEN: "${NGROK_AUTHTOKEN:-}"
     ports:
       - "4040:4040" # Local dashboard to get your public link
     depends_on:

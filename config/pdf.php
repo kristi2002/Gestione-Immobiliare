@@ -89,7 +89,8 @@ function generateContractPdf(PDO $db, array $params, int $adminId): array
 
     $pdf = SimplePdf::fromBlocks($title, $blocks, pdfDocOpts($title));
 
-    return persistPdf($db, 'contract', $title, $pdf, $clientId, $propertyId, $tenantId, $adminId);
+    // Pass NULL (not 0) for missing links so the pdf_documents FKs aren't violated.
+    return persistPdf($db, 'contract', $title, $pdf, $clientId ?: null, $propertyId ?: null, $tenantId ?: null, $adminId);
 }
 
 function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): array

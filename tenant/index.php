@@ -488,5 +488,6 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
         <?php endif; ?>
     })();
     </script>
+    <script src="../assets/js/cookie_consent.js"></script>
 </body>
 </html>

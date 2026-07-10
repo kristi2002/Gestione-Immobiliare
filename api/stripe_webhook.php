@@ -84,9 +84,17 @@ if ($webhookSecret) {
         }
     }
 } else {
-    // No secret configured — accept event (development/testing mode only)
-    // In production, set STRIPE_WEBHOOK_SECRET in Coolify env vars.
-    error_log('[stripe_webhook] WARNING: no STRIPE_WEBHOOK_SECRET set — accepting unverified events.');
+    // No signing secret configured.
+    // FAIL CLOSED in production: an unsigned/forged event must never be trusted.
+    // Only in non-production do we accept unverified events (to ease local testing).
+    $isProd = strtolower((string) env('APP_ENV', 'production')) === 'production';
+    if ($isProd) {
+        error_log('[stripe_webhook] REJECTED: no STRIPE_WEBHOOK_SECRET configured in production — refusing unverified event.');
+        http_response_code(503);
+        echo json_encode(['error' => 'Webhook non configurato.']);
+        exit;
+    }
+    error_log('[stripe_webhook] WARNING: no STRIPE_WEBHOOK_SECRET set — accepting unverified events (non-production only).');
 }
 
 // If $event wasn't already set by SDK path, parse the raw payload now
@@ -132,11 +140,14 @@ try {
                 if ($spRow && $spRow['payment_id']) {
                     $paymentId = (int) $spRow['payment_id'];
 
-                    // Mark payments record as paid
+                    // Mark payments record as paid.
+                    // NOTE: the payments table column is `paid_date` (not `paid_at`,
+                    // which only exists on stripe_payments). Using the wrong column
+                    // here previously threw after a real charge and returned 500.
                     $db->prepare(
                         "UPDATE payments
-                            SET status   = 'paid',
-                                paid_at  = NOW()
+                            SET status    = 'paid',
+                                paid_date = CURDATE()
                           WHERE id = :pid
                             AND status IN ('pending','late')"
                     )->execute([':pid' => $paymentId]);

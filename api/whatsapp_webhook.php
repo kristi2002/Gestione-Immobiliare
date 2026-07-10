@@ -19,10 +19,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // ── Twilio signature validation ───────────────────────────────────────────────
 // Twilio signs every webhook with HMAC-SHA1. We reject requests that lack a
 // valid signature to prevent fake messages being injected into the database.
-// Skip when no auth token is configured (local dev only).
+// FAIL CLOSED in production: if no auth token is configured we cannot verify the
+// signature, so an unsigned/forged request must be rejected. Only non-production
+// skips the check (to ease local dev/testing).
 $twilioAuthToken = getSetting('twilio_auth_token') ?: (getenv('TWILIO_AUTH_TOKEN') ?: '');
 
-if ($twilioAuthToken !== '') {
+if ($twilioAuthToken === '') {
+    $isProd = strtolower((string) env('APP_ENV', 'production')) === 'production';
+    if ($isProd) {
+        error_log('[whatsapp_webhook] REJECTED: no twilio_auth_token configured in production — refusing unverified request.');
+        http_response_code(503);
+        echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+        exit;
+    }
+    error_log('[whatsapp_webhook] WARNING: no twilio_auth_token — skipping signature check (non-production only).');
+} else {
     $twilioSignature = $_SERVER['HTTP_X_TWILIO_SIGNATURE'] ?? '';
 
     // Build the canonical URL exactly as Twilio sees it

@@ -249,5 +249,6 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
             .catch(() => {});
     }
     </script>
+    <script src="assets/js/cookie_consent.js"></script>
 </body>
 </html>

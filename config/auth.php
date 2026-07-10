@@ -34,6 +34,12 @@ function initTenantSession(): void
     }
 
     session_name(TENANT_SESSION_NAME);
+    // After switching from a previously-active session (e.g. the admin session
+    // opened by bootstrap), PHP keeps the old session id; session_start() would
+    // then reload the WRONG session. Bind the id to this portal's own cookie.
+    if (!empty($_COOKIE[TENANT_SESSION_NAME])) {
+        session_id($_COOKIE[TENANT_SESSION_NAME]);
+    }
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',

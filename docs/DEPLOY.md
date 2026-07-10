@@ -50,10 +50,10 @@ FORCE_HTTPS=true
 DB_HOST=k6ctgb6t5pco3p4qabrgl8h3   # Coolify internal DB hostname
 DB_PORT=3306
 DB_NAME=default                     # ⚠️ Coolify names DB "default"
-DB_USER=root
-DB_PASS=<coolify-generated>
+DB_USER=gestionale_app             # least-privilege user (database/create_app_user.sql) — NOT root
+DB_PASS=<strong-password>
 
-SESSION_NAME=gi_session
+SESSION_NAME=gestionale_session    # canonical name (matches code default + all env templates)
 CRON_SECRET=<change-me>             # ⚠️ Must change from placeholder
 
 AGENCY_NAME=Anije Immobiliare

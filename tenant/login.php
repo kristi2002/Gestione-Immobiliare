@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/login_throttle.php';
 initTenantSession();
 
 if (isTenantLoggedIn()) {
@@ -9,13 +10,19 @@ if (isTenantLoggedIn()) {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $pass  = $_POST['password'] ?? '';
-    if ($email && $pass && attemptTenantLogin($email, $pass)) {
-        header('Location: index.php');
-        exit;
+    if (isLoginLocked()) {
+        $error = loginLockoutMessage();
+    } else {
+        $email = trim($_POST['email'] ?? '');
+        $pass  = $_POST['password'] ?? '';
+        if ($email && $pass && attemptTenantLogin($email, $pass)) {
+            recordLoginAttempt(true);
+            header('Location: index.php');
+            exit;
+        }
+        recordLoginAttempt(false);
+        $error = 'Credenziali non valide.';
     }
-    $error = 'Credenziali non valide.';
 }
 ?>
 <!DOCTYPE html>

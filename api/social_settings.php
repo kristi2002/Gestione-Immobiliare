@@ -11,6 +11,9 @@ require_once __DIR__ . '/../config/meta.php';
 
 apiHandleOptions();
 
+// Social/Meta configuration is admin-and-above only (never agent/readonly).
+requireRole('super_admin', 'admin');
+
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];

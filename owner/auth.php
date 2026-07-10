@@ -19,6 +19,12 @@ function initOwnerSession(): void
     }
 
     session_name(OWNER_SESSION_NAME);
+    // Bind the id to the owner cookie so switching away from a previously-active
+    // session (the admin session opened by bootstrap) still loads the owner
+    // session rather than reusing the prior session id.
+    if (!empty($_COOKIE[OWNER_SESSION_NAME])) {
+        session_id($_COOKIE[OWNER_SESSION_NAME]);
+    }
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',

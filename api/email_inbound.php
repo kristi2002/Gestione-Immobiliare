@@ -19,7 +19,17 @@ $timestamp  = $_POST['timestamp'] ?? '';
 $token      = $_POST['token']     ?? '';
 $signature  = $_POST['signature'] ?? '';
 
-if ($signingKey !== '') {
+if ($signingKey === '') {
+    // FAIL CLOSED in production: without the signing key we cannot verify Mailgun's
+    // signature, so a forged inbound email must be rejected. Non-production skips.
+    $isProd = strtolower((string) env('APP_ENV', 'production')) === 'production';
+    if ($isProd) {
+        error_log('[email_inbound] REJECTED: no mailgun_webhook_key configured in production — refusing unverified request.');
+        http_response_code(503);
+        exit('Webhook not configured');
+    }
+    error_log('[email_inbound] WARNING: no mailgun_webhook_key — skipping signature check (non-production only).');
+} else {
     $expectedSig = hash_hmac('sha256', $timestamp . $token, $signingKey);
     if (!hash_equals($expectedSig, $signature)) {
         http_response_code(403);

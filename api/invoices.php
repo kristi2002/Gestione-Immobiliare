@@ -97,8 +97,8 @@ function getInvoice(PDO $db, int $id): void
 function createInvoice(PDO $db): void
 {
     $validated = validateInvoiceInput(apiGetJsonBody());
-    $validated['invoice_number'] = nextInvoiceNumber($db, (int) substr($validated['issue_date'], 0, 4));
-    $validated['created_by']     = getCurrentAdminId() ?: null;
+    $validated['created_by'] = getCurrentAdminId() ?: null;
+    $year = (int) substr($validated['issue_date'], 0, 4);
 
     $stmt = $db->prepare(
         "INSERT INTO invoices
@@ -108,7 +108,24 @@ function createInvoice(PDO $db): void
             (:invoice_number, :client_id, :lead_id, :description, :amount, :vat_rate,
              :status, :issue_date, :due_date, :paid_date, :notes, :created_by)"
     );
-    $stmt->execute($validated);
+
+    // Retry to survive a race on the invoice number. The UNIQUE index on
+    // invoice_number (see migration phase29) makes a colliding INSERT fail with
+    // SQLSTATE 23000; we then recompute the next number and try again.
+    for ($attempt = 0; ; $attempt++) {
+        $validated['invoice_number'] = nextInvoiceNumber($db, $year);
+        try {
+            $stmt->execute($validated);
+            break;
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000' && $attempt < 5) {
+                usleep(10000);
+                continue;
+            }
+            throw $e;
+        }
+    }
+
     getInvoice($db, (int) $db->lastInsertId());
 }
 
@@ -142,9 +159,17 @@ function deleteInvoice(PDO $db, int $id): void
 
 function nextInvoiceNumber(PDO $db, int $year): string
 {
-    $stmt = $db->prepare("SELECT COUNT(*) + 1 FROM invoices WHERE YEAR(issue_date) = :year");
-    $stmt->execute(['year' => $year]);
-    $seq = (int) $stmt->fetchColumn();
+    // Derive the next sequence from the HIGHEST existing number for the year,
+    // not COUNT(*). COUNT(*) reuses a number after a draft is deleted, which would
+    // produce a duplicate invoice number — illegal for Italian invoicing, which
+    // requires unique, non-reused, sequential numbering.
+    $stmt = $db->prepare(
+        "SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(invoice_number, '-', -1) AS UNSIGNED)), 0)
+           FROM invoices
+          WHERE invoice_number LIKE :prefix"
+    );
+    $stmt->execute(['prefix' => 'FAT-' . $year . '-%']);
+    $seq = (int) $stmt->fetchColumn() + 1;
     return sprintf('FAT-%d-%04d', $year, $seq);
 }
 

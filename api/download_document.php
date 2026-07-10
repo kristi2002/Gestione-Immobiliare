@@ -27,9 +27,11 @@ $ownerClientId  = 0;
 if (isLoggedIn()) {
     $isAdmin = true;
 } else {
-    // Tenant session
+    // Tenant session. Bind the id to the tenant cookie so switching away from the
+    // admin session opened by bootstrap loads the correct session (not the old id).
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     session_name(TENANT_SESSION_NAME);
+    if (!empty($_COOKIE[TENANT_SESSION_NAME])) session_id($_COOKIE[TENANT_SESSION_NAME]);
     session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
     @session_start();
     if (isTenantLoggedIn()) {
@@ -39,6 +41,7 @@ if (isLoggedIn()) {
         session_write_close();
         // Owner session
         session_name('gestionale_owner_session');
+        if (!empty($_COOKIE['gestionale_owner_session'])) session_id($_COOKIE['gestionale_owner_session']);
         @session_start();
         if (!empty($_SESSION['owner_client_id'])) {
             $isOwnerPortal = true;
@@ -113,6 +116,16 @@ try {
     if (!file_exists($fullPath)) {
         http_response_code(404);
         exit('File non trovato sul server.');
+    }
+
+    // GDPR data-access audit: record who downloaded which document.
+    require_once __DIR__ . '/../config/gdpr.php';
+    if ($isAdmin) {
+        logDataAccessAdmin('download', null, null, 'document', $id, (string) $doc['original_name']);
+    } else {
+        $actorType = $isTenantPortal ? 'tenant' : 'owner';
+        $actorId   = $isTenantPortal ? $tenantId : $ownerClientId;
+        logDataAccess('download', null, null, $actorType, $actorId, null, 'document', $id, (string) $doc['original_name']);
     }
 
     $mime     = $doc['mime_type'] ?: 'application/octet-stream';

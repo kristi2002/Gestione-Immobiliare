@@ -1,8 +1,15 @@
 # Guida alla messa in produzione — Gestionale Immobiliare
 
+> ⚠️ **AGGIORNAMENTO 2026-07-10.** Molti punti P1/P2 qui elencati come da fare (CSRF,
+> rate limit, firma webhook, cron, `uploads/` pubblico, `DB_USER=root`) sono stati
+> **risolti e verificati con evidenze**. Fonti autorevoli aggiornate:
+> **`docs/VERIFICATION_REPORT.md`** (stato attuale + test), **`docs/CHANGES_2026-07.md`**
+> (tutte le modifiche), **`docs/DEPLOYMENT_PLAN.md`** (log per fasi),
+> **`docs/GDPR.md`** (conformità). Considerare le sezioni seguenti come storiche.
+
 Documento di riferimento per capire **cosa è già pronto**, **cosa manca** e **come deployare** l'applicazione in un ambiente reale (agenzia immobiliare).
 
-**Ultimo aggiornamento:** giugno 2026  
+**Ultimo aggiornamento:** giugno 2026 (superato il 2026-07-10 — vedi banner sopra)  
 **Stack:** PHP 8.3 + MySQL 8 + Apache — Hetzner VPS + Coolify + Traefik  
 **URL live:** https://testdemo.it ✅
 

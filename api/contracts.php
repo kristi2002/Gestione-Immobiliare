@@ -283,32 +283,72 @@ function generatePayments(PDO $db, int $id): void
     if (!$contract['end_date'])
         apiError('Il contratto non ha una data di fine.');
 
-    $existStmt = $db->prepare("SELECT COUNT(*) FROM payments WHERE contract_id = :cid");
-    $existStmt->execute(['cid' => $id]);
-    if ((int) $existStmt->fetchColumn() > 0) {
-        apiError('Esiste già uno scadenzario per questo contratto. Elimina i pagamenti esistenti prima di rigenerarlo.');
-    }
+    // Run the whole generation inside a transaction and lock the contract row so
+    // two concurrent "genera scadenzario" requests can't both pass the guard and
+    // create a duplicate schedule.
+    $db->beginTransaction();
+    try {
+        // Re-read + lock the contract row.
+        $lock = $db->prepare("SELECT id FROM contracts WHERE id = :id FOR UPDATE");
+        $lock->execute(['id' => $id]);
 
-    $start   = new DateTime($contract['start_date']);
-    $end     = new DateTime($contract['end_date']);
-    $current = clone $start;
+        $existStmt = $db->prepare("SELECT COUNT(*) FROM payments WHERE contract_id = :cid");
+        $existStmt->execute(['cid' => $id]);
+        if ((int) $existStmt->fetchColumn() > 0) {
+            $db->rollBack();
+            apiError('Esiste già uno scadenzario per questo contratto. Elimina i pagamenti esistenti prima di rigenerarlo.');
+        }
 
-    $insert = $db->prepare(
-        "INSERT INTO payments (contract_id, tenant_id, property_id, amount, due_date, status)
-         VALUES (:contract_id, :tenant_id, :property_id, :amount, :due_date, 'pending')"
-    );
+        $start = new DateTime($contract['start_date']);
+        $end   = new DateTime($contract['end_date']);
+        // Anchor on the lease start day-of-month; clamp to each month's length so
+        // an end-of-month start (e.g. the 31st) does NOT roll over into the next
+        // month. `DateTime::modify('+1 month')` overflows (Jan 31 -> Mar 3), which
+        // previously skipped/shifted months — this computes each due date directly.
+        $anchorDay  = (int) $start->format('j');
+        $monthStart = (clone $start)->modify('first day of this month');
 
-    $count = 0;
-    while ($current <= $end) {
-        $insert->execute([
-            'contract_id' => $id,
-            'tenant_id'   => $contract['tenant_id'],
-            'property_id' => $contract['property_id'],
-            'amount'      => $contract['monthly_rent'],
-            'due_date'    => $current->format('Y-m-d'),
-        ]);
-        $count++;
-        $current->modify('+1 month');
+        $insert = $db->prepare(
+            "INSERT INTO payments (contract_id, tenant_id, property_id, amount, due_date, status)
+             VALUES (:contract_id, :tenant_id, :property_id, :amount, :due_date, 'pending')"
+        );
+
+        $count = 0;
+        for ($i = 0; ; $i++) {
+            $month       = (clone $monthStart)->modify("+$i month");
+            $daysInMonth = (int) $month->format('t');
+            $day         = min($anchorDay, $daysInMonth);
+            // '!Y-m-d' resets the time to 00:00:00 (createFromFormat otherwise
+            // inherits the current time-of-day, which would push an end-date match
+            // past `end` and drop the final payment).
+            $due         = DateTime::createFromFormat('!Y-m-d', $month->format('Y-m-') . sprintf('%02d', $day));
+
+            if ($due < $start || $due > $end) {
+                // Before the lease start (only possible at i=0 if start day was clamped
+                // upward, which cannot happen) or past the end — stop.
+                if ($due > $end) break;
+                continue;
+            }
+
+            $insert->execute([
+                'contract_id' => $id,
+                'tenant_id'   => $contract['tenant_id'],
+                'property_id' => $contract['property_id'],
+                'amount'      => $contract['monthly_rent'],
+                'due_date'    => $due->format('Y-m-d'),
+            ]);
+            $count++;
+
+            // Safety valve: a lease longer than 50 years is certainly bad data.
+            if ($i > 600) break;
+        }
+
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
     }
 
     logActivity('create', 'contract', $id, "Scadenzario generato: $count pagamenti per contratto #$id");

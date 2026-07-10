@@ -23,12 +23,14 @@ function checkRateLimit(
     string $endpoint,
     int    $maxRequests = 30,
     int    $windowSecs  = 60,
-    bool   $adminBypass = true
+    bool   $adminBypass = false
 ): void {
-    // Super-admins can be exempted
-    if ($adminBypass && function_exists('getCurrentUser')) {
-        $user = getCurrentUser();
-        if (in_array($user['role'] ?? '', ['admin', 'super_admin'], true)) {
+    // Optional admin/super_admin exemption (OFF by default so cost-sensitive
+    // endpoints such as whatsapp_send / stripe_checkout stay limited for everyone).
+    // NOTE: previously this called getCurrentUser(), which does not exist, so the
+    // bypass never fired and per-user bucketing silently degraded to per-IP.
+    if ($adminBypass && function_exists('getCurrentRole')) {
+        if (in_array(getCurrentRole(), ['admin', 'super_admin'], true)) {
             return;
         }
     }
@@ -132,12 +134,12 @@ function getRateLimitIp(): string
     return '0.0.0.0';
 }
 
-/** Return the logged-in user ID or NULL for unauthenticated callers. */
+/** Return the logged-in admin user ID or NULL for unauthenticated callers. */
 function getRateLimitUserId(): ?int
 {
-    if (function_exists('getCurrentUser')) {
-        $u = getCurrentUser();
-        return isset($u['id']) ? (int) $u['id'] : null;
+    if (function_exists('getCurrentAdminId')) {
+        $id = (int) getCurrentAdminId();
+        return $id > 0 ? $id : null;
     }
     return null;
 }

@@ -28,16 +28,16 @@ try {
         if (isset($_GET['public'])) {
             apiSuccess(getPublicBranding());
         }
-        requireRole('super_admin', 'admin');
+        requireRole('super_admin');
         $payload = publicSettingsPayload();
         $payload['twofa'] = twoFaStatus($db);
         apiSuccess($payload);
     } elseif ($method === 'PUT') {
-        requireRole('super_admin', 'admin');
+        requireRole('super_admin');
         requireWriteAccess();
         updateSettings();
     } elseif ($method === 'POST' && isset($_GET['test_email'])) {
-        requireRole('super_admin', 'admin');
+        requireRole('super_admin');
         requireWriteAccess();
         testEmail();
     } else {

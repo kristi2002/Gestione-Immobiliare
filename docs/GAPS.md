@@ -1,9 +1,18 @@
 # Known Gaps & Issues — Gestione Immobiliare
 
+> ⚠️ **STATUS UPDATE 2026-07-10 — read this first.**
+> This file's per-item "✅ Fixed" claims predate verification and several were
+> **not actually true** (webhooks accepted forged requests without a secret; the
+> owner/tenant portals could not load their sessions; `uploads/` served documents
+> and executed PHP on the real image). Those and more are now **fixed and verified
+> with evidence** — see **`docs/VERIFICATION_REPORT.md`** (authoritative current
+> state), **`docs/CHANGES_2026-07.md`** (everything changed), and
+> **`docs/DEPLOYMENT_PLAN.md`** (phase log). Treat the sections below as historical.
+
 This document catalogs known bugs, missing features, and security gaps.  
 Each item includes severity, affected code, recommended fix, and implementation status.
 
-> **Last updated:** June 2026
+> **Last updated:** June 2026 (superseded 2026-07-10 — see banner above)
 
 ---
 
