@@ -183,9 +183,59 @@
         updateVisibility();
     }
 
+    // On scroll-down, the filter bar becomes ONE with the top bar: it pins over
+    // the topbar (fixed) instead of sitting under it — matching the property-
+    // profile sub-nav. A spacer holds its place so content doesn't jump.
+    function setupStickyOverlay(bar) {
+        if (bar._stickyOverlay) return;
+        // Skip toolbars nested in their own scroll context (modals, side panels).
+        if (bar.closest('.modal, .modal-overlay, .chat-sidebar, [data-no-sticky]')) return;
+        const topbar = document.querySelector('.topbar');
+        const scroller = document.getElementById('app-content');
+        if (!topbar || !scroller) return;
+        bar._stickyOverlay = true;
+
+        const spacer = document.createElement('div');
+        spacer.className = 'toolbar-spacer';
+        spacer.hidden = true;
+        bar.parentNode.insertBefore(spacer, bar);
+
+        let pinned = false;
+        const position = () => {
+            const r = topbar.getBoundingClientRect();
+            bar.style.left = r.left + 'px';
+            bar.style.width = r.width + 'px';
+        };
+        const onScroll = () => {
+            if (!document.body.contains(bar)) { scroller.removeEventListener('scroll', onScroll); return; }
+            const th = topbar.getBoundingClientRect().bottom;
+            const ref = pinned ? spacer.getBoundingClientRect().top : bar.getBoundingClientRect().top;
+            if (!pinned && ref <= th) {
+                const mb = parseFloat(getComputedStyle(bar).marginBottom) || 0;
+                spacer.style.height = (bar.offsetHeight + mb) + 'px';
+                spacer.hidden = false;
+                bar.classList.add('toolbar--pinned');
+                position();
+                pinned = true;
+            } else if (pinned && ref > th) {
+                bar.classList.remove('toolbar--pinned');
+                spacer.hidden = true;
+                bar.style.left = ''; bar.style.width = '';
+                pinned = false;
+            } else if (pinned) {
+                position();
+            }
+        };
+        scroller.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', () => { if (pinned) position(); });
+        onScroll();
+    }
+
     window.FilterBar = {
         setupIn(root) {
-            (root || document).querySelectorAll(BAR_SELECTORS).forEach(setupBar);
+            const scope = root || document;
+            scope.querySelectorAll(BAR_SELECTORS).forEach(setupBar);
+            scope.querySelectorAll('.toolbar').forEach(setupStickyOverlay);
         },
     };
 })();
