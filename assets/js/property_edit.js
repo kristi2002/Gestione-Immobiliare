@@ -108,6 +108,7 @@
         setVal('pe-condo-fees', p.condo_fees);
         setVal('pe-latitude', p.latitude);
         setVal('pe-longitude', p.longitude);
+        if (p.latitude != null && p.longitude != null) setMapPoint(p.latitude, p.longitude);
         setVal('pe-geo-confidence-value', p.geo_confidence);
         setVal('pe-cat-comune', p.cadastral_comune);
         setVal('pe-cat-category', p.cadastral_category);
@@ -251,6 +252,7 @@
             $('pe-latitude').value = hit.lat;
             $('pe-longitude').value = hit.lng;
             $('pe-geo-confidence-value').value = hit.confidence || '';
+            setMapPoint(hit.lat, hit.lng);
             if (hit.suggested_province && !prop.province) {
                 $('pe-province').value = hit.suggested_province.replace(/^Provincia di\s+/i, '').slice(0, 10);
             }
@@ -277,12 +279,103 @@
         } catch (err) { showAlert(err.message, 'error'); }
     }
 
+    // ── Live address autocomplete (Google-Maps style) ────────────────────────
+    let peMap = null, peMarker = null;
+
+    function setMapPoint(lat, lng) {
+        const el = $('pe-map');
+        if (!el || typeof L === 'undefined') return;
+        lat = parseFloat(lat); lng = parseFloat(lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+        el.hidden = false;
+        if (!peMap) {
+            peMap = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(peMap);
+            peMarker = L.marker([lat, lng], { draggable: true }).addTo(peMap);
+            peMarker.on('dragend', () => {
+                const p = peMarker.getLatLng();
+                setVal('pe-latitude', p.lat.toFixed(7));
+                setVal('pe-longitude', p.lng.toFixed(7));
+                setVal('pe-geo-confidence-value', 'exact');
+            });
+        } else {
+            peMarker.setLatLng([lat, lng]);
+            peMap.setView([lat, lng], 16);
+        }
+        setTimeout(() => peMap && peMap.invalidateSize(), 60);
+    }
+
+    function setupAddressAutocomplete() {
+        const input = $('pe-address');
+        const box = $('pe-addr-suggestions');
+        if (!input || !box) return;
+        const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+        let timer = null, items = [], activeIdx = -1, lastQ = '';
+
+        const close = () => { box.hidden = true; box.innerHTML = ''; activeIdx = -1; };
+
+        const render = () => {
+            if (!items.length) { close(); return; }
+            box.innerHTML = items.map((c, i) =>
+                `<button type="button" class="addr-sug${i === activeIdx ? ' is-active' : ''}" data-i="${i}">
+                    <span class="addr-sug__line">${esc(c.address)}</span>
+                    <span class="addr-sug__meta">${esc(c.city)}${c.cap ? ' · ' + esc(c.cap) : ''}${c.province ? ' (' + esc(c.province) + ')' : ''}</span>
+                 </button>`).join('');
+            box.hidden = false;
+            box.querySelectorAll('.addr-sug').forEach(b => b.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // select before the input blurs
+                choose(items[parseInt(b.dataset.i, 10)]);
+            }));
+        };
+
+        const choose = (c) => {
+            input.value = c.address;
+            setVal('pe-city', c.city);
+            setVal('pe-cap', c.cap);
+            if (c.province) setVal('pe-province', c.province);
+            if (c.lat != null && c.lng != null) {
+                setVal('pe-latitude', c.lat);
+                setVal('pe-longitude', c.lng);
+                setVal('pe-geo-confidence-value', c.confidence || 'exact');
+                setMapPoint(c.lat, c.lng);
+            }
+            close();
+        };
+
+        const search = async (q) => {
+            try {
+                const res = await fetch('api/geocode_autocomplete.php?q=' + encodeURIComponent(q));
+                const json = await res.json();
+                if (!json.success) return;
+                items = json.data.candidates || [];
+                activeIdx = -1;
+                render();
+            } catch (e) { /* fail soft — the "Trova" button still works */ }
+        };
+
+        input.addEventListener('input', () => {
+            const q = input.value.trim();
+            clearTimeout(timer);
+            if (q.length < 4) { close(); return; }
+            timer = setTimeout(() => { if (q !== lastQ) { lastQ = q; search(q); } }, 300);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (box.hidden) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, items.length - 1); render(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
+            else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); choose(items[activeIdx]); }
+            else if (e.key === 'Escape') { close(); }
+        });
+        input.addEventListener('blur', () => setTimeout(close, 150));
+    }
+
     async function init() {
         $('pe-back').addEventListener('click', goBack);
         $('pe-cancel').addEventListener('click', goBack);
         $('pe-form').addEventListener('submit', save);
         $('pe-geocode').addEventListener('click', geocode);
         $('pe-mandato').addEventListener('click', generateMandato);
+        setupAddressAutocomplete();
         const aiBtn = $('pe-ai-describe');
         if (aiBtn) aiBtn.addEventListener('click', aiDescribe);
 

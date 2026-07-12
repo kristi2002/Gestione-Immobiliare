@@ -242,15 +242,26 @@
             if (window.App) window.App.navigateTo('property_edit', { propertyId });
         });
 
-        // Show the bar once the gallery is scrolled past; highlight the active section.
-        const gallery = document.getElementById('pp-gallery');
+        // The bar REPLACES the app top bar on scroll-down: fixed, overlaying the
+        // topbar's exact position, shown once the title has scrolled up under it.
+        const topbar = document.querySelector('.topbar');
+        const anchor = document.getElementById('pp-title-section') || document.getElementById('pp-gallery');
+        const positionBar = () => {
+            if (!topbar) return;
+            const r = topbar.getBoundingClientRect();
+            bar.style.left = r.left + 'px';
+            bar.style.width = r.width + 'px';
+        };
         const onScroll = () => {
-            const threshold = gallery ? gallery.getBoundingClientRect().bottom : 200;
-            bar.hidden = threshold > 90;
+            const tbBottom = topbar ? topbar.getBoundingClientRect().bottom : 56;
+            const anchorBottom = anchor ? anchor.getBoundingClientRect().bottom : 200;
+            const show = anchorBottom < tbBottom;   // title scrolled up behind the top bar
+            bar.hidden = !show;
+            if (show) positionBar();
             let active = links[0] && links[0][0];
             for (const [id] of links) {
                 const el = document.getElementById(id);
-                if (el && el.getBoundingClientRect().top < 160) active = id;
+                if (el && el.getBoundingClientRect().top < (tbBottom + 90)) active = id;
             }
             linksEl && linksEl.querySelectorAll('a').forEach(a =>
                 a.classList.toggle('is-active', a.dataset.sec === active));
@@ -260,6 +271,9 @@
         (bar._scrollers || []).forEach(s => s.removeEventListener('scroll', bar._onScroll));
         bar._onScroll = onScroll; bar._scrollers = scrollers;
         scrollers.forEach(s => s.addEventListener('scroll', onScroll, { passive: true }));
+        if (bar._onResize) window.removeEventListener('resize', bar._onResize);
+        bar._onResize = () => { if (!bar.hidden) positionBar(); };
+        window.addEventListener('resize', bar._onResize);
         onScroll();
     }
 

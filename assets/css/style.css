@@ -874,23 +874,26 @@ details.nav-group[open] > summary .nav-group-arrow {
 /* --------------------------------------------------------------------------
    Property profile — portal-style sections + sticky sub-nav (à la immobiliare.it)
    -------------------------------------------------------------------------- */
+/* Fixed bar that OVERLAYS the app top bar on scroll-down (JS sets left/width to
+   match the topbar exactly), so it reads as a replacement, not a second bar. */
 .pp-subnav {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 40;
+    left: 0;
+    z-index: 60;               /* above .topbar (z-index 50) */
     display: flex;
     align-items: center;
     gap: 18px;
-    padding: 10px 16px;
-    margin-bottom: 12px;
+    height: var(--topbar-height);
+    padding: 0 24px;
+    margin: 0;
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-md, 0 4px 14px rgba(0,0,0,.08));
-    animation: pp-subnav-in .18s ease-out;
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow, 0 1px 10px rgba(15,23,42,.10));
+    animation: pp-subnav-in .16s ease-out;
 }
 .pp-subnav[hidden] { display: none; }
-@keyframes pp-subnav-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pp-subnav-in { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: translateY(0); } }
 .pp-subnav__info { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; }
 .pp-subnav__title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 .pp-subnav__price { color: var(--color-primary); font-weight: 700; font-size: 13px; }
@@ -928,6 +931,29 @@ details.nav-group[open] > summary .nav-group-arrow {
     .pp-subnav__title { max-width: 150px; }
     .pp-subnav__cta { display: none; }
 }
+
+/* --------------------------------------------------------------------------
+   Address autocomplete (type-ahead) + edit-form map preview
+   -------------------------------------------------------------------------- */
+.addr-autocomplete { position: relative; }
+.addr-suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 60;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius); box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,.15));
+    margin-top: 4px; max-height: 320px; overflow-y: auto;
+}
+.addr-suggestions[hidden] { display: none; }
+.addr-sug {
+    display: flex; flex-direction: column; gap: 2px; width: 100%;
+    padding: 9px 12px; border: none; background: none; text-align: left; cursor: pointer;
+    border-bottom: 1px solid var(--color-border); font-family: inherit;
+}
+.addr-sug:last-child { border-bottom: none; }
+.addr-sug:hover, .addr-sug.is-active { background: var(--color-primary-light); }
+.addr-sug__line { font-weight: 600; font-size: 14px; color: var(--color-text); }
+.addr-sug__meta { font-size: 12px; color: var(--color-text-muted, #64748b); }
+.pe-map { height: 240px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin-top: 8px; }
+.pe-map[hidden] { display: none; }
 
 /* Custom dropdown chevron — consistent across browsers and nudged slightly left
    of the native arrow position for tighter alignment in filter bars / forms. */
