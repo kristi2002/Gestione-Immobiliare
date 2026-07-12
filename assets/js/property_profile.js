@@ -4,6 +4,8 @@
     const propertyId = window.App?.viewParams?.propertyId;
     let currentProperty = null;
     let allMedia = [];
+    let mediaPage = 1;
+    const MEDIA_PAGE_SIZE = 12;
     let lightboxIndex = 0;
 
     // ── Bootstrap ────────────────────────────────────────────────────────────
@@ -878,16 +880,28 @@
 
     function renderGalleryGrid(media) {
         const grid = document.getElementById('pp-gallery-grid');
+        const pager = document.getElementById('pp-gallery-pagination');
         if (!media.length) {
             grid.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun file caricato.</p>';
+            if (pager) pager.innerHTML = '';
             return;
         }
-        grid.innerHTML = media.map((m, i) => {
-            const isPhoto = !m.media_type || m.media_type === 'photo' || m.media_type === 'image';
-            const thumb = isPhoto ? `<img src="${esc(m.file_path)}" alt="">` : `<div class="gallery-item-icon"><i data-lucide="file-text"></i></div>`;
+        const isPhotoFn = (m) => !m.media_type || m.media_type === 'photo' || m.media_type === 'image';
+        const photos = media.filter(isPhotoFn); // for lightbox indexing across pages
+
+        const totalPages = Math.ceil(media.length / MEDIA_PAGE_SIZE);
+        if (mediaPage > totalPages) mediaPage = totalPages;
+        if (mediaPage < 1) mediaPage = 1;
+        const start = (mediaPage - 1) * MEDIA_PAGE_SIZE;
+        const pageItems = media.slice(start, start + MEDIA_PAGE_SIZE);
+
+        grid.innerHTML = pageItems.map((m) => {
+            const isPhoto = isPhotoFn(m);
+            const lightIdx = isPhoto ? photos.indexOf(m) : -1; // global photo index
+            const thumb = isPhoto ? `<img src="${esc(m.file_path)}" alt="" loading="lazy">` : `<div class="gallery-item-icon"><i data-lucide="file-text"></i></div>`;
             const coverBadge = m.is_cover ? '<span class="gallery-cover-badge">Copertina</span>' : '';
             return `<div class="gallery-item" data-id="${m.id}">
-                <div class="gallery-item-thumb" data-lightbox="${i}">${thumb}${coverBadge}</div>
+                <div class="gallery-item-thumb"${isPhoto ? ` data-lightbox="${lightIdx}"` : ''}>${thumb}${coverBadge}</div>
                 <div class="gallery-item-info">
                     <span class="gallery-item-name">${esc(m.original_name || m.file_name || '')}</span>
                     <div class="gallery-item-actions">
@@ -897,6 +911,24 @@
                 </div>
             </div>`;
         }).join('');
+
+        // Pagination controls
+        if (pager) {
+            if (totalPages <= 1) {
+                pager.innerHTML = '';
+            } else {
+                pager.innerHTML =
+                    `<button class="btn btn--sm btn--ghost" data-mp="prev" ${mediaPage === 1 ? 'disabled' : ''}>‹ Prec.</button>` +
+                    `<span class="text-muted" style="padding:0 10px;">Pagina ${mediaPage} di ${totalPages} · ${media.length} file</span>` +
+                    `<button class="btn btn--sm btn--ghost" data-mp="next" ${mediaPage === totalPages ? 'disabled' : ''}>Succ. ›</button>`;
+                pager.querySelectorAll('[data-mp]').forEach(b => b.addEventListener('click', () => {
+                    mediaPage += b.dataset.mp === 'next' ? 1 : -1;
+                    renderGalleryGrid(allMedia);
+                    document.getElementById('pp-gallery-grid')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }));
+            }
+        }
+        if (window.lucide) window.lucide.createIcons();
 
         grid.querySelectorAll('[data-lightbox]').forEach(el => {
             el.addEventListener('click', e => {

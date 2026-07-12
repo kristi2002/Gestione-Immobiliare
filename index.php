@@ -217,6 +217,10 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                 <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Apri/chiudi menu"><span></span><span></span><span></span></button>
                 <h1 class="page-title" id="page-title">Dashboard</h1>
                 <div class="topbar-actions">
+                    <a href="view.php?name=communications" class="topbar-link topbar-icon-btn" data-view="communications" title="Messaggi" aria-label="Messaggi"><i data-lucide="mail"></i></a>
+                    <?php if (canAccessView('whatsapp_inbox')): ?>
+                    <a href="view.php?name=whatsapp_inbox" class="topbar-link topbar-icon-btn" data-view="whatsapp_inbox" title="WhatsApp" aria-label="WhatsApp"><i data-lucide="message-circle"></i></a>
+                    <?php endif; ?>
                     <div class="notif-wrapper">
                         <button class="notif-bell" id="notif-bell" aria-label="Notifiche" title="Notifiche">
                             🔔
@@ -229,6 +233,17 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                             </div>
                         </div>
                     </div>
+                    <?php if (canAccessView('agents')): ?>
+                    <a href="view.php?name=agents" class="topbar-link topbar-user" data-view="agents" title="Profilo agente">
+                        <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                        <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
+                    </a>
+                    <?php else: ?>
+                    <span class="topbar-user" title="<?= htmlspecialchars($username) ?>">
+                        <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                        <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
+                    </span>
+                    <?php endif; ?>
                 </div>
             </header>
             <main id="app-content" class="app-content">

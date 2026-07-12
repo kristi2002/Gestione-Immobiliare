@@ -4,6 +4,18 @@
     const API = 'api/suppliers.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+
+    function copyToClipboard(text, btn) {
+        const done = () => {
+            if (!btn) return;
+            const old = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check"></i>';
+            if (window.lucide) window.lucide.createIcons();
+            setTimeout(() => { btn.innerHTML = old; if (window.lucide) window.lucide.createIcons(); }, 1200);
+        };
+        if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done).catch(done); }
+        else { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (_) {} t.remove(); done(); }
+    }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
     let currentPage    = 1;
@@ -113,22 +125,37 @@
         }
 
         els.grid.innerHTML = items.map(s => `
-            <div class="card" style="display:flex;flex-direction:column;gap:0.5rem;padding:1.25rem;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-                    <div style="font-weight:600;font-size:1.05rem;">${esc(s.name)}</div>
-                    <span class="badge" style="flex-shrink:0;">${esc(s.category || '—')}</span>
+            <div class="entity-card supplier-card">
+                <div class="entity-card__header">
+                    <div class="entity-card__avatar"><i data-lucide="truck"></i></div>
+                    <div class="entity-card__title-group">
+                        <div class="entity-card__name">${esc(s.name)}</div>
+                        <div class="supplier-card__sub">
+                            ${s.category ? `<span class="badge">${esc(s.category)}</span>` : ''}
+                            ${s.rating ? `<span class="supplier-card__rating">${starsHtml(s.rating)}</span>` : ''}
+                        </div>
+                    </div>
                 </div>
-                <div style="font-size:1.1rem;">${starsHtml(s.rating)}</div>
-                ${s.phone ? `<div class="text-muted" style="font-size:0.9rem;"><i data-lucide="phone"></i> ${esc(s.phone)}</div>` : ''}
-                ${s.email ? `<div class="text-muted" style="font-size:0.9rem;"><i data-lucide="mail"></i> <a href="mailto:${esc(s.email)}">${esc(s.email)}</a></div>` : ''}
-                ${s.address ? `<div class="text-muted" style="font-size:0.85rem;"><i data-lucide="map-pin"></i> ${esc(s.address)}</div>` : ''}
-                ${s.notes ? `<div style="font-size:0.85rem;color:var(--color-text-muted,#888);margin-top:0.25rem;">${esc(s.notes)}</div>` : ''}
-                <div style="display:flex;gap:0.5rem;margin-top:auto;padding-top:0.5rem;border-top:1px solid var(--color-border,#eee);">
-                    <button class="btn btn--sm btn--ghost btn-s-edit" data-id="${s.id}" title="Modifica"><i data-lucide="pencil"></i> Modifica</button>
-                    <button class="btn btn--sm btn--ghost btn-s-del" data-id="${s.id}" data-name="${esc(s.name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                <div class="entity-card__body">
+                    ${s.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="phone"></i></span><span style="flex:1;min-width:0">${esc(s.phone)}</span><button class="btn--copy btn-copy" data-copy="${esc(s.phone)}" title="Copia numero"><i data-lucide="copy"></i></button></div>` : ''}
+                    ${s.email ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="mail"></i></span><a href="mailto:${esc(s.email)}" style="flex:1;min-width:0">${esc(s.email)}</a><button class="btn--copy btn-copy" data-copy="${esc(s.email)}" title="Copia email"><i data-lucide="copy"></i></button></div>` : ''}
+                    ${s.address ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="map-pin"></i></span><span style="flex:1;min-width:0">${esc(s.address)}</span></div>` : ''}
+                    ${s.notes ? `<p class="entity-card__desc">${esc(s.notes)}</p>` : ''}
+                    ${!s.phone && !s.email && !s.address ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
+                </div>
+                <div class="entity-card__footer">
+                    <div class="entity-card__actions" style="margin-left:auto;">
+                        ${s.phone && window.WA ? window.WA.buttonHtml(s.phone) : ''}
+                        <button class="btn btn--sm btn--ghost btn-s-edit" data-id="${s.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-s-del" data-id="${s.id}" data-name="${esc(s.name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                    </div>
                 </div>
             </div>
         `).join('');
+
+        els.grid.querySelectorAll('.btn-copy').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(btn.dataset.copy, btn); });
+        });
 
         els.grid.querySelectorAll('.btn-s-edit').forEach(btn => {
             btn.addEventListener('click', async () => {

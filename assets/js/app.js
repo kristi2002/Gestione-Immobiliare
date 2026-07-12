@@ -129,6 +129,7 @@
 
             this.bindNavigation();
             this.bindContentNavigation();
+            this.bindTopbarLinks();
             this.bindSidebarToggle();
 
             // Render Lucide icons in the static chrome (sidebar, topbar) and keep
@@ -193,6 +194,20 @@
                 const navLink = document.querySelector(`.nav-link[data-view="${view}"]`);
                 if (navLink) this.setActiveNav(navLink);
                 this.loadView(link.getAttribute('href'), view);
+            });
+        },
+
+        /** Topbar quick links (messages / whatsapp / agent profile) — SPA navigation */
+        bindTopbarLinks() {
+            document.querySelectorAll('.topbar-link[data-view]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const view = link.dataset.view;
+                    if (!view) return;
+                    const navLink = document.querySelector(`.nav-link[data-view="${view}"]`);
+                    if (navLink) this.setActiveNav(navLink);
+                    this.navigateTo(view);
+                });
             });
         },
 
