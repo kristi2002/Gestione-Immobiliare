@@ -871,6 +871,64 @@ details.nav-group[open] > summary .nav-group-arrow {
     }
 }
 
+/* --------------------------------------------------------------------------
+   Property profile — portal-style sections + sticky sub-nav (à la immobiliare.it)
+   -------------------------------------------------------------------------- */
+.pp-subnav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md, 0 4px 14px rgba(0,0,0,.08));
+    animation: pp-subnav-in .18s ease-out;
+}
+.pp-subnav[hidden] { display: none; }
+@keyframes pp-subnav-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.pp-subnav__info { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; }
+.pp-subnav__title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.pp-subnav__price { color: var(--color-primary); font-weight: 700; font-size: 13px; }
+.pp-subnav__links { display: flex; gap: 4px; flex: 1 1 auto; overflow-x: auto; }
+.pp-subnav__links a {
+    padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    color: var(--color-text-muted, #64748b); text-decoration: none; white-space: nowrap;
+    transition: background var(--transition), color var(--transition);
+}
+.pp-subnav__links a:hover { background: var(--color-primary-light); color: var(--color-primary-dark, var(--color-primary)); }
+.pp-subnav__links a.is-active { background: var(--color-primary); color: #fff; }
+.pp-subnav__cta { flex-shrink: 0; }
+
+.pp-section {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    scroll-margin-top: 70px; /* land below the sticky sub-nav on anchor jump */
+}
+.pp-section .pp-section-title { margin: 0 0 12px; font-size: 16px; }
+.pp-kv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px 24px;
+    margin: 0;
+}
+.pp-kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--color-border); }
+.pp-kv dt { color: var(--color-text-muted, #64748b); font-size: 13px; margin: 0; }
+.pp-kv dd { margin: 0; font-weight: 600; font-size: 13px; text-align: right; }
+.pp-map { height: 300px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); }
+
+@media (max-width: 640px) {
+    .pp-subnav__title { max-width: 150px; }
+    .pp-subnav__cta { display: none; }
+}
+
 /* Custom dropdown chevron — consistent across browsers and nudged slightly left
    of the native arrow position for tighter alignment in filter bars / forms. */
 .form-select {

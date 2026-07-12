@@ -137,21 +137,150 @@
     // Left column: description + features + internal notes.
     function renderInfoSection(p) {
         const sec = document.getElementById('pp-info-section');
-        const features = (p.additional_features || p.features || '')
-            .split(',').map(f => f.trim()).filter(Boolean);
-        const featuresHtml = features.length
-            ? `<div class="pp-feature-tags">${features.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : '';
+        const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box / Garage', terreno:'Terreno', altro:'Altro' };
+        const STATUS = { available:'Disponibile', rented:'Affittato', sold:'Venduto', archived:'Archiviato' };
+        const eur = (n) => '€ ' + Number(n).toLocaleString('it-IT');
+        const yesno = (v) => v == null || v === '' ? null : (Number(v) ? 'Sì' : 'No');
 
-        const hasBody = p.description || features.length || p.internal_notes || p.notes;
-        sec.innerHTML = `
-        <div class="pp-info-card">
-            <h3 class="pp-section-title">Descrizione</h3>
-            ${p.description ? `<p class="pp-info-description">${esc(p.description)}</p>`
-                            : `<p class="text-muted" style="margin:0 0 8px;">Nessuna descrizione inserita.</p>`}
-            ${featuresHtml ? `<h4 class="pp-section-subtitle">Caratteristiche</h4>${featuresHtml}` : ''}
-            ${(p.internal_notes || p.notes) ? `<p class="pp-info-notes"><strong>Note interne:</strong> ${esc(p.internal_notes || p.notes)}</p>` : ''}
-        </div>`;
+        // key/value rows — only render pairs that have a value
+        const kv = (pairs) => pairs.filter(([, v]) => v != null && v !== '')
+            .map(([k, v]) => `<div class="pp-kv"><dt>${esc(k)}</dt><dd>${esc(String(v))}</dd></div>`).join('');
+
+        // ── Caratteristiche ──────────────────────────────────────────────────
+        const caratteristiche = kv([
+            ['Contratto',        p.price_type === 'affitto' ? 'Affitto' : 'Vendita'],
+            ['Tipologia',        TYPE[p.property_type] || p.property_type],
+            ['Superficie',       p.sqm ? Math.round(p.sqm) + ' m²' : null],
+            ['Locali',           p.locali || p.rooms || null],
+            ['Bagni',            p.bathrooms || null],
+            ['Piano',            p.floor || null],
+            ['Piani edificio',   p.total_floors || null],
+            ['Anno costruzione', p.year_built || null],
+            ['Stato',            p.condition_state || null],
+            ['Classe energetica',p.energy_class || null],
+            ['Riscaldamento',    p.heating || null],
+            ['Ascensore',        yesno(p.elevator)],
+            ['Arredato',         p.furnished || null],
+            ['Disponibilità',    STATUS[p.status] || p.status],
+        ]);
+
+        // ── Dettaglio superficie (light — agency uses commercial m²) ─────────
+        const superficie = kv([
+            ['Superficie commerciale', p.sqm ? Math.round(p.sqm) + ' m²' : null],
+            ['Balconi',   p.balconies || null],
+            ['Terrazzi',  p.terraces || null],
+            ['Giardino',  p.garden || null],
+            ['Posti auto',p.parking_spaces || null],
+        ]);
+
+        // ── Altre caratteristiche (chips) ────────────────────────────────────
+        const chips = [];
+        if (Number(p.elevator)) chips.push('Ascensore');
+        if (p.furnished && p.furnished !== 'no') chips.push('Arredato: ' + p.furnished);
+        if (p.garden && p.garden !== 'no') chips.push('Giardino ' + p.garden);
+        if (p.balconies) chips.push(p.balconies + ' balcon' + (p.balconies == 1 ? 'e' : 'i'));
+        if (p.terraces) chips.push(p.terraces + ' terrazz' + (p.terraces == 1 ? 'o' : 'i'));
+        if (p.parking_spaces) chips.push(p.parking_spaces + ' posto/i auto');
+        if (p.exposure) chips.push('Esposizione ' + p.exposure);
+        (p.additional_features || '').split(',').map(f => f.trim()).filter(Boolean).forEach(f => chips.push(f));
+        const altreHtml = chips.length
+            ? `<div class="pp-feature-tags">${chips.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>`
+            : '<p class="text-muted" style="margin:0;">Nessuna caratteristica aggiuntiva.</p>';
+
+        // ── Informazioni sul prezzo ──────────────────────────────────────────
+        const prezzo = kv([
+            [p.price_type === 'affitto' ? 'Canone' : 'Prezzo', p.price ? eur(p.price) + (p.price_type === 'affitto' ? '/mese' : '') : 'Non indicato'],
+            ['Tipo contratto',       p.price_type === 'affitto' ? 'Locazione' : 'Vendita'],
+            ['Spese condominiali',   p.condo_fees ? eur(p.condo_fees) + '/mese' : null],
+            ['Rendita catastale',    p.cadastral_rendita ? eur(p.cadastral_rendita) : null],
+            ['Riferimento',          p.reference_code || null],
+        ]);
+
+        const section = (id, title, body) => body
+            ? `<section id="${id}" class="pp-section"><h3 class="pp-section-title">${title}</h3>${body}</section>` : '';
+
+        sec.innerHTML =
+            section('pp-sec-caratteristiche', 'Caratteristiche', `<dl class="pp-kv-grid">${caratteristiche}</dl>`) +
+            (superficie ? section('pp-sec-superficie', 'Dettaglio superficie', `<dl class="pp-kv-grid">${superficie}</dl>`) : '') +
+            section('pp-sec-altre', 'Altre caratteristiche', altreHtml) +
+            section('pp-sec-prezzo', 'Informazioni sul prezzo', `<dl class="pp-kv-grid">${prezzo}</dl>`) +
+            section('pp-sec-descrizione', 'Descrizione',
+                (p.description ? `<p class="pp-info-description">${esc(p.description)}</p>` : `<p class="text-muted" style="margin:0;">Nessuna descrizione inserita.</p>`) +
+                ((p.internal_notes || p.notes) ? `<p class="pp-info-notes"><strong>Note interne:</strong> ${esc(p.internal_notes || p.notes)}</p>` : '')) +
+            section('pp-sec-mappa', 'Mappa e zona', `<div id="pp-map" class="pp-map"></div><p class="text-muted" id="pp-map-hint" style="margin:8px 0 0;"></p>`);
+
         sec.hidden = false;
+        setupSubnav(p);
+        initProfileMap(p);
+    }
+
+    // ── Sticky sub-nav (appears on scroll, portal-style) ──────────────────────
+    function setupSubnav(p) {
+        const bar = document.getElementById('pp-subnav');
+        if (!bar) return;
+        const titleEl = document.getElementById('pp-subnav-title');
+        const priceEl = document.getElementById('pp-subnav-price');
+        const linksEl = document.getElementById('pp-subnav-links');
+        if (titleEl) titleEl.textContent = (p.address || 'Immobile') + (p.city ? ', ' + p.city : '');
+        if (priceEl) priceEl.textContent = p.price ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '') : '';
+
+        const links = [
+            ['pp-sec-caratteristiche', 'Caratteristiche'],
+            ['pp-sec-superficie', 'Superficie'],
+            ['pp-sec-prezzo', 'Prezzo'],
+            ['pp-sec-mappa', 'Mappa'],
+        ].filter(([id]) => document.getElementById(id));
+        if (linksEl) {
+            linksEl.innerHTML = links.map(([id, label]) => `<a href="#${id}" data-sec="${id}">${label}</a>`).join('');
+            linksEl.querySelectorAll('a').forEach(a => a.addEventListener('click', (e) => {
+                e.preventDefault();
+                const t = document.getElementById(a.dataset.sec);
+                if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }));
+        }
+        document.getElementById('pp-subnav-edit')?.addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('property_edit', { propertyId });
+        });
+
+        // Show the bar once the gallery is scrolled past; highlight the active section.
+        const gallery = document.getElementById('pp-gallery');
+        const onScroll = () => {
+            const threshold = gallery ? gallery.getBoundingClientRect().bottom : 200;
+            bar.hidden = threshold > 90;
+            let active = links[0] && links[0][0];
+            for (const [id] of links) {
+                const el = document.getElementById(id);
+                if (el && el.getBoundingClientRect().top < 160) active = id;
+            }
+            linksEl && linksEl.querySelectorAll('a').forEach(a =>
+                a.classList.toggle('is-active', a.dataset.sec === active));
+        };
+        // Either #app-content or the window may be the scroll container — listen on both.
+        const scrollers = [document.getElementById('app-content'), window].filter(Boolean);
+        (bar._scrollers || []).forEach(s => s.removeEventListener('scroll', bar._onScroll));
+        bar._onScroll = onScroll; bar._scrollers = scrollers;
+        scrollers.forEach(s => s.addEventListener('scroll', onScroll, { passive: true }));
+        onScroll();
+    }
+
+    // ── Property mini-map ─────────────────────────────────────────────────────
+    function initProfileMap(p) {
+        const el = document.getElementById('pp-map');
+        const hint = document.getElementById('pp-map-hint');
+        if (!el) return;
+        if (typeof L === 'undefined') { if (hint) hint.textContent = 'Mappa non disponibile.'; return; }
+        if (p.latitude == null || p.longitude == null) {
+            el.style.display = 'none';
+            if (hint) hint.textContent = 'Immobile non geolocalizzato. Geocodifica l\'indirizzo dalla scheda di modifica o dalla vista Mappa.';
+            return;
+        }
+        const lat = parseFloat(p.latitude), lng = parseFloat(p.longitude);
+        setTimeout(() => {
+            const map = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+            L.circleMarker([lat, lng], { radius: 10, fillColor: '#2563eb', color: '#fff', weight: 2, fillOpacity: 0.95 }).addTo(map);
+            map.invalidateSize();
+        }, 50);
     }
 
     // Right column (sticky): price, status, owner, quick facts, actions.

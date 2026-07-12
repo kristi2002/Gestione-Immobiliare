@@ -13,6 +13,16 @@
         <div class="pp-title-meta" id="pp-title-meta"></div>
     </div>
 
+    <!-- Sticky sub-nav — appears on scroll (portal-style). Populated by JS. -->
+    <div id="pp-subnav" class="pp-subnav" hidden>
+        <div class="pp-subnav__info">
+            <span class="pp-subnav__title" id="pp-subnav-title"></span>
+            <span class="pp-subnav__price" id="pp-subnav-price"></span>
+        </div>
+        <nav class="pp-subnav__links" id="pp-subnav-links"></nav>
+        <button class="btn btn--sm btn--primary pp-subnav__cta" id="pp-subnav-edit"><i data-lucide="pencil"></i> Modifica</button>
+    </div>
+
     <!-- Listing-style layout: gallery + content (left) · sticky summary (right) -->
     <div class="pp-layout">
         <main class="pp-main">
