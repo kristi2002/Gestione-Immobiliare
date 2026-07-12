@@ -84,6 +84,7 @@
         document.getElementById('profile-report-close').addEventListener('click', closeReportModal);
         document.getElementById('profile-report-cancel').addEventListener('click', closeReportModal);
         document.getElementById('profile-report-generate').addEventListener('click', generateReport);
+        document.getElementById('profile-fiscal-generate').addEventListener('click', generateFiscalStatement);
 
         // Document upload
         document.getElementById('profile-doc-upload').addEventListener('change', uploadDocuments);
@@ -742,7 +743,30 @@
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
-            btn.disabled = false; btn.textContent = 'Genera PDF';
+            btn.disabled = false; btn.textContent = 'Genera rendiconto';
+        }
+    }
+
+    async function generateFiscalStatement() {
+        const btn = document.getElementById('profile-fiscal-generate');
+        btn.disabled = true; btn.textContent = 'Generazione...';
+        try {
+            const res  = await fetch('api/owner_fiscal_statement.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    client_id: parseInt(clientId, 10),
+                    year:  document.getElementById('profile-report-year').value,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            closeReportModal();
+            window.open(json.data.download, '_blank');
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Prospetto fiscale';
         }
     }
 

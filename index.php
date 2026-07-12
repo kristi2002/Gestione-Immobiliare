@@ -90,6 +90,12 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                         <?php if (canAccessView('inventory')): ?>
                         <li><a href="view.php?name=inventory" class="nav-link" data-view="inventory"><i class="nav-icon" data-lucide="package"></i><span class="nav-label">Inventario</span></a></li>
                         <?php endif; ?>
+                        <?php if (canAccessView('portal_sync')): ?>
+                        <li><a href="view.php?name=portal_sync" class="nav-link" data-view="portal_sync"><i class="nav-icon" data-lucide="globe-2"></i><span class="nav-label">Pubblicazioni portali</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('valuation')): ?>
+                        <li><a href="view.php?name=valuation" class="nav-link" data-view="valuation"><i class="nav-icon" data-lucide="calculator"></i><span class="nav-label">Valutazioni OMI</span></a></li>
+                        <?php endif; ?>
                     </ul>
                 </details>
 
@@ -124,6 +130,9 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                         <?php if (canAccessView('reports')): ?>
                         <li><a href="view.php?name=reports" class="nav-link" data-view="reports"><i class="nav-icon" data-lucide="bar-chart-3"></i><span class="nav-label">Report</span></a></li>
                         <?php endif; ?>
+                        <?php if (canAccessView('scadenzario')): ?>
+                        <li><a href="view.php?name=scadenzario" class="nav-link" data-view="scadenzario"><i class="nav-icon" data-lucide="calendar-clock"></i><span class="nav-label">Scadenzario fiscale</span></a></li>
+                        <?php endif; ?>
                     </ul>
                 </details>
 
@@ -141,6 +150,9 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                         <?php endif; ?>
                         <?php if (canAccessView('property_applications')): ?>
                         <li><a href="view.php?name=property_applications" class="nav-link" data-view="property_applications"><i class="nav-icon" data-lucide="clipboard-list"></i><span class="nav-label">Richieste</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('aml')): ?>
+                        <li><a href="view.php?name=aml" class="nav-link" data-view="aml"><i class="nav-icon" data-lucide="shield-alert"></i><span class="nav-label">Antiriciclaggio</span></a></li>
                         <?php endif; ?>
                     </ul>
                 </details>

@@ -7,6 +7,31 @@
 
 ---
 
+## ⏱ Update — July 2026 implementation pass
+
+A first implementation pass shipped the **Italian fiscal/legal compliance layer** (the real
+market differentiator) plus several intelligence features. See `docs/FEATURE_IMPLEMENTATION_PLAN.md`
+for the full plan and status. Shipped in code (not yet runtime-verified per CLAUDE.md §0):
+
+- **Magic Match reverse** (1.1) — `?action=matching_leads` + "Trova lead" with WA/email invites. ✅ code
+- **AI provider layer** (0.2) — `lib/ai.php` + AI listing copywriter (`api/ai_describe.php`). ✅ code 🔑 key
+- **FatturaPA XML**, **lease registration (RLI/cedolare/F24 tracking)**, **antiriciclaggio module**,
+  **dati catastali + APE**, **scadenzario fiscale unico**, **ISTAT adjustment**, **portal sync status**,
+  **SEPA/SDD mandates** — all new (were not in the original 12-feature wishlist but are the
+  compliance moat competitors already have). ✅ code, 🔑 where a transmission channel/key is needed.
+
+Uploads lockdown (0.1) — **hardened July 2026**: defense-in-depth added on top of the existing
+documents deny-all (root belt-and-suspenders `.htaccess`, a `config/upload_guard.php` path-containment
+guard wired into all three file streamers, `nosniff`). Path guard executed 7/7; live incognito HTTP
+fetch still owed. See `docs/UPLOADS_SECURITY.md`.
+
+Still open from this roadmap: WhatsApp production (0.3), pipeline health (1.2),
+missed-call text-back (1.3), import wizard (2.1), photo→listing on upload hook (2.2 — copywriter exists,
+auto-on-upload not wired), predictive scoring (3.1), call summaries (3.2), leaderboard (4.1),
+encrypted vault (4.2), real portal push (4.3 — status tracking shipped, transport not).
+
+---
+
 ## Sequencing principle
 
 Order by **business value × feasibility**, and respect dependencies. Three features share an

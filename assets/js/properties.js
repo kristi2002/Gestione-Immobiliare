@@ -50,6 +50,9 @@
     const PAGE_LIMIT   = 16;
     let selectedIds    = new Set();
     let compareIds     = new Set();
+    let mapMode        = false;
+    let propMap        = null;
+    let propMarkers    = [];
 
     const els = {};
 
@@ -159,6 +162,7 @@
             toggle.querySelectorAll('.view-cols-btn').forEach(b => b.addEventListener('click', () => apply(b.dataset.cols)));
             apply(cols);
         })();
+        bindClick('btn-toggle-map', toggleMap);
         bindClick('property-modal-close', closeModal);
         bindClick('property-modal-cancel', closeModal);
         bindClick('btn-property-mandato', generateMandato);
@@ -220,10 +224,14 @@
             const modal = document.getElementById('property-qr-modal');
             if (modal) modal.hidden = true;
         });
-        bindClick('property-compare-close', () => {
-            const modal = document.getElementById('property-compare-modal');
-            if (modal) modal.hidden = true;
-        });
+        bindClick('property-compare-close', closeCompareModal);
+        // Click on the dimmed backdrop closes the modal too (keeps selection).
+        const compareModalEl = document.getElementById('property-compare-modal');
+        if (compareModalEl) {
+            compareModalEl.addEventListener('click', (e) => {
+                if (e.target === compareModalEl) closeCompareModal();
+            });
+        }
         bindClick('btn-copy-qr-url', () => {
             const url = document.getElementById('qr-url')?.value;
             if (url) navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
@@ -239,6 +247,7 @@
         // Appraisal modal
         bindClick('appraisal-modal-close', closeAppraisalModal);
         bindClick('appraisal-modal-cancel', closeAppraisalModal);
+        bindClick('appraisal-omi-estimate', omiEstimateForAppraisal);
         const appraisalForm = document.getElementById('appraisal-form');
         if (appraisalForm) appraisalForm.addEventListener('submit', saveAppraisal);
 
@@ -400,6 +409,7 @@
                         <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR"><i data-lucide="qr-code"></i></button>
                         <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto"><i data-lucide="bar-chart-2"></i></button>
                         <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF"><i data-lucide="file-text"></i></button>
+                        <button class="btn btn--sm btn--ghost btn-match" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Trova lead compatibili"><i data-lucide="users-round"></i></button>
                         ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione"><i data-lucide="calculator"></i></button>
                         <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia"><i data-lucide="archive"></i></button>
                         <button class="btn btn--sm btn--ghost btn-social" data-id="${p.id}" title="Crea post social"><i data-lucide="megaphone"></i></button>` : ''}
@@ -453,6 +463,13 @@
             });
         });
 
+        els.grid.querySelectorAll('.btn-match').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showMatchingLeads(btn.dataset.id, btn.dataset.address);
+            });
+        });
+
         els.grid.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -502,6 +519,92 @@
         });
 
         updateBulkToolbar();
+        if (mapMode) renderPropertyMap();
+    }
+
+    // ── Immobili map (portal-style split view) ────────────────────────────────
+    function toggleMap() {
+        mapMode = !mapMode;
+        const layout = document.getElementById('properties-layout');
+        const panel  = document.getElementById('properties-map-panel');
+        const btn    = document.getElementById('btn-toggle-map');
+        if (!layout || !panel) return;
+        layout.classList.toggle('properties-layout--split', mapMode);
+        panel.hidden = !mapMode;
+        if (btn) btn.classList.toggle('is-active', mapMode);
+        if (mapMode) {
+            renderPropertyMap();
+            // Leaflet needs a size recompute after the container becomes visible.
+            setTimeout(() => { if (propMap) propMap.invalidateSize(); }, 60);
+        }
+    }
+
+    function renderPropertyMap() {
+        if (typeof L === 'undefined') return;
+        const el = document.getElementById('properties-map');
+        if (!el) return;
+
+        if (!propMap) {
+            propMap = L.map(el, { scrollWheelZoom: true }).setView([43.3, 13.72], 12); // Civitanova Marche
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap',
+            }).addTo(propMap);
+        }
+
+        propMarkers.forEach(m => propMap.removeLayer(m));
+        propMarkers = [];
+        const bounds = [];
+        const STATUS_COLORS = { available: '#16a34a', rented: '#2563eb', sold: '#64748b', archived: '#94a3b8' };
+        const STATUS_LABELS = { available: 'Disponibile', rented: 'Affittato', sold: 'Venduto', archived: 'Archiviato' };
+
+        (Array.isArray(properties) ? properties : []).forEach(p => {
+            if (p.latitude == null || p.longitude == null) return;
+            const lat = parseFloat(p.latitude), lng = parseFloat(p.longitude);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const marker = L.circleMarker([lat, lng], {
+                radius: 9, fillColor: STATUS_COLORS[p.status] || '#64748b',
+                color: '#fff', weight: 2, fillOpacity: 0.95,
+            }).addTo(propMap);
+
+            const price = p.price != null
+                ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '')
+                : 'prezzo n.d.';
+            marker.bindPopup(
+                `<div class="map-pop">
+                    <p class="map-pop__title">${escapeHtml(p.address || '')}</p>
+                    <p class="map-pop__meta">${escapeHtml(p.city || '')} · ${escapeHtml(STATUS_LABELS[p.status] || p.status || '')}</p>
+                    <p class="map-pop__price">${price}</p>
+                    <button class="btn btn--sm btn--ghost map-open-btn" data-id="${p.id}">Apri scheda</button>
+                </div>`);
+            marker.on('popupopen', (e) => {
+                const b = e.popup.getElement().querySelector('.map-open-btn');
+                if (b) b.addEventListener('click', () => {
+                    if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(b.dataset.id, 10) });
+                });
+            });
+            // Hovering a card could highlight its pin later; open popup on marker hover.
+            marker.on('mouseover', () => marker.openPopup());
+            propMarkers.push(marker);
+            bounds.push([lat, lng]);
+        });
+
+        if (bounds.length) {
+            propMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        }
+        // Empty-state hint when nothing is geocoded yet.
+        const hint = document.getElementById('properties-map-empty');
+        if (!bounds.length && !hint) {
+            const note = document.createElement('div');
+            note.id = 'properties-map-empty';
+            note.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;z-index:500;background:rgba(255,255,255,.95);border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;font-size:13px;';
+            note.innerHTML = 'Nessun immobile geolocalizzato. Geocodifica gli indirizzi dalla vista <strong>Mappa</strong> per vederli qui.';
+            const panel = document.getElementById('properties-map-panel');
+            if (panel) { panel.style.position = 'relative'; panel.appendChild(note); }
+        } else if (bounds.length && hint) {
+            hint.remove();
+        }
     }
 
     function updateCompareButton() {
@@ -543,6 +646,15 @@
         document.getElementById('qr-img').src = qrSrc;
         document.getElementById('qr-download').href = qrSrc;
         document.getElementById('property-qr-modal').hidden = false;
+    }
+
+    // Close the compare modal WITHOUT losing the current selection: restore the
+    // floating compare bar (updateCompareButton re-shows it while compareIds still
+    // holds ≥2 items) so the user can add more properties or run another action.
+    function closeCompareModal() {
+        const modal = document.getElementById('property-compare-modal');
+        if (modal) modal.hidden = true;
+        updateCompareButton();
     }
 
     async function openCompareModal() {
@@ -1309,7 +1421,43 @@
         document.getElementById('appraisal-property-id').value = propertyId;
         document.getElementById('appraisal-date').value = new Date().toISOString().slice(0, 10);
         document.getElementById('appraisal-modal').hidden = false;
+        const hint = document.getElementById('appraisal-omi-hint');
+        if (hint) hint.textContent = '';
         loadAppraisals(propertyId);
+    }
+
+    async function omiEstimateForAppraisal() {
+        const propertyId = document.getElementById('appraisal-property-id').value;
+        const hint = document.getElementById('appraisal-omi-hint');
+        const btn = document.getElementById('appraisal-omi-estimate');
+        if (!propertyId) return;
+        btn.disabled = true;
+        if (hint) hint.textContent = 'Calcolo…';
+        try {
+            const res  = await fetch(`api/valuation.php?action=estimate&property_id=${propertyId}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const s = json.data.suggested || {};
+            if (s.value != null) document.getElementById('appraisal-value').value = s.value;
+            if (s.rent != null) document.getElementById('appraisal-rent').value = s.rent;
+            if (s.comparable_1) {
+                document.getElementById('appraisal-c1-addr').value = s.comparable_1.address || '';
+                document.getElementById('appraisal-c1-price').value = s.comparable_1.price || '';
+            }
+            if (s.comparable_2) {
+                document.getElementById('appraisal-c2-addr').value = s.comparable_2.address || '';
+                document.getElementById('appraisal-c2-price').value = s.comparable_2.price || '';
+            }
+            if (hint) {
+                const warn = (json.data.warnings || []).length ? ' — ' + json.data.warnings[0] : '';
+                hint.textContent = `Base: ${s.basis || 'dati insufficienti'}${warn}`;
+            }
+        } catch (err) {
+            if (hint) hint.textContent = err.message;
+        } finally {
+            btn.disabled = false;
+            if (window.lucide) window.lucide.createIcons();
+        }
     }
 
     function closeAppraisalModal() {
@@ -1508,6 +1656,66 @@
         }
         out.push(cur);
         return out;
+    }
+
+    // ── Magic Match (reverse): property → compatible leads ────────────────────
+    async function showMatchingLeads(propertyId, address) {
+        let modal = document.getElementById('match-leads-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'match-leads-modal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal modal--lg" role="dialog" aria-labelledby="match-leads-title">
+                    <div class="modal-header">
+                        <h3 id="match-leads-title">Lead compatibili</h3>
+                        <button class="modal-close" id="match-leads-close" aria-label="Chiudi">&times;</button>
+                    </div>
+                    <div class="modal-body" id="match-leads-body"></div>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.hidden = true; });
+            modal.querySelector('#match-leads-close').addEventListener('click', () => { modal.hidden = true; });
+        }
+        const body = modal.querySelector('#match-leads-body');
+        modal.querySelector('#match-leads-title').textContent = 'Lead compatibili — ' + (address || '');
+        body.innerHTML = '<p class="text-muted" style="text-align:center;padding:1.5rem;">Ricerca in corso…</p>';
+        modal.hidden = false;
+
+        try {
+            const res  = await fetch(`api/properties.php?action=matching_leads&id=${propertyId}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const { property, matches } = json.data;
+            if (!matches.length) {
+                body.innerHTML = '<p class="text-muted" style="text-align:center;padding:1.5rem;">Nessun lead attivo compatibile con questo immobile.</p>';
+                return;
+            }
+            const eur = (n) => n == null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+            const inviteText = `Salve, ho un immobile che potrebbe interessarle: ${property.address}, ${property.city}` +
+                (property.price ? ` (${eur(property.price)}${property.price_type === 'affitto' ? '/mese' : ''})` : '') +
+                `. Vuole fissare una visita?`;
+
+            body.innerHTML = `<div class="table-wrapper"><table class="data-table">
+                <thead><tr><th>Lead</th><th>Compatibilità</th><th>Budget</th><th>Invita</th></tr></thead>
+                <tbody>${matches.map(m => {
+                    const waBtn = m.phone ? window.WA.buttonHtml(m.phone, inviteText, { label: 'WhatsApp' }) : '';
+                    const mailBtn = m.email
+                        ? `<a class="btn btn--sm btn--ghost" href="mailto:${escapeHtml(m.email)}?subject=${encodeURIComponent('Proposta immobile')}&body=${encodeURIComponent(inviteText)}" title="Email"><i data-lucide="mail"></i></a>`
+                        : '';
+                    return `<tr>
+                        <td data-label="Lead"><strong>${escapeHtml(m.name)}</strong><br><small class="text-muted">${escapeHtml(m.status)}</small></td>
+                        <td data-label="Compatibilità"><span class="badge badge--success">${m.score}%</span> <small class="text-muted">${(m.reasons || []).map(escapeHtml).join(', ')}</small></td>
+                        <td data-label="Budget">${eur(m.budget_min)} – ${eur(m.budget_max)}</td>
+                        <td data-label="Invita" style="white-space:nowrap;display:flex;gap:6px;">${waBtn}${mailBtn}</td>
+                    </tr>`;
+                }).join('')}</tbody>
+            </table></div>
+            <p class="text-muted" style="font-size:12px;margin-top:8px;">Punteggio su base 100: città 30, tipologia 25, budget 30, locali 10, superficie 5.</p>`;
+            if (window.lucide) window.lucide.createIcons();
+        } catch (err) {
+            body.innerHTML = `<p style="color:var(--color-danger);text-align:center;padding:1.5rem;">${escapeHtml(err.message)}</p>`;
+        }
     }
 
     init();

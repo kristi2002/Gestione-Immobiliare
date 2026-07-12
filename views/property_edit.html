@@ -223,10 +223,75 @@
             </fieldset>
 
             <fieldset class="form-section">
+                <legend>Dati catastali e APE</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-cat-comune">Comune catastale</label>
+                        <input type="text" id="pe-cat-comune" class="form-input" maxlength="100" placeholder="es. Civitanova Marche">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-category">Categoria</label>
+                        <input type="text" id="pe-cat-category" class="form-input" maxlength="10" placeholder="es. A/2">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-class">Classe</label>
+                        <input type="text" id="pe-cat-class" class="form-input" maxlength="10" placeholder="es. 3">
+                    </div>
+                </div>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-cat-foglio">Foglio</label>
+                        <input type="text" id="pe-cat-foglio" class="form-input" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-particella">Particella</label>
+                        <input type="text" id="pe-cat-particella" class="form-input" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-subalterno">Subalterno</label>
+                        <input type="text" id="pe-cat-subalterno" class="form-input" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-zone">Zona OMI</label>
+                        <input type="text" id="pe-cat-zone" class="form-input" maxlength="20" placeholder="es. B1">
+                    </div>
+                </div>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-cat-rendita">Rendita catastale (€)</label>
+                        <input type="number" id="pe-cat-rendita" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-ape-number">N. attestato APE</label>
+                        <input type="text" id="pe-ape-number" class="form-input" maxlength="50">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-ape-issue">Rilascio APE</label>
+                        <input type="date" id="pe-ape-issue" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-ape-expiry">Scadenza APE</label>
+                        <input type="date" id="pe-ape-expiry" class="form-input">
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-ipe">IPE (kWh/m²·a)</label>
+                        <input type="number" id="pe-ipe" class="form-input" min="0" step="0.01">
+                    </div>
+                </div>
+                <p class="text-muted" style="font-size:12px;margin:4px 0 0 0">La scadenza APE si compila da sola a 10 anni dal rilascio se lasciata vuota.</p>
+            </fieldset>
+
+            <fieldset class="form-section">
                 <legend>Descrizione</legend>
                 <div class="form-group">
-                    <label for="pe-description">Descrizione</label>
+                    <label for="pe-description" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                        <span>Descrizione</span>
+                        <button type="button" class="btn btn--ghost btn--sm" id="pe-ai-describe" title="Genera una descrizione annuncio con l'AI dai dati dell'immobile"><i data-lucide="sparkles"></i> Genera con AI</button>
+                    </label>
                     <textarea id="pe-description" class="form-textarea" rows="3"></textarea>
+                    <p id="pe-ai-hint" class="text-muted" style="font-size:12px;margin-top:4px;display:none"></p>
                 </div>
                 <div class="form-group">
                     <label for="pe-features">Caratteristiche aggiuntive</label>

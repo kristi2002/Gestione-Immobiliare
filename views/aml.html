@@ -1,0 +1,226 @@
+<div class="aml-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Antiriciclaggio</h2>
+            <p>Adeguata verifica della clientela (D.lgs 231/2007). Fascicolo per soggetto, con conservazione decennale.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-aml">+ Nuova pratica</button>
+        </div>
+    </div>
+
+    <div id="aml-alert" class="alert" style="display:none;"></div>
+
+    <div class="stats-grid" id="aml-stats">
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-aml-total">—</div>
+            <div class="stat-card__label">Totale pratiche</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-aml-pending">—</div>
+            <div class="stat-card__label">Da completare</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-aml-highrisk">—</div>
+            <div class="stat-card__label">Rischio alto</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value" id="stat-aml-expiring">—</div>
+            <div class="stat-card__label">Conservazione in scadenza</div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="aml-search" class="form-input" placeholder="Cerca per nominativo, CF, P.IVA…" autocomplete="off">
+        </div>
+        <select id="aml-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="da_completare">Da completare</option>
+            <option value="completata">Completata</option>
+            <option value="sospesa">Sospesa</option>
+        </select>
+        <select id="aml-risk-filter" class="form-select">
+            <option value="">Tutti i rischi</option>
+            <option value="basso">Rischio basso</option>
+            <option value="medio">Rischio medio</option>
+            <option value="alto">Rischio alto</option>
+        </select>
+        <label class="form-check" style="white-space:nowrap;">
+            <input type="checkbox" id="aml-expiring-toggle"> Conservazione in scadenza
+        </label>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="aml-table">
+            <thead>
+                <tr>
+                    <th>Soggetto</th>
+                    <th>Operazione</th>
+                    <th>Verifica</th>
+                    <th>Rischio</th>
+                    <th>Data verifica</th>
+                    <th>Conservazione fino a</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="aml-tbody">
+                <tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="aml-pagination" class="pagination-container"></div>
+</div>
+
+<!-- New / Edit modal -->
+<div class="modal-overlay" id="aml-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="aml-modal-title">
+        <div class="modal-header">
+            <h3 id="aml-modal-title">Nuova pratica</h3>
+            <button class="modal-close" id="aml-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="aml-form" class="modal-body">
+            <input type="hidden" id="aml-id">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="aml-subject-name">Soggetto (nominativo / ragione sociale) <span class="required">*</span></label>
+                    <input type="text" id="aml-subject-name" class="form-input" required maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="aml-subject-type">Tipo soggetto</label>
+                    <select id="aml-subject-type" class="form-select">
+                        <option value="persona_fisica">Persona fisica</option>
+                        <option value="persona_giuridica">Persona giuridica</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="aml-cf">Codice fiscale</label>
+                    <input type="text" id="aml-cf" class="form-input" maxlength="16">
+                </div>
+                <div class="form-group">
+                    <label for="aml-piva">Partita IVA</label>
+                    <input type="text" id="aml-piva" class="form-input" maxlength="11">
+                </div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="aml-verification-type">Tipo verifica</label>
+                    <select id="aml-verification-type" class="form-select">
+                        <option value="ordinaria">Ordinaria</option>
+                        <option value="semplificata">Semplificata</option>
+                        <option value="rafforzata">Rafforzata</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="aml-risk">Livello di rischio</label>
+                    <select id="aml-risk" class="form-select">
+                        <option value="basso">Basso</option>
+                        <option value="medio">Medio</option>
+                        <option value="alto">Alto</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="aml-operation-type">Operazione</label>
+                    <select id="aml-operation-type" class="form-select">
+                        <option value="mediazione">Mediazione</option>
+                        <option value="vendita">Vendita</option>
+                        <option value="locazione">Locazione</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="aml-operation-value">Valore operazione (€)</label>
+                    <input type="number" id="aml-operation-value" class="form-input" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="aml-client">Proprietario collegato</label>
+                    <select id="aml-client" class="form-select"><option value="">—</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="aml-property">Immobile collegato</label>
+                    <select id="aml-property" class="form-select"><option value="">—</option></select>
+                </div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="aml-doc-type">Documento identità</label>
+                    <input type="text" id="aml-doc-type" class="form-input" maxlength="40" placeholder="Carta d'identità / Passaporto">
+                </div>
+                <div class="form-group">
+                    <label for="aml-doc-number">N. documento</label>
+                    <input type="text" id="aml-doc-number" class="form-input" maxlength="40">
+                </div>
+                <div class="form-group">
+                    <label for="aml-doc-expiry">Scadenza documento</label>
+                    <input type="date" id="aml-doc-expiry" class="form-input">
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="aml-beneficial-owner">Titolare effettivo (se diverso)</label>
+                    <input type="text" id="aml-beneficial-owner" class="form-input" maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label class="form-check" style="margin-top:28px;">
+                        <input type="checkbox" id="aml-pep"> Persona Politicamente Esposta (PEP)
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="aml-purpose">Scopo e natura dell'operazione</label>
+                <textarea id="aml-purpose" class="form-textarea" rows="2"></textarea>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="aml-verification-date">Data adeguata verifica</label>
+                    <input type="date" id="aml-verification-date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="aml-retention">Conservazione fino a</label>
+                    <input type="date" id="aml-retention" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="aml-status">Stato</label>
+                    <select id="aml-status" class="form-select">
+                        <option value="da_completare">Da completare</option>
+                        <option value="completata">Completata</option>
+                        <option value="sospesa">Sospesa</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="aml-notes">Note</label>
+                <textarea id="aml-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+            <p class="text-muted" style="font-size:12px;">La data di conservazione si compila da sola a 10 anni dalla verifica se lasciata vuota.</p>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="aml-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="aml-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="aml-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Elimina pratica</h3>
+            <button class="modal-close" id="aml-delete-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Eliminare la pratica antiriciclaggio di <strong id="aml-delete-name"></strong>?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="aml-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="aml-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/aml.js"></script>

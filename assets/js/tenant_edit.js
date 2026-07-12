@@ -51,6 +51,9 @@
         $('tne-lease-end').value = t.lease_end || '';
         $('tne-rent').value = t.monthly_rent || '';
         $('tne-notes').value = t.notes || '';
+        if ($('tne-iban')) $('tne-iban').value = t.iban || '';
+        if ($('tne-sdd-ref')) $('tne-sdd-ref').value = t.sdd_mandate_ref || '';
+        if ($('tne-sdd-date')) $('tne-sdd-date').value = t.sdd_mandate_date ? String(t.sdd_mandate_date).substring(0, 10) : '';
     }
 
     async function save(e) {
@@ -67,6 +70,9 @@
             lease_end:       $('tne-lease-end').value || null,
             monthly_rent:    $('tne-rent').value || null,
             notes:           $('tne-notes').value,
+            iban:            $('tne-iban') ? $('tne-iban').value.trim() : '',
+            sdd_mandate_ref: $('tne-sdd-ref') ? $('tne-sdd-ref').value.trim() : '',
+            sdd_mandate_date:$('tne-sdd-date') ? ($('tne-sdd-date').value || null) : null,
             portal_password: $('tne-portal-pass').value,
         };
         const btn = $('tne-save');

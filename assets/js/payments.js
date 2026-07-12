@@ -51,6 +51,8 @@
             if (window.App) window.App.navigateTo('payment_edit');
         });
 
+        bindSddExport();
+
         [els.statusFilter, els.monthFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadPayments(); }));
         els.yearFilter.addEventListener('input', () => {
             clearTimeout(els._timer);
@@ -380,6 +382,54 @@
         const div = document.createElement('div');
         div.textContent = String(str);
         return div.innerHTML;
+    }
+
+    // ── SEPA SDD export ───────────────────────────────────────────────────────
+    function bindSddExport() {
+        const openBtn = document.getElementById('btn-export-sdd');
+        const modal   = document.getElementById('sdd-modal');
+        if (!openBtn || !modal) return;
+        const monthInput = document.getElementById('sdd-month');
+        const preview    = document.getElementById('sdd-preview');
+        const dlBtn      = document.getElementById('sdd-download');
+
+        function close() { modal.hidden = true; }
+        openBtn.addEventListener('click', () => {
+            monthInput.value = new Date().toISOString().slice(0, 7);
+            preview.textContent = '';
+            dlBtn.disabled = true;
+            modal.hidden = false;
+            checkSdd();
+        });
+        document.getElementById('sdd-modal-close').addEventListener('click', close);
+        document.getElementById('sdd-modal-cancel').addEventListener('click', close);
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        monthInput.addEventListener('change', checkSdd);
+        dlBtn.addEventListener('click', () => {
+            if (monthInput.value) window.location.href = `api/generate_sdd.php?month=${monthInput.value}`;
+        });
+
+        async function checkSdd() {
+            const month = monthInput.value;
+            if (!month) return;
+            preview.textContent = 'Verifica…';
+            dlBtn.disabled = true;
+            try {
+                const res  = await fetch(`api/generate_sdd.php?month=${month}&check=1`);
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error);
+                const d = json.data;
+                const eur = (n) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n || 0);
+                let msg = `${d.count} addebiti idonei · totale ${eur(d.total)}.`;
+                if (d.missing && d.missing.length) msg += ` ⚠ Configura: ${d.missing.join(', ')}.`;
+                if (d.skipped && d.skipped.length) msg += ` Esclusi (mandato/IBAN mancante): ${d.skipped.length}.`;
+                preview.textContent = msg;
+                dlBtn.disabled = !d.ready;
+            } catch (err) {
+                preview.textContent = err.message;
+                dlBtn.disabled = true;
+            }
+        }
     }
 
     init();

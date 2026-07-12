@@ -14,3 +14,6 @@ uploads/social/*
 .claude/
 .phpunit.result.cache
 *.log
+
+# Local dev scratch (port-conflict workaround, not for CI/prod)
+docker-compose.dryrun.yml

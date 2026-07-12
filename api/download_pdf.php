@@ -18,12 +18,13 @@ $stmt = getDB()->prepare('SELECT title, file_path FROM pdf_documents WHERE id = 
 $stmt->execute(['id' => $id]);
 $doc = $stmt->fetch();
 
-if (!$doc || !is_readable(__DIR__ . '/../' . $doc['file_path'])) {
+require_once __DIR__ . '/../config/upload_guard.php';
+$path = $doc ? safeUploadRealPath((string) $doc['file_path']) : null;
+if (!$doc || $path === null) {
     http_response_code(404);
     exit('PDF non trovato.');
 }
 
-$path = __DIR__ . '/../' . $doc['file_path'];
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="' . rawurlencode($doc['title'] . '.pdf') . '"');
 header('Content-Length: ' . filesize($path));

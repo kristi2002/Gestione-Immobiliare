@@ -1,0 +1,42 @@
+-- Phase 37 — Antiriciclaggio / Adeguata Verifica (D.lgs 231/2007)
+-- Run once against the production DB:
+--   mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < database/migrations/phase37_antiriciclaggio.sql
+
+CREATE TABLE IF NOT EXISTS `aml_records` (
+  `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `subject_name`      VARCHAR(200) NOT NULL COMMENT 'Nominativo soggetto verificato',
+  `subject_type`      ENUM('persona_fisica','persona_giuridica') NOT NULL DEFAULT 'persona_fisica',
+  `codice_fiscale`    VARCHAR(16)  DEFAULT NULL,
+  `partita_iva`       VARCHAR(11)  DEFAULT NULL,
+  `client_id`         INT UNSIGNED DEFAULT NULL,
+  `lead_id`           INT UNSIGNED DEFAULT NULL,
+  `property_id`       INT UNSIGNED DEFAULT NULL,
+  `verification_type` ENUM('ordinaria','semplificata','rafforzata') NOT NULL DEFAULT 'ordinaria',
+  `risk_level`        ENUM('basso','medio','alto') NOT NULL DEFAULT 'basso',
+  `operation_type`    ENUM('vendita','locazione','mediazione','altro') NOT NULL DEFAULT 'mediazione',
+  `operation_value`   DECIMAL(14,2) DEFAULT NULL COMMENT 'Valore operazione (EUR)',
+  `id_document_type`  VARCHAR(40)  DEFAULT NULL COMMENT 'Tipo documento identità',
+  `id_document_number` VARCHAR(40) DEFAULT NULL,
+  `id_document_expiry` DATE        DEFAULT NULL,
+  `beneficial_owner`  VARCHAR(200) DEFAULT NULL COMMENT 'Titolare effettivo (se diverso)',
+  `is_pep`            TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'Persona Politicamente Esposta 0/1',
+  `purpose`           TEXT         DEFAULT NULL COMMENT 'Scopo e natura dell operazione',
+  `verification_date` DATE         DEFAULT NULL COMMENT 'Data adeguata verifica',
+  `retention_until`   DATE         DEFAULT NULL COMMENT 'Conservazione fino a (10 anni)',
+  `status`            ENUM('da_completare','completata','sospesa') NOT NULL DEFAULT 'da_completare',
+  `notes`             TEXT         DEFAULT NULL,
+  `created_by`        INT UNSIGNED DEFAULT NULL,
+  `created_at`        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_aml_status` (`status`),
+  KEY `idx_aml_risk` (`risk_level`),
+  KEY `idx_aml_retention` (`retention_until`),
+  KEY `fk_aml_client` (`client_id`),
+  KEY `fk_aml_lead` (`lead_id`),
+  KEY `fk_aml_property` (`property_id`),
+  CONSTRAINT `fk_aml_client`   FOREIGN KEY (`client_id`)   REFERENCES `clients` (`id`)   ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_aml_lead`     FOREIGN KEY (`lead_id`)     REFERENCES `leads` (`id`)     ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_aml_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_aml_created_by` FOREIGN KEY (`created_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -117,6 +117,10 @@
             maintenance_workflow:  'Manutenzione',
             whatsapp_inbox:        'WhatsApp Inbox',
             property_applications: 'Richieste immobili',
+            aml:                   'Antiriciclaggio',
+            scadenzario:           'Scadenzario Fiscale',
+            portal_sync:           'Pubblicazioni Portali',
+            valuation:             'Valutazioni OMI',
         },
 
         init() {

@@ -33,6 +33,18 @@ const SETTINGS_DEFAULTS = [
     'backup_s3_prefix'      => 'gestionale-backups/',
     'meta_app_id'           => '',
     'meta_app_secret'       => '',
+    // Fatturazione elettronica (identità fiscale cedente/prestatore)
+    'agency_piva'           => '',
+    'agency_cf'             => '',
+    'agency_denominazione'  => '',
+    'agency_regime_fiscale' => 'RF01',
+    'agency_indirizzo'      => '',
+    'agency_cap'            => '',
+    'agency_comune'         => '',
+    'agency_provincia'      => '',
+    'agency_pec'            => '',
+    'agency_iban'           => '',
+    'agency_sepa_creditor_id' => '',
 ];
 
 function getSetting(string $key, ?string $default = null): ?string
@@ -199,6 +211,19 @@ function publicSettingsPayload(): array
         'meta' => [
             'meta_app_id'     => getSetting('meta_app_id'),
             'meta_app_secret' => maskSecret(getSetting('meta_app_secret')),
+        ],
+        'fatturazione' => [
+            'agency_piva'           => getSetting('agency_piva'),
+            'agency_cf'             => getSetting('agency_cf'),
+            'agency_denominazione'  => getSetting('agency_denominazione'),
+            'agency_regime_fiscale' => getSetting('agency_regime_fiscale', 'RF01'),
+            'agency_indirizzo'      => getSetting('agency_indirizzo'),
+            'agency_cap'            => getSetting('agency_cap'),
+            'agency_comune'         => getSetting('agency_comune'),
+            'agency_provincia'      => getSetting('agency_provincia'),
+            'agency_pec'            => getSetting('agency_pec'),
+            'agency_iban'           => getSetting('agency_iban'),
+            'agency_sepa_creditor_id' => getSetting('agency_sepa_creditor_id'),
         ],
     ];
 }

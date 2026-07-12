@@ -5,6 +5,13 @@
  * GET /api/property_export.php?id=X&format=json  — single property, Immobiliare.it-compatible JSON
  * GET /api/property_export.php?format=xml         — all active properties as XML feed
  * GET /api/property_export.php?format=csv         — all properties as CSV
+ *
+ * Portal integration note: Immobiliare.it / Idealista / Casa.it ingest listings
+ * from a feed URL that THEY are configured to pull, once the agency has a paid
+ * account (there is no free/open API). This XML feed is that artifact — publish
+ * it at a stable authenticated URL and give it to the portal during onboarding.
+ * The exact tag mapping must be aligned to each portal's current spec (supplied
+ * with the contract); the tags below are a superset of the common fields.
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
@@ -141,6 +148,21 @@ function exportXml(PDO $db): void
 {
     $properties = fetchActiveProperties($db);
 
+    // Public listing images (photos/floor plans), grouped by property. Portals
+    // require absolute, publicly reachable image URLs.
+    $base = defined('APP_URL') && APP_URL !== '' ? rtrim(APP_URL, '/') : '';
+    $mediaMap = [];
+    try {
+        $mrows = $db->query(
+            "SELECT property_id, file_path FROM property_media
+             WHERE media_type IN ('photo','floor_plan','house_map')
+             ORDER BY property_id, sort_order"
+        )->fetchAll();
+        foreach ($mrows as $m) {
+            $mediaMap[(int) $m['property_id']][] = $base . '/' . ltrim($m['file_path'], '/');
+        }
+    } catch (Throwable $e) { /* media table optional */ }
+
     header('Content-Type: application/xml; charset=utf-8');
     header('Content-Disposition: attachment; filename="properties_' . date('Ymd') . '.xml"');
 
@@ -171,6 +193,21 @@ function exportXml(PDO $db): void
             'Rooms'         => $p['rooms'] !== null ? (string) $p['rooms'] : '',
             'Bathrooms'     => $p['bathrooms'] !== null ? (string) $p['bathrooms'] : '',
             'Floor'         => $p['floor'] ?? '',
+            'TotalFloors'   => $p['total_floors'] !== null ? (string) $p['total_floors'] : '',
+            'Rooms2'        => $p['locali'] !== null ? (string) $p['locali'] : '',
+            'YearBuilt'     => $p['year_built'] !== null ? (string) $p['year_built'] : '',
+            'EnergyClass'   => $p['energy_class'] ?? '',
+            'EnergyIPE'     => $p['ipe_value'] !== null ? (string) $p['ipe_value'] : '',
+            'Heating'       => $p['heating'] ?? '',
+            'Elevator'      => $p['elevator'] !== null ? ((int) $p['elevator'] ? 'true' : 'false') : '',
+            'Furnished'     => $p['furnished'] ?? '',
+            'Garden'        => $p['garden'] ?? '',
+            'Balconies'     => $p['balconies'] !== null ? (string) $p['balconies'] : '',
+            'Terraces'      => $p['terraces'] !== null ? (string) $p['terraces'] : '',
+            'ParkingSpaces' => $p['parking_spaces'] !== null ? (string) $p['parking_spaces'] : '',
+            'Exposure'      => $p['exposure'] ?? '',
+            'ConditionState'=> $p['condition_state'] ?? '',
+            'CondoFees'     => $p['condo_fees'] !== null ? (string) $p['condo_fees'] : '',
             'Price'         => $p['price'] !== null ? (string) $p['price'] : '',
             'Currency'      => 'EUR',
             'Latitude'      => $p['latitude'] !== null ? (string) $p['latitude'] : '',
@@ -185,6 +222,18 @@ function exportXml(PDO $db): void
             $el = $doc->createElement($tag);
             $el->appendChild($doc->createTextNode($value));
             $propEl->appendChild($el);
+        }
+
+        // Public image URLs
+        $imgs = $mediaMap[(int) $p['id']] ?? [];
+        if ($imgs) {
+            $imagesEl = $doc->createElement('Images');
+            $propEl->appendChild($imagesEl);
+            foreach ($imgs as $url) {
+                $img = $doc->createElement('Image');
+                $img->appendChild($doc->createTextNode($url));
+                $imagesEl->appendChild($img);
+            }
         }
 
         // Features as child elements

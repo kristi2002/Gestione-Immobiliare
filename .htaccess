@@ -16,6 +16,18 @@
     RewriteRule ^database/ - [F,L]
     RewriteRule ^cron/ - [F,L]
     RewriteRule ^backups/ - [F,L]
+
+    # Defense-in-depth: deny ALL direct access to the uploaded-documents tree
+    # (ID scans, contracts, generated PDFs/invoices, private attachments). These
+    # are personal data and must only ever be reached via the auth-checked
+    # api/download_document.php / api/download_pdf.php / api/media.php streamers.
+    # This duplicates uploads/documents/.htaccess so protection survives even if
+    # that nested file is lost during a deploy/rsync.
+    RewriteRule ^uploads/documents/ - [F,L]
+
+    # And never serve office/archive document types from anywhere under uploads/
+    # (belt-and-suspenders for uploads/properties, which is otherwise public images).
+    RewriteRule ^uploads/.*\.(pdf|docx?|xlsx?|pptx?|txt|csv|zip|rar|7z|odt|ods|odp|rtf)$ - [F,L]
 </IfModule>
 
 <Files ".env">

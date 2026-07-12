@@ -76,3 +76,6 @@ $cloud = uploadBackupToCloud($filepath, $filename);
 if ($cloud['success']) {
     echo json_encode(['cloud_upload' => $cloud], JSON_UNESCAPED_UNICODE) . "\n";
 }
+
+require_once __DIR__ . '/../config/heartbeat.php';
+cronHeartbeat('backup');

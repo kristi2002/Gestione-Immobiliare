@@ -75,6 +75,8 @@ try {
     $report['documents'] = 'error: ' . $e->getMessage();
 }
 
+require_once __DIR__ . '/../config/heartbeat.php';
+cronHeartbeat('gdpr_retention');
 $ts = date('Y-m-d H:i:s');
 echo "[{$ts}] GDPR retention run\n";
 foreach ($report as $table => $result) {

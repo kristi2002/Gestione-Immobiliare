@@ -4,9 +4,31 @@
             <h2>Pagamenti</h2>
             <p>Scadenzario affitti: gestisci canoni, scadenze e incassi.</p>
         </div>
-        <button class="btn btn--primary" id="btn-new-payment">
-            + Nuovo Pagamento
-        </button>
+        <div class="view-header__actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn--ghost" id="btn-export-sdd" title="Esporta file SEPA SDD del mese"><i data-lucide="banknote-arrow-down"></i> Esporta SDD</button>
+            <button class="btn btn--primary" id="btn-new-payment">+ Nuovo Pagamento</button>
+        </div>
+    </div>
+
+    <!-- SDD export modal -->
+    <div class="modal-overlay" id="sdd-modal" hidden>
+        <div class="modal modal--sm" role="dialog" aria-labelledby="sdd-modal-title">
+            <div class="modal-header">
+                <h3 id="sdd-modal-title">Esporta addebiti SEPA (SDD)</h3>
+                <button class="modal-close" id="sdd-modal-close" aria-label="Chiudi">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sdd-month">Mese di competenza</label>
+                    <input type="month" id="sdd-month" class="form-input">
+                </div>
+                <div id="sdd-preview" class="text-muted" style="font-size:13px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="sdd-modal-cancel">Annulla</button>
+                <button type="button" class="btn btn--primary" id="sdd-download" disabled>Scarica file</button>
+            </div>
+        </div>
     </div>
 
     <div id="payments-alert" class="alert" style="display:none;"></div>

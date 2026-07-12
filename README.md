@@ -77,6 +77,13 @@ https://dashboard.render.com/blueprint/new?repo=https://github.com/kristi2002/Ge
 
 **Also included:** multi-user roles (`super_admin`, `admin`, `agent`, `readonly`), responsive mobile UI, session-based auth, cron jobs for reminders/social/backup.
 
+**Fiscal & compliance layer (July 2026):** FatturaPA XML export, lease registration (RLI / cedolare
+secca / imposta di registro tracking), Antiriciclaggio (adeguata verifica D.lgs 231/2007), dati
+catastali + APE, unified fiscal deadline dashboard (Scadenzario), ISTAT rent-adjustment calculator,
+portal publish-state tracking, SEPA/SDD mandates, AI listing copywriter, and reverse Magic Match
+(property → compatible leads). Some features need an external channel/key to go live (FatturaPA SdI
+intermediary, `AI_API_KEY`, portal APIs) — see `docs/FEATURE_IMPLEMENTATION_PLAN.md`.
+
 ---
 
 ## Configuration

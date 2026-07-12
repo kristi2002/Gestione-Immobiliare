@@ -1,0 +1,107 @@
+<div class="valuation-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Valutazioni &amp; Quotazioni OMI</h2>
+            <p>Stima automatica del valore di un immobile da quotazioni OMI e comparabili interni.</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-omi">+ Quotazione OMI</button>
+        </div>
+    </div>
+
+    <div id="val-alert" class="alert" style="display:none;"></div>
+
+    <!-- Quick estimate -->
+    <div class="card" style="margin-bottom:16px;">
+        <h3 style="margin-top:0;">Stima rapida</h3>
+        <div class="toolbar" style="align-items:flex-end;">
+            <div class="form-group" style="flex:1;min-width:240px;margin:0;">
+                <label for="val-property">Immobile</label>
+                <select id="val-property" class="form-select"><option value="">— Seleziona immobile —</option></select>
+            </div>
+            <button class="btn btn--primary" id="btn-estimate"><i data-lucide="calculator"></i> Calcola stima</button>
+        </div>
+        <div id="val-estimate-result" style="margin-top:14px;"></div>
+    </div>
+
+    <h3>Quotazioni OMI inserite</h3>
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="omi-search" class="form-input" placeholder="Cerca per comune, zona o tipologia…" autocomplete="off">
+        </div>
+    </div>
+    <div class="table-wrapper">
+        <table class="data-table" id="omi-table">
+            <thead>
+                <tr><th>Comune</th><th>Zona</th><th>Tipologia</th><th>Vendita €/m²</th><th>Affitto €/m²</th><th>Periodo</th><th>Azioni</th></tr>
+            </thead>
+            <tbody id="omi-tbody">
+                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="omi-pagination" class="pagination-container"></div>
+</div>
+
+<div class="modal-overlay" id="omi-modal" hidden>
+    <div class="modal modal--md" role="dialog" aria-labelledby="omi-modal-title">
+        <div class="modal-header">
+            <h3 id="omi-modal-title">Nuova quotazione OMI</h3>
+            <button class="modal-close" id="omi-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="omi-form" class="modal-body">
+            <input type="hidden" id="omi-id">
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="omi-comune">Comune <span class="required">*</span></label>
+                    <input type="text" id="omi-comune" class="form-input" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="omi-zone">Zona OMI</label>
+                    <input type="text" id="omi-zone" class="form-input" maxlength="20" placeholder="es. B1">
+                </div>
+                <div class="form-group">
+                    <label for="omi-type">Tipologia</label>
+                    <select id="omi-type" class="form-select">
+                        <option value="appartamento">Appartamento</option>
+                        <option value="villa">Villa</option>
+                        <option value="ufficio">Ufficio</option>
+                        <option value="negozio">Negozio</option>
+                        <option value="box">Box/Garage</option>
+                        <option value="terreno">Terreno</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label for="omi-price-min">Vendita €/m² min</label><input type="number" id="omi-price-min" class="form-input" min="0" step="0.01"></div>
+                <div class="form-group"><label for="omi-price-max">Vendita €/m² max</label><input type="number" id="omi-price-max" class="form-input" min="0" step="0.01"></div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label for="omi-rent-min">Affitto €/m²/mese min</label><input type="number" id="omi-rent-min" class="form-input" min="0" step="0.01"></div>
+                <div class="form-group"><label for="omi-rent-max">Affitto €/m²/mese max</label><input type="number" id="omi-rent-max" class="form-input" min="0" step="0.01"></div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label for="omi-period">Periodo</label><input type="text" id="omi-period" class="form-input" maxlength="10" placeholder="2026-S1"></div>
+                <div class="form-group"><label for="omi-notes">Note</label><input type="text" id="omi-notes" class="form-input" maxlength="255"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="omi-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="omi-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="omi-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header"><h3>Elimina quotazione</h3><button class="modal-close" id="omi-delete-close" aria-label="Chiudi">&times;</button></div>
+        <div class="modal-body"><p>Eliminare questa quotazione OMI?</p></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="omi-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="omi-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/valuation.js"></script>

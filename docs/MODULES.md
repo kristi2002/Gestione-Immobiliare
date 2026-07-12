@@ -25,7 +25,13 @@ Clients own properties. Leads want to rent or buy them. Tenants already live in 
 
 ---
 
-## The 33 Modules
+> **July 2026 — fiscal & compliance layer added.** Three new modules (Antiriciclaggio,
+> Scadenzario Fiscale, Pubblicazioni Portali) plus deep fields on Immobili (dati catastali + APE),
+> Contratti (registrazione RLI, cedolare secca, adeguamento ISTAT), Inquilini (mandato SEPA) and
+> Pagamenti (metodo). Fatture can now export the **FatturaPA XML** and Immobili gain an **AI listing
+> copywriter** + **reverse Magic Match** (immobile → lead compatibili). See §"New modules" below.
+
+## The 37 Modules
 
 ### Dashboard
 
@@ -332,6 +338,55 @@ System-wide configuration. Organised into tabs:
 - **Utenti** *(super-admin only)* — create and manage admin accounts with roles: `super_admin`, `admin`, `agent`, `readonly`.
 
 **Connects to:** All modules (global configuration source).
+
+---
+
+## New modules (July 2026)
+
+### Antiriciclaggio (AML)
+`Gestione` group. A fascicolo di **adeguata verifica** per subject (D.lgs 231/2007): tipo verifica
+(ordinaria/semplificata/rafforzata), livello di rischio, dati documento d'identità, titolare
+effettivo, flag PEP, scopo dell'operazione, data verifica e **conservazione decennale** (auto a 10
+anni). Può essere collegato a un proprietario, lead o immobile. KPI: da completare, rischio alto,
+conservazione in scadenza. Backend: `aml_records` + `api/aml.php`.
+
+### Scadenzario Fiscale
+`Finanze` group. Un'unica lista ordinata di **tutte** le scadenze: fine contratto, imposta di
+registro/cedolare, adeguamento ISTAT, scadenza APE, assicurazioni, conservazione antiriciclaggio.
+Classificazione scadute / entro 30 gg / in arrivo, con orizzonte configurabile. Sola lettura
+aggregata: `api/scadenzario.php`.
+
+### Pubblicazioni Portali
+`Immobili` group. Stato di pubblicazione di ogni immobile sui portali (Immobiliare.it, Idealista,
+Casa.it, Subito, sito agenzia): stato (bozza/in pubblicazione/pubblicato/errore/rimosso), ID e URL
+annuncio, ultimo sync, messaggio di errore. Il tracciamento è nell'app; la spinta effettiva ai
+portali richiede le credenziali/feed di ciascun portale. Backend: `portal_listings` + `api/portal_sync.php`.
+
+### Valutazioni & Quotazioni OMI
+`Immobili` group. Two things: (1) a manager for **quotazioni OMI** (valori €/m² per comune/zona/tipologia,
+inseriti dal database OMI dell'Agenzia delle Entrate); (2) una **stima rapida** che, dato un immobile,
+calcola un valore/canone suggerito combinando la quotazione OMI (€/m² × m²) con i **comparabili interni**
+(immobili dell'agenzia stesso comune/tipologia con prezzo e m²). La stima si può anche lanciare dal
+pulsante "Calcola stima OMI" nella modale Valutazione dell'immobile, che precompila il record di
+valutazione. Backend: `omi_quotazioni` + `api/valuation.php`.
+
+### Enhancements to existing modules (layer 2)
+- **Pagamenti:** pulsante **"Esporta SDD"** → genera il file **SEPA pain.008.001.02** degli addebiti
+  diretti del mese (canoni con metodo SDD e mandato valido). Il creditore (IBAN + Identificativo
+  Creditore SEPA) si imposta in Impostazioni → Fatturazione.
+- **Scheda proprietario:** pulsante **"Prospetto fiscale"** → PDF dei canoni **incassati** per immobile
+  nell'anno con regime (cedolare/ordinario) e dati catastali, a supporto della dichiarazione redditi.
+
+### Enhancements to existing modules
+- **Immobili:** sezione "Dati catastali e APE" (foglio/particella/subalterno/categoria/rendita/zona OMI,
+  APE con scadenza a 10 anni) + pulsante **"Genera con AI"** per la descrizione annuncio + pulsante
+  **"Trova lead"** (reverse Magic Match con inviti WhatsApp/email precompilati).
+- **Contratti:** sezione "Registrazione e fisco" (tipo locazione 4+4/3+2/transitorio…, estremi
+  registrazione, cedolare secca, imposta di registro/bollo con scadenza) + **calcolo adeguamento ISTAT**.
+- **Fatture:** pulsante **XML FatturaPA** (scarica l'XML 1.2.2; l'identità fiscale agenzia si imposta
+  in Impostazioni → Fatturazione).
+- **Inquilini:** IBAN + mandato **SDD** (addebito diretto SEPA).
+- **Pagamenti:** campo **Metodo** (bonifico/SDD/MAV/contanti/assegno/POS/Stripe).
 
 ---
 

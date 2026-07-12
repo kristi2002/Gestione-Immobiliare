@@ -49,12 +49,20 @@
             <button type="button" class="view-cols-btn" data-cols="3">▦ 3</button>
             <button type="button" class="view-cols-btn" data-cols="4">▦ 4</button>
         </div>
+        <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-map" title="Mostra la mappa accanto agli immobili"><i data-lucide="map"></i> Mappa</button>
     </div>
 
-    <div id="properties-grid" class="entity-grid entity-grid--wide">
-        <div class="entity-loading">Caricamento…</div>
+    <div id="properties-layout" class="properties-layout">
+        <div class="properties-layout__list">
+            <div id="properties-grid" class="entity-grid entity-grid--wide">
+                <div class="entity-loading">Caricamento…</div>
+            </div>
+            <div id="properties-pagination" class="pagination-container"></div>
+        </div>
+        <div class="properties-layout__map" id="properties-map-panel" hidden>
+            <div id="properties-map"></div>
+        </div>
     </div>
-    <div id="properties-pagination" class="pagination-container"></div>
 </div>
 
 <!-- Create / Edit modal -->
@@ -249,7 +257,12 @@
             <h4>Storico valutazioni</h4>
             <div id="appraisal-history" class="appraisal-history">Caricamento…</div>
 
-            <form id="appraisal-form" style="margin-top:20px">
+            <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button type="button" class="btn btn--ghost btn--sm" id="appraisal-omi-estimate"><i data-lucide="calculator"></i> Calcola stima OMI</button>
+                <span id="appraisal-omi-hint" class="text-muted" style="font-size:12px;"></span>
+            </div>
+
+            <form id="appraisal-form" style="margin-top:12px">
                 <input type="hidden" id="appraisal-property-id">
                 <fieldset class="form-section">
                     <legend>Nuova valutazione</legend>

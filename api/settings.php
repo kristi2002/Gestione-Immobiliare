@@ -181,6 +181,18 @@ function updateSettings(): void
         }
     }
 
+    if (in_array($section, ['fatturazione', 'all'], true)) {
+        foreach ([
+            'agency_piva','agency_cf','agency_denominazione','agency_regime_fiscale',
+            'agency_indirizzo','agency_cap','agency_comune','agency_provincia','agency_pec',
+            'agency_iban','agency_sepa_creditor_id',
+        ] as $k) {
+            if (array_key_exists($k, $data)) {
+                $pairs[$k] = trim((string) $data[$k]);
+            }
+        }
+    }
+
     if (empty($pairs)) {
         apiError('Nessun campo da aggiornare.');
     }

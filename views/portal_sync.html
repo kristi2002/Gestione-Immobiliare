@@ -1,0 +1,126 @@
+<div class="portal-sync-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Pubblicazioni Portali</h2>
+            <p>Stato di pubblicazione di ogni immobile sui portali (Immobiliare.it, Idealista, Casa.it, sito agenzia).</p>
+        </div>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-portal">+ Nuova pubblicazione</button>
+        </div>
+    </div>
+
+    <div id="portal-alert" class="alert" style="display:none;"></div>
+
+    <div class="stats-grid" id="portal-stats">
+        <div class="stat-card"><div class="stat-card__value" id="stat-portal-total">—</div><div class="stat-card__label">Totale</div></div>
+        <div class="stat-card"><div class="stat-card__value" id="stat-portal-published">—</div><div class="stat-card__label">Pubblicati</div></div>
+        <div class="stat-card"><div class="stat-card__value" id="stat-portal-pending">—</div><div class="stat-card__label">In corso / bozza</div></div>
+        <div class="stat-card" style="border-left:4px solid var(--color-danger,#dc2626)"><div class="stat-card__value" id="stat-portal-errors">—</div><div class="stat-card__label">Errori</div></div>
+    </div>
+
+    <div class="toolbar">
+        <select id="portal-portal-filter" class="form-select">
+            <option value="">Tutti i portali</option>
+            <option value="immobiliare">Immobiliare.it</option>
+            <option value="idealista">Idealista</option>
+            <option value="casa">Casa.it</option>
+            <option value="subito">Subito</option>
+            <option value="sito_agenzia">Sito agenzia</option>
+            <option value="altro">Altro</option>
+        </select>
+        <select id="portal-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="draft">Bozza</option>
+            <option value="publishing">In pubblicazione</option>
+            <option value="published">Pubblicato</option>
+            <option value="error">Errore</option>
+            <option value="removed">Rimosso</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="portal-table">
+            <thead>
+                <tr><th>Immobile</th><th>Portale</th><th>Stato</th><th>ID annuncio</th><th>Ultimo sync</th><th>Azioni</th></tr>
+            </thead>
+            <tbody id="portal-tbody">
+                <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="portal-pagination" class="pagination-container"></div>
+</div>
+
+<div class="modal-overlay" id="portal-modal" hidden>
+    <div class="modal modal--md" role="dialog" aria-labelledby="portal-modal-title">
+        <div class="modal-header">
+            <h3 id="portal-modal-title">Nuova pubblicazione</h3>
+            <button class="modal-close" id="portal-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="portal-form" class="modal-body">
+            <input type="hidden" id="portal-id">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="portal-property">Immobile <span class="required">*</span></label>
+                    <select id="portal-property" class="form-select" required><option value="">— Seleziona —</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="portal-portal">Portale <span class="required">*</span></label>
+                    <select id="portal-portal" class="form-select" required>
+                        <option value="immobiliare">Immobiliare.it</option>
+                        <option value="idealista">Idealista</option>
+                        <option value="casa">Casa.it</option>
+                        <option value="subito">Subito</option>
+                        <option value="sito_agenzia">Sito agenzia</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="portal-status">Stato</label>
+                    <select id="portal-status" class="form-select">
+                        <option value="draft">Bozza</option>
+                        <option value="publishing">In pubblicazione</option>
+                        <option value="published">Pubblicato</option>
+                        <option value="error">Errore</option>
+                        <option value="removed">Rimosso</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="portal-external-id">ID annuncio sul portale</label>
+                    <input type="text" id="portal-external-id" class="form-input" maxlength="100">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="portal-external-url">URL annuncio</label>
+                <input type="url" id="portal-external-url" class="form-input" maxlength="500" placeholder="https://…">
+            </div>
+            <div class="form-group">
+                <label for="portal-error">Messaggio di errore (se stato = errore)</label>
+                <input type="text" id="portal-error" class="form-input" maxlength="500">
+            </div>
+            <div class="form-group">
+                <label for="portal-notes">Note</label>
+                <textarea id="portal-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="portal-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="portal-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="portal-delete-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header"><h3>Elimina pubblicazione</h3><button class="modal-close" id="portal-delete-close" aria-label="Chiudi">&times;</button></div>
+        <div class="modal-body"><p>Eliminare questa pubblicazione?</p></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="portal-delete-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="portal-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/portal_sync.js"></script>

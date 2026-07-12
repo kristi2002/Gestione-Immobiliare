@@ -703,11 +703,14 @@ details.nav-group[open] > summary .nav-group-arrow {
     color: var(--color-text);
 }
 
-/* Outlined primary — pairs with a solid primary button (e.g. dashboard "+ Proprietario") */
+/* Outlined primary — a clean secondary that pairs with the solid primary button
+   (dashboard "+ Proprietario" next to "+ Immobile"). True outline: transparent
+   fill, primary text + border; fills in on hover. */
 .btn--outline-primary {
-    background: var(--color-primary-light);
-    color: var(--color-primary-dark);
+    background: transparent;
+    color: var(--color-primary);
     border-color: var(--color-primary);
+    font-weight: 600;
 }
 
 .btn--outline-primary:hover {
@@ -818,6 +821,66 @@ details.nav-group[open] > summary .nav-group-arrow {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* --------------------------------------------------------------------------
+   Immobili — map + cards split view (portal-style, à la immobiliare.it)
+   -------------------------------------------------------------------------- */
+.properties-layout { display: block; }
+.properties-layout__map { display: none; }
+
+/* Split mode: scrollable card column beside a sticky map. */
+.properties-layout--split { display: flex; gap: 16px; align-items: flex-start; }
+.properties-layout--split .properties-layout__list { flex: 1 1 58%; min-width: 0; }
+.properties-layout--split .properties-layout__map {
+    display: block;
+    flex: 1 1 42%;
+    position: sticky;
+    top: 12px;
+    height: calc(100vh - 130px);
+    min-width: 300px;
+}
+#properties-map {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+/* Narrower cards so they fit the reduced column width in split mode. */
+.properties-layout--split .entity-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+#btn-toggle-map.is-active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+/* Map pin popup — mini property card. */
+.map-pop { min-width: 180px; }
+.map-pop__title { font-weight: 700; margin: 0 0 2px; }
+.map-pop__meta { color: var(--color-text-muted, #64748b); font-size: 12px; margin: 0 0 6px; }
+.map-pop__price { font-weight: 700; color: var(--color-primary); }
+
+@media (max-width: 900px) {
+    .properties-layout--split { flex-direction: column; }
+    .properties-layout--split .properties-layout__list,
+    .properties-layout--split .properties-layout__map { flex: 1 1 100%; width: 100%; }
+    .properties-layout--split .properties-layout__map {
+        position: relative; top: 0; height: 340px; order: -1; /* map on top on mobile */
+    }
+}
+
+/* Custom dropdown chevron — consistent across browsers and nudged slightly left
+   of the native arrow position for tighter alignment in filter bars / forms. */
+.form-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 34px;
 }
 
 .form-textarea {
@@ -4672,12 +4735,13 @@ body.nav-open {
     box-shadow: 0 1px 4px rgba(220,38,38,.28);
 }
 
-/* ── Outline primary ────────────────────────────────────────────────────── */
+/* ── Outline primary — keep it flat (no coloured shadow on a transparent fill),
+      just a subtle lift on hover. ─────────────────────────────────────────── */
 .btn--outline-primary {
-    box-shadow: 0 1px 3px rgba(37,99,235,.12);
+    box-shadow: none;
 }
 .btn--outline-primary:not(:disabled):hover {
-    box-shadow: 0 3px 10px rgba(37,99,235,.24);
+    box-shadow: 0 2px 8px rgba(37,99,235,.18);
 }
 
 /* ── Semantic colour variants — add shadow + lift on hover ──────────────── */

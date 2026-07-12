@@ -14,6 +14,8 @@
         <button class="settings-tab" data-tab="whatsapp">WhatsApp</button>
         <button class="settings-tab" data-tab="backup">Backup cloud</button>
         <button class="settings-tab" data-tab="meta">Meta / Social</button>
+        <button class="settings-tab" data-tab="fatturazione">Fatturazione</button>
+        <button class="settings-tab" data-tab="sistema">Stato sistema</button>
         <button class="settings-tab" data-tab="wa-templates">Template WhatsApp</button>
         <button class="settings-tab" data-tab="email-templates">Template Email</button>
         <button class="settings-tab" data-tab="security">Sicurezza 2FA</button>
@@ -146,6 +148,57 @@
                 <a href="meta_oauth.php" class="btn btn--ghost" id="btn-meta-oauth">Connetti Facebook / Instagram</a>
             </div>
         </form>
+    </div>
+
+    <div class="settings-panel" id="panel-fatturazione" hidden>
+        <form id="form-fatturazione" class="card">
+            <h3>Fatturazione elettronica — identità fiscale agenzia</h3>
+            <p class="text-muted">Dati del cedente/prestatore usati per generare l'XML FatturaPA. La trasmissione al Sistema di Interscambio (SdI) avviene tramite intermediario accreditato.</p>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Denominazione</label><input type="text" id="set-fp-denominazione" class="form-input" maxlength="80"></div>
+                <div class="form-group"><label>Regime fiscale</label>
+                    <select id="set-fp-regime" class="form-select">
+                        <option value="RF01">RF01 — Ordinario</option>
+                        <option value="RF19">RF19 — Forfettario</option>
+                        <option value="RF02">RF02 — Contribuenti minimi</option>
+                        <option value="RF04">RF04 — Agricoltura</option>
+                        <option value="RF18">RF18 — Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Partita IVA</label><input type="text" id="set-fp-piva" class="form-input" maxlength="11"></div>
+                <div class="form-group"><label>Codice fiscale</label><input type="text" id="set-fp-cf" class="form-input" maxlength="16"></div>
+            </div>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>Indirizzo sede</label><input type="text" id="set-fp-indirizzo" class="form-input" maxlength="120"></div>
+                <div class="form-group"><label>PEC</label><input type="email" id="set-fp-pec" class="form-input" maxlength="120"></div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group"><label>CAP</label><input type="text" id="set-fp-cap" class="form-input" maxlength="5"></div>
+                <div class="form-group"><label>Comune</label><input type="text" id="set-fp-comune" class="form-input" maxlength="60"></div>
+                <div class="form-group"><label>Provincia</label><input type="text" id="set-fp-provincia" class="form-input" maxlength="2" placeholder="MC"></div>
+            </div>
+            <h3 style="margin-top:18px;">Addebito diretto SEPA (SDD)</h3>
+            <p class="text-muted">Usati per generare il file pain.008 di incasso canoni (Pagamenti → Esporta SDD).</p>
+            <div class="form-row form-row--2">
+                <div class="form-group"><label>IBAN agenzia (creditore)</label><input type="text" id="set-fp-iban" class="form-input" maxlength="34"></div>
+                <div class="form-group"><label>Identificativo Creditore SEPA (CID)</label><input type="text" id="set-fp-creditor-id" class="form-input" maxlength="35" placeholder="IT..ZZZ.........."></div>
+            </div>
+            <button type="submit" class="btn btn--primary">Salva dati fatturazione</button>
+        </form>
+    </div>
+
+    <div class="settings-panel" id="panel-sistema" hidden>
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <h3 style="margin:0;">Stato sistema — prontezza produzione</h3>
+                <button type="button" class="btn btn--ghost btn--sm" id="btn-readiness-refresh"><i data-lucide="refresh-cw"></i> Aggiorna</button>
+            </div>
+            <p class="text-muted">Controlli automatici per la messa in produzione: database, migrazioni, sicurezza upload, email, backup, cron, webhook.</p>
+            <div id="readiness-overall" style="margin:8px 0 14px 0;"></div>
+            <div id="readiness-list"><p class="text-muted">Caricamento…</p></div>
+        </div>
     </div>
 
     <div class="settings-panel" id="panel-wa-templates" hidden>

@@ -24,7 +24,15 @@ try {
 
     switch ($method) {
         case 'GET':
-            $id ? getContract($db, $id) : listContracts($db);
+            $action = trim($_GET['action'] ?? '');
+            if ($action === 'istat_adjustment') {
+                if (!$id) apiError('ID contratto mancante.');
+                istatAdjustment($db, $id);
+            } elseif ($id) {
+                getContract($db, $id);
+            } else {
+                listContracts($db);
+            }
             break;
         case 'POST':
             $action = trim($_GET['action'] ?? '');
@@ -157,11 +165,17 @@ function createContract(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO contracts
-            (property_id, tenant_id, client_id, title, contract_type, status,
-             start_date, end_date, monthly_rent, deposit, notes, created_by)
+            (property_id, tenant_id, client_id, title, contract_type, contract_subtype, status,
+             start_date, end_date, monthly_rent, deposit, notes,
+             registration_number, registration_date, registration_office, cedolare_secca,
+             registration_tax_annual, stamp_duty, imposta_registro_due_date,
+             istat_update_enabled, istat_baseline_index, istat_baseline_month, last_istat_update, created_by)
          VALUES
-            (:property_id, :tenant_id, :client_id, :title, :contract_type, :status,
-             :start_date, :end_date, :monthly_rent, :deposit, :notes, :created_by)"
+            (:property_id, :tenant_id, :client_id, :title, :contract_type, :contract_subtype, :status,
+             :start_date, :end_date, :monthly_rent, :deposit, :notes,
+             :registration_number, :registration_date, :registration_office, :cedolare_secca,
+             :registration_tax_annual, :stamp_duty, :imposta_registro_due_date,
+             :istat_update_enabled, :istat_baseline_index, :istat_baseline_month, :last_istat_update, :created_by)"
     );
     $stmt->execute($validated);
 
@@ -182,9 +196,16 @@ function updateContract(PDO $db, int $id): void
     $stmt = $db->prepare(
         "UPDATE contracts
          SET property_id = :property_id, tenant_id = :tenant_id, client_id = :client_id,
-             title = :title, contract_type = :contract_type, status = :status,
+             title = :title, contract_type = :contract_type, contract_subtype = :contract_subtype,
+             status = :status,
              start_date = :start_date, end_date = :end_date, monthly_rent = :monthly_rent,
-             deposit = :deposit, notes = :notes
+             deposit = :deposit, notes = :notes,
+             registration_number = :registration_number, registration_date = :registration_date,
+             registration_office = :registration_office, cedolare_secca = :cedolare_secca,
+             registration_tax_annual = :registration_tax_annual, stamp_duty = :stamp_duty,
+             imposta_registro_due_date = :imposta_registro_due_date,
+             istat_update_enabled = :istat_update_enabled, istat_baseline_index = :istat_baseline_index,
+             istat_baseline_month = :istat_baseline_month, last_istat_update = :last_istat_update
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -231,6 +252,25 @@ function validateContractInput(array $data): array
     $deposit      = isset($data['deposit']) && $data['deposit'] !== '' ? (float) $data['deposit'] : null;
     $notes        = trim($data['notes'] ?? '') ?: null;
 
+    // Fiscal registration (RLI), cedolare secca, imposta di registro, ISTAT
+    $dateOrNull = static function ($v) {
+        $v = isset($v) ? trim((string) $v) : '';
+        return $v !== '' && DateTime::createFromFormat('Y-m-d', $v) ? $v : null;
+    };
+    $strOrNull  = static fn($v) => isset($v) && trim((string) $v) !== '' ? trim((string) $v) : null;
+    $contractSubtype     = $strOrNull($data['contract_subtype'] ?? null);
+    $registrationNumber  = $strOrNull($data['registration_number'] ?? null);
+    $registrationDate    = $dateOrNull($data['registration_date'] ?? null);
+    $registrationOffice  = $strOrNull($data['registration_office'] ?? null);
+    $cedolareSecca       = !empty($data['cedolare_secca']) ? 1 : 0;
+    $registrationTax     = isset($data['registration_tax_annual']) && $data['registration_tax_annual'] !== '' ? (float) $data['registration_tax_annual'] : null;
+    $stampDuty           = isset($data['stamp_duty']) && $data['stamp_duty'] !== '' ? (float) $data['stamp_duty'] : null;
+    $registroDueDate     = $dateOrNull($data['imposta_registro_due_date'] ?? null);
+    $istatEnabled        = !empty($data['istat_update_enabled']) ? 1 : 0;
+    $istatBaselineIndex  = isset($data['istat_baseline_index']) && $data['istat_baseline_index'] !== '' ? (float) $data['istat_baseline_index'] : null;
+    $istatBaselineMonth  = $strOrNull($data['istat_baseline_month'] ?? null);
+    $lastIstatUpdate     = $dateOrNull($data['last_istat_update'] ?? null);
+
     if ($propertyId <= 0) {
         apiError('Seleziona un immobile.');
     }
@@ -262,7 +302,58 @@ function validateContractInput(array $data): array
         'monthly_rent'  => $monthlyRent,
         'deposit'       => $deposit,
         'notes'         => $notes,
+        'contract_subtype'          => $contractSubtype,
+        'registration_number'       => $registrationNumber,
+        'registration_date'         => $registrationDate,
+        'registration_office'       => $registrationOffice,
+        'cedolare_secca'            => $cedolareSecca,
+        'registration_tax_annual'   => $registrationTax,
+        'stamp_duty'                => $stampDuty,
+        'imposta_registro_due_date' => $registroDueDate,
+        'istat_update_enabled'      => $istatEnabled,
+        'istat_baseline_index'      => $istatBaselineIndex,
+        'istat_baseline_month'      => $istatBaselineMonth,
+        'last_istat_update'         => $lastIstatUpdate,
     ];
+}
+
+/**
+ * Compute the proposed ISTAT rent adjustment for a lease contract.
+ * GET /api/contracts.php?action=istat_adjustment&id={id}[&target_year=YYYY]
+ */
+function istatAdjustment(PDO $db, int $id): void
+{
+    require_once __DIR__ . '/../lib/istat.php';
+
+    $stmt = $db->prepare('SELECT * FROM contracts WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $c = $stmt->fetch();
+    if (!$c) apiError('Contratto non trovato.', 404);
+
+    $rent = isset($c['monthly_rent']) ? (float) $c['monthly_rent'] : 0.0;
+    if ($rent <= 0) apiError('Il contratto non ha un canone mensile impostato.');
+
+    $baselineIndex = ($c['istat_baseline_index'] ?? null) !== null && $c['istat_baseline_index'] !== ''
+        ? (float) $c['istat_baseline_index'] : null;
+
+    // Fallback baseline year from start_date when no explicit index is stored.
+    $baselineYear = null;
+    if ($baselineIndex === null && !empty($c['start_date'])) {
+        $baselineYear = (int) substr((string) $c['start_date'], 0, 4);
+    }
+
+    $targetYear = isset($_GET['target_year']) && $_GET['target_year'] !== ''
+        ? (int) $_GET['target_year']
+        : (int) date('Y');
+
+    $result = istatComputeAdjustment($rent, $baselineIndex, $baselineYear, $targetYear);
+    if (empty($result['ok'])) {
+        apiError($result['message'] ?? 'Calcolo ISTAT non riuscito.');
+    }
+
+    $result['contract_id'] = $id;
+    $result['note'] = 'Adeguamento pari al 75% della variazione FOI. Valori indicativi: verificare con il dato ISTAT ufficiale.';
+    apiSuccess($result);
 }
 
 function generatePayments(PDO $db, int $id): void

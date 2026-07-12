@@ -12,4 +12,6 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/contract_expirations.php';
 
 $result = processContractExpirations(getDB());
+require_once __DIR__ . '/../config/heartbeat.php';
+cronHeartbeat('contract_expirations');
 echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";

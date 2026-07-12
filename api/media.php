@@ -99,8 +99,9 @@ try {
 
 function streamMediaFile(array $media): never
 {
-    $fullPath = __DIR__ . '/../' . $media['file_path'];
-    if (!is_file($fullPath)) {
+    require_once __DIR__ . '/../config/upload_guard.php';
+    $fullPath = safeUploadRealPath((string) $media['file_path']);
+    if ($fullPath === null) {
         http_response_code(404);
         exit('File non trovato sul server.');
     }

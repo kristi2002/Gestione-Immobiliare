@@ -564,6 +564,30 @@ All FK columns are indexed. Notable unique constraints:
 
 ---
 
+## Fiscal & compliance additions (phase 35–37)
+
+**`properties`** — new columns:
+- Dati catastali: `cadastral_comune`, `cadastral_foglio`, `cadastral_particella`, `cadastral_subalterno`, `cadastral_category`, `cadastral_class`, `cadastral_rendita`, `cadastral_zone`
+- APE: `ape_number`, `ape_issue_date`, `ape_expiry_date` (auto-filled to issue + 10y), `ipe_value`
+
+**`contracts`** — new columns: `contract_subtype`, `registration_number`, `registration_date`, `registration_office`, `cedolare_secca`, `registration_tax_annual`, `stamp_duty`, `imposta_registro_due_date`, `istat_update_enabled`, `istat_baseline_index`, `istat_baseline_month`, `last_istat_update`
+
+**`tenants`** — new columns: `iban`, `sdd_mandate_ref`, `sdd_mandate_date` (SEPA addebito diretto)
+
+**`payments`** — new column: `method` ENUM(`bonifico`,`sdd`,`mav`,`contanti`,`assegno`,`pos`,`stripe`,`altro`)
+
+**`portal_listings`** (new) — per-property per-portal publish state. Unique key `(property_id, portal)`. FK `property_id` → `properties` `ON DELETE CASCADE`. Columns: `portal`, `status`, `external_id`, `external_url`, `last_synced_at`, `error_message`, `notes`.
+
+**`aml_records`** (new) — antiriciclaggio / adeguata verifica. FKs to `clients`, `leads`, `properties` (`ON DELETE SET NULL`) and `admin_users` (`created_by`). Key columns: `subject_name`, `subject_type`, `verification_type`, `risk_level`, `operation_type`, `operation_value`, `id_document_*`, `beneficial_owner`, `is_pep`, `verification_date`, `retention_until` (auto = verifica + 10y), `status`.
+
+**`app_settings`** — new keys for FatturaPA cedente: `agency_piva`, `agency_cf`, `agency_denominazione`, `agency_regime_fiscale`, `agency_indirizzo`, `agency_cap`, `agency_comune`, `agency_provincia`, `agency_pec`. For SEPA SDD: `agency_iban`, `agency_sepa_creditor_id`.
+
+**`fattura_transmissions`** (new, phase 39) — one row per invoice tracking the FatturaPA/SdI lifecycle. Unique key `invoice_id` (FK → `invoices` `ON DELETE CASCADE`). Columns: `status` (generato/trasmesso/consegnato/messa_a_disposizione/scartato/accettato/rifiutato/errore_invio), `progressivo`, `xml_filename`, `xml_path` (persisted in the protected `uploads/documents/fatture/` tree), `channel`, `sdi_identificativo`, `receipt_type`, `receipt_message`, `sent_at`, `delivered_at`.
+
+**`omi_quotazioni`** (new, phase 38) — manually-entered OMI market values. Unique key `(comune, cadastral_zone, property_type)`. Columns: `price_min_sqm`, `price_max_sqm`, `rent_min_sqm`, `rent_max_sqm`, `period`, `notes`. Feeds `api/valuation.php` estimates.
+
+---
+
 ## Notes on data integrity
 
 - Most FKs use `ON DELETE SET NULL` (preserve history when related record deleted)

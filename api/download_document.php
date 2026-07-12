@@ -112,8 +112,10 @@ try {
         exit('Documento non trovato.');
     }
 
-    $fullPath = __DIR__ . '/../' . $doc['file_path'];
-    if (!file_exists($fullPath)) {
+    // Containment guard: the stored path must resolve to a real file INSIDE uploads/.
+    require_once __DIR__ . '/../config/upload_guard.php';
+    $fullPath = safeUploadRealPath((string) $doc['file_path']);
+    if ($fullPath === null) {
         http_response_code(404);
         exit('File non trovato sul server.');
     }
@@ -136,6 +138,7 @@ try {
     header('Content-Length: ' . filesize($fullPath));
     header('Cache-Control: no-cache, must-revalidate');
     header('Pragma: no-cache');
+    header('X-Content-Type-Options: nosniff');
 
     readfile($fullPath);
     exit;

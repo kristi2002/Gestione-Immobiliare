@@ -146,7 +146,7 @@ All output logged to `/var/log/gestione-cron.log`.
 ### ✅ Social post image must be public HTTPS URL
 
 ~~**Problem:** Instagram requires a publicly accessible image URL. If `META_PUBLIC_BASE_URL` is not set or the image isn't publicly accessible, Instagram publishing fails silently.~~  
-**Status: Fixed (June 2026).** `META_PUBLIC_BASE_URL=https://testdemo.it` is set in Coolify env vars. Files under `uploads/` are served by Apache without auth, so Instagram can fetch them directly.
+**Status: Fixed (June 2026).** `META_PUBLIC_BASE_URL=https://testdemo.it` is set in Coolify env vars. **Only listing images under `uploads/properties/` are public** so Instagram can fetch them; the `uploads/documents/` tree (ID scans, contracts, private attachments) is denied and streamed only through auth-checked PHP. See **`docs/UPLOADS_SECURITY.md`** for the full, verified posture.
 
 ---
 

@@ -34,6 +34,7 @@
                 tab.classList.add('settings-tab--active');
                 document.querySelectorAll('.settings-panel').forEach(p => p.hidden = true);
                 document.getElementById('panel-' + tab.dataset.tab).hidden = false;
+                if (tab.dataset.tab === 'sistema') loadReadiness();
                 if (tab.dataset.tab === 'email-templates') loadEmailTemplates();
             });
         });
@@ -49,6 +50,7 @@
         fillWhatsApp(settings.whatsapp);
         fillBackup(settings.backup);
         fillMeta(settings.meta);
+        fillFatturazione(settings.fatturazione);
         try {
             const uRes = await fetch(USERS_API);
             if (uRes.ok) {
@@ -116,12 +118,29 @@
         document.getElementById('set-meta-app-secret').value = m.meta_app_secret || '';
     }
 
+    function fillFatturazione(f) {
+        if (!f) return;
+        document.getElementById('set-fp-denominazione').value = f.agency_denominazione || '';
+        document.getElementById('set-fp-regime').value = f.agency_regime_fiscale || 'RF01';
+        document.getElementById('set-fp-piva').value = f.agency_piva || '';
+        document.getElementById('set-fp-cf').value = f.agency_cf || '';
+        document.getElementById('set-fp-indirizzo').value = f.agency_indirizzo || '';
+        document.getElementById('set-fp-pec').value = f.agency_pec || '';
+        document.getElementById('set-fp-cap').value = f.agency_cap || '';
+        document.getElementById('set-fp-comune').value = f.agency_comune || '';
+        document.getElementById('set-fp-provincia').value = f.agency_provincia || '';
+        if (document.getElementById('set-fp-iban')) document.getElementById('set-fp-iban').value = f.agency_iban || '';
+        if (document.getElementById('set-fp-creditor-id')) document.getElementById('set-fp-creditor-id').value = f.agency_sepa_creditor_id || '';
+    }
+
     function bindForms() {
         document.getElementById('form-branding').addEventListener('submit', e => saveSection(e, 'branding', collectBranding));
         document.getElementById('form-mail').addEventListener('submit', e => saveSection(e, 'mail', collectMail));
         document.getElementById('form-whatsapp').addEventListener('submit', e => saveSection(e, 'whatsapp', collectWhatsApp));
         document.getElementById('form-backup').addEventListener('submit', e => saveSection(e, 'backup', collectBackup));
         document.getElementById('form-meta').addEventListener('submit', e => saveSection(e, 'meta', collectMeta));
+        document.getElementById('form-fatturazione').addEventListener('submit', e => saveSection(e, 'fatturazione', collectFatturazione));
+        document.getElementById('btn-readiness-refresh')?.addEventListener('click', loadReadiness);
         document.getElementById('btn-test-email').addEventListener('click', testEmail);
         document.getElementById('set-logo-file').addEventListener('change', uploadLogo);
         document.getElementById('btn-backup-now').addEventListener('click', triggerBackup);
@@ -169,6 +188,54 @@
             backup_s3_key: document.getElementById('set-s3-key').value,
             backup_s3_secret: document.getElementById('set-s3-secret').value,
             backup_s3_prefix: document.getElementById('set-s3-prefix').value,
+        };
+    }
+
+    async function loadReadiness() {
+        const listEl = document.getElementById('readiness-list');
+        const overallEl = document.getElementById('readiness-overall');
+        if (!listEl) return;
+        const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+        listEl.innerHTML = '<p class="text-muted">Caricamento…</p>';
+        overallEl.innerHTML = '';
+        try {
+            const res = await fetch('api/readiness.php');
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore');
+            const icon = { ok: '🟢', warn: '🟡', fail: '🔴' };
+            const overallLabel = { ok: 'Pronto', warn: 'Pronto con avvisi', fail: 'Blocchi da risolvere' };
+            const oBadge = { ok: 'badge--success', warn: 'badge--warning', fail: 'badge--danger' }[json.overall] || 'badge';
+            overallEl.innerHTML = `<span class="badge ${oBadge}" style="font-size:14px;">${icon[json.overall] || ''} ${esc(overallLabel[json.overall] || json.overall)}</span>
+                <span class="text-muted" style="margin-left:8px;font-size:12px;">ambiente: ${esc(json.env)} · ${esc((json.checked_at||'').replace('T',' ').substring(0,16))}</span>`;
+            const labels = {
+                db_user:'Utente database', migrations:'Migrazioni', uploads:'Sicurezza upload',
+                setup:'Setup', debug:'Debug', cron_secret:'Segreto cron', email:'Email (SMTP)',
+                webhooks:'Firme webhook', cron:'Esecuzione cron', backup:'Backup',
+            };
+            listEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;">' +
+                Object.entries(json.checks).map(([k, c]) =>
+                    `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--color-border,#e5e7eb);border-radius:8px;">
+                        <span style="font-size:14px;line-height:1.4;">${icon[c.status] || '•'}</span>
+                        <div><strong>${esc(labels[k] || k)}</strong><br><span class="text-muted" style="font-size:13px;">${esc(c.message)}</span></div>
+                     </div>`).join('') + '</div>';
+        } catch (err) {
+            listEl.innerHTML = `<p style="color:var(--color-danger);">${esc(err.message)}</p>`;
+        }
+    }
+
+    function collectFatturazione() {
+        return {
+            agency_denominazione:  document.getElementById('set-fp-denominazione').value,
+            agency_regime_fiscale: document.getElementById('set-fp-regime').value,
+            agency_piva:           document.getElementById('set-fp-piva').value,
+            agency_cf:             document.getElementById('set-fp-cf').value,
+            agency_indirizzo:      document.getElementById('set-fp-indirizzo').value,
+            agency_pec:            document.getElementById('set-fp-pec').value,
+            agency_cap:            document.getElementById('set-fp-cap').value,
+            agency_comune:         document.getElementById('set-fp-comune').value,
+            agency_provincia:      document.getElementById('set-fp-provincia').value,
+            agency_iban:           document.getElementById('set-fp-iban') ? document.getElementById('set-fp-iban').value : '',
+            agency_sepa_creditor_id: document.getElementById('set-fp-creditor-id') ? document.getElementById('set-fp-creditor-id').value : '',
         };
     }
 

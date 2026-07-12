@@ -42,8 +42,21 @@
                 </div>
             </div>
 
-            <div class="form-row">
+            <div class="form-row form-row--2">
                 <div class="form-group"><label for="pye-paid-date">Data pagamento</label><input type="date" id="pye-paid-date" class="form-input"></div>
+                <div class="form-group">
+                    <label for="pye-method">Metodo di pagamento</label>
+                    <select id="pye-method" class="form-select">
+                        <option value="bonifico">Bonifico</option>
+                        <option value="sdd">Addebito diretto SEPA (SDD)</option>
+                        <option value="mav">MAV</option>
+                        <option value="contanti">Contanti</option>
+                        <option value="assegno">Assegno</option>
+                        <option value="pos">POS / carta</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
             </div>
 
             <div class="form-group"><label for="pye-notes">Note</label><textarea id="pye-notes" class="form-textarea" rows="2"></textarea></div>

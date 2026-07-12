@@ -109,6 +109,18 @@
         setVal('pe-latitude', p.latitude);
         setVal('pe-longitude', p.longitude);
         setVal('pe-geo-confidence-value', p.geo_confidence);
+        setVal('pe-cat-comune', p.cadastral_comune);
+        setVal('pe-cat-category', p.cadastral_category);
+        setVal('pe-cat-class', p.cadastral_class);
+        setVal('pe-cat-foglio', p.cadastral_foglio);
+        setVal('pe-cat-particella', p.cadastral_particella);
+        setVal('pe-cat-subalterno', p.cadastral_subalterno);
+        setVal('pe-cat-zone', p.cadastral_zone);
+        setVal('pe-cat-rendita', p.cadastral_rendita);
+        setVal('pe-ape-number', p.ape_number);
+        setVal('pe-ape-issue', p.ape_issue_date ? String(p.ape_issue_date).substring(0, 10) : '');
+        setVal('pe-ape-expiry', p.ape_expiry_date ? String(p.ape_expiry_date).substring(0, 10) : '');
+        setVal('pe-ipe', p.ipe_value);
         setVal('pe-description', p.description);
         setVal('pe-features', p.additional_features);
         setVal('pe-notes', p.internal_notes);
@@ -150,7 +162,54 @@
             description:         $('pe-description').value.trim(),
             additional_features: $('pe-features').value.trim(),
             internal_notes:      $('pe-notes').value.trim(),
+            cadastral_comune:     $('pe-cat-comune').value.trim(),
+            cadastral_category:   $('pe-cat-category').value.trim(),
+            cadastral_class:      $('pe-cat-class').value.trim(),
+            cadastral_foglio:     $('pe-cat-foglio').value.trim(),
+            cadastral_particella: $('pe-cat-particella').value.trim(),
+            cadastral_subalterno: $('pe-cat-subalterno').value.trim(),
+            cadastral_zone:       $('pe-cat-zone').value.trim(),
+            cadastral_rendita:    $('pe-cat-rendita').value,
+            ape_number:           $('pe-ape-number').value.trim(),
+            ape_issue_date:       $('pe-ape-issue').value || null,
+            ape_expiry_date:      $('pe-ape-expiry').value || null,
+            ipe_value:            $('pe-ipe').value,
         };
+    }
+
+    // ── AI listing description ────────────────────────────────────────────────
+    async function aiDescribe() {
+        const btn  = $('pe-ai-describe');
+        const hint = $('pe-ai-hint');
+        if (!btn) return;
+        btn.disabled = true;
+        const original = btn.innerHTML;
+        btn.innerHTML = 'Generazione…';
+        if (hint) hint.style.display = 'none';
+        try {
+            const res = await fetch('api/ai_describe.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ property: collect() }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Generazione non riuscita.');
+            if (json.data && json.data.description) {
+                $('pe-description').value = json.data.description;
+                if (json.data.title && !$('pe-reference').value) {
+                    // suggested title is informational; show it as a hint
+                }
+                if (hint) {
+                    hint.textContent = json.data.title ? ('Titolo suggerito: ' + json.data.title) : 'Descrizione generata.';
+                    hint.style.display = 'block';
+                }
+            }
+        } catch (err) {
+            if (hint) { hint.textContent = err.message; hint.style.display = 'block'; }
+        } finally {
+            btn.disabled = false; btn.innerHTML = original;
+            if (window.lucide) window.lucide.createIcons();
+        }
     }
 
     async function save(e) {
@@ -224,6 +283,8 @@
         $('pe-form').addEventListener('submit', save);
         $('pe-geocode').addEventListener('click', geocode);
         $('pe-mandato').addEventListener('click', generateMandato);
+        const aiBtn = $('pe-ai-describe');
+        if (aiBtn) aiBtn.addEventListener('click', aiDescribe);
 
         if (isEdit) {
             $('pe-title').textContent = 'Modifica Immobile';

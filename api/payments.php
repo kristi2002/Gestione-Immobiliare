@@ -124,9 +124,9 @@ function createPayment(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO payments
-            (tenant_id, property_id, contract_id, amount, due_date, paid_date, status, notes)
+            (tenant_id, property_id, contract_id, amount, due_date, paid_date, status, notes, method)
          VALUES
-            (:tenant_id, :property_id, :contract_id, :amount, :due_date, :paid_date, :status, :notes)"
+            (:tenant_id, :property_id, :contract_id, :amount, :due_date, :paid_date, :status, :notes, :method)"
     );
     $stmt->execute($validated);
 
@@ -147,7 +147,8 @@ function updatePayment(PDO $db, int $id): void
     $stmt = $db->prepare(
         "UPDATE payments
          SET tenant_id = :tenant_id, property_id = :property_id, contract_id = :contract_id,
-             amount = :amount, due_date = :due_date, paid_date = :paid_date, status = :status, notes = :notes
+             amount = :amount, due_date = :due_date, paid_date = :paid_date, status = :status,
+             notes = :notes, method = :method
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -184,6 +185,9 @@ function validatePaymentInput(array $data): array
     $paidDate   = trim($data['paid_date'] ?? '') ?: null;
     $status     = trim($data['status'] ?? 'pending');
     $notes      = trim($data['notes'] ?? '') ?: null;
+    $methods    = ['bonifico', 'sdd', 'mav', 'contanti', 'assegno', 'pos', 'stripe', 'altro'];
+    $method     = trim($data['method'] ?? 'bonifico');
+    if (!in_array($method, $methods, true)) $method = 'bonifico';
 
     if ($tenantId <= 0) {
         apiError('Seleziona un inquilino.');
@@ -218,6 +222,7 @@ function validatePaymentInput(array $data): array
         'paid_date'   => $paidDate,
         'status'      => $status,
         'notes'       => $notes,
+        'method'      => $method,
     ];
 }
 

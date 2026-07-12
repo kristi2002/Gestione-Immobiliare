@@ -69,7 +69,21 @@
         $('cte-rent').value = c.monthly_rent ?? '';
         $('cte-deposit').value = c.deposit ?? '';
         $('cte-notes').value = c.notes || '';
+        // Fiscal / registration
+        setVal('cte-subtype', c.contract_subtype);
+        $('cte-cedolare').checked = !!Number(c.cedolare_secca);
+        setVal('cte-reg-number', c.registration_number);
+        setVal('cte-reg-date', c.registration_date ? String(c.registration_date).substring(0, 10) : '');
+        setVal('cte-reg-office', c.registration_office);
+        setVal('cte-registro-due', c.imposta_registro_due_date ? String(c.imposta_registro_due_date).substring(0, 10) : '');
+        setVal('cte-reg-tax', c.registration_tax_annual);
+        setVal('cte-stamp', c.stamp_duty);
+        $('cte-istat-enabled').checked = !!Number(c.istat_update_enabled);
+        setVal('cte-istat-index', c.istat_baseline_index);
+        setVal('cte-istat-month', c.istat_baseline_month);
     }
+
+    function setVal(id, v) { const el = $(id); if (el) el.value = (v ?? '') === null ? '' : (v ?? ''); }
 
     function collect() {
         return {
@@ -84,7 +98,46 @@
             monthly_rent:  $('cte-rent').value,
             deposit:       $('cte-deposit').value,
             notes:         $('cte-notes').value.trim(),
+            contract_subtype:          $('cte-subtype').value || null,
+            cedolare_secca:            $('cte-cedolare').checked ? 1 : 0,
+            registration_number:       $('cte-reg-number').value.trim(),
+            registration_date:         $('cte-reg-date').value || null,
+            registration_office:       $('cte-reg-office').value.trim(),
+            imposta_registro_due_date: $('cte-registro-due').value || null,
+            registration_tax_annual:   $('cte-reg-tax').value || null,
+            stamp_duty:                $('cte-stamp').value || null,
+            istat_update_enabled:      $('cte-istat-enabled').checked ? 1 : 0,
+            istat_baseline_index:      $('cte-istat-index').value || null,
+            istat_baseline_month:      $('cte-istat-month').value.trim() || null,
         };
+    }
+
+    async function calcIstat() {
+        const box = $('cte-istat-result');
+        const id  = $('cte-id').value;
+        if (!id) { box.className = 'alert alert--warning'; box.style.display = 'block'; box.textContent = 'Salva prima il contratto per calcolare l\'adeguamento.'; return; }
+        const btn = $('cte-istat-calc');
+        btn.disabled = true;
+        try {
+            const j = await fetch(`${API}?action=istat_adjustment&id=${id}`).then(r => r.json());
+            if (!j.success) throw new Error(j.error);
+            const d = j.data;
+            const eur = (n) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+            box.className = 'alert alert--info';
+            box.style.display = 'block';
+            box.innerHTML =
+                `<strong>Adeguamento ISTAT ${esc(d.target_year)}</strong><br>` +
+                `Variazione FOI: ${d.variation_pct}% · applicata (75%): ${d.applied_pct}%<br>` +
+                `Canone attuale ${eur(d.current_rent)} → <strong>${eur(d.new_rent)}</strong> ` +
+                `(+${eur(d.monthly_increase)}/mese, +${eur(d.annual_increase)}/anno)<br>` +
+                `<small class="text-muted">${esc(d.note || '')}</small>`;
+        } catch (err) {
+            box.className = 'alert alert--error';
+            box.style.display = 'block';
+            box.textContent = err.message;
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     async function save(e) {
@@ -112,6 +165,8 @@
         $('cte-back').addEventListener('click', goBack);
         $('cte-cancel').addEventListener('click', goBack);
         $('cte-form').addEventListener('submit', save);
+        const istatBtn = $('cte-istat-calc');
+        if (istatBtn) istatBtn.addEventListener('click', calcIstat);
 
         try { await loadDropdowns(); }
         catch (err) { showAlert('Errore caricamento elenchi: ' + err.message, 'error'); }

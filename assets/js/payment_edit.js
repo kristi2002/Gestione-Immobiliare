@@ -62,6 +62,7 @@
         $('pye-due-date').value = p.due_date || '';
         $('pye-paid-date').value = p.paid_date || '';
         $('pye-status').value = p.status || 'pending';
+        if ($('pye-method')) $('pye-method').value = p.method || 'bonifico';
         $('pye-notes').value = p.notes || '';
     }
 
@@ -74,6 +75,7 @@
             due_date:    $('pye-due-date').value,
             paid_date:   $('pye-paid-date').value,
             status:      $('pye-status').value,
+            method:      $('pye-method') ? $('pye-method').value : 'bonifico',
             notes:       $('pye-notes').value.trim(),
         };
     }

@@ -748,6 +748,42 @@ This creates or updates `portal_email` / `portal_password_hash` on the `clients`
 
 ---
 
+## Fiscal & compliance endpoints (July 2026)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/aml.php` | Antiriciclaggio (adeguata verifica) CRUD. List supports `status`, `risk_level`, `search`, `expiring`. |
+| GET | `/api/scadenzario.php?horizon=365[&type=…]` | Unified fiscal deadline feed (contract expiry, imposta di registro, APE, insurance, AML retention) with overdue/soon/upcoming classification. |
+| GET/POST/PUT/DELETE | `/api/portal_sync.php` | Portal publish-state tracking (immobiliare/idealista/casa/subito/sito_agenzia). POST upserts on `(property_id, portal)`. |
+| GET | `/api/properties.php?action=matching_leads&id={id}` | Reverse Magic Match — top-5 active buyer/tenant leads scored against a listing (city 30, type 25, budget 30, rooms 10, sqm 5). |
+| GET | `/api/contracts.php?action=istat_adjustment&id={id}[&target_year=YYYY]` | Proposed ISTAT rent adjustment (75% of FOI variation) from the contract's baseline index. |
+| GET | `/api/generate_fattura_xml.php?id={invoice_id}` | Download FatturaPA 1.2.2 XML. `&check=1` returns a JSON readiness check (missing agency fields). Admin+ only. |
+| POST | `/api/ai_describe.php` | AI listing copywriter — body `{ property_id }` or `{ property: {…} }`; returns `{ title, description }`. Requires `AI_API_KEY` (else 400 "non configurata"). |
+
+## Valuation & fiscal-output endpoints (layer 2)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/valuation.php` | OMI quotazioni CRUD (per comune/zona/tipologia, €/m²). POST upserts on `(comune, cadastral_zone, property_type)`. |
+| GET | `/api/valuation.php?action=estimate&property_id={id}` | Valuation — blends the OMI range (zone €/m² × m²) with comparables from the agency's own stock; returns suggested value/rent, range, comparables, warnings. |
+| GET | `/api/generate_sdd.php?month=YYYY-MM` | SEPA SDD **pain.008.001.02** file for the month's pending `method=sdd` payments with a valid mandate. `&check=1` returns JSON readiness (count/total/missing/skipped). Admin+ only. |
+| POST | `/api/owner_fiscal_statement.php` | Owner fiscal-year statement PDF — body `{ client_id, year }`; rents *received* per property + regime (cedolare/ordinario) + dati catastali (supporto 730/Redditi). |
+
+## FatturaPA / SdI lifecycle (`/api/fattura_sdi.php`, admin+)
+
+Tracks each invoice's electronic-invoice lifecycle: `generato → trasmesso → consegnato | messa_a_disposizione | scartato | accettato | rifiutato`.
+
+| Method | Action | Description |
+|---|---|---|
+| GET | `?invoice_id={id}` | Transmission status for an invoice (`transmission`, `automatic`, `provider`). |
+| GET | `?action=list[&status=]` | All transmissions (dashboard). |
+| GET | `?action=download&id={ft_id}` | Download the persisted XML (from the protected tree, via the path guard). |
+| POST | `?action=generate` `{invoice_id}` | Build + persist the XML (`uploads/documents/fatture/`), set state `generato`. |
+| POST | `?action=transmit` `{invoice_id}` | Send via the configured intermediary (`lib/sdi_sender.php`). With `SDI_PROVIDER=manual` it stays `generato` and instructs manual upload. |
+| POST | `?action=record_receipt` `{invoice_id, receipt_type, ne_outcome?, sdi_identificativo?, message?}` | Record an SdI receipt (RC/MC/NS/NE/DT/AT) and advance the state. |
+
+Provider config (env): `SDI_PROVIDER` (manual\|aruba\|fatturaincloud\|custom), `SDI_API_KEY`, `SDI_BASE_URL`.
+
 ## Rate Limits
 
 | Endpoint | Limit | Window | Notes |

@@ -25,6 +25,10 @@ try {
             if (($_GET['format'] ?? '') === 'csv') {
                 exportPropertiesCsv($db);
             }
+            if (($_GET['action'] ?? '') === 'matching_leads') {
+                if (!$id) apiError('ID immobile mancante.');
+                matchingLeads($db, $id);
+            }
             $id ? getProperty($db, $id) : listProperties($db);
             break;
         case 'POST':
@@ -170,6 +174,91 @@ function getProperty(PDO $db, int $id): void
     apiSuccess($property);
 }
 
+/**
+ * Magic Match (reverse): score active buyer/tenant leads against a listing.
+ * GET /api/properties.php?action=matching_leads&id={property_id}
+ */
+function matchingLeads(PDO $db, int $id): void
+{
+    $stmt = $db->prepare('SELECT * FROM properties WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $p = $stmt->fetch();
+    if (!$p) apiError('Immobile non trovato.', 404);
+
+    // A rental listing matches renters (affitto/entrambi); a sale matches buyers.
+    $wantInterest = ($p['price_type'] ?? 'affitto') === 'vendita'
+        ? ['acquisto', 'entrambi']
+        : ['affitto', 'entrambi'];
+    $in = implode(',', array_fill(0, count($wantInterest), '?'));
+
+    $sql = "SELECT * FROM leads
+            WHERE status IN ('new','contacted','interested','negotiating')
+              AND interest_type IN ($in)";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($wantInterest);
+    $leads = $stmt->fetchAll();
+
+    $price = $p['price'] !== null ? (float) $p['price'] : null;
+    $matches = [];
+
+    foreach ($leads as $l) {
+        $score   = 0;
+        $reasons = [];
+
+        if (!empty($l['preferred_city']) && !empty($p['city'])
+            && mb_strtolower(trim($l['preferred_city'])) === mb_strtolower(trim($p['city']))) {
+            $score += 30; $reasons[] = 'Città';
+        }
+        if (!empty($l['preferred_type']) && $l['preferred_type'] === $p['property_type']) {
+            $score += 25; $reasons[] = 'Tipologia';
+        }
+        if ($price !== null) {
+            $min = $l['budget_min'] !== null ? (float) $l['budget_min'] : null;
+            $max = $l['budget_max'] !== null ? (float) $l['budget_max'] : null;
+            $okMin = $min === null || $price >= $min;
+            $okMax = $max === null || $price <= $max;
+            if ($okMin && $okMax && ($min !== null || $max !== null)) {
+                $score += 30; $reasons[] = 'Budget';
+            }
+        }
+        if (!empty($l['min_rooms']) && $p['rooms'] !== null && (int) $p['rooms'] >= (int) $l['min_rooms']) {
+            $score += 10; $reasons[] = 'Locali';
+        }
+        if (!empty($l['min_sqm']) && $p['sqm'] !== null && (float) $p['sqm'] >= (float) $l['min_sqm']) {
+            $score += 5; $reasons[] = 'Superficie';
+        }
+
+        if ($score <= 0) continue;
+
+        $matches[] = [
+            'id'       => (int) $l['id'],
+            'name'     => trim(($l['name'] ?? '') . ' ' . ($l['surname'] ?? '')),
+            'phone'    => $l['phone'] ?? null,
+            'email'    => $l['email'] ?? null,
+            'status'   => $l['status'],
+            'interest_type' => $l['interest_type'],
+            'budget_min' => $l['budget_min'] !== null ? (float) $l['budget_min'] : null,
+            'budget_max' => $l['budget_max'] !== null ? (float) $l['budget_max'] : null,
+            'score'    => $score,
+            'reasons'  => $reasons,
+        ];
+    }
+
+    usort($matches, fn($a, $b) => $b['score'] <=> $a['score']);
+    $matches = array_slice($matches, 0, 5);
+
+    apiSuccess([
+        'property' => [
+            'id'         => (int) $p['id'],
+            'address'    => $p['address'],
+            'city'       => $p['city'],
+            'price'      => $price,
+            'price_type' => $p['price_type'],
+        ],
+        'matches' => $matches,
+    ]);
+}
+
 function createProperty(PDO $db): void
 {
     $data      = apiGetJsonBody();
@@ -181,13 +270,19 @@ function createProperty(PDO $db): void
              year_built, property_type, description, additional_features, internal_notes, status,
              price, price_type, latitude, longitude, geo_confidence,
              locali, total_floors, energy_class, heating, elevator, furnished, balconies, terraces,
-             garden, parking_spaces, condition_state, exposure, condo_fees, reference_code)
+             garden, parking_spaces, condition_state, exposure, condo_fees, reference_code,
+             cadastral_comune, cadastral_foglio, cadastral_particella, cadastral_subalterno,
+             cadastral_category, cadastral_class, cadastral_rendita, cadastral_zone,
+             ape_number, ape_issue_date, ape_expiry_date, ipe_value)
          VALUES
             (:client_id, :building_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
              :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
              :price, :price_type, :latitude, :longitude, :geo_confidence,
              :locali, :total_floors, :energy_class, :heating, :elevator, :furnished, :balconies, :terraces,
-             :garden, :parking_spaces, :condition_state, :exposure, :condo_fees, :reference_code)"
+             :garden, :parking_spaces, :condition_state, :exposure, :condo_fees, :reference_code,
+             :cadastral_comune, :cadastral_foglio, :cadastral_particella, :cadastral_subalterno,
+             :cadastral_category, :cadastral_class, :cadastral_rendita, :cadastral_zone,
+             :ape_number, :ape_issue_date, :ape_expiry_date, :ipe_value)"
     );
     $stmt->execute($validated);
 
@@ -250,7 +345,13 @@ function updateProperty(PDO $db, int $id): void
              heating = :heating, elevator = :elevator, furnished = :furnished,
              balconies = :balconies, terraces = :terraces, garden = :garden,
              parking_spaces = :parking_spaces, condition_state = :condition_state,
-             exposure = :exposure, condo_fees = :condo_fees, reference_code = :reference_code
+             exposure = :exposure, condo_fees = :condo_fees, reference_code = :reference_code,
+             cadastral_comune = :cadastral_comune, cadastral_foglio = :cadastral_foglio,
+             cadastral_particella = :cadastral_particella, cadastral_subalterno = :cadastral_subalterno,
+             cadastral_category = :cadastral_category, cadastral_class = :cadastral_class,
+             cadastral_rendita = :cadastral_rendita, cadastral_zone = :cadastral_zone,
+             ape_number = :ape_number, ape_issue_date = :ape_issue_date,
+             ape_expiry_date = :ape_expiry_date, ipe_value = :ipe_value
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -363,6 +464,30 @@ function validatePropertyInput(PDO $db, array $data): array
     $exposure       = trim($data['exposure'] ?? '') ?: null;
     $referenceCode  = trim($data['reference_code'] ?? '') ?: null;
 
+    // Dati catastali (structured) + APE tracking — all optional
+    $strOrNull      = static fn($v) => isset($v) && trim((string) $v) !== '' ? trim((string) $v) : null;
+    $dateOrNull     = static function ($v) {
+        $v = isset($v) ? trim((string) $v) : '';
+        return $v !== '' && DateTime::createFromFormat('Y-m-d', $v) ? $v : null;
+    };
+    $catComune      = $strOrNull($data['cadastral_comune'] ?? null);
+    $catFoglio      = $strOrNull($data['cadastral_foglio'] ?? null);
+    $catParticella  = $strOrNull($data['cadastral_particella'] ?? null);
+    $catSubalterno  = $strOrNull($data['cadastral_subalterno'] ?? null);
+    $catCategory    = $strOrNull($data['cadastral_category'] ?? null);
+    $catClass       = $strOrNull($data['cadastral_class'] ?? null);
+    $catRendita     = isset($data['cadastral_rendita']) && $data['cadastral_rendita'] !== '' ? (float) $data['cadastral_rendita'] : null;
+    $catZone        = $strOrNull($data['cadastral_zone'] ?? null);
+    $apeNumber      = $strOrNull($data['ape_number'] ?? null);
+    $apeIssueDate   = $dateOrNull($data['ape_issue_date'] ?? null);
+    $apeExpiryDate  = $dateOrNull($data['ape_expiry_date'] ?? null);
+    $ipeValue       = isset($data['ipe_value']) && $data['ipe_value'] !== '' ? (float) $data['ipe_value'] : null;
+
+    // APE is valid 10 years — auto-fill expiry from the issue date when omitted.
+    if ($apeExpiryDate === null && $apeIssueDate !== null) {
+        $apeExpiryDate = (new DateTime($apeIssueDate))->modify('+10 years')->format('Y-m-d');
+    }
+
     if ($clientId <= 0) {
         apiError('Seleziona un proprietario.');
     }
@@ -445,6 +570,18 @@ function validatePropertyInput(PDO $db, array $data): array
         'exposure'            => $exposure,
         'condo_fees'          => $condoFees,
         'reference_code'      => $referenceCode,
+        'cadastral_comune'     => $catComune,
+        'cadastral_foglio'     => $catFoglio,
+        'cadastral_particella' => $catParticella,
+        'cadastral_subalterno' => $catSubalterno,
+        'cadastral_category'   => $catCategory,
+        'cadastral_class'      => $catClass,
+        'cadastral_rendita'    => $catRendita,
+        'cadastral_zone'       => $catZone,
+        'ape_number'           => $apeNumber,
+        'ape_issue_date'       => $apeIssueDate,
+        'ape_expiry_date'      => $apeExpiryDate,
+        'ipe_value'            => $ipeValue,
     ];
 }
 

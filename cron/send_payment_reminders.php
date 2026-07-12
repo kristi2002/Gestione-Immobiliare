@@ -166,4 +166,6 @@ $out = [
     'stats'   => $stats,
 ];
 
+require_once __DIR__ . '/../config/heartbeat.php';
+cronHeartbeat('payment_reminders');
 echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";

@@ -133,8 +133,8 @@ function createTenant(PDO $db): void
     }
 
     $stmt = $db->prepare(
-        'INSERT INTO tenants (name, surname, email, phone, notes)
-         VALUES (:name, :surname, :email, :phone, :notes)'
+        'INSERT INTO tenants (name, surname, email, phone, notes, iban, sdd_mandate_ref, sdd_mandate_date)
+         VALUES (:name, :surname, :email, :phone, :notes, :iban, :sdd_mandate_ref, :sdd_mandate_date)'
     );
     $stmt->execute([
         'name'    => $name,
@@ -142,6 +142,9 @@ function createTenant(PDO $db): void
         'email'   => $email,
         'phone'   => trim($data['phone'] ?? '') ?: null,
         'notes'   => trim($data['notes'] ?? '') ?: null,
+        'iban'            => trim($data['iban'] ?? '') ?: null,
+        'sdd_mandate_ref' => trim($data['sdd_mandate_ref'] ?? '') ?: null,
+        'sdd_mandate_date'=> (trim($data['sdd_mandate_date'] ?? '') ?: null),
     ]);
 
     $tenantId = (int) $db->lastInsertId();
@@ -168,10 +171,10 @@ function updateTenant(PDO $db, int $id): void
 
     $fields = [];
     $params = ['id' => $id];
-    foreach (['name', 'surname', 'email', 'phone', 'notes', 'status'] as $f) {
+    foreach (['name', 'surname', 'email', 'phone', 'notes', 'status', 'iban', 'sdd_mandate_ref', 'sdd_mandate_date'] as $f) {
         if (array_key_exists($f, $data)) {
             $fields[] = "{$f} = :{$f}";
-            $params[$f] = $data[$f];
+            $params[$f] = ($data[$f] === '' ? null : $data[$f]);
         }
     }
     if ($fields) {
