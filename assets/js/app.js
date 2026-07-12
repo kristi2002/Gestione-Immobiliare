@@ -130,6 +130,7 @@
             this.bindNavigation();
             this.bindContentNavigation();
             this.bindTopbarLinks();
+            this.bindGlobalSearch();
             this.bindSidebarToggle();
 
             // Render Lucide icons in the static chrome (sidebar, topbar) and keep
@@ -209,6 +210,71 @@
                     this.navigateTo(view);
                 });
             });
+        },
+
+        /** Global topbar search — across proprietari / immobili / inquilini / lead */
+        bindGlobalSearch() {
+            const input = document.getElementById('global-search-input');
+            const box = document.getElementById('global-search-results');
+            if (!input || !box) return;
+            const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+            const self = this;
+            let timer = null, flat = [], activeIdx = -1, lastQ = '';
+
+            const close = () => { box.hidden = true; box.innerHTML = ''; activeIdx = -1; flat = []; };
+            const paint = () => box.querySelectorAll('.gsr-item').forEach((b, i) => b.classList.toggle('is-active', i === activeIdx));
+
+            const go = (it) => { if (!it) return; close(); input.value = ''; self.navigateTo(it.view, it.params || {}); };
+
+            const render = (groups) => {
+                flat = [];
+                if (!groups.length) { box.innerHTML = '<div class="gsr-empty">Nessun risultato.</div>'; box.hidden = false; return; }
+                let html = '';
+                groups.forEach(g => {
+                    html += `<div class="gsr-group__label">${esc(g.label)}</div>`;
+                    g.items.forEach(it => {
+                        const i = flat.length; flat.push(it);
+                        html += `<button type="button" class="gsr-item" data-i="${i}">
+                            <span class="gsr-item__icon"><i data-lucide="${esc(g.icon)}"></i></span>
+                            <span class="gsr-item__text"><span class="gsr-item__title">${esc(it.title)}</span><span class="gsr-item__sub">${esc(it.sub)}</span></span>
+                        </button>`;
+                    });
+                });
+                box.innerHTML = html;
+                box.hidden = false;
+                activeIdx = -1;
+                if (window.lucide) window.lucide.createIcons();
+                box.querySelectorAll('.gsr-item').forEach(b => b.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    go(flat[parseInt(b.dataset.i, 10)]);
+                }));
+            };
+
+            const doSearch = async (q) => {
+                try {
+                    const res = await fetch('api/global_search.php?q=' + encodeURIComponent(q));
+                    const json = await res.json();
+                    if (json.success) render(json.data.groups || []);
+                } catch (e) { /* fail soft */ }
+            };
+
+            input.addEventListener('input', () => {
+                const q = input.value.trim();
+                clearTimeout(timer);
+                if (q.length < 2) { close(); return; }
+                timer = setTimeout(() => { if (q !== lastQ) { lastQ = q; doSearch(q); } }, 250);
+            });
+            input.addEventListener('keydown', (e) => {
+                if (box.hidden || !flat.length) {
+                    if (e.key === 'Escape') input.blur();
+                    return;
+                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, flat.length - 1); paint(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); paint(); }
+                else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); go(flat[activeIdx]); }
+                else if (e.key === 'Escape') { close(); }
+            });
+            input.addEventListener('blur', () => setTimeout(close, 150));
         },
 
         /** Sidebar toggle — desktop sidebar stays open permanently; mobile uses an overlay */
@@ -314,6 +380,9 @@
                 if (window.lucide) window.lucide.createIcons();
                 if (window.FilterBar) {
                     FilterBar.setupIn(this.contentEl);
+                }
+                if (window.DatePicker) {
+                    DatePicker.setupIn(this.contentEl);
                 }
 
                 // Hide write-only static controls for readonly users.

@@ -248,9 +248,9 @@
         // topbar's exact position, shown once the title has scrolled up under it.
         const topbar = document.querySelector('.topbar');
         const anchor = document.getElementById('pp-title-section') || document.getElementById('pp-gallery');
+        const scroller = document.getElementById('app-content');
         const positionBar = () => {
-            if (!topbar) return;
-            const r = topbar.getBoundingClientRect();
+            const r = (scroller || topbar || document.body).getBoundingClientRect();
             bar.style.left = r.left + 'px';
             bar.style.width = r.width + 'px';
         };

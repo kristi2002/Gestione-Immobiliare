@@ -188,8 +188,9 @@
     // profile sub-nav. A spacer holds its place so content doesn't jump.
     function setupStickyOverlay(bar) {
         if (bar._stickyOverlay) return;
-        // Skip toolbars nested in their own scroll context (modals, side panels).
-        if (bar.closest('.modal, .modal-overlay, .chat-sidebar, [data-no-sticky]')) return;
+        // Skip toolbars nested in their own scroll context (modals, side panels)
+        // or inside a card — those are inline form rows, not page-level filter bars.
+        if (bar.closest('.modal, .modal-overlay, .chat-sidebar, .card, [data-no-sticky]')) return;
         const topbar = document.querySelector('.topbar');
         const scroller = document.getElementById('app-content');
         if (!topbar || !scroller) return;
@@ -202,7 +203,8 @@
 
         let pinned = false;
         const position = () => {
-            const r = topbar.getBoundingClientRect();
+            // Span the content area (right of the sidebar), matching #app-content.
+            const r = scroller.getBoundingClientRect();
             bar.style.left = r.left + 'px';
             bar.style.width = r.width + 'px';
         };

@@ -82,15 +82,28 @@
         const omi = d.omi;
         const cmp = d.comparables;
 
-        let html = `<div class="stats-grid" style="margin-bottom:12px;">
-            <div class="stat-card"><div class="stat-card__value">${eur(s.value)}</div><div class="stat-card__label">Valore stimato</div></div>
-            <div class="stat-card"><div class="stat-card__value">${s.value_min != null ? eur(s.value_min) + ' – ' + eur(s.value_max) : '—'}</div><div class="stat-card__label">Intervallo</div></div>
-            <div class="stat-card"><div class="stat-card__value">${eur(s.rent)}</div><div class="stat-card__label">Canone stimato/mese</div></div>
-            <div class="stat-card"><div class="stat-card__value">${esc(s.basis || '—')}</div><div class="stat-card__label">Base di calcolo</div></div>
-        </div>`;
+        let html = `<div class="val-result">
+            <div class="val-result__figures">
+                <div class="val-stat val-stat--lead">
+                    <span class="val-stat__value">${eur(s.value)}</span>
+                    <span class="val-stat__label">Valore stimato</span>
+                </div>
+                <div class="val-stat">
+                    <span class="val-stat__value">${s.value_min != null ? eur(s.value_min) + ' – ' + eur(s.value_max) : '—'}</span>
+                    <span class="val-stat__label">Intervallo</span>
+                </div>
+                <div class="val-stat">
+                    <span class="val-stat__value">${eur(s.rent)}</span>
+                    <span class="val-stat__label">Canone stimato/mese</span>
+                </div>
+                <div class="val-stat">
+                    <span class="val-stat__value">${esc(s.basis || '—')}</span>
+                    <span class="val-stat__label">Base di calcolo</span>
+                </div>
+            </div>
+            <div class="val-result__panels">`;
 
-        html += '<div class="form-row form-row--2">';
-        html += '<div class="card"><h4 style="margin-top:0;">Quotazione OMI</h4>';
+        html += '<div class="val-panel"><div class="val-panel__head">Quotazione OMI</div><div class="val-panel__body">';
         if (omi) {
             html += `<p>Zona <strong>${esc(omi.zone || '—')}</strong>${omi.period ? ' · ' + esc(omi.period) : ''}<br>
                 Vendita: ${eur(omi.value_min)} – ${eur(omi.value_max)}<br>
@@ -98,21 +111,22 @@
         } else {
             html += '<p class="text-muted">Nessuna quotazione OMI per questa zona/tipologia.</p>';
         }
-        html += '</div>';
+        html += '</div></div>';
 
-        html += '<div class="card"><h4 style="margin-top:0;">Comparabili interni</h4>';
+        html += '<div class="val-panel"><div class="val-panel__head">Comparabili interni</div><div class="val-panel__body">';
         if (cmp && cmp.sample && cmp.sample.length) {
             html += `<p class="text-muted" style="margin-top:0;">${cmp.count} immobili · media ${cmp.sale_sqm_avg ? eur2(cmp.sale_sqm_avg) + '/m² (vendita)' : ''} ${cmp.rent_sqm_avg ? eur2(cmp.rent_sqm_avg) + '/m² (affitto)' : ''}</p>`;
-            html += '<ul style="margin:0;padding-left:18px;">' + cmp.sample.slice(0, 4).map(c =>
+            html += '<ul class="val-panel__list">' + cmp.sample.slice(0, 4).map(c =>
                 `<li>${esc(c.address)} — ${eur(c.price)} (${c.sqm} m², ${eur2(c.price_sqm)}/m²)</li>`).join('') + '</ul>';
         } else {
             html += '<p class="text-muted">Comparabili interni insufficienti.</p>';
         }
-        html += '</div></div>';
+        html += '</div></div></div>';
 
         if (d.warnings && d.warnings.length) {
-            html += '<div class="alert alert--warning" style="margin-top:10px;">' + d.warnings.map(esc).join('<br>') + '</div>';
+            html += '<div class="alert alert--warning" style="margin-top:14px;">' + d.warnings.map(esc).join('<br>') + '</div>';
         }
+        html += '</div>';
         els.estResult.innerHTML = html;
         if (window.lucide) window.lucide.createIcons();
     }

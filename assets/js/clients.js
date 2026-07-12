@@ -163,8 +163,10 @@
             const initials  = (c.name[0] || '') + (c.surname[0] || '');
             const propLabel = c.property_count === 1 ? '1 immobile' : `${c.property_count} immobili`;
             const checked   = selectedIds.has(c.id) ? 'checked' : '';
+            // Stable per-owner accent so the grid reads with colour, like the leads cards.
+            const accent    = ((c.id % 8) + 8) % 8;
             return `
-            <div class="entity-card entity-card--clickable" data-id="${c.id}">
+            <div class="entity-card client-card client-card--a${accent} entity-card--clickable" data-id="${c.id}">
                 <div class="entity-card__header">
                     <input type="checkbox" class="client-checkbox entity-card__select" data-id="${c.id}" ${checked} title="Seleziona">
                     <div class="entity-card__avatar">${escapeHtml(initials.toUpperCase())}</div>
