@@ -37,46 +37,21 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
 <body>
     <div class="sidebar-backdrop" id="sidebar-backdrop" hidden aria-hidden="true"></div>
     <div class="app-layout">
-        <header class="topbar">
-            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Apri/chiudi menu"><span></span><span></span><span></span></button>
-            <a class="topbar-logo" href="view.php?name=dashboard" data-view="dashboard" title="<?= htmlspecialchars($agencyName) ?>">
-                <?php if (!empty($branding['logo_path'])): ?>
-                    <img src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="Logo" class="topbar-logo__img">
-                <?php else: ?>
-                    <i class="topbar-logo__icon" data-lucide="building-2"></i>
-                <?php endif; ?>
-            </a>
-            <div class="global-search">
-                <i class="global-search__icon" data-lucide="search"></i>
-                <input type="search" id="global-search-input" class="global-search__input" placeholder="Cerca proprietari, immobili, inquilini, lead…" autocomplete="off" aria-label="Ricerca globale">
-                <div class="global-search__results" id="global-search-results" hidden></div>
-            </div>
-            <div class="topbar-actions">
-                <a href="view.php?name=communications" class="topbar-link topbar-icon-btn" data-view="communications" title="Messaggi" aria-label="Messaggi"><i data-lucide="mail"></i></a>
-                <?php if (canAccessView('whatsapp_inbox')): ?>
-                <a href="view.php?name=whatsapp_inbox" class="topbar-link topbar-icon-btn" data-view="whatsapp_inbox" title="WhatsApp" aria-label="WhatsApp"><i data-lucide="message-circle"></i></a>
-                <?php endif; ?>
-                <div class="notif-wrapper">
-                    <button class="notif-bell" id="notif-bell" aria-label="Notifiche" title="Notifiche">🔔<span class="notif-badge" id="notif-badge" hidden>0</span></button>
-                    <div class="notif-dropdown" id="notif-dropdown" hidden>
-                        <div class="notif-dropdown__header">Notifiche</div>
-                        <div class="notif-dropdown__list" id="notif-list"><p class="notif-empty text-muted">Nessuna notifica.</p></div>
-                    </div>
-                </div>
-                <?php if (canAccessView('agents')): ?>
-                <a href="view.php?name=agents" class="topbar-link topbar-user" data-view="agents" title="Profilo agente">
-                    <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
-                    <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
-                </a>
-                <?php else: ?>
-                <span class="topbar-user" title="<?= htmlspecialchars($username) ?>">
-                    <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
-                    <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
-                </span>
-                <?php endif; ?>
-            </div>
-        </header>
         <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <a class="sidebar-brand__mark" href="view.php?name=dashboard" data-view="dashboard" title="<?= htmlspecialchars($agencyName) ?>">
+                    <?php if (!empty($branding['logo_path'])): ?>
+                        <img src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="Logo">
+                    <?php else: ?>
+                        <i data-lucide="building-2"></i>
+                    <?php endif; ?>
+                </a>
+                <div class="sidebar-brand__txt">
+                    <b><?= htmlspecialchars($agencyName) ?></b>
+                    <small><?= htmlspecialchars($tagline) ?></small>
+                </div>
+                <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Chiudi menu">&times;</button>
+            </div>
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="view.php?name=dashboard" class="nav-link active" data-view="dashboard"><i class="nav-icon" data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a></li>
@@ -236,6 +211,42 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
         </aside>
 
         <div class="main-wrapper">
+            <header class="topbar">
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Apri/chiudi menu"><span></span><span></span><span></span></button>
+                <div class="global-search">
+                    <i class="global-search__icon" data-lucide="search"></i>
+                    <input type="search" id="global-search-input" class="global-search__input" placeholder="Cerca proprietari, immobili, inquilini, lead…" autocomplete="off" aria-label="Ricerca globale">
+                    <div class="global-search__results" id="global-search-results" hidden></div>
+                </div>
+                <div class="topbar-filters" id="topbar-filters" aria-label="Filtri pagina"></div>
+                <div class="topbar-actions">
+                    <?php if (!isReadOnlyRole()): ?>
+                    <a href="view.php?name=property_edit" class="topbar-new" data-view="property_edit" title="Nuovo immobile"><i data-lucide="plus"></i><span>Nuovo</span></a>
+                    <?php endif; ?>
+                    <a href="view.php?name=communications" class="topbar-link topbar-icon-btn" data-view="communications" title="Messaggi" aria-label="Messaggi"><i data-lucide="mail"></i></a>
+                    <?php if (canAccessView('whatsapp_inbox')): ?>
+                    <a href="view.php?name=whatsapp_inbox" class="topbar-link topbar-icon-btn" data-view="whatsapp_inbox" title="WhatsApp" aria-label="WhatsApp"><i data-lucide="message-circle"></i></a>
+                    <?php endif; ?>
+                    <div class="notif-wrapper">
+                        <button class="notif-bell" id="notif-bell" aria-label="Notifiche" title="Notifiche">🔔<span class="notif-badge" id="notif-badge" hidden>0</span></button>
+                        <div class="notif-dropdown" id="notif-dropdown" hidden>
+                            <div class="notif-dropdown__header">Notifiche</div>
+                            <div class="notif-dropdown__list" id="notif-list"><p class="notif-empty text-muted">Nessuna notifica.</p></div>
+                        </div>
+                    </div>
+                    <?php if (canAccessView('agents')): ?>
+                    <a href="view.php?name=agents" class="topbar-link topbar-user" data-view="agents" title="Profilo agente">
+                        <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                        <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
+                    </a>
+                    <?php else: ?>
+                    <span class="topbar-user" title="<?= htmlspecialchars($username) ?>">
+                        <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                        <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
+                    </span>
+                    <?php endif; ?>
+                </div>
+            </header>
             <main id="app-content" class="app-content">
                 <div class="loading-spinner"><div class="spinner"></div><p>Caricamento...</p></div>
             </main>

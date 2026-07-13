@@ -66,6 +66,66 @@ try {
         "SELECT COUNT(*) FROM leads WHERE status NOT IN ('lost','archived')"
     )->fetchColumn();
 
+    // Listing breakdown by price type
+    $propertiesForSale = (int) $db->query(
+        "SELECT COUNT(*) FROM properties WHERE status != 'archived' AND price_type = 'vendita'"
+    )->fetchColumn();
+    $propertiesForRent = (int) $db->query(
+        "SELECT COUNT(*) FROM properties WHERE status != 'archived' AND price_type = 'affitto'"
+    )->fetchColumn();
+
+    // "New this month" counters (real month-over-month deltas for the stat cards)
+    $propertiesNewMonth = (int) $db->query(
+        "SELECT COUNT(*) FROM properties
+         WHERE status != 'archived'
+           AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"
+    )->fetchColumn();
+    $leadsNewMonth = (int) $db->query(
+        "SELECT COUNT(*) FROM leads
+         WHERE status NOT IN ('lost','archived')
+           AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"
+    )->fetchColumn();
+
+    // Recent transactions (payments) for the dashboard table
+    $recentPaymentsStmt = $db->prepare(
+        "SELECT pay.amount, pay.status, pay.due_date, pay.paid_date,
+                t.name AS tenant_name, t.surname AS tenant_surname,
+                p.address AS property_address, p.price_type
+         FROM payments pay
+         LEFT JOIN tenants t ON pay.tenant_id = t.id
+         LEFT JOIN properties p ON pay.property_id = p.id
+         WHERE pay.status != 'cancelled'
+         ORDER BY COALESCE(pay.paid_date, pay.due_date) DESC, pay.id DESC
+         LIMIT 6"
+    );
+    $recentPaymentsStmt->execute();
+    $recentPayments = $recentPaymentsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Recently added properties for the right rail
+    $recentPropertiesStmt = $db->prepare(
+        "SELECT p.id, p.address, p.city, p.price, p.price_type, p.property_type,
+                m.file_path AS cover
+         FROM properties p
+         LEFT JOIN property_media m ON m.id = p.cover_media_id
+         WHERE p.status != 'archived'
+         ORDER BY p.created_at DESC
+         LIMIT 4"
+    );
+    $recentPropertiesStmt->execute();
+    $recentProperties = $recentPropertiesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Recent communications for the right rail feed
+    $recentCommsStmt = $db->prepare(
+        "SELECT c.subject, c.body, c.direction, c.channel, c.created_at,
+                cl.name AS client_name, cl.surname AS client_surname
+         FROM communications c
+         LEFT JOIN clients cl ON c.client_id = cl.id
+         ORDER BY c.created_at DESC
+         LIMIT 5"
+    );
+    $recentCommsStmt->execute();
+    $recentCommunications = $recentCommsStmt->fetchAll(PDO::FETCH_ASSOC);
+
     // Monthly revenue: last 6 complete months + current month
     $monthlyStmt = $db->prepare(
         "SELECT DATE_FORMAT(due_date, '%Y-%m') AS ym,
@@ -95,11 +155,18 @@ try {
         'sold_properties'      => $soldProperties,
         'active_tenants'       => $activeTenants,
         'total_leads'          => $totalLeads,
+        'properties_for_sale'  => $propertiesForSale,
+        'properties_for_rent'  => $propertiesForRent,
+        'properties_new_month' => $propertiesNewMonth,
+        'leads_new_month'      => $leadsNewMonth,
         'expiring_reminders'   => $expiringReminders,
         'overdue_reminders'    => $overdueReminders,
         'upcoming_reminders'   => $upcomingReminders,
         'monthly_revenue'      => $monthlyRevenue,
         'pending_this_month'   => $pendingThisMonth,
+        'recent_payments'      => $recentPayments,
+        'recent_properties'    => $recentProperties,
+        'recent_communications'=> $recentCommunications,
     ]);
 } catch (PDOException $e) {
     apiError('Unable to fetch dashboard statistics.', 500);

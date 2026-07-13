@@ -1,166 +1,73 @@
 <div class="dashboard-view">
-    <div class="dashboard-header">
+    <div class="db-pagehead">
         <div>
-            <h2 id="dashboard-greeting">Benvenuto</h2>
-            <p id="dashboard-date" class="text-muted"></p>
+            <h1 id="dashboard-greeting">Dashboard</h1>
+            <p id="dashboard-sub" class="text-muted">Panoramica dell'attività</p>
         </div>
-        <div class="dashboard-header__actions">
-            <a href="view.php?name=client_edit" class="btn btn--outline-primary btn--sm" data-view="client_edit">+ Proprietario</a>
-            <a href="view.php?name=property_edit" class="btn btn--primary btn--sm" data-view="property_edit">+ Immobile</a>
-        </div>
+        <div class="db-drop" id="dashboard-period"><i data-lucide="calendar"></i><span id="dashboard-date">—</span></div>
     </div>
 
     <div id="dashboard-error" class="alert alert--error" style="display:none;"></div>
 
-    <div class="stats-grid stats-grid--8">
-        <div class="stat-card">
-            <div class="stat-icon stat-icon--clients"><i data-lucide="users"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Proprietari</div>
-                <div class="stat-value loading" id="stat-clients">—</div>
-                <div class="stat-sub">Clienti registrati</div>
-            </div>
+    <!-- Stat cards -->
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="building-2"></i></div>
+            <div class="db-stat__label">Immobili totali</div>
+            <div class="db-stat__value loading" id="stat-properties">—</div>
+            <div class="db-delta flat" id="delta-properties"><span>in gestione</span></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon--properties"><i data-lucide="building-2"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Immobili</div>
-                <div class="stat-value loading" id="stat-properties">—</div>
-                <div class="stat-sub">Totale in gestione</div>
-            </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="tag"></i></div>
+            <div class="db-stat__label">In vendita</div>
+            <div class="db-stat__value loading" id="stat-sale">—</div>
+            <div class="db-delta flat"><span>annunci attivi</span></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon--available"><i data-lucide="check-circle"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Disponibili</div>
-                <div class="stat-value loading" id="stat-available">—</div>
-                <div class="stat-sub">Liberi da affittare</div>
-            </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="key-round"></i></div>
+            <div class="db-stat__label">In affitto</div>
+            <div class="db-stat__value loading" id="stat-rent">—</div>
+            <div class="db-delta flat"><span>annunci attivi</span></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon--rented"><i data-lucide="key"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Affittati</div>
-                <div class="stat-value loading" id="stat-rented">—</div>
-                <div class="stat-sub">Contratti attivi</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon--sold"><i data-lucide="tag"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Venduti</div>
-                <div class="stat-value loading" id="stat-sold">—</div>
-                <div class="stat-sub">Immobili venduti</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon--tenants"><i data-lucide="users-round"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Inquilini</div>
-                <div class="stat-value loading" id="stat-tenants">—</div>
-                <div class="stat-sub">Locatari attivi</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed"><i data-lucide="target"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Leads attivi</div>
-                <div class="stat-value loading" id="stat-leads">—</div>
-                <div class="stat-sub">Potenziali clienti</div>
-            </div>
-        </div>
-        <div class="stat-card" id="stat-card-overdue" style="display:none;">
-            <div class="stat-icon stat-icon--overdue"><i data-lucide="alert-triangle"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">Scaduti</div>
-                <div class="stat-value loading" id="stat-overdue">—</div>
-                <div class="stat-sub">Promemoria in ritardo</div>
-            </div>
-        </div>
-        <div class="stat-card" id="stat-card-reminders">
-            <div class="stat-icon stat-icon--reminders"><i data-lucide="bell"></i></div>
-            <div class="stat-body">
-                <div class="stat-label">In scadenza</div>
-                <div class="stat-value loading" id="stat-reminders">—</div>
-                <div class="stat-sub">Prossimi 7 giorni</div>
-            </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="target"></i></div>
+            <div class="db-stat__label">Leads attivi</div>
+            <div class="db-stat__value loading" id="stat-leads">—</div>
+            <div class="db-delta flat" id="delta-leads"><span>potenziali clienti</span></div>
         </div>
     </div>
 
-    <!-- Analytics charts -->
-    <div class="dashboard-charts">
-        <div class="chart-card card">
-            <div class="chart-card__header">
-                <h3>Entrate mensili</h3>
-                <span class="text-muted" id="chart-pending-label"></span>
+    <!-- Main grid -->
+    <div class="db-grid">
+        <div class="db-col">
+            <div class="db-card">
+                <div class="db-card__head">
+                    <div><h3>Andamento entrate</h3><p id="chart-pending-label">Incassato mensile</p></div>
+                    <a href="view.php?name=payments" class="db-link" data-view="payments">Pagamenti →</a>
+                </div>
+                <div class="db-chartwrap"><canvas id="chart-revenue"></canvas></div>
             </div>
-            <div class="chart-container">
-                <canvas id="chart-revenue"></canvas>
-            </div>
-        </div>
-        <div class="chart-card card">
-            <div class="chart-card__header">
-                <h3>Stato immobili</h3>
-                <span class="text-muted">Situazione attuale</span>
-            </div>
-            <div class="chart-container chart-container--doughnut">
-                <canvas id="chart-occupancy"></canvas>
-            </div>
-        </div>
-    </div>
 
-    <!-- Adempimenti & scadenze fiscali (compliance overview) -->
-    <div class="dashboard-section" id="compliance-section" style="margin-bottom:20px;">
-        <div class="section-header">
-            <h3>Adempimenti &amp; scadenze fiscali</h3>
-            <a href="view.php?name=scadenzario" class="btn btn--ghost btn--sm" data-view="scadenzario">Scadenzario →</a>
-        </div>
-        <div class="stats-grid" id="compliance-kpis" style="margin-bottom:12px;">
-            <div class="stat-card"><div class="stat-card__value" id="cmp-overdue" style="color:var(--color-danger,#dc2626)">—</div><div class="stat-card__label">Scadute</div></div>
-            <div class="stat-card"><div class="stat-card__value" id="cmp-soon" style="color:var(--color-warning,#f59e0b)">—</div><div class="stat-card__label">Entro 30 giorni</div></div>
-            <div class="stat-card"><div class="stat-card__value" id="cmp-total">—</div><div class="stat-card__label">Prossimi 90 giorni</div></div>
-        </div>
-        <div id="compliance-list" class="upcoming-list">
-            <div class="upcoming-loading">Caricamento…</div>
-        </div>
-    </div>
-
-    <div class="dashboard-bottom">
-        <div class="dashboard-section">
-            <div class="section-header">
-                <h3>Prossimi promemoria</h3>
-                <a href="view.php?name=reminders" class="btn btn--ghost btn--sm" data-view="reminders">Vedi tutti →</a>
-            </div>
-            <div id="upcoming-reminders-list" class="upcoming-list">
-                <div class="upcoming-loading">Caricamento…</div>
+            <div class="db-card">
+                <div class="db-card__head"><h3>Ultime transazioni</h3><a href="view.php?name=payments" class="db-link" data-view="payments">Vedi tutte →</a></div>
+                <table class="db-table">
+                    <thead><tr><th>CLIENTE</th><th>IMMOBILE</th><th>TIPO</th><th>IMPORTO</th><th>STATO</th></tr></thead>
+                    <tbody id="tx-body">
+                        <tr><td colspan="5" class="db-empty">Caricamento…</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="dashboard-section">
-            <div class="section-header">
-                <h3>Accesso rapido</h3>
-                <button type="button" class="btn btn--ghost btn--sm" id="quick-actions-customize"><i data-lucide="settings"></i> Personalizza</button>
+        <div class="db-col">
+            <div class="db-card">
+                <div class="db-card__head"><h3>Nuovi immobili</h3><a href="view.php?name=properties" class="db-link" data-view="properties">Tutti →</a></div>
+                <div class="db-list" id="new-properties"><div class="db-empty">Caricamento…</div></div>
             </div>
-            <div class="quick-actions" id="quick-actions">
-                <div class="upcoming-loading" style="grid-column:1/-1;padding:16px;">Caricamento…</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Customize quick access modal -->
-    <div class="modal-overlay" id="quick-actions-modal" hidden>
-        <div class="modal modal--lg">
-            <div class="modal-header">
-                <h3>Personalizza accesso rapido</h3>
-                <button type="button" class="modal-close" id="quick-actions-modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted" style="margin-bottom:14px;">Scegli fino a <strong>9</strong> collegamenti da mostrare nella dashboard. <span id="quick-actions-count">0/9</span></p>
-                <div class="ql-picker" id="quick-actions-picker"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn--ghost" id="quick-actions-cancel">Annulla</button>
-                <button type="button" class="btn btn--primary" id="quick-actions-save">Salva</button>
+            <div class="db-card">
+                <div class="db-card__head"><h3>Comunicazioni</h3><a href="view.php?name=communications" class="db-link" data-view="communications" title="Comunicazioni"><i data-lucide="mail" style="width:18px;color:#aeb8c5;"></i></a></div>
+                <div class="db-list" id="recent-comms"><div class="db-empty">Caricamento…</div></div>
             </div>
         </div>
     </div>
@@ -171,389 +78,210 @@
     'use strict';
 
     const API_URL = 'api/get_dashboard_stats.php';
-    const FREQ_LABELS = { once: 'Una volta', weekly: 'Settimanale', monthly: 'Mensile', yearly: 'Annuale' };
+    const MONTHS = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+    const AVATAR_TINTS = [
+        ['#deeef9', '#206bac'], ['#e7f7ee', '#16a34a'], ['#f3e8ff', '#7c3aed'],
+        ['#fdf3e3', '#d97706'], ['#fdecec', '#dc2626'], ['#e0f2fe', '#0369a1'],
+    ];
     let revenueChart = null;
-    let occupancyChart = null;
-
-    function setGreeting() {
-        const hour = new Date().getHours();
-        const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
-        document.getElementById('dashboard-greeting').textContent = greeting;
-        document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('it-IT', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-        });
-    }
 
     function esc(str) {
-        if (!str) return '';
+        if (str == null) return '';
         const d = document.createElement('div');
         d.textContent = str;
         return d.innerHTML;
     }
+    function fmtEuro(v, decimals) {
+        return '€ ' + Number(v || 0).toLocaleString('it-IT', {
+            minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: decimals ? 2 : 0
+        });
+    }
+    function initials(name, surname) {
+        const a = (name || '').trim(), b = (surname || '').trim();
+        return ((a[0] || '') + (b[0] || (a[1] || ''))).toUpperCase() || '?';
+    }
+    function tintFor(i) { return AVATAR_TINTS[i % AVATAR_TINTS.length]; }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    function relTime(dateStr) {
+        if (!dateStr) return '';
+        const then = new Date(dateStr.replace(' ', 'T'));
+        const mins = Math.floor((Date.now() - then.getTime()) / 60000);
+        if (mins < 1) return 'ora';
+        if (mins < 60) return mins + ' min';
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + (hrs === 1 ? ' ora' : ' ore');
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return days + (days === 1 ? ' giorno' : ' giorni');
+        return then.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
     }
 
-    function daysUntil(dateStr) {
-        const diff = Math.ceil((new Date(dateStr) - new Date()) / 86400000);
-        if (diff < 0) return `<span class="reminder-date--overdue">Scaduto da ${Math.abs(diff)} gg</span>`;
-        if (diff === 0) return `<span class="reminder-date--soon">Oggi</span>`;
-        if (diff === 1) return `<span class="reminder-date--soon">Domani</span>`;
-        if (diff <= 7) return `<span class="reminder-date--soon">Tra ${diff} giorni</span>`;
-        return formatDate(dateStr);
+    function refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
+
+    function setHeader() {
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+        const sub = document.getElementById('dashboard-sub');
+        if (sub) sub.textContent = greeting + ', ecco la panoramica della tua attività.';
+        const date = document.getElementById('dashboard-date');
+        if (date) date.textContent = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
-    function fmtCurrency(v) {
-        return '€ ' + Number(v).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    }
-
-    function renderCharts(d) {
-        if (typeof Chart === 'undefined') return;
-
-        // Monthly revenue bar chart
-        const ctx1 = document.getElementById('chart-revenue');
-        if (ctx1) {
-            const rows = d.monthly_revenue || [];
-            const labels = rows.map(r => {
-                const [y, m] = r.ym.split('-');
-                return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
-            });
-
-            if (revenueChart) revenueChart.destroy();
-            revenueChart = new Chart(ctx1, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            label: 'Incassato',
-                            data: rows.map(r => parseFloat(r.revenue)),
-                            backgroundColor: 'rgba(37,99,235,0.75)',
-                            borderRadius: 4,
-                        },
-                        {
-                            label: 'Da incassare',
-                            data: rows.map(r => parseFloat(r.expected) - parseFloat(r.revenue)),
-                            backgroundColor: 'rgba(220,38,38,0.35)',
-                            borderRadius: 4,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'bottom' } },
-                    scales: {
-                        x: { stacked: true },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            ticks: { callback: v => '€' + v.toLocaleString('it-IT') },
-                        },
-                    },
-                },
-            });
+    function setDelta(elId, newCount, fallback) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        if (newCount > 0) {
+            el.className = 'db-delta up';
+            el.innerHTML = '<i data-lucide="trending-up"></i><b>+' + newCount + '</b><span>nel mese</span>';
+        } else {
+            el.className = 'db-delta flat';
+            el.innerHTML = '<span>' + esc(fallback) + '</span>';
         }
+    }
 
-        // Occupancy doughnut chart
-        const ctx2 = document.getElementById('chart-occupancy');
-        if (ctx2) {
-            const avail  = d.available_properties || 0;
-            const rented = d.rented_properties || 0;
-            const sold   = d.sold_properties || 0;
-
-            if (occupancyChart) occupancyChart.destroy();
-            occupancyChart = new Chart(ctx2, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Disponibili', 'Affittati', 'Venduti'],
-                    datasets: [{
-                        data: [avail, rented, sold],
-                        backgroundColor: ['#16a34a', '#2563eb', '#7c3aed'],
-                        borderWidth: 2,
-                        borderColor: '#fff',
-                    }],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    cutout: '65%',
-                },
-            });
-        }
-
-        // Pending label
+    function renderStats(d) {
+        document.getElementById('stat-properties').textContent = d.total_properties;
+        document.getElementById('stat-sale').textContent       = d.properties_for_sale;
+        document.getElementById('stat-rent').textContent       = d.properties_for_rent;
+        document.getElementById('stat-leads').textContent      = d.total_leads;
+        document.querySelectorAll('.db-stat__value.loading').forEach(el => el.classList.remove('loading'));
+        setDelta('delta-properties', d.properties_new_month, 'in gestione');
+        setDelta('delta-leads', d.leads_new_month, 'potenziali clienti');
         if (d.pending_this_month > 0) {
             const el = document.getElementById('chart-pending-label');
-            if (el) el.textContent = fmtCurrency(d.pending_this_month) + ' da incassare questo mese';
+            if (el) el.textContent = fmtEuro(d.pending_this_month) + ' da incassare questo mese';
         }
     }
 
-    async function loadDashboardStats() {
-        const errorEl = document.getElementById('dashboard-error');
-        try {
-            const response = await fetch(API_URL);
-            const json = await response.json();
-            if (!json.success) throw new Error(json.error || 'Risposta API non valida');
-            const d = json.data;
-
-            document.getElementById('stat-clients').textContent    = d.total_clients;
-            document.getElementById('stat-properties').textContent = d.total_properties;
-            document.getElementById('stat-available').textContent  = d.available_properties;
-            document.getElementById('stat-rented').textContent     = d.rented_properties;
-            document.getElementById('stat-sold').textContent       = d.sold_properties;
-            document.getElementById('stat-tenants').textContent    = d.active_tenants;
-            document.getElementById('stat-leads').textContent      = d.total_leads;
-            document.getElementById('stat-reminders').textContent  = d.expiring_reminders;
-            document.getElementById('stat-overdue').textContent    = d.overdue_reminders;
-
-            document.querySelectorAll('.stat-value.loading').forEach(el => el.classList.remove('loading'));
-
-            if (d.overdue_reminders > 0) {
-                document.getElementById('stat-card-overdue').style.display = '';
-                document.getElementById('stat-card-reminders').style.display = 'none';
-            }
-
-            renderUpcoming(d.upcoming_reminders || []);
-            renderCharts(d);
-
-        } catch (err) {
-            errorEl.style.display = 'block';
-            errorEl.textContent = 'Errore nel caricamento: ' + err.message;
-            document.querySelectorAll('.stat-value.loading').forEach(el => { el.textContent = '!'; el.classList.remove('loading'); });
-        }
+    function renderChart(d) {
+        if (typeof Chart === 'undefined') return;
+        const ctx = document.getElementById('chart-revenue');
+        if (!ctx) return;
+        const rows = d.monthly_revenue || [];
+        const labels = rows.map(r => {
+            const [y, m] = r.ym.split('-');
+            return MONTHS[parseInt(m, 10) - 1] + ' ' + y.slice(2);
+        });
+        const g = ctx.getContext('2d').createLinearGradient(0, 0, 0, 240);
+        g.addColorStop(0, 'rgba(32,107,172,.20)');
+        g.addColorStop(1, 'rgba(32,107,172,0)');
+        if (revenueChart) revenueChart.destroy();
+        revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{
+                data: rows.map(r => parseFloat(r.revenue)),
+                borderColor: '#206bac', borderWidth: 2.6, fill: true, backgroundColor: g,
+                tension: 0.38, pointBackgroundColor: '#fff', pointBorderColor: '#206bac',
+                pointBorderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6,
+            }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: {
+                    backgroundColor: '#0e1626', padding: 10, cornerRadius: 8, displayColors: false,
+                    callbacks: { label: c => fmtEuro(c.parsed.y) },
+                } },
+                scales: {
+                    x: { grid: { display: false }, border: { display: false }, ticks: { color: '#8a97a8', font: { size: 11.5 } } },
+                    y: { grid: { color: '#eef2f7' }, border: { display: false }, beginAtZero: true,
+                         ticks: { color: '#8a97a8', font: { size: 11.5 }, callback: v => '€' + Number(v).toLocaleString('it-IT') } },
+                },
+            },
+        });
     }
 
-    function renderUpcoming(reminders) {
-        const container = document.getElementById('upcoming-reminders-list');
-        if (reminders.length === 0) {
-            container.innerHTML = '<p class="text-muted" style="padding:24px 16px;text-align:center;">Nessun promemoria in arrivo.</p>';
+    const STATUS_BADGE = {
+        paid:    ['ok', 'Pagato'],
+        pending: ['wait', 'In attesa'],
+        late:    ['late', 'In ritardo'],
+    };
+
+    function renderTransactions(rows) {
+        const body = document.getElementById('tx-body');
+        if (!rows || !rows.length) {
+            body.innerHTML = '<tr><td colspan="5" class="db-empty">Nessuna transazione recente.</td></tr>';
             return;
         }
-        container.innerHTML = reminders.map(r => {
-            const who = r.client_name
-                ? `${esc(r.client_name)} ${esc(r.client_surname)}`
-                : r.property_address ? esc(r.property_address) : '—';
-            return `
-            <div class="upcoming-item">
-                <div class="upcoming-item__icon"><i data-lucide="bell"></i></div>
-                <div class="upcoming-item__body">
-                    <div class="upcoming-item__title">${esc(r.title)}</div>
-                    <div class="upcoming-item__meta">${who} · ${FREQ_LABELS[r.frequency] || r.frequency}</div>
-                </div>
-                <div class="upcoming-item__date">${daysUntil(r.reminder_date)}</div>
+        body.innerHTML = rows.map((r, i) => {
+            const name = ((r.tenant_name || '') + ' ' + (r.tenant_surname || '')).trim() || 'Inquilino';
+            const [bg, fg] = tintFor(i);
+            const tipo = r.price_type === 'vendita' ? 'Vendita' : 'Affitto';
+            const badge = STATUS_BADGE[r.status] || ['wait', esc(r.status)];
+            return `<tr>
+                <td><div class="db-cli"><span class="db-av" style="background:${bg};color:${fg}">${esc(initials(r.tenant_name, r.tenant_surname))}</span><b>${esc(name)}</b></div></td>
+                <td class="db-addr">${esc(r.property_address || '—')}</td>
+                <td>${tipo}</td>
+                <td class="db-amt">${fmtEuro(r.amount)}</td>
+                <td><span class="db-badge ${badge[0]}">${esc(badge[1])}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderProperties(rows) {
+        const box = document.getElementById('new-properties');
+        if (!rows || !rows.length) {
+            box.innerHTML = '<div class="db-empty">Nessun immobile recente.</div>';
+            return;
+        }
+        box.innerHTML = rows.map(r => {
+            const place = [r.address, r.city].filter(Boolean).map(esc).join(' · ') || '—';
+            const thumb = r.cover
+                ? `<img src="${esc(r.cover)}" alt="" onerror="this.remove()">`
+                : '<i data-lucide="home"></i>';
+            return `<a class="db-prop" href="view.php?name=properties" data-view="properties">
+                <div class="db-prop__thumb">${thumb}</div>
+                <div class="db-prop__b"><b>${fmtEuro(r.price)}</b><span>${place}</span></div>
+                <i class="db-prop__more" data-lucide="more-vertical"></i>
+            </a>`;
+        }).join('');
+    }
+
+    function renderComms(rows) {
+        const box = document.getElementById('recent-comms');
+        if (!rows || !rows.length) {
+            box.innerHTML = '<div class="db-empty">Nessuna comunicazione.</div>';
+            return;
+        }
+        box.innerHTML = rows.map((r, i) => {
+            const who = ((r.client_name || '') + ' ' + (r.client_surname || '')).trim() || 'Contatto';
+            const [bg, fg] = tintFor(i);
+            return `<div class="db-msg">
+                <span class="db-av" style="background:${bg};color:${fg}">${esc(initials(r.client_name, r.client_surname))}</span>
+                <div class="db-msg__b"><b>${esc(who)}</b><span>${esc(r.subject || '(nessun oggetto)')}</span></div>
+                <span class="db-msg__t">${esc(relTime(r.created_at))}</span>
             </div>`;
         }).join('');
     }
 
     function bindSpaLinks() {
-        document.querySelectorAll('[data-view]').forEach(link => {
+        document.querySelectorAll('.dashboard-view [data-view]').forEach(link => {
             link.addEventListener('click', e => {
                 if (window.App) { e.preventDefault(); window.App.navigateTo(link.dataset.view); }
             });
         });
     }
 
-    // -------------------------------------------------------------------------
-    // Quick access (customizable)
-    // -------------------------------------------------------------------------
-
-    const PREFS_API = 'api/dashboard_prefs.php';
-    const QUICK_MAX = 9;
-    const DEFAULT_LINKS = ['clients', 'properties', 'leads', 'contracts', 'payments', 'documents', 'tenants', 'reminders'];
-
-    // Build the catalog from the sidebar nav: this is exactly what the current
-    // user is allowed to access (icon + label included), minus the dashboard itself.
-    // view -> Lucide icon name (matches the sidebar icons)
-    const VIEW_ICONS = {
-        clients: 'users', leads: 'target', tenants: 'key-round', agents: 'user-round',
-        properties: 'building-2', buildings: 'building', map: 'map', keys: 'key',
-        meters: 'gauge', inventory: 'package', contracts: 'scroll-text', documents: 'file-text',
-        invoices: 'receipt', payments: 'banknote', expenses: 'wallet', commissions: 'briefcase',
-        forecast: 'trending-up', reports: 'bar-chart-3', maintenance_workflow: 'wrench',
-        insurance: 'shield-check', suppliers: 'truck', property_applications: 'clipboard-list',
-        communications: 'mail', whatsapp_inbox: 'message-circle', social: 'megaphone',
-        surveys: 'star', appointments: 'calendar-check', calendar: 'calendar', reminders: 'bell',
-        automations: 'workflow', activity_log: 'history', settings: 'settings',
-    };
-
-    function buildCatalog() {
-        const catalog = [];
-        document.querySelectorAll('.sidebar-nav .nav-link[data-view]').forEach(link => {
-            const view = link.dataset.view;
-            if (!view || view === 'dashboard') return;
-            const icon  = VIEW_ICONS[view] || 'link';
-            const label = link.querySelector('.nav-label')?.textContent?.trim() || view;
-            catalog.push({ view, icon, label });
-        });
-        return catalog;
-    }
-
-    function catalogMap() {
-        const map = {};
-        buildCatalog().forEach(item => { map[item.view] = item; });
-        return map;
-    }
-
-    let quickLinks = DEFAULT_LINKS.slice();
-
-    function renderQuickActions() {
-        const container = document.getElementById('quick-actions');
-        if (!container) return;
-        const map = catalogMap();
-        // Keep only links the user can access; fall back to defaults if empty.
-        let links = quickLinks.filter(v => map[v]);
-        if (!links.length) links = DEFAULT_LINKS.filter(v => map[v]);
-
-        container.innerHTML = links.map(v => {
-            const item = map[v];
-            return `<a href="view.php?name=${item.view}" class="quick-action" data-view="${item.view}">
-                <i class="quick-action__icon" data-lucide="${item.icon}"></i>
-                <span class="quick-action__label">${esc(item.label)}</span>
-            </a>`;
-        }).join('');
-
-        container.querySelectorAll('[data-view]').forEach(link => {
-            link.addEventListener('click', e => {
-                if (window.App) { e.preventDefault(); window.App.navigateTo(link.dataset.view); }
-            });
-        });
-    }
-
-    async function loadQuickLinks() {
+    async function load() {
+        const errorEl = document.getElementById('dashboard-error');
         try {
-            const res  = await fetch(PREFS_API);
+            const res = await fetch(API_URL);
             const json = await res.json();
-            if (json.success && Array.isArray(json.data.quick_links) && json.data.quick_links.length) {
-                quickLinks = json.data.quick_links;
-            }
-        } catch (_) { /* use defaults */ }
-        renderQuickActions();
-    }
-
-    function updatePickerCount() {
-        const checked = document.querySelectorAll('#quick-actions-picker input:checked').length;
-        const el = document.getElementById('quick-actions-count');
-        if (el) el.textContent = `${checked}/${QUICK_MAX}`;
-    }
-
-    function openCustomizeModal() {
-        const picker = document.getElementById('quick-actions-picker');
-        const selected = new Set(quickLinks);
-        picker.innerHTML = buildCatalog().map(item => `
-            <label class="ql-option">
-                <input type="checkbox" value="${item.view}" ${selected.has(item.view) ? 'checked' : ''}>
-                <i class="ql-option__icon" data-lucide="${item.icon}"></i>
-                <span class="ql-option__label">${esc(item.label)}</span>
-            </label>`).join('');
-
-        picker.querySelectorAll('input').forEach(cb => {
-            cb.addEventListener('change', () => {
-                const checked = picker.querySelectorAll('input:checked').length;
-                if (checked > QUICK_MAX) {
-                    cb.checked = false;
-                    return;
-                }
-                cb.closest('.ql-option').classList.toggle('ql-option--on', cb.checked);
-                updatePickerCount();
-            });
-            cb.closest('.ql-option').classList.toggle('ql-option--on', cb.checked);
-        });
-
-        updatePickerCount();
-        document.getElementById('quick-actions-modal').hidden = false;
-    }
-
-    function closeCustomizeModal() {
-        document.getElementById('quick-actions-modal').hidden = true;
-    }
-
-    async function saveQuickLinks() {
-        const picker = document.getElementById('quick-actions-picker');
-        const chosen = [...picker.querySelectorAll('input:checked')].map(cb => cb.value).slice(0, QUICK_MAX);
-        const saveBtn = document.getElementById('quick-actions-save');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Salvataggio...';
-        try {
-            const res = await fetch(PREFS_API, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quick_links: chosen }),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            quickLinks = json.data.quick_links.length ? json.data.quick_links : DEFAULT_LINKS.slice();
-            renderQuickActions();
-            closeCustomizeModal();
+            if (!json.success) throw new Error(json.error || 'Risposta API non valida');
+            const d = json.data;
+            renderStats(d);
+            renderChart(d);
+            renderTransactions(d.recent_payments);
+            renderProperties(d.recent_properties);
+            renderComms(d.recent_communications);
+            refreshIcons();
+            bindSpaLinks();
         } catch (err) {
-            const errorEl = document.getElementById('dashboard-error');
             errorEl.style.display = 'block';
-            errorEl.textContent = 'Impossibile salvare l\'accesso rapido: ' + err.message;
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Salva';
+            errorEl.textContent = 'Errore nel caricamento: ' + err.message;
+            document.querySelectorAll('.db-stat__value.loading').forEach(el => { el.textContent = '!'; el.classList.remove('loading'); });
         }
     }
 
-    function bindCustomize() {
-        document.getElementById('quick-actions-customize')?.addEventListener('click', openCustomizeModal);
-        document.getElementById('quick-actions-modal-close')?.addEventListener('click', closeCustomizeModal);
-        document.getElementById('quick-actions-cancel')?.addEventListener('click', closeCustomizeModal);
-        document.getElementById('quick-actions-save')?.addEventListener('click', saveQuickLinks);
-        document.getElementById('quick-actions-modal')?.addEventListener('click', e => {
-            if (e.target.id === 'quick-actions-modal') closeCustomizeModal();
-        });
-    }
-
-    const CMP_TYPE_LABEL = {
-        contract_expiry: 'Scadenza contratto',
-        registration:    'Imposta di registro',
-        ape:             'Scadenza APE',
-        insurance:       'Assicurazione',
-        aml:             'Antiriciclaggio',
-    };
-    const CMP_SEV_BADGE = { overdue: 'badge--danger', soon: 'badge--warning', upcoming: 'badge' };
-
-    async function loadCompliance() {
-        const list = document.getElementById('compliance-list');
-        try {
-            const res  = await fetch('api/scadenzario.php?horizon=90');
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error || 'Errore');
-            const s = json.data.stats || {};
-            document.getElementById('cmp-overdue').textContent = s.overdue ?? 0;
-            document.getElementById('cmp-soon').textContent    = s.soon ?? 0;
-            document.getElementById('cmp-total').textContent   = s.total ?? 0;
-
-            const items = (json.data.items || []).slice(0, 6);
-            if (!items.length) {
-                list.innerHTML = '<p class="text-muted" style="padding:24px 16px;text-align:center;">Nessuna scadenza nei prossimi 90 giorni.</p>';
-                return;
-            }
-            list.innerHTML = items.map(it => {
-                const days = it.days_until;
-                const dl = days == null ? '' : days < 0 ? `${Math.abs(days)} gg fa` : days === 0 ? 'oggi' : `tra ${days} gg`;
-                return `<div class="upcoming-item">
-                    <div class="upcoming-item__body">
-                        <div class="upcoming-item__title">${esc(CMP_TYPE_LABEL[it.type] || it.label)} — ${esc(it.subject)}</div>
-                        <div class="upcoming-item__meta text-muted">${esc(it.context || '')} · ${formatDate(it.date)}</div>
-                    </div>
-                    <span class="badge ${CMP_SEV_BADGE[it.severity] || 'badge'}">${esc(dl)}</span>
-                </div>`;
-            }).join('');
-        } catch (err) {
-            list.innerHTML = `<p class="text-muted" style="padding:16px;">Scadenzario non disponibile: ${esc(err.message)}</p>`;
-        }
-    }
-
-    setGreeting();
-    loadDashboardStats().then(bindSpaLinks);
-    bindSpaLinks();
-    bindCustomize();
-    loadQuickLinks();
-    loadCompliance();
+    setHeader();
+    refreshIcons();
+    load();
 })();
 </script>
