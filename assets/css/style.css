@@ -7186,3 +7186,27 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
     .db-pagehead h1 { font-size: 19px; }
 }
 
+/* ----------------------------------------------------------------------------
+   Sidebar theme: Brand Blue (#206bac). Self-contained recolour — swap this
+   whole block to change the sidebar palette.
+   ---------------------------------------------------------------------------- */
+.sidebar {
+    background: var(--color-primary);
+    color: #fff;
+    border-right: 1px solid rgba(255, 255, 255, 0.10);
+}
+.sidebar-brand__mark { background: #fff; color: var(--color-primary); }
+.sidebar-brand__mark [data-lucide] { color: var(--color-primary); }
+.sidebar-brand__txt b { color: #fff; }
+.sidebar-brand__txt small { color: rgba(255, 255, 255, 0.72); }
+.sidebar-close-btn { color: rgba(255, 255, 255, 0.7); }
+.sidebar-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.nav-link { color: rgba(255, 255, 255, 0.82); }
+.nav-link:hover { background: rgba(255, 255, 255, 0.10); color: #fff; }
+.nav-link.active { background: rgba(255, 255, 255, 0.18); color: #fff; font-weight: 600; }
+details.nav-group > summary { color: rgba(255, 255, 255, 0.60); }
+details.nav-group > summary:hover { color: rgba(255, 255, 255, 0.92); }
+.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.15); }
+.sidebar-footer .btn { color: rgba(255, 255, 255, 0.92); border-color: rgba(255, 255, 255, 0.28); }
+.sidebar-footer .btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
