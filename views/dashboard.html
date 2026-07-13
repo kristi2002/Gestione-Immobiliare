@@ -42,8 +42,8 @@
         <div class="db-col">
             <div class="db-card">
                 <div class="db-card__head">
-                    <div><h3>Andamento entrate</h3><p id="chart-pending-label">Incassato mensile</p></div>
-                    <a href="view.php?name=payments" class="db-link" data-view="payments">Pagamenti →</a>
+                    <div><h3>Andamento entrate</h3><p>Vendite e locazioni · <span id="chart-year">—</span></p></div>
+                    <div class="db-drop">Annuale <i data-lucide="chevron-down"></i></div>
                 </div>
                 <div class="db-chartwrap"><canvas id="chart-revenue"></canvas></div>
             </div>
@@ -101,6 +101,11 @@
         return ((a[0] || '') + (b[0] || (a[1] || ''))).toUpperCase() || '?';
     }
     function tintFor(i) { return AVATAR_TINTS[i % AVATAR_TINTS.length]; }
+    function mediaUrl(path) {
+        if (!path) return '';
+        if (/^https?:\/\//i.test(path) || path.startsWith('/')) return path;
+        return '/' + String(path).replace(/^\.\//, '');
+    }
 
     function relTime(dateStr) {
         if (!dateStr) return '';
@@ -146,45 +151,98 @@
         document.querySelectorAll('.db-stat__value.loading').forEach(el => el.classList.remove('loading'));
         setDelta('delta-properties', d.properties_new_month, 'in gestione');
         setDelta('delta-leads', d.leads_new_month, 'potenziali clienti');
-        if (d.pending_this_month > 0) {
-            const el = document.getElementById('chart-pending-label');
-            if (el) el.textContent = fmtEuro(d.pending_this_month) + ' da incassare questo mese';
-        }
+    }
+
+    const MONTHS_CAP  = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const MONTHS_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+    function roundRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.arcTo(x + w, y, x + w, y + h, r);
+        c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r);
+        c.arcTo(x, y, x + w, y, r);
+        c.closePath();
     }
 
     function renderChart(d) {
         if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById('chart-revenue');
         if (!ctx) return;
-        const rows = d.monthly_revenue || [];
-        const labels = rows.map(r => {
+
+        const year = d.chart_year || new Date().getFullYear();
+        const yearEl = document.getElementById('chart-year');
+        if (yearEl) yearEl.textContent = year;
+
+        // Pad the returned rows into a full 12-month series for the current year.
+        const byMonth = {};
+        (d.monthly_revenue || []).forEach(r => {
             const [y, m] = r.ym.split('-');
-            return MONTHS[parseInt(m, 10) - 1] + ' ' + y.slice(2);
+            if (parseInt(y, 10) === year) byMonth[parseInt(m, 10) - 1] = parseFloat(r.revenue);
         });
+        const data = Array.from({ length: 12 }, (_, i) => byMonth[i] || 0);
+        let peak = 0;
+        for (let i = 1; i < 12; i++) if (data[i] > data[peak]) peak = i;
+
         const g = ctx.getContext('2d').createLinearGradient(0, 0, 0, 240);
-        g.addColorStop(0, 'rgba(32,107,172,.20)');
+        g.addColorStop(0, 'rgba(32,107,172,.18)');
         g.addColorStop(1, 'rgba(32,107,172,0)');
+
+        // Draws the dashed marker + value bubble over the peak month (Figma style).
+        const peakLabel = {
+            id: 'peakLabel',
+            afterDatasetsDraw(chart) {
+                if (data[peak] <= 0) return;
+                const meta = chart.getDatasetMeta(1);
+                const pt = meta && meta.data[peak];
+                if (!pt) return;
+                const c = chart.ctx, area = chart.chartArea;
+                c.save();
+                c.setLineDash([4, 4]); c.strokeStyle = '#bcd0ea'; c.lineWidth = 1.5;
+                c.beginPath(); c.moveTo(pt.x, area.top); c.lineTo(pt.x, area.bottom); c.stroke();
+                c.setLineDash([]);
+                const val = fmtEuro(data[peak]);
+                const sub = MONTHS_FULL[peak] + ' ' + year;
+                c.font = '700 13px Inter, sans-serif'; const w1 = c.measureText(val).width;
+                c.font = '400 11px Inter, sans-serif'; const w2 = c.measureText(sub).width;
+                const bw = Math.max(w1, w2) + 24, bh = 44;
+                const bx = Math.min(Math.max(pt.x - bw / 2, area.left), area.right - bw);
+                const by = Math.max(pt.y - bh - 14, 2);
+                c.fillStyle = '#0e1626'; roundRect(c, bx, by, bw, bh, 9); c.fill();
+                c.textAlign = 'center';
+                c.fillStyle = '#ffffff'; c.font = '700 13px Inter, sans-serif';
+                c.fillText(val, bx + bw / 2, by + 19);
+                c.fillStyle = '#a9b6c7'; c.font = '400 11px Inter, sans-serif';
+                c.fillText(sub, bx + bw / 2, by + 34);
+                c.restore();
+            },
+        };
+
         if (revenueChart) revenueChart.destroy();
         revenueChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [{
-                data: rows.map(r => parseFloat(r.revenue)),
-                borderColor: '#206bac', borderWidth: 2.6, fill: true, backgroundColor: g,
-                tension: 0.38, pointBackgroundColor: '#fff', pointBorderColor: '#206bac',
-                pointBorderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6,
-            }] },
+            type: 'bar',
+            data: {
+                labels: MONTHS_CAP,
+                datasets: [
+                    { type: 'bar', data, backgroundColor: '#eaf0fb', borderRadius: 5,
+                      barPercentage: 0.55, categoryPercentage: 0.7, order: 2 },
+                    { type: 'line', data, borderColor: '#206bac', borderWidth: 2.6, fill: true,
+                      backgroundColor: g, tension: 0.38, pointBackgroundColor: '#fff',
+                      pointBorderColor: '#206bac', pointBorderWidth: 2.5, pointRadius: 4,
+                      pointHoverRadius: 6, order: 1 },
+                ],
+            },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: {
-                    backgroundColor: '#0e1626', padding: 10, cornerRadius: 8, displayColors: false,
-                    callbacks: { label: c => fmtEuro(c.parsed.y) },
-                } },
+                layout: { padding: { top: 58 } },
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
                 scales: {
                     x: { grid: { display: false }, border: { display: false }, ticks: { color: '#8a97a8', font: { size: 11.5 } } },
-                    y: { grid: { color: '#eef2f7' }, border: { display: false }, beginAtZero: true,
-                         ticks: { color: '#8a97a8', font: { size: 11.5 }, callback: v => '€' + Number(v).toLocaleString('it-IT') } },
+                    y: { display: false, beginAtZero: true, grace: '15%' },
                 },
             },
+            plugins: [peakLabel],
         });
     }
 
@@ -223,9 +281,9 @@
         }
         box.innerHTML = rows.map(r => {
             const place = [r.address, r.city].filter(Boolean).map(esc).join(' · ') || '—';
-            const thumb = r.cover
-                ? `<img src="${esc(r.cover)}" alt="" onerror="this.remove()">`
-                : '<i data-lucide="home"></i>';
+            const cover = mediaUrl(r.cover_url);
+            const thumb = '<i data-lucide="home"></i>'
+                + (cover ? `<img src="${esc(cover)}" alt="" onerror="this.remove()">` : '');
             return `<a class="db-prop" href="view.php?name=properties" data-view="properties">
                 <div class="db-prop__thumb">${thumb}</div>
                 <div class="db-prop__b"><b>${fmtEuro(r.price)}</b><span>${place}</span></div>

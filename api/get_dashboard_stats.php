@@ -104,9 +104,15 @@ try {
     // Recently added properties for the right rail
     $recentPropertiesStmt = $db->prepare(
         "SELECT p.id, p.address, p.city, p.price, p.price_type, p.property_type,
-                m.file_path AS cover
+                COALESCE(
+                    (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                    (SELECT fm.file_path FROM property_media fm
+                     WHERE fm.property_id = p.id
+                       AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
+                       AND fm.mime_type LIKE 'image/%'
+                     ORDER BY fm.sort_order ASC, fm.created_at ASC LIMIT 1)
+                ) AS cover_url
          FROM properties p
-         LEFT JOIN property_media m ON m.id = p.cover_media_id
          WHERE p.status != 'archived'
          ORDER BY p.created_at DESC
          LIMIT 4"
@@ -126,18 +132,24 @@ try {
     $recentCommsStmt->execute();
     $recentCommunications = $recentCommsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Monthly revenue: last 6 complete months + current month
+    // Monthly revenue for a full calendar year (Jan–Dec). Anchor on the year of
+    // the most recent payment so the chart always has data (in production this is
+    // the current year; with older seed data it follows the data). The front-end
+    // pads the series to all 12 months for a complete axis.
+    $chartYear = (int) $db->query(
+        "SELECT COALESCE(YEAR(MAX(due_date)), YEAR(CURDATE())) FROM payments"
+    )->fetchColumn();
+
     $monthlyStmt = $db->prepare(
         "SELECT DATE_FORMAT(due_date, '%Y-%m') AS ym,
                 COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END), 0) AS revenue,
                 COALESCE(SUM(amount), 0) AS expected
          FROM payments
-         WHERE due_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
-           AND due_date <= LAST_DAY(CURDATE())
+         WHERE YEAR(due_date) = :year
          GROUP BY ym
          ORDER BY ym ASC"
     );
-    $monthlyStmt->execute();
+    $monthlyStmt->execute(['year' => $chartYear]);
     $monthlyRevenue = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Pending payments due this month
@@ -163,6 +175,7 @@ try {
         'overdue_reminders'    => $overdueReminders,
         'upcoming_reminders'   => $upcomingReminders,
         'monthly_revenue'      => $monthlyRevenue,
+        'chart_year'           => $chartYear,
         'pending_this_month'   => $pendingThisMonth,
         'recent_payments'      => $recentPayments,
         'recent_properties'    => $recentProperties,
