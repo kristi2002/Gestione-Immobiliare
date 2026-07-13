@@ -7112,7 +7112,8 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 .db-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 20px 0; }
 .db-card__head h3 { font-size: 15.5px; font-weight: 700; color: var(--color-text); }
 .db-card__head p { font-size: 12.5px; color: var(--color-text-muted); margin-top: 3px; }
-.db-link { color: var(--color-primary); font-weight: 600; font-size: 13px; }
+.db-link { color: var(--color-primary); font-weight: 600; font-size: 13px; text-decoration: none; }
+.db-link:hover { text-decoration: underline; }
 .db-chartwrap { padding: 14px 16px 16px; height: 280px; position: relative; }
 
 .db-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -7141,7 +7142,7 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 .db-badge.late { background: #fdecec; color: #b91c1c; }
 
 .db-list { padding: 4px 20px 12px; }
-.db-prop { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rd-line); }
+.db-prop { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rd-line); text-decoration: none; }
 .db-prop:first-child { border-top: none; }
 .db-prop__thumb {
     position: relative;
@@ -7153,12 +7154,13 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 .db-prop__thumb [data-lucide] { width: 22px; height: 22px; color: #fff; }
 .db-prop__b { flex: 1; min-width: 0; }
 .db-prop__b b { font-size: 14px; font-weight: 700; display: block; color: var(--color-text); }
+.db-prop__b b { text-decoration: none; }
 .db-prop__b span {
-    font-size: 12px; color: #4a6076; display: block;
+    font-size: 12px; color: var(--color-text-muted); display: block;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    text-decoration: underline; text-decoration-color: #c9d6e5; text-underline-offset: 2px;
+    text-decoration: none;
 }
-.db-prop:hover .db-prop__b span { text-decoration-color: var(--color-primary); color: var(--color-primary); }
+.db-prop:hover .db-prop__b span { color: var(--color-primary); }
 .db-prop__more { color: #aeb8c5; flex-shrink: 0; }
 .db-msg { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--rd-line); }
 .db-msg:first-child { border-top: none; }
@@ -7223,19 +7225,18 @@ details.nav-group > summary:hover { color: #fff; }
 .view-header__text p { font-size: 13px; color: var(--color-text-muted); margin-top: 2px; }
 .view-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* Filter bar → single horizontal row of aligned, equal-height controls */
-.toolbar {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 12px;
-}
-.toolbar .search-box { flex: 1 1 260px; min-width: 200px; }
+/* Filter bar → aligned, equal-height rounded controls.
+   NOTE: filters.js moves the controls into a `.filter-bar__controls` wrapper at
+   runtime, so the styling targets THAT (the real live structure), plus the raw
+   toolbar for any static/pre-JS markup. */
+.toolbar { padding: 12px 14px; border-radius: 12px; }
+.filter-bar__controls { gap: 10px; align-items: center; }
+.filter-bar__controls .search-box,
+.toolbar > .search-box { flex: 1 1 260px; min-width: 200px; }
+.filter-bar__controls .search-box .form-input,
+.filter-bar__controls .search-box input[type="search"],
 .toolbar .search-box .form-input,
-.toolbar .search-box input[type="search"],
-.toolbar > input[type="search"] {
+.toolbar .search-box input[type="search"] {
     height: 40px;
     border-radius: 9px;
     padding-left: 38px;
@@ -7243,16 +7244,17 @@ details.nav-group > summary:hover { color: #fff; }
     background-repeat: no-repeat;
     background-position: 13px center;
 }
+.filter-bar__controls .form-select,
+.filter-bar__controls .form-input,
+.filter-bar__controls input[type="date"],
+.filter-bar__controls input[type="text"],
 .toolbar > .form-select,
-.toolbar > .form-input,
-.toolbar > input[type="date"],
-.toolbar > input[type="text"] {
+.toolbar > .form-input {
     height: 40px;
     border-radius: 9px;
-    flex: 0 0 auto;
 }
-/* Push a trailing clear/reset control (and anything after) to the right */
-.toolbar .btn-clear-filters { margin-left: auto; height: 40px; border-radius: 9px; }
+.filter-bar__controls .btn-clear-filters,
+.toolbar .btn-clear-filters { height: 40px; border-radius: 9px; }
 
 /* Segmented view toggle (columns / map) → pill control like the reference */
 .view-cols-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: -4px 0 14px; flex-wrap: wrap; }
