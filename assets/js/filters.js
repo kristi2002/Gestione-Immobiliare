@@ -171,6 +171,10 @@
             .filter(el => el !== searchInput && !el.closest('.search-box'));
         if (!searchInput && !fields.length) return false;
 
+        // The reference bar is always shown (it replaces the collapse-to-toggle
+        // pattern with a Filtri popover), so keep it out of the collapsed state.
+        bar.classList.add('is-open');
+
         const pageKey = 'fbSaved:' + (bar.id || (location.pathname + '|' + [...bar.classList].join('.')));
         const left  = document.createElement('div'); left.className  = 'fb-group fb-group--left';
         const right = document.createElement('div'); right.className = 'fb-group fb-group--right';
