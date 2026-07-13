@@ -145,6 +145,7 @@
         book:   svgIco('<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'),
         filter: svgIco('<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>'),
         sort:   svgIco('<path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4"/>'),
+        layers: svgIco('<path d="m12 2 9 4.9-9 4.9-9-4.9L12 2z"/><path d="m3 12 9 4.9 9-4.9"/><path d="m3 17 9 4.9 9-4.9"/>'),
     };
 
     function findResultsContainer(bar) {
@@ -176,6 +177,29 @@
         bar.classList.add('is-open');
 
         const pageKey = 'fbSaved:' + (bar.id || (location.pathname + '|' + [...bar.classList].join('.')));
+
+        // Panels are position:fixed and placed via JS so they escape the toolbar's
+        // overflow:hidden and any stacking context — never render behind the list.
+        function closeAllPanels() { bar.querySelectorAll('.fb-pop.open, .fb-menu.open').forEach(p => p.classList.remove('open')); }
+        function placePanel(btn, panel, align) {
+            const pw = panel.offsetWidth || 250;
+            const r = btn.getBoundingClientRect();
+            let leftPx = align === 'right' ? (r.right - pw) : r.left;
+            leftPx = Math.max(8, Math.min(leftPx, window.innerWidth - pw - 8));
+            panel.style.position = 'fixed';
+            panel.style.left = leftPx + 'px';
+            panel.style.top = (r.bottom + 6) + 'px';
+            panel.style.right = 'auto';
+        }
+        function togglePanel(btn, panel, align) {
+            const willOpen = !panel.classList.contains('open');
+            closeAllPanels();
+            if (willOpen) { panel.classList.add('open'); placePanel(btn, panel, align); }
+        }
+        const _fbScroller = document.getElementById('app-content');
+        if (_fbScroller) _fbScroller.addEventListener('scroll', closeAllPanels, { passive: true });
+        window.addEventListener('resize', closeAllPanels);
+
         const left  = document.createElement('div'); left.className  = 'fb-group fb-group--left';
         const right = document.createElement('div'); right.className = 'fb-group fb-group--right';
 
@@ -191,6 +215,21 @@
         const saveIcon = document.createElement('button'); saveIcon.type = 'button'; saveIcon.className = 'fb-icon-btn';
         saveIcon.title = 'Salva la ricerca corrente'; saveIcon.innerHTML = REF_ICONS.save;
         left.append(saveWrap, saveIcon);
+
+        // Bulk Action dropdown — wraps the page's existing .bulk-toolbar (its
+        // buttons/checkbox keep their ids, so the page's bulk JS keeps working).
+        const bulk = bar.parentElement && bar.parentElement.querySelector('.bulk-toolbar');
+        if (bulk) {
+            const bWrap = document.createElement('div'); bWrap.className = 'fb-ctrl';
+            const bBtn = document.createElement('button'); bBtn.type = 'button'; bBtn.className = 'fb-btn';
+            bBtn.innerHTML = REF_ICONS.layers + '<span>Azioni</span><span class="fb-chev">' + REF_ICONS.chev + '</span>';
+            const bMenu = document.createElement('div'); bMenu.className = 'fb-menu fb-menu--bulk';
+            [...bulk.childNodes].forEach(n => bMenu.appendChild(n));
+            bulk.classList.add('bulk-moved'); bulk.hidden = false;
+            bWrap.append(bBtn, bMenu);
+            bBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(bBtn, bMenu, 'right'); });
+            right.appendChild(bWrap);
+        }
 
         // View toggle moved in from the sibling .view-cols-row (where present)
         const colsRow = bar.parentElement && bar.parentElement.querySelector('.view-cols-row');
@@ -221,7 +260,7 @@
             foot.appendChild(done);
             pop.appendChild(foot);
             fWrap.append(fBtn, pop);
-            fBtn.addEventListener('click', (e) => { e.stopPropagation(); pop.classList.toggle('open'); });
+            fBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(fBtn, pop, 'right'); });
             right.appendChild(fWrap);
         } else if (clearBtn) {
             right.appendChild(clearBtn);
@@ -239,7 +278,7 @@
             sortMenu.appendChild(b);
         });
         sortWrap.append(sortBtn, sortMenu);
-        sortBtn.addEventListener('click', (e) => { e.stopPropagation(); sortMenu.classList.toggle('open'); });
+        sortBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(sortBtn, sortMenu, 'right'); });
         right.appendChild(sortWrap);
 
         controls.classList.add('fb-ref');
@@ -302,7 +341,7 @@
                 saveMenu.appendChild(b);
             });
         }
-        saveBtn.addEventListener('click', (e) => { e.stopPropagation(); renderSaveMenu(); saveMenu.classList.toggle('open'); });
+        saveBtn.addEventListener('click', (e) => { e.stopPropagation(); renderSaveMenu(); togglePanel(saveBtn, saveMenu, 'left'); });
         saveIcon.addEventListener('click', () => {
             const name = prompt('Nome della ricerca salvata:'); if (!name) return;
             const l = readSaved(); l.push({ name: name.slice(0, 40), values: snapshot() }); writeSaved(l);
@@ -335,13 +374,16 @@
         }
 
         // Reflow list toolbars into the reference layout (search + saved searches
-        // | view toggle + Filtri popover + sort). Guarded: any failure falls back
-        // to the original, working bar + the mobile collapse toggle.
-        let refApplied = false;
-        if (bar.classList.contains('toolbar') || bar.classList.contains('filter-bar')) {
-            try { refApplied = buildRefBar(bar, controls, btn); } catch (_) { refApplied = false; }
+        // | bulk action + view toggle + Filtri popover + sort). Main bars are then
+        // always shown (no collapse toggle); reports/chat bars keep collapsing.
+        // Guarded: any failure leaves the original controls, still shown.
+        const isMainBar = bar.classList.contains('toolbar') || bar.classList.contains('filter-bar');
+        if (isMainBar) {
+            try { buildRefBar(bar, controls, btn); } catch (_) { /* keep original bar */ }
+            bar.classList.add('is-open');
+        } else {
+            setupCollapsible(bar);
         }
-        if (!refApplied) setupCollapsible(bar);
 
         const updateVisibility = () => {
             btn.hidden = !isBarActive(bar);

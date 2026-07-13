@@ -7287,13 +7287,24 @@ details.nav-group > summary:hover { color: #fff; }
     font-size: 11px; font-weight: 700; padding: 1px 7px; line-height: 1.5;
 }
 .fb-badge[hidden] { display: none; }
+/* position:fixed + JS placement so the panels are never clipped by the
+   toolbar's overflow:hidden (collapse animation) or the merged bar's scroll. */
 .fb-pop, .fb-menu {
-    position: absolute; top: calc(100% + 6px); z-index: 60;
+    position: fixed; z-index: 1300;
     background: var(--color-surface); border: 1px solid var(--color-border);
     border-radius: 12px; box-shadow: var(--shadow-lg); display: none;
+    max-height: 72vh; overflow: auto;
 }
-.fb-pop { right: 0; min-width: 250px; padding: 14px; }
-.fb-menu { left: 0; min-width: 200px; padding: 6px; }
+.fb-pop { min-width: 250px; padding: 14px; }
+.fb-menu { min-width: 200px; padding: 6px; }
+/* Bulk Action dropdown wraps the page's existing bulk toolbar */
+.bulk-moved { display: none !important; }
+.fb-menu--bulk { min-width: 250px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.fb-menu--bulk > * { width: 100%; margin: 0 !important; box-sizing: border-box; }
+.fb-menu--bulk label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text); }
+.fb-menu--bulk .btn { justify-content: flex-start; width: 100%; }
+.fb-menu--bulk .form-select { height: 38px; }
+.fb-menu--bulk .text-muted { font-size: 12px; }
 .fb-pop.open, .fb-menu.open { display: block; }
 .fb-pop__row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
 .fb-pop__row label { font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
