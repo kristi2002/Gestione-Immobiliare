@@ -490,6 +490,8 @@
         div.textContent = String(str);
         return div.innerHTML;
     }
+    // The FatturaPA/SdI additions call esc() — alias it or every render throws.
+    const esc = escapeHtml;
 
     init();
 })();
