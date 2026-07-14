@@ -22,6 +22,9 @@ try {
     $id     = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
     if ($method === 'GET') {
+        if (($_GET['action'] ?? '') === 'stats') {
+            tenantStats($db);
+        }
         $id ? getTenant($db, $id) : listTenants($db);
     } elseif ($method === 'POST') {
         requireWriteAccess();
@@ -42,6 +45,29 @@ try {
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
+
+function tenantStats(PDO $db): void
+{
+    $total  = (int) $db->query("SELECT COUNT(*) FROM tenants WHERE status != 'archived'")->fetchColumn();
+    $active = (int) $db->query("SELECT COUNT(*) FROM tenants WHERE status = 'active'")->fetchColumn();
+    $withContract = (int) $db->query(
+        "SELECT COUNT(DISTINCT c.tenant_id) FROM contracts c
+         JOIN tenants t ON t.id = c.tenant_id AND t.status != 'archived'
+         WHERE (c.end_date IS NULL OR c.end_date >= CURDATE())"
+    )->fetchColumn();
+    $expiring = (int) $db->query(
+        "SELECT COUNT(DISTINCT c.tenant_id) FROM contracts c
+         JOIN tenants t ON t.id = c.tenant_id AND t.status != 'archived'
+         WHERE c.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY)"
+    )->fetchColumn();
+
+    apiSuccess([
+        'total'         => $total,
+        'active'        => $active,
+        'with_contract' => $withContract,
+        'expiring'      => $expiring,
+    ]);
+}
 
 /**
  * Shared derived-table join that resolves each tenant's current contract

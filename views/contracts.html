@@ -1,47 +1,47 @@
 <div class="contracts-view">
-    <div class="view-header">
-        <div class="view-header__text">
-            <h2>Contratti</h2>
-            <p>Gestisci il ciclo di vita dei contratti: bozza, invio, firma, scadenza.</p>
+    <div class="view-header view-header--bare">
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-contract"><i data-lucide="plus"></i> Nuovo Contratto</button>
         </div>
-        <button class="btn btn--primary" id="btn-new-contract">
-            + Nuovo Contratto
-        </button>
     </div>
 
     <div id="contracts-alert" class="alert" style="display:none;"></div>
 
-    <div class="toolbar">
-        <div class="search-box">
-            <input type="search" id="contract-search" class="form-input" placeholder="Cerca per immobile, inquilino, titolo…" autocomplete="off">
+    <div class="db-card list-card">
+        <div class="db-card__head"><h3>Lista Contratti</h3></div>
+
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="search" id="contract-search" class="form-input" placeholder="Cerca per immobile, inquilino, titolo…" autocomplete="off">
+            </div>
+            <select id="contract-property-filter" class="form-select">
+                <option value="">Tutti gli immobili</option>
+            </select>
+            <select id="contract-type-filter" class="form-select">
+                <option value="">Tutti i tipi</option>
+                <option value="locazione">Locazione</option>
+                <option value="compravendita">Compravendita</option>
+                <option value="preliminare">Preliminare</option>
+                <option value="mandato">Mandato</option>
+                <option value="altro">Altro</option>
+            </select>
         </div>
-        <select id="contract-property-filter" class="form-select">
-            <option value="">Tutti gli immobili</option>
-        </select>
-        <select id="contract-type-filter" class="form-select">
-            <option value="">Tutti i tipi</option>
-            <option value="locazione">Locazione</option>
-            <option value="compravendita">Compravendita</option>
-            <option value="preliminare">Preliminare</option>
-            <option value="mandato">Mandato</option>
-            <option value="altro">Altro</option>
-        </select>
-    </div>
 
-    <div class="filter-pills" id="contract-status-pills" role="group" aria-label="Filtra per stato">
-        <button type="button" class="filter-pill filter-pill--all is-active" data-status="">Tutti</button>
-        <button type="button" class="filter-pill filter-pill--active" data-status="__active">Attivi</button>
-        <button type="button" class="filter-pill filter-pill--draft" data-status="draft">Bozza</button>
-        <button type="button" class="filter-pill filter-pill--sent" data-status="sent">Inviato</button>
-        <button type="button" class="filter-pill filter-pill--signed" data-status="signed">Firmato</button>
-        <button type="button" class="filter-pill filter-pill--expired" data-status="__expired">Scaduti</button>
-        <button type="button" class="filter-pill filter-pill--cancelled" data-status="cancelled">Annullato</button>
-    </div>
+        <div class="filter-pills filter-pills--inset" id="contract-status-pills" role="group" aria-label="Filtra per stato">
+            <button type="button" class="filter-pill filter-pill--all is-active" data-status="">Tutti</button>
+            <button type="button" class="filter-pill filter-pill--active" data-status="__active">Attivi</button>
+            <button type="button" class="filter-pill filter-pill--draft" data-status="draft">Bozza</button>
+            <button type="button" class="filter-pill filter-pill--sent" data-status="sent">Inviato</button>
+            <button type="button" class="filter-pill filter-pill--signed" data-status="signed">Firmato</button>
+            <button type="button" class="filter-pill filter-pill--expired" data-status="__expired">Scaduti</button>
+            <button type="button" class="filter-pill filter-pill--cancelled" data-status="cancelled">Annullato</button>
+        </div>
 
-    <div id="contracts-grid" class="entity-grid">
-        <div class="entity-loading">Caricamento…</div>
+        <div id="contracts-grid" class="entity-grid entity-grid--inset">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+        <div id="contracts-pagination" class="pagination-container"></div>
     </div>
-    <div id="contracts-pagination" class="pagination-container"></div>
 </div>
 
 <!-- E-sign modal -->

@@ -1,9 +1,5 @@
 <div class="clients-view">
-    <div class="view-header">
-        <div class="view-header__text">
-            <h2>Proprietari</h2>
-            <p>Gestisci i clienti dell'agenzia e le loro informazioni di contatto.</p>
-        </div>
+    <div class="view-header view-header--bare">
         <div class="view-header__actions">
             <button class="btn btn--export" id="btn-export-clients"><i data-lucide="download"></i> Esporta CSV</button>
             <button class="btn btn--import" id="btn-import-clients"><i data-lucide="upload"></i> Importa CSV</button>
@@ -14,29 +10,68 @@
 
     <div id="clients-alert" class="alert" style="display:none;"></div>
 
-    <div class="toolbar">
-        <div class="search-box">
-            <input type="search" id="client-search" class="form-input" placeholder="Cerca per nome, email, telefono…" autocomplete="off">
+    <!-- Stat strip -->
+    <div class="list-stats" id="clients-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="users"></i></span>
+            <div class="stat-mini__txt"><small>Proprietari Totali</small><b id="cstat-total">—</b></div>
         </div>
-        <select id="client-status-filter" class="form-select">
-            <option value="">Tutti (esclusi archiviati)</option>
-            <option value="active">Attivi</option>
-            <option value="inactive">Inattivi</option>
-            <option value="archived">Archiviati</option>
-        </select>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="building-2"></i></span>
+            <div class="stat-mini__txt"><small>Con Immobili</small><b id="cstat-props">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="user-plus"></i></span>
+            <div class="stat-mini__txt"><small>Nuovi questo mese</small><b id="cstat-new">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="badge-check"></i></span>
+            <div class="stat-mini__txt"><small>Attivi</small><b id="cstat-active">—</b></div>
+        </div>
     </div>
 
-    <div id="clients-bulk-toolbar" class="bulk-toolbar" hidden>
-        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="clients-select-all"> Seleziona tutti</label>
-        <span id="clients-bulk-count" class="text-muted">0 selezionati</span>
-        <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-clients"><i data-lucide="trash-2"></i> Archivia selezionati</button>
-        <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-clients"><i data-lucide="download"></i> Esporta selezionati</button>
-    </div>
+    <!-- List card -->
+    <div class="db-card list-card">
+        <div class="db-card__head"><h3>Lista Proprietari</h3></div>
 
-    <div id="clients-grid" class="entity-grid">
-        <div class="entity-loading">Caricamento…</div>
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="search" id="client-search" class="form-input" placeholder="Cerca per nome, email, telefono…" autocomplete="off">
+            </div>
+            <select id="client-status-filter" class="form-select">
+                <option value="">Tutti (esclusi archiviati)</option>
+                <option value="active">Attivi</option>
+                <option value="inactive">Inattivi</option>
+                <option value="archived">Archiviati</option>
+            </select>
+        </div>
+
+        <div id="clients-bulk-toolbar" class="bulk-toolbar" hidden>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="clients-select-all"> Seleziona tutti</label>
+            <span id="clients-bulk-count" class="text-muted">0 selezionati</span>
+            <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-clients"><i data-lucide="trash-2"></i> Archivia selezionati</button>
+            <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-clients"><i data-lucide="download"></i> Esporta selezionati</button>
+        </div>
+
+        <div class="lt-wrap">
+            <table class="lt">
+                <thead>
+                    <tr>
+                        <th class="lt-check"></th>
+                        <th>Nome Proprietario</th>
+                        <th>Contatti</th>
+                        <th>Immobili</th>
+                        <th>Stato</th>
+                        <th class="lt-actions-h">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="clients-grid">
+                    <tr><td colspan="6" class="entity-loading">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="clients-pagination" class="pagination-container"></div>
     </div>
-    <div id="clients-pagination" class="pagination-container"></div>
 </div>
 
 <!-- CSV import preview modal -->
@@ -77,4 +112,4 @@
     </div>
 </div>
 
-<script src="assets/js/clients.js?v=4"></script>
+<script src="assets/js/clients.js?v=5"></script>

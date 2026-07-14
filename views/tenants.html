@@ -1,44 +1,77 @@
 <div class="tenants-view">
-    <div class="view-header">
-        <div class="view-header__text">
-            <h2>Inquilini</h2>
-            <p>Gestisci conduttori, contratti e accesso al portale inquilino.</p>
+    <div class="view-header view-header--bare">
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-tenant"><i data-lucide="plus"></i> Nuovo Inquilino</button>
         </div>
-        <button class="btn btn--primary" id="btn-new-tenant">+ Nuovo inquilino</button>
     </div>
 
     <div id="tenants-alert" class="alert" style="display:none;"></div>
 
-    <div class="toolbar">
-        <input type="search" id="tenant-search" class="form-input" placeholder="Cerca per nome, email o indirizzo…">
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="users"></i></span>
+            <div class="stat-mini__txt"><small>Inquilini Totali</small><b id="tstat-total">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="badge-check"></i></span>
+            <div class="stat-mini__txt"><small>Attivi</small><b id="tstat-active">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="scroll-text"></i></span>
+            <div class="stat-mini__txt"><small>Con Contratto</small><b id="tstat-contract">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="calendar-clock"></i></span>
+            <div class="stat-mini__txt"><small>In Scadenza (90gg)</small><b id="tstat-expiring">—</b></div>
+        </div>
     </div>
 
-    <div id="tenants-bulk-toolbar" class="bulk-toolbar" hidden>
-        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="tenants-select-all"> Seleziona tutti</label>
-        <span id="tenants-bulk-count" class="text-muted">0 selezionati</span>
-        <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-tenants"><i data-lucide="trash-2"></i> Archivia selezionati</button>
-        <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-tenants"><i data-lucide="download"></i> Esporta selezionati</button>
-    </div>
+    <div class="db-card list-card">
+        <div class="db-card__head"><h3>Lista Inquilini</h3></div>
 
-    <div class="table-wrapper">
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width:36px"></th>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Immobile</th>
-                <th>Canone</th>
-                <th>Contratto</th>
-                <th>Portale</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="tenants-tbody"></tbody>
-    </table>
+        <div class="toolbar">
+            <input type="search" id="tenant-search" class="form-input" placeholder="Cerca per nome, email o indirizzo…">
+        </div>
+
+        <div id="tenants-bulk-toolbar" class="bulk-toolbar" hidden>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="tenants-select-all"> Seleziona tutti</label>
+            <span id="tenants-bulk-count" class="text-muted">0 selezionati</span>
+            <button type="button" class="btn btn--sm btn--ghost" id="bulk-archive-tenants"><i data-lucide="trash-2"></i> Archivia selezionati</button>
+            <button type="button" class="btn btn--sm btn--ghost" id="bulk-export-tenants"><i data-lucide="download"></i> Esporta selezionati</button>
+        </div>
+
+        <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width:36px"></th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Immobile</th>
+                    <th>Canone</th>
+                    <th>Contratto</th>
+                    <th>Portale</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tenants-tbody"></tbody>
+        </table>
+        </div>
+        <div id="tenants-pagination" class="pagination-container"></div>
     </div>
-    <div id="tenants-pagination" class="pagination-container"></div>
 </div>
+<script>
+(function () {
+    fetch('api/tenants.php?action=stats').then(r => r.json()).then(j => {
+        if (!j.success) return;
+        var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+        set('tstat-total', j.data.total);
+        set('tstat-active', j.data.active);
+        set('tstat-contract', j.data.with_contract);
+        set('tstat-expiring', j.data.expiring);
+    }).catch(function () {});
+})();
+</script>
 
 <div class="modal-overlay" id="wa-send-modal" hidden>
     <div class="modal modal--sm">

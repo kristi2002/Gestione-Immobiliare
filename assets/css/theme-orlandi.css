@@ -225,6 +225,102 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .db-rowaction:hover { background: var(--color-primary); color: #fff; }
 .db-rowaction [data-lucide], .db-rowaction svg { width: 16px; height: 16px; }
 
+/* =====================================================================
+   List pages — stat strip + list card + table (mockup anatomy)
+   ===================================================================== */
+/* The page title lives in the topbar — hide every view's duplicate header
+   text and keep only its action buttons, aligned right (mockup pattern). */
+.view-header .view-header__text { display: none; }
+.view-header { justify-content: flex-end; }
+.view-header--bare { justify-content: flex-end; margin-bottom: 14px; }
+
+.list-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+@media (max-width: 1100px) { .list-stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px)  { .list-stats { grid-template-columns: 1fr; } }
+.stat-mini {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+}
+.stat-mini__ico {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--mi, var(--color-primary)) 13%, #fff);
+    color: var(--mi, var(--color-primary));
+}
+.stat-mini__ico svg, .stat-mini__ico [data-lucide] { width: 19px; height: 19px; }
+.stat-mini__txt { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.stat-mini__txt small { font-size: 12px; color: var(--color-text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-mini__txt b { font-size: 21px; font-weight: 800; color: var(--color-text); letter-spacing: -0.01em; }
+
+.list-card { overflow: visible; }
+.list-card > .db-card__head { padding: 18px 20px 4px; }
+.list-card > .db-card__head h3 { font-size: 16.5px; font-weight: 800; }
+.list-card .toolbar {
+    margin: 0; border: none; box-shadow: none; background: transparent;
+    padding: 10px 20px 12px; border-radius: 0;
+}
+.list-card .pagination-container { padding: 6px 20px 16px; margin: 0; }
+
+.lt-wrap, .table-wrapper { overflow-x: auto; }
+.lt, .data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.lt thead th, .data-table thead th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--color-text-muted);
+    padding: 10px 12px; border-bottom: 1px solid var(--color-border);
+    background: #f7f9fc; white-space: nowrap;
+}
+.lt thead th:first-child, .data-table thead th:first-child { padding-left: 20px; }
+.lt thead th:last-child, .data-table thead th:last-child { padding-right: 20px; }
+.lt tbody td, .data-table tbody td { padding: 12px; border-bottom: 1px solid #eef2f7; vertical-align: middle; color: var(--color-text); }
+.lt tbody td:first-child, .data-table tbody td:first-child { padding-left: 20px; }
+.lt tbody td:last-child, .data-table tbody td:last-child { padding-right: 20px; }
+.lt tbody tr:last-child td, .data-table tbody tr:last-child td { border-bottom: none; }
+.lt tbody tr.lt-row { cursor: pointer; }
+.lt tbody tr.lt-row, .data-table tbody tr { transition: background 0.12s; }
+.lt tbody tr.lt-row:nth-child(even), .data-table tbody tr:nth-child(even) { background: #fafcfe; }
+.lt tbody tr.lt-row:hover, .data-table tbody tr:hover { background: #f2f7fd; }
+.lt .entity-loading, .lt .entity-empty, .lt .entity-error { text-align: center; padding: 26px 16px; color: var(--color-text-muted); }
+.lt-check { width: 34px; }
+.lt-actions-h { text-align: right; }
+
+.lt-who { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.lt-who__txt { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.lt-who__txt b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lt-who__txt small { font-size: 11.5px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lt-av {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 12.5px;
+}
+.av-a0 { background: #2563eb; } .av-a1 { background: #0d9488; }
+.av-a2 { background: #7c3aed; } .av-a3 { background: #d97706; }
+.av-a4 { background: #16a34a; } .av-a5 { background: #db2777; }
+.av-a6 { background: #0891b2; } .av-a7 { background: #e11d48; }
+
+.lt-contacts { line-height: 1.35; }
+.lt-contacts a { display: block; color: var(--color-text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.lt-contacts a:hover { color: var(--color-primary); }
+.lt-contacts small { display: block; color: var(--color-text-muted); font-size: 12px; }
+.lt-count {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #e3eefb; color: #276fb4; border-radius: 999px;
+    padding: 4px 11px; font-weight: 700; font-size: 12.5px;
+}
+.lt-count svg, .lt-count [data-lucide] { width: 14px; height: 14px; }
+.lt-actions { text-align: right; white-space: nowrap; }
+.lt-actions .btn { padding: 6px 8px; }
+.lt-actions .btn svg, .lt-actions .btn [data-lucide] { width: 15px; height: 15px; }
+@media (max-width: 900px) { .lt-contacts, .lt thead th:nth-child(3) { display: none; } }
+
+/* status pills row + card grids hosted inside a list card */
+.filter-pills--inset { padding: 0 20px 12px; }
+.entity-grid--inset { padding: 4px 20px 18px; }
+
+/* Entity cards — align with the mockup card language */
+.entity-card { border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--color-border); }
+.entity-card--clickable:hover { box-shadow: var(--shadow-md); border-color: #cfe0f2; }
+
 /* Cards / panels */
 .db-card, .card {
     background: var(--color-surface);

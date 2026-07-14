@@ -41,6 +41,7 @@
 
         bindEvents();
         loadClients();
+        loadStats();
     }
 
     function bindEvents() {
@@ -103,7 +104,7 @@
 
         const url = `${API}?${params}`;
 
-        softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
+        softLoad(els.grid, '<tr><td colspan="6" class="entity-loading">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(url);
@@ -121,8 +122,22 @@
             Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadClients(); });
         } catch (err) {
             els.grid.classList.remove('is-loading');
-            els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
+            els.grid.innerHTML = `<tr><td colspan="6" class="entity-error">${escapeHtml(err.message)}</td></tr>`;
         }
+    }
+
+    async function loadStats() {
+        try {
+            const res  = await fetch(`${API}?action=stats`);
+            const json = await res.json();
+            if (!json.success) return;
+            const d = json.data;
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('cstat-total',  d.total);
+            set('cstat-props',  d.with_properties);
+            set('cstat-new',    d.new_month);
+            set('cstat-active', d.active);
+        } catch (_) { /* the strip stays at — */ }
     }
 
     async function saveClient(data, id) {
@@ -155,47 +170,44 @@
         const list = Array.isArray(clients) ? clients : [];
 
         if (list.length === 0) {
-            els.grid.innerHTML = '<div class="entity-empty">Nessun proprietario trovato.</div>';
+            els.grid.innerHTML = '<tr><td colspan="6" class="entity-empty">Nessun proprietario trovato.</td></tr>';
             return;
         }
 
         els.grid.innerHTML = list.map(c => {
-            const initials  = (c.name[0] || '') + (c.surname[0] || '');
-            const propLabel = c.property_count === 1 ? '1 immobile' : `${c.property_count} immobili`;
+            const initials  = ((c.name[0] || '') + (c.surname[0] || '')).toUpperCase();
             const checked   = selectedIds.has(c.id) ? 'checked' : '';
-            // Stable per-owner accent so the grid reads with colour, like the leads cards.
+            // Stable per-owner accent, echoing the mockup's colored avatar circles.
             const accent    = ((c.id % 8) + 8) % 8;
+            const contacts  = [
+                c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : '',
+                c.phone ? `<small>${escapeHtml(c.phone)}</small>` : '',
+            ].filter(Boolean).join('') || '<small class="text-muted">Nessun contatto</small>';
             return `
-            <div class="entity-card client-card client-card--a${accent} entity-card--clickable" data-id="${c.id}">
-                <div class="entity-card__header">
-                    <input type="checkbox" class="client-checkbox entity-card__select" data-id="${c.id}" ${checked} title="Seleziona">
-                    <div class="entity-card__avatar">${escapeHtml(initials.toUpperCase())}</div>
-                    <div class="entity-card__title-group">
-                        <div class="entity-card__name">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</div>
-                        <span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span>
+            <tr class="lt-row" data-id="${c.id}">
+                <td class="lt-check"><input type="checkbox" class="client-checkbox" data-id="${c.id}" ${checked} title="Seleziona"></td>
+                <td>
+                    <div class="lt-who">
+                        <span class="lt-av av-a${accent}">${escapeHtml(initials)}</span>
+                        <div class="lt-who__txt">
+                            <b>${escapeHtml(c.name)} ${escapeHtml(c.surname)}</b>
+                            <small>${c.codice_fiscale ? 'CF: ' + escapeHtml(c.codice_fiscale) : '—'}</small>
+                        </div>
                     </div>
-                </div>
-                <div class="entity-card__body">
-                    ${c.codice_fiscale ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="id-card"></i></span><span style="flex:1;min-width:0;font-family:monospace;font-size:12px">${escapeHtml(c.codice_fiscale)}</span></div>` : ''}
-                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="phone"></i></span><span style="flex:1;min-width:0">${escapeHtml(c.phone)}</span><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.phone)}" title="Copia numero"><i data-lucide="copy"></i></button></div>` : ''}
-                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="mail"></i></span><a href="mailto:${escapeHtml(c.email)}" style="flex:1;min-width:0">${escapeHtml(c.email)}</a><button class="btn--copy btn-copy" data-copy="${escapeHtml(c.email)}" title="Copia email"><i data-lucide="copy"></i></button></div>` : ''}
-                    ${!c.codice_fiscale && !c.phone && !c.email ? `<div class="entity-card__info text-muted">Nessun contatto registrato</div>` : ''}
-                </div>
-                <div class="entity-card__footer">
-                    <div class="entity-card__stat">
-                        <span class="entity-card__stat-icon"><i data-lucide="building-2"></i></span>
-                        <span class="entity-card__stat-label">${propLabel}</span>
-                    </div>
-                    <div class="entity-card__actions">
-                        ${c.phone && window.WA ? window.WA.buttonHtml(c.phone) : ''}
-                        <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni"><i data-lucide="mail"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità"><i data-lucide="id-card"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia"><i data-lucide="archive"></i></button>
-                    </div>
-                </div>
-            </div>`;
+                </td>
+                <td class="lt-contacts">${contacts}</td>
+                <td><span class="lt-count"><i data-lucide="building-2"></i>${Number(c.property_count) || 0}</span></td>
+                <td><span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
+                <td class="lt-actions">
+                    ${c.phone && window.WA ? window.WA.buttonHtml(c.phone) : ''}
+                    <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni"><i data-lucide="mail"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità"><i data-lucide="id-card"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia"><i data-lucide="archive"></i></button>
+                </td>
+            </tr>`;
         }).join('');
+        if (window.lucide) window.lucide.createIcons();
 
         els.grid.querySelectorAll('.client-checkbox').forEach(cb => {
             cb.addEventListener('change', () => {
@@ -241,10 +253,10 @@
             });
         });
 
-        els.grid.querySelectorAll('.entity-card').forEach(card => {
-            card.addEventListener('click', (e) => {
+        els.grid.querySelectorAll('.lt-row').forEach(row => {
+            row.addEventListener('click', (e) => {
                 if (!e.target.closest('button, input, a')) {
-                    if (window.App) window.App.navigateTo('client_profile', { clientId: Number(card.dataset.id) });
+                    if (window.App) window.App.navigateTo('client_profile', { clientId: Number(row.dataset.id) });
                 }
             });
         });

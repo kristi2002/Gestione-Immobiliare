@@ -25,6 +25,9 @@ try {
             if (($_GET['format'] ?? '') === 'csv') {
                 exportClientsCsv($db);
             }
+            if (($_GET['action'] ?? '') === 'stats') {
+                clientStats($db);
+            }
             $id ? getClient($db, $id) : listClients($db);
             break;
         case 'POST':
@@ -61,6 +64,29 @@ try {
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
+
+function clientStats(PDO $db): void
+{
+    $total = (int) $db->query("SELECT COUNT(*) FROM clients WHERE status != 'archived'")->fetchColumn();
+    $withProperties = (int) $db->query(
+        "SELECT COUNT(DISTINCT c.id) FROM clients c
+         JOIN properties p ON p.client_id = c.id AND p.status != 'archived'
+         WHERE c.status != 'archived'"
+    )->fetchColumn();
+    $newMonth = (int) $db->query(
+        "SELECT COUNT(*) FROM clients
+         WHERE status != 'archived'
+           AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"
+    )->fetchColumn();
+    $active = (int) $db->query("SELECT COUNT(*) FROM clients WHERE status = 'active'")->fetchColumn();
+
+    apiSuccess([
+        'total'           => $total,
+        'with_properties' => $withProperties,
+        'new_month'       => $newMonth,
+        'active'          => $active,
+    ]);
+}
 
 function listClients(PDO $db): void
 {

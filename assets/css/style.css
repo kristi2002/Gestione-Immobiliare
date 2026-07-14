@@ -7233,7 +7233,8 @@ details.nav-group > summary:hover { color: rgba(255, 255, 255, 0.75); }
 .fb-menu { min-width: 200px; padding: 6px; }
 /* Bulk Action dropdown wraps the page's existing bulk toolbar */
 .bulk-moved { display: none !important; }
-.fb-menu--bulk { min-width: 250px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.fb-menu--bulk { min-width: 250px; padding: 12px; flex-direction: column; gap: 8px; }
+.fb-menu--bulk.open { display: flex; }
 .fb-menu--bulk > * { width: 100%; margin: 0 !important; box-sizing: border-box; }
 .fb-menu--bulk label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text); }
 .fb-menu--bulk .btn { justify-content: flex-start; width: 100%; }
