@@ -469,7 +469,7 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 /* All 6 pipeline stages share the width equally and shrink to fit, so no
    column (Convertito/Perso) is ever clipped on desktop. minmax(0,1fr) + the
    column's min-width:0 are both required to let the columns shrink. */
-.kanban { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; padding: 4px 2px 16px; align-items: start; }
+.kanban { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; padding: 4px 2px 16px; align-items: start; }
 .kanban__col { min-width: 0; background: #f4f7fb; border: 1px solid var(--color-border); border-radius: 14px; display: flex; flex-direction: column; min-height: 120px; }
 
 /* Narrow screens: 6 columns would be unreadably thin, so fall back to a

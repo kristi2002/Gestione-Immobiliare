@@ -10,8 +10,9 @@
         new: 'Nuovo', contacted: 'Contattato', interested: 'Interessato',
         negotiating: 'In trattativa', converted: 'Convertito', lost: 'Perso',
     };
-    // Pipeline column order for the kanban board.
-    const KANBAN_ORDER = ['new', 'contacted', 'interested', 'negotiating', 'converted', 'lost'];
+    // Pipeline column order for the kanban board ('lost' is intentionally
+    // excluded — persi leads are reachable via the grid view / status filter).
+    const KANBAN_ORDER = ['new', 'contacted', 'interested', 'negotiating', 'converted'];
     let viewMode = 'kanban'; // 'kanban' | 'grid'
     const INTEREST_LABELS = { affitto: 'Affitto', acquisto: 'Acquisto', entrambi: 'Entrambi' };
     const SOURCE_LABELS = {
