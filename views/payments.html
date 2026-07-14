@@ -33,6 +33,38 @@
 
     <div id="payments-alert" class="alert" style="display:none;"></div>
 
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="banknote"></i></span>
+            <div class="stat-mini__txt"><small>Incassato questo mese</small><b id="pstat-paid">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="hourglass"></i></span>
+            <div class="stat-mini__txt"><small>In attesa (mese)</small><b id="pstat-pending">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#dc2626"><i data-lucide="alert-triangle"></i></span>
+            <div class="stat-mini__txt"><small>In ritardo</small><b id="pstat-late">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="trending-up"></i></span>
+            <div class="stat-mini__txt"><small>Incassato anno</small><b id="pstat-year">—</b></div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var eur = function (v) { return '€ ' + Number(v || 0).toLocaleString('it-IT', { maximumFractionDigits: 0 }); };
+        fetch('api/payments.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) return;
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+            set('pstat-paid', eur(j.data.paid_month));
+            set('pstat-pending', eur(j.data.pending_month));
+            set('pstat-late', eur(j.data.late_total) + (j.data.late_count ? ' (' + j.data.late_count + ')' : ''));
+            set('pstat-year', eur(j.data.year_paid));
+        }).catch(function () {});
+    })();
+    </script>
+
     <div class="toolbar">
         <select id="payment-status-filter" class="form-select">
             <option value="">Tutti gli stati</option>

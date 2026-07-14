@@ -22,6 +22,9 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'stats') {
+                paymentStats($db);
+            }
             $id ? getPayment($db, $id) : listPayments($db);
             break;
         case 'POST':
@@ -48,6 +51,41 @@ try {
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
+
+function paymentStats(PDO $db): void
+{
+    $paidMonth = (float) $db->query(
+        "SELECT COALESCE(SUM(amount),0) FROM payments
+         WHERE status = 'paid'
+           AND COALESCE(paid_date, due_date) >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+           AND COALESCE(paid_date, due_date) <= LAST_DAY(CURDATE())"
+    )->fetchColumn();
+    $pendingMonth = (float) $db->query(
+        "SELECT COALESCE(SUM(amount),0) FROM payments
+         WHERE status = 'pending'
+           AND due_date BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())"
+    )->fetchColumn();
+    $lateTotal = (float) $db->query(
+        "SELECT COALESCE(SUM(amount),0) FROM payments
+         WHERE status = 'late' OR (status = 'pending' AND due_date < CURDATE())"
+    )->fetchColumn();
+    $lateCount = (int) $db->query(
+        "SELECT COUNT(*) FROM payments
+         WHERE status = 'late' OR (status = 'pending' AND due_date < CURDATE())"
+    )->fetchColumn();
+    $yearPaid = (float) $db->query(
+        "SELECT COALESCE(SUM(amount),0) FROM payments
+         WHERE status = 'paid' AND YEAR(COALESCE(paid_date, due_date)) = YEAR(CURDATE())"
+    )->fetchColumn();
+
+    apiSuccess([
+        'paid_month'    => $paidMonth,
+        'pending_month' => $pendingMonth,
+        'late_total'    => $lateTotal,
+        'late_count'    => $lateCount,
+        'year_paid'     => $yearPaid,
+    ]);
+}
 
 function listPayments(PDO $db): void
 {
