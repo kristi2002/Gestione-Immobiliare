@@ -3,7 +3,29 @@
    Retints the existing token system + adds the mockup-specific
    stat-card treatment (colored top accents, sparklines, delta pills).
    Load AFTER style.css and branding.css.php so it wins the cascade.
+   BUILD-STAMP: orlandi-darknav-20260714a
    ===================================================================== */
+
+/* --- Authoritative dark-navy sidebar (mockup). Hardened with !important to
+       defeat the 4 stacked .sidebar background rules left in style.css by the
+       earlier light-Landify + ocean-gradient redesigns. Single source of truth. --- */
+.app-layout .sidebar {
+    background: #232a36 !important;
+    color: #cbd3df !important;
+    border-right: 1px solid rgba(255,255,255,0.06) !important;
+    box-shadow: none !important;
+}
+.app-layout .sidebar .sidebar-brand__txt b { color: #ffffff !important; }
+.app-layout .sidebar .sidebar-brand__txt small { color: rgba(255,255,255,0.6) !important; }
+.app-layout .sidebar .nav-link { color: rgba(255,255,255,0.82) !important; }
+.app-layout .sidebar .nav-link:hover { background: rgba(255,255,255,0.07) !important; color:#fff !important; }
+.app-layout .sidebar .nav-link.active { background: var(--color-primary) !important; color:#fff !important; box-shadow: 0 6px 14px rgba(49,134,213,.35) !important; }
+.app-layout .sidebar .nav-link.active .nav-icon,
+.app-layout .sidebar .nav-link.active [data-lucide] { color:#fff !important; }
+.app-layout .sidebar details.nav-group > summary { color: rgba(255,255,255,0.5) !important; font-weight:700 !important; }
+.app-layout .sidebar details.nav-group > summary:hover { color:#fff !important; }
+.app-layout .sidebar .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1) !important; }
+.app-layout .sidebar .sidebar-footer .btn { color: rgba(255,255,255,0.9) !important; border-color: rgba(255,255,255,0.24) !important; }
 
 :root {
     /* --- exact palette sampled from the mockups --- */
