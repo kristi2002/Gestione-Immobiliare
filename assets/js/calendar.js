@@ -115,6 +115,11 @@
         els.grid.querySelectorAll('.cal-day[data-key]').forEach(cell => {
             cell.addEventListener('click', () => selectDay(cell.dataset.key, byDay[cell.dataset.key] || []));
         });
+
+        // Show today's agenda by default when viewing the current month.
+        if (today.getFullYear() === viewYear && today.getMonth() === viewMonth) {
+            selectDay(todayKey, byDay[todayKey] || []);
+        }
     }
 
     function selectDay(key, dayEvents) {

@@ -19,6 +19,16 @@
     display: flex;
     flex-direction: column;
 }
+.wa-thread-topbar { flex-shrink: 0; border-bottom: 1px solid var(--color-border, #eee); background: #fff; }
+.wa-thread-topbar .wa-thread-list-header { border-bottom: none; }
+.wa-thread-search { position: relative; padding: 0 0.9rem 0.6rem; }
+.wa-thread-search svg { position: absolute; left: 1.55rem; top: 50%; transform: translateY(-60%); width: 16px; height: 16px; color: #8a95a6; }
+.wa-thread-search input { width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; border: 1px solid var(--color-border, #e0e0e0); border-radius: 999px; font-size: 0.85rem; background: #f4f6f9; }
+.wa-thread-search input:focus { outline: none; border-color: #25d366; background: #fff; box-shadow: 0 0 0 3px rgba(37,211,102,0.15); }
+.wa-thread-tabs { display: flex; gap: 6px; padding: 0 0.9rem 0.7rem; }
+.wa-tab { flex: 1; border: 1px solid var(--color-border, #e0e0e0); background: #fff; color: #667; padding: 6px 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all .12s; }
+.wa-tab:hover { border-color: #25d366; color: #128c5e; }
+.wa-tab.active { background: #25d366; border-color: #25d366; color: #fff; }
 .wa-thread-list-header {
     padding: 0.9rem 1rem;
     font-weight: 700;
@@ -241,8 +251,15 @@
     <div class="wa-inbox-layout">
         <!-- Left: thread list -->
         <div class="wa-thread-list" id="wa-thread-list">
-            <div class="wa-thread-list-header"><i data-lucide="message-circle"></i> Conversazioni</div>
-            <div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>
+            <div class="wa-thread-topbar">
+                <div class="wa-thread-list-header"><i data-lucide="message-circle"></i> Conversazioni</div>
+                <div class="wa-thread-search"><i data-lucide="search"></i><input type="search" id="wa-thread-search" placeholder="Cerca conversazione…" autocomplete="off"></div>
+                <div class="wa-thread-tabs" id="wa-thread-tabs">
+                    <button type="button" class="wa-tab active" data-filter="all">Tutte</button>
+                    <button type="button" class="wa-tab" data-filter="unread">Non lette</button>
+                </div>
+            </div>
+            <div id="wa-thread-items"><div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div></div>
         </div>
 
         <!-- Right: chat panel -->

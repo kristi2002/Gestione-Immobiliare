@@ -1,0 +1,235 @@
+/* =====================================================================
+   theme-orlandi.css — "immobiliare design" mockup theme
+   Retints the existing token system + adds the mockup-specific
+   stat-card treatment (colored top accents, sparklines, delta pills).
+   Load AFTER style.css and branding.css.php so it wins the cascade.
+   ===================================================================== */
+
+:root {
+    /* --- exact palette sampled from the mockups --- */
+    --color-primary:        #3186d5;   /* azure accent (buttons, active nav) */
+    --color-primary-dark:   #276fb4;
+    --color-primary-light:  #e3eefb;
+    --color-sidebar-bg:     #282e3a;   /* slate-navy sidebar */
+    --color-sidebar-hover:  rgba(255,255,255,0.06);
+    --color-sidebar-active: #3186d5;
+    --color-bg:             #eef2f7;   /* soft blue-gray page */
+    --color-surface:        #ffffff;
+    --color-text:           #1f2a3a;
+    --color-text-muted:     #6b7688;
+    --color-border:         #e6ebf1;
+    --color-border-strong:  #d5dde7;
+    --color-success:        #16a34a;
+    --color-warning:        #e08a1e;
+    --color-danger:         #dc2626;
+    --radius:               14px;
+    --radius-sm:            10px;
+    --shadow:               0 1px 2px rgba(30,42,58,.04), 0 1px 3px rgba(30,42,58,.05);
+    --shadow-md:            0 8px 24px rgba(30,42,58,.07), 0 2px 6px rgba(30,42,58,.05);
+}
+
+/* Sidebar brand + active pill to match mockup */
+.sidebar { background: var(--color-sidebar-bg); }
+.nav-link.active,
+.sidebar-nav .nav-link.active {
+    background: var(--color-sidebar-active);
+    color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 6px 14px rgba(49,134,213,.35);
+}
+.nav-link.active .nav-icon { color: #fff; }
+
+/* --- Stat cards: colored top accent + sparkline + delta pill --- */
+.db-stat {
+    position: relative;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 20px 20px 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.db-stat::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: var(--accent, var(--color-primary));
+}
+.db-stats .db-stat:nth-child(1) { --accent: #3186d5; }
+.db-stats .db-stat:nth-child(2) { --accent: #16a34a; }
+.db-stats .db-stat:nth-child(3) { --accent: #e08a1e; }
+.db-stats .db-stat:nth-child(4) { --accent: #f0a83c; }
+
+.db-stat__chip {
+    position: absolute;
+    top: 18px; right: 18px;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent, var(--color-primary)) 14%, #fff);
+    color: var(--accent, var(--color-primary));
+}
+.db-stat__chip svg { width: 20px; height: 20px; }
+.db-stat__label { color: var(--color-text-muted); font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.db-stat__value { font-size: 34px; font-weight: 800; letter-spacing: -.02em; color: var(--color-text); line-height: 1.1; }
+
+/* delta pill (e.g. -8%, +21%) */
+.db-delta {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 10px; font-size: 12.5px; font-weight: 600;
+    color: var(--color-text-muted);
+}
+.db-delta.up   { color: #16a34a; }
+.db-delta.down { color: #dc2626; }
+.db-delta.up::before, .db-delta.down::before {
+    display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 11px;
+}
+.db-delta.up::before   { content: attr(data-pill); background: #e7f7ee; color: #16a34a; }
+.db-delta.down::before { content: attr(data-pill); background: #fdecec; color: #dc2626; }
+
+/* Cards / panels */
+.db-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.db-card__head h3 { font-weight: 700; letter-spacing: -.01em; }
+
+/* Data tables: status pills */
+.db-table th {
+    font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--color-text-muted); font-weight: 600;
+}
+.badge, .status-pill, .db-table .pill {
+    display: inline-flex; align-items: center; padding: 3px 10px;
+    border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+.pill--green,  .badge--success { background: #e7f7ee; color: #16a34a; }
+.pill--blue,   .badge--info    { background: #e3eefb; color: #276fb4; }
+.pill--amber,  .badge--warning { background: #fdf1e0; color: #b9720f; }
+.pill--red,    .badge--danger  { background: #fdecec; color: #dc2626; }
+
+/* Primary button — azure */
+.btn--primary, .topbar-new, .settings-tab--active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 18px rgba(49,134,213,.28);
+}
+.btn--primary:hover, .topbar-new:hover { background: var(--color-primary-dark); }
+
+/* Topbar search — pill with soft ring like the mockup */
+.global-search__input {
+    border-radius: 999px;
+    background: #f4f6f9;
+    border: 1px solid var(--color-border);
+}
+.global-search__input:focus {
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+    border-color: var(--color-primary);
+}
+
+/* =====================================================================
+   Leads — Kanban pipeline board (matches "Leads — Pipeline Kanban" mockup)
+   ===================================================================== */
+.view-header__actions { display: flex; gap: 12px; align-items: center; }
+.leads-viewtoggle { display: inline-flex; gap: 4px; background: #eef2f7; border: 1px solid var(--color-border); border-radius: 10px; padding: 3px; }
+.leads-viewtoggle button { border: none; background: none; padding: 7px 10px; border-radius: 8px; cursor: pointer; color: var(--color-text-muted); display: flex; align-items: center; }
+.leads-viewtoggle button.active { background: var(--color-primary); color: #fff; box-shadow: 0 4px 10px rgba(49,134,213,.28); }
+.leads-viewtoggle button svg { width: 18px; height: 18px; }
+
+.kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(258px, 1fr); gap: 16px; overflow-x: auto; padding: 4px 2px 14px; align-items: start; }
+.kanban__col { background: #f4f7fb; border: 1px solid var(--color-border); border-radius: 14px; display: flex; flex-direction: column; min-height: 120px; }
+.kanban__head { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 14px; border-radius: 13px 13px 0 0; color: #fff; font-weight: 700; font-size: 14.5px; letter-spacing: .01em; position: relative; }
+.kanban__count { position: absolute; right: 12px; background: rgba(255,255,255,.28); color: #fff; min-width: 22px; height: 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; padding: 0 6px; }
+.kanban__body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.kanban__empty { color: #9aa6b6; font-size: 13px; text-align: center; padding: 18px 6px; }
+
+/* column accent colors — mapped to the real lead statuses */
+.kanban__col--new        .kanban__head { background: #ec7a3c; }
+.kanban__col--contacted  .kanban__head { background: #3186d5; }
+.kanban__col--interested .kanban__head { background: #7c5cd0; }
+.kanban__col--negotiating .kanban__head { background: #e0a020; }
+.kanban__col--converted  .kanban__head { background: #16a34a; }
+.kanban__col--lost       .kanban__head { background: #6b7688; }
+
+.kcard { background: #fff; border: 1px solid var(--color-border); border-left: 4px solid var(--kc, var(--color-primary)); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.kcard:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kanban__col--new        .kcard { --kc: #ec7a3c; }
+.kanban__col--contacted  .kcard { --kc: #3186d5; }
+.kanban__col--interested .kcard { --kc: #7c5cd0; }
+.kanban__col--negotiating .kcard { --kc: #e0a020; }
+.kanban__col--converted  .kcard { --kc: #16a34a; }
+.kanban__col--lost       .kcard { --kc: #6b7688; }
+.kcard__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.kcard__name { font-weight: 700; color: #1f2a3a; font-size: 14.5px; line-height: 1.25; }
+.kcard__interest { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12.5px; color: var(--color-text-muted); }
+.kcard__interest svg { width: 14px; height: 14px; }
+.kcard__budget { margin-top: 8px; font-weight: 700; color: #1f2a3a; font-size: 14px; }
+.kcard__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.kcard__avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+.kcard__agent { font-size: 12px; color: #9aa6b6; }
+
+/* Bottom pipeline stats bar */
+.leads-statsbar { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 18px; }
+.leads-statsbar .stat { flex: 1 1 200px; background: #fff; border: 1px solid var(--color-border); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow); }
+.leads-statsbar .stat b { display: block; font-size: 20px; font-weight: 800; color: #1f2a3a; }
+.leads-statsbar .stat span { font-size: 12.5px; color: var(--color-text-muted); }
+.leads-statsbar .stat .bar { height: 6px; border-radius: 999px; background: #eef2f7; margin-top: 8px; overflow: hidden; }
+.leads-statsbar .stat .bar i { display: block; height: 100%; background: var(--color-primary); border-radius: 999px; }
+
+/* =====================================================================
+   Mappa — split list + map layout (matches "Mappa Immobili" mockup)
+   ===================================================================== */
+.map-view .map-layout { display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: stretch; height: calc(100vh - 210px); min-height: 460px; }
+@media (max-width: 900px) { .map-view .map-layout { grid-template-columns: 1fr; height: auto; } }
+
+.map-side { background: #fff; border: 1px solid var(--color-border); border-radius: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+.map-side__head { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 18px 6px; }
+.map-side__head h3 { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.map-side__count { font-size: 13px; color: var(--color-text-muted); font-weight: 600; }
+.map-side__search { position: relative; padding: 8px 18px 4px; }
+.map-side__search svg { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: #8a95a6; }
+.map-side__search input { width: 100%; padding: 10px 14px 10px 38px; border: 1px solid var(--color-border-strong); border-radius: 10px; font-size: 14px; }
+.map-side__search input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-light); }
+
+.map-filters { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 18px; }
+.map-chip { border: 1px solid var(--color-border-strong); background: #fff; color: var(--color-text-muted); padding: 6px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .12s; }
+.map-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.map-chip.active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+.map-list { flex: 1; overflow-y: auto; padding: 4px 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.map-list__empty { color: #9aa6b6; font-size: 13px; text-align: center; padding: 24px 6px; }
+.map-card { display: flex; gap: 12px; padding: 10px; border: 1px solid var(--color-border); border-radius: 12px; cursor: pointer; transition: all .12s; background: #fff; }
+.map-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); }
+.map-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.map-card--nogeo { opacity: .6; }
+.map-card__img { width: 64px; height: 64px; border-radius: 9px; background-size: cover; background-position: center; flex-shrink: 0; background-color: #eef2f7; }
+.map-card__img--empty { display: flex; align-items: center; justify-content: center; color: #b3bdca; }
+.map-card__img--empty svg { width: 22px; height: 22px; }
+.map-card__body { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.map-card__addr { font-weight: 700; font-size: 14px; color: #1f2a3a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-card__meta { display: flex; align-items: center; gap: 12px; }
+.map-card__price { font-weight: 700; color: var(--color-primary); font-size: 13.5px; }
+.map-card__status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--color-text-muted); }
+
+.map-canvas { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--color-border); box-shadow: var(--shadow); }
+.map-canvas .leaflet-map, .map-view .leaflet-map { height: 100%; min-height: 460px; }
+.map-canvas .map-legend { position: absolute; top: 14px; left: 14px; z-index: 500; background: rgba(255,255,255,.94); backdrop-filter: blur(4px); border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 12px; display: flex; gap: 14px; box-shadow: var(--shadow); font-size: 12.5px; }
+.map-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.map-dot--available { background: #16a34a; }
+.map-dot--rented { background: #2563eb; }
+.map-dot--sold { background: #7c3aed; }
+.map-pin-icon { background: none; border: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.25)); }
+
+/* Map popup card */
+.map-popup-wrap .leaflet-popup-content-wrapper { border-radius: 14px; padding: 0; overflow: hidden; box-shadow: var(--shadow-lg); }
+.map-popup-wrap .leaflet-popup-content { margin: 0; width: 230px !important; }
+.map-popup__img { height: 120px; background-size: cover; background-position: center; background-color: #eef2f7; }
+.map-popup__body { padding: 12px 14px 14px; }
+.map-popup__body strong { font-size: 14.5px; color: #1f2a3a; }
+.map-popup__city { color: var(--color-text-muted); font-size: 12.5px; margin: 2px 0 8px; }
+.map-popup__row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.map-popup__price { font-weight: 800; color: #1f2a3a; font-size: 15px; }

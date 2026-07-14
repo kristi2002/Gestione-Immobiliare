@@ -4,7 +4,13 @@
             <h2>Leads</h2>
             <p>Gestisci i potenziali clienti, abbina immobili e converti in proprietari.</p>
         </div>
-        <button class="btn btn--primary" id="btn-new-lead">+ Nuovo Lead</button>
+        <div class="view-header__actions">
+            <button class="btn btn--primary" id="btn-new-lead">+ Nuovo Lead</button>
+            <div class="leads-viewtoggle" role="tablist" aria-label="Modalità visualizzazione">
+                <button type="button" id="lead-view-kanban" class="active" title="Pipeline" aria-label="Pipeline"><i data-lucide="columns-3"></i></button>
+                <button type="button" id="lead-view-grid" title="Griglia" aria-label="Griglia"><i data-lucide="layout-grid"></i></button>
+            </div>
+        </div>
     </div>
 
     <div id="leads-alert" class="alert" style="display:none;"></div>
@@ -40,7 +46,10 @@
         <button type="button" class="btn btn--sm btn--ghost" id="bulk-assign-leads">Riassegna</button>
     </div>
 
-    <div id="leads-grid" class="entity-grid entity-grid--wide">
+    <div id="leads-kanban" class="kanban"></div>
+    <div id="leads-statsbar" class="leads-statsbar" hidden></div>
+
+    <div id="leads-grid" class="entity-grid entity-grid--wide" hidden>
         <div class="entity-loading">Caricamento…</div>
     </div>
     <div id="leads-pagination" class="pagination-container"></div>

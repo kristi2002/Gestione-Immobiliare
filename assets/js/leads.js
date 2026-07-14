@@ -10,6 +10,9 @@
         new: 'Nuovo', contacted: 'Contattato', interested: 'Interessato',
         negotiating: 'In trattativa', converted: 'Convertito', lost: 'Perso',
     };
+    // Pipeline column order for the kanban board.
+    const KANBAN_ORDER = ['new', 'contacted', 'interested', 'negotiating', 'converted', 'lost'];
+    let viewMode = 'kanban'; // 'kanban' | 'grid'
     const INTEREST_LABELS = { affitto: 'Affitto', acquisto: 'Acquisto', entrambi: 'Entrambi' };
     const SOURCE_LABELS = {
         telefono: 'Telefono', email: 'Email', web: 'Web',
@@ -26,6 +29,10 @@
 
     function init() {
         els.grid          = document.getElementById('leads-grid');
+        els.kanban        = document.getElementById('leads-kanban');
+        els.statsbar      = document.getElementById('leads-statsbar');
+        els.viewKanbanBtn = document.getElementById('lead-view-kanban');
+        els.viewGridBtn   = document.getElementById('lead-view-grid');
         els.search        = document.getElementById('lead-search');
         els.statusFilter  = document.getElementById('lead-status-filter');
         els.interestFilter = document.getElementById('lead-interest-filter');
@@ -44,6 +51,13 @@
         els.bulkAssignAgent = document.getElementById('bulk-assign-agent');
         els.tenantModal    = document.getElementById('lead-tenant-modal');
         els.tenantPropSel  = document.getElementById('lead-tenant-property');
+
+        // Kanban is the default view: hide grid-only controls up front.
+        if (viewMode === 'kanban') {
+            if (els.grid) els.grid.hidden = true;
+            if (els.statsbar) els.statsbar.hidden = false;
+            if (els.statusFilter) els.statusFilter.style.display = 'none';
+        }
 
         bindEvents();
         loadAgents().then(loadLeads);
@@ -67,6 +81,9 @@
         });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadLeads(); });
         els.interestFilter.addEventListener('change', () => { currentPage = 1; loadLeads(); });
+
+        if (els.viewKanbanBtn) els.viewKanbanBtn.addEventListener('click', () => setViewMode('kanban'));
+        if (els.viewGridBtn)   els.viewGridBtn.addEventListener('click', () => setViewMode('grid'));
 
         els.matchModal.addEventListener('click', (e) => { if (e.target === els.matchModal) closeMatchModal(); });
 
@@ -103,15 +120,18 @@
     }
 
     async function loadLeads() {
+        const kanban = viewMode === 'kanban';
         const params = new URLSearchParams();
         if (els.search.value.trim()) params.set('search', els.search.value.trim());
-        if (els.statusFilter.value) params.set('status', els.statusFilter.value);
+        // Kanban shows every stage as a column, so the single-status filter is ignored there.
+        if (!kanban && els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.interestFilter.value) params.set('interest_type', els.interestFilter.value);
-        params.set('page', currentPage);
-        params.set('limit', PAGE_LIMIT);
+        params.set('page', kanban ? 1 : currentPage);
+        params.set('limit', kanban ? 500 : PAGE_LIMIT);
 
         const url = `${API}?${params}`;
-        softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
+        if (kanban) els.kanban.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+        else softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
 
         try {
             const res = await fetch(url);
@@ -119,12 +139,95 @@
             if (!json.success) throw new Error(json.error);
             const parsed = Pagination.parseResponse(json);
             leads = parsed.items;
-            renderCards();
-            Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadLeads(); });
+            if (kanban) {
+                renderKanban();
+                els.pagination.innerHTML = '';
+            } else {
+                renderCards();
+                Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadLeads(); });
+            }
         } catch (err) {
-            els.grid.classList.remove('is-loading');
-            els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
+            const target = kanban ? els.kanban : els.grid;
+            target.classList.remove('is-loading');
+            target.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
         }
+    }
+
+    function setViewMode(mode) {
+        if (mode === viewMode) return;
+        viewMode = mode;
+        const kanban = mode === 'kanban';
+        els.kanban.hidden = !kanban;
+        els.statsbar.hidden = !kanban;
+        els.grid.hidden = kanban;
+        els.pagination.style.display = kanban ? 'none' : '';
+        if (els.viewKanbanBtn) els.viewKanbanBtn.classList.toggle('active', kanban);
+        if (els.viewGridBtn) els.viewGridBtn.classList.toggle('active', !kanban);
+        // Status filter is meaningless in kanban mode.
+        if (els.statusFilter) els.statusFilter.style.display = kanban ? 'none' : '';
+        currentPage = 1;
+        loadLeads();
+    }
+
+    function renderKanban() {
+        const groups = {};
+        KANBAN_ORDER.forEach(s => { groups[s] = []; });
+        leads.forEach(l => { (groups[l.status] || (groups[l.status] = [])).push(l); });
+
+        els.kanban.innerHTML = KANBAN_ORDER.map(status => {
+            const items = groups[status] || [];
+            const cards = items.length ? items.map(l => {
+                const initials = ((l.name && l.name[0]) || '') + ((l.surname && l.surname[0]) || '');
+                const budget = formatBudget(l.budget_min, l.budget_max);
+                const interest = INTEREST_LABELS[l.interest_type] || l.interest_type || '';
+                return `
+                <div class="kcard" data-id="${l.id}">
+                    <div class="kcard__top">
+                        <div class="kcard__name">${escapeHtml(l.surname || '')} ${escapeHtml(l.name || '')}</div>
+                        <span class="kcard__avatar">${escapeHtml(initials.toUpperCase())}</span>
+                    </div>
+                    ${interest ? `<div class="kcard__interest"><i data-lucide="tag"></i> ${escapeHtml(interest)}</div>` : ''}
+                    ${budget ? `<div class="kcard__budget">${escapeHtml(budget)}</div>` : ''}
+                    <div class="kcard__foot">
+                        <span class="badge badge--lead-${status}">${STATUS_LABELS[status] || status}</span>
+                        ${l.agent_name ? `<span class="kcard__agent">${escapeHtml(l.agent_name)}</span>` : ''}
+                    </div>
+                </div>`;
+            }).join('') : '<div class="kanban__empty">Nessun lead</div>';
+            return `
+            <div class="kanban__col kanban__col--${status}">
+                <div class="kanban__head">${STATUS_LABELS[status] || status}<span class="kanban__count">${items.length}</span></div>
+                <div class="kanban__body">${cards}</div>
+            </div>`;
+        }).join('');
+
+        els.kanban.querySelectorAll('.kcard').forEach(c => c.addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(c.dataset.id) });
+        }));
+
+        renderStatsBar();
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function renderStatsBar() {
+        const total = leads.length;
+        const converted = leads.filter(l => l.status === 'converted').length;
+        const active = leads.filter(l => l.status !== 'converted' && l.status !== 'lost').length;
+        const convRate = total ? Math.round((converted / total) * 100) : 0;
+        // Pipeline value = sum of the upper budget (fallback lower) of still-active leads.
+        const pipeline = leads
+            .filter(l => l.status !== 'converted' && l.status !== 'lost')
+            .reduce((sum, l) => sum + (Number(l.budget_max) || Number(l.budget_min) || 0), 0);
+        const fmtEur = n => {
+            if (n >= 1e6) return '€' + (n / 1e6).toFixed(1).replace('.0', '') + 'M';
+            if (n >= 1e3) return '€' + Math.round(n / 1e3) + 'k';
+            return '€' + n;
+        };
+        els.statsbar.innerHTML = `
+            <div class="stat"><b>${convRate}%</b><span>Tasso di conversione</span><div class="bar"><i style="width:${convRate}%"></i></div></div>
+            <div class="stat"><b>${active}</b><span>Lead attivi in pipeline</span></div>
+            <div class="stat"><b>${fmtEur(pipeline)}</b><span>Valore stimato pipeline</span></div>
+            <div class="stat"><b>${total}</b><span>Lead totali (pagina)</span></div>`;
     }
 
     function renderCards() {

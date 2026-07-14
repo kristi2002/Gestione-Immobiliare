@@ -2,21 +2,46 @@
     <div class="view-header">
         <div class="view-header__text">
             <h2>Mappa Immobili</h2>
-            <p>Visualizza la posizione geografica degli immobili.</p>
+            <p>Visualizzazione geografica del portafoglio.</p>
         </div>
-        <button class="btn btn--ghost" id="btn-geocode" title="Geocodifica gli indirizzi mancanti"><i data-lucide="map-pin"></i> Geocodifica indirizzi</button>
-        <button class="btn btn--ghost" id="btn-regeocode" title="Ricalcola coordinate per tutti gli immobili (sovrascrive quelle esistenti)"><i data-lucide="refresh-cw"></i> Rigeocodifica</button>
+        <div class="view-header__actions">
+            <button class="btn btn--ghost btn--sm" id="btn-geocode" title="Geocodifica gli indirizzi mancanti"><i data-lucide="map-pin"></i> Geocodifica</button>
+            <button class="btn btn--ghost btn--sm" id="btn-regeocode" title="Ricalcola coordinate per tutti gli immobili (sovrascrive quelle esistenti)"><i data-lucide="refresh-cw"></i> Rigeocodifica</button>
+        </div>
     </div>
 
     <div id="map-alert" class="alert" style="display:none;"></div>
 
-    <div class="map-legend">
-        <span><i class="map-dot map-dot--available"></i> Disponibile</span>
-        <span><i class="map-dot map-dot--rented"></i> Affittato</span>
-        <span><i class="map-dot map-dot--sold"></i> Venduto</span>
-    </div>
+    <div class="map-layout">
+        <aside class="map-side">
+            <div class="map-side__head">
+                <h3>Immobili in zona</h3>
+                <span class="map-side__count" id="map-count">—</span>
+            </div>
+            <div class="map-side__search">
+                <i data-lucide="search"></i>
+                <input type="search" id="map-search" placeholder="Cerca indirizzo…" autocomplete="off">
+            </div>
+            <div class="map-filters" id="map-filters">
+                <button type="button" class="map-chip active" data-status="">Tutti</button>
+                <button type="button" class="map-chip" data-status="available">Disponibile</button>
+                <button type="button" class="map-chip" data-status="rented">Affittato</button>
+                <button type="button" class="map-chip" data-status="sold">Venduto</button>
+            </div>
+            <div class="map-list" id="map-list">
+                <div class="map-list__empty">Caricamento…</div>
+            </div>
+        </aside>
 
-    <div id="leaflet-map" class="leaflet-map"></div>
+        <div class="map-canvas">
+            <div class="map-legend">
+                <span><i class="map-dot map-dot--available"></i> Disponibile</span>
+                <span><i class="map-dot map-dot--rented"></i> Affittato</span>
+                <span><i class="map-dot map-dot--sold"></i> Venduto</span>
+            </div>
+            <div id="leaflet-map" class="leaflet-map"></div>
+        </div>
+    </div>
 </div>
 
 <script src="assets/js/map.js"></script>

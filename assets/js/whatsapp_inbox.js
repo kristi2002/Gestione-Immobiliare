@@ -14,6 +14,8 @@
     let msgTotalPages    = 1;   // total pages available for active thread
     const MSG_LIMIT      = 50;  // messages per page
     const els            = {};
+    let threadFilter     = 'all';  // 'all' | 'unread'
+    let threadSearch     = '';
 
     function init() {
         els.alert            = document.getElementById('whatsapp-inbox-alert');
@@ -30,6 +32,9 @@
         els.newModal         = document.getElementById('wa-new-modal');
         els.loadEarlierBar   = document.getElementById('wa-load-earlier-bar');
         els.loadEarlierBtn   = document.getElementById('wa-load-earlier-btn');
+        els.threadItems      = document.getElementById('wa-thread-items');
+        els.threadSearch     = document.getElementById('wa-thread-search');
+        els.threadTabs       = document.getElementById('wa-thread-tabs');
 
         bindEvents();
         loadThreads();
@@ -57,6 +62,24 @@
         });
         // Load earlier messages button
         els.loadEarlierBtn.addEventListener('click', loadEarlierMessages);
+
+        // Thread search + filter tabs
+        if (els.threadSearch) {
+            let t = null;
+            els.threadSearch.addEventListener('input', () => {
+                clearTimeout(t);
+                t = setTimeout(() => { threadSearch = els.threadSearch.value.trim().toLowerCase(); renderThreads(); }, 180);
+            });
+        }
+        if (els.threadTabs) {
+            els.threadTabs.addEventListener('click', e => {
+                const tab = e.target.closest('.wa-tab');
+                if (!tab) return;
+                threadFilter = tab.dataset.filter || 'all';
+                els.threadTabs.querySelectorAll('.wa-tab').forEach(x => x.classList.toggle('active', x === tab));
+                renderThreads();
+            });
+        }
     }
 
     function startPolling() {
@@ -72,11 +95,8 @@
     }
 
     async function loadThreads(silent = false) {
-        if (!silent) {
-            const hdr = els.threadList.querySelector('.wa-thread-list-header');
-            els.threadList.innerHTML = '';
-            if (hdr) els.threadList.appendChild(hdr);
-            els.threadList.insertAdjacentHTML('beforeend', '<div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>');
+        if (!silent && els.threadItems) {
+            els.threadItems.innerHTML = '<div style="padding:1rem;text-align:center;color:#999;font-size:0.9rem;">Caricamento…</div>';
         }
         try {
             const res  = await fetch(`${INBOX_API}?threads=1`);
@@ -85,22 +105,29 @@
             threads = json.data || [];
             renderThreads();
         } catch (err) {
-            if (!silent) {
-                els.threadList.innerHTML = `<div style="padding:1rem;color:var(--color-danger);font-size:0.85rem;">${esc(err.message)}</div>`;
+            if (!silent && els.threadItems) {
+                els.threadItems.innerHTML = `<div style="padding:1rem;color:var(--color-danger);font-size:0.85rem;">${esc(err.message)}</div>`;
             }
         }
     }
 
     function renderThreads() {
-        const header = els.threadList.querySelector('.wa-thread-list-header');
-        if (!threads.length) {
-            els.threadList.innerHTML = '';
-            if (header) els.threadList.appendChild(header);
-            els.threadList.insertAdjacentHTML('beforeend', '<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">Nessuna conversazione.</div>');
+        if (!els.threadItems) return;
+
+        let list = threads.slice();
+        if (threadFilter === 'unread') list = list.filter(t => (parseInt(t.unread_count) || 0) > 0);
+        if (threadSearch) {
+            list = list.filter(t => `${t.contact_name || ''} ${t.phone || ''} ${t.last_message || ''}`.toLowerCase().includes(threadSearch));
+        }
+
+        if (!list.length) {
+            const msg = !threads.length ? 'Nessuna conversazione.'
+                : (threadFilter === 'unread' ? 'Nessuna conversazione non letta.' : 'Nessun risultato.');
+            els.threadItems.innerHTML = `<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">${msg}</div>`;
             return;
         }
 
-        const items = threads.map(t => {
+        const items = list.map(t => {
             const name     = t.contact_name || t.phone || '?';
             const initials = name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
             const isActive = t.phone === activePhone;
@@ -124,11 +151,8 @@
             </div>`;
         }).join('');
 
-        els.threadList.innerHTML = '';
-        if (header) els.threadList.appendChild(header);
-        els.threadList.insertAdjacentHTML('beforeend', items);
-
-        els.threadList.querySelectorAll('.wa-thread-item').forEach(item => {
+        els.threadItems.innerHTML = items;
+        els.threadItems.querySelectorAll('.wa-thread-item').forEach(item => {
             item.addEventListener('click', () => openThread(item.dataset.phone));
         });
     }
