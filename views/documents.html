@@ -11,6 +11,37 @@
 
     <div id="documents-alert" class="alert" style="display:none;"></div>
 
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="files"></i></span>
+            <div class="stat-mini__txt"><small>Documenti Totali</small><b id="dstat-total">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="scroll-text"></i></span>
+            <div class="stat-mini__txt"><small>Contratti</small><b id="dstat-contracts">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="id-card"></i></span>
+            <div class="stat-mini__txt"><small>Documenti Identità</small><b id="dstat-ids">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="upload"></i></span>
+            <div class="stat-mini__txt"><small>Caricati questo mese</small><b id="dstat-new">—</b></div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        fetch('api/documents.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) return;
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+            set('dstat-total', j.data.total);
+            set('dstat-contracts', j.data.contracts);
+            set('dstat-ids', j.data.ids);
+            set('dstat-new', j.data.new_month);
+        }).catch(function () {});
+    })();
+    </script>
+
     <div class="toolbar">
         <div class="search-box">
             <input type="search" id="doc-search" class="form-input" placeholder="Cerca per titolo, file, proprietario, immobile…" autocomplete="off">

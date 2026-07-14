@@ -34,6 +34,14 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'stats') {
+                apiSuccess([
+                    'total'     => (int) $db->query('SELECT COUNT(*) FROM documents')->fetchColumn(),
+                    'contracts' => (int) $db->query("SELECT COUNT(*) FROM documents WHERE doc_type IN ('contratto','contract')")->fetchColumn(),
+                    'ids'       => (int) $db->query("SELECT COUNT(*) FROM documents WHERE doc_type = 'id'")->fetchColumn(),
+                    'new_month' => (int) $db->query("SELECT COUNT(*) FROM documents WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')")->fetchColumn(),
+                ]);
+            }
             $id ? getDocument($db, $id) : listDocuments($db);
             break;
         case 'POST':

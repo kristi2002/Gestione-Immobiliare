@@ -11,6 +11,38 @@
 
     <div id="expenses-alert" class="alert" style="display:none;"></div>
 
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#dc2626"><i data-lucide="wallet"></i></span>
+            <div class="stat-mini__txt"><small>Spese questo mese</small><b id="estat-month">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="calendar-range"></i></span>
+            <div class="stat-mini__txt"><small>Spese anno</small><b id="estat-year">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="receipt"></i></span>
+            <div class="stat-mini__txt"><small>Registrate nel mese</small><b id="estat-count">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="tag"></i></span>
+            <div class="stat-mini__txt"><small>Categoria principale</small><b id="estat-cat" style="font-size:15px;text-transform:capitalize">—</b></div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var eur = function (v) { return '€ ' + Number(v || 0).toLocaleString('it-IT', { maximumFractionDigits: 0 }); };
+        fetch('api/expenses.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) return;
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+            set('estat-month', eur(j.data.month_total));
+            set('estat-year', eur(j.data.year_total));
+            set('estat-count', j.data.count_month);
+            set('estat-cat', j.data.top_category || '—');
+        }).catch(function () {});
+    })();
+    </script>
+
     <div class="toolbar">
         <select id="expense-property-filter" class="form-select">
             <option value="">Tutti gli immobili</option>

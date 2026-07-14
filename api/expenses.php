@@ -22,6 +22,14 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'stats') {
+                apiSuccess([
+                    'month_total' => (float) $db->query("SELECT COALESCE(SUM(amount),0) FROM expenses WHERE expense_date BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())")->fetchColumn(),
+                    'year_total'  => (float) $db->query('SELECT COALESCE(SUM(amount),0) FROM expenses WHERE YEAR(expense_date) = YEAR(CURDATE())')->fetchColumn(),
+                    'count_month' => (int) $db->query("SELECT COUNT(*) FROM expenses WHERE expense_date BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())")->fetchColumn(),
+                    'top_category'=> (string) ($db->query("SELECT category FROM expenses WHERE YEAR(expense_date) = YEAR(CURDATE()) GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1")->fetchColumn() ?: '—'),
+                ]);
+            }
             $id ? getExpense($db, $id) : listExpenses($db);
             break;
         case 'POST':
