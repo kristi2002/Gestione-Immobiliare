@@ -18,16 +18,20 @@ const ContractsPage = lazy(() => import('@/features/contracts/ContractsPage'));
 const PaymentsPage = lazy(() => import('@/features/payments/PaymentsPage'));
 const InvoicesPage = lazy(() => import('@/features/invoices/InvoicesPage'));
 const CommissionsPage = lazy(() => import('@/features/commissions/CommissionsPage'));
+const KeysPage = lazy(() => import('@/features/keys/KeysPage'));
+const MetersPage = lazy(() => import('@/features/meters/MetersPage'));
+const InventoryPage = lazy(() => import('@/features/inventory/InventoryPage'));
+const InsurancePage = lazy(() => import('@/features/insurance/InsurancePage'));
+const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage'));
+const ApplicationsPage = lazy(() => import('@/features/applications/ApplicationsPage'));
+const AppointmentsPage = lazy(() => import('@/features/appointments/AppointmentsPage'));
+const SurveysPage = lazy(() => import('@/features/surveys/SurveysPage'));
+const ActivityLogPage = lazy(() => import('@/features/activity/ActivityLogPage'));
 const PlaceholderPage = lazy(() => import('@/pages/PlaceholderPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
-/** View keys handled by real React pages (skip the placeholder generator). */
-const IMPLEMENTED = new Set([
-  'dashboard', 'properties', 'clients', 'leads', 'tenants', 'agents',
-  'contracts', 'payments', 'invoices', 'commissions',
-]);
-
-/** view key → real page element. */
+/** view key → real page element. Keys in this map become real routes; every
+ * other nav item falls through to the placeholder. */
 const FEATURE_PAGES: Record<string, ReactElement> = {
   clients: <ClientsPage />,
   leads: <LeadsPage />,
@@ -37,7 +41,19 @@ const FEATURE_PAGES: Record<string, ReactElement> = {
   payments: <PaymentsPage />,
   invoices: <InvoicesPage />,
   commissions: <CommissionsPage />,
+  keys: <KeysPage />,
+  meters: <MetersPage />,
+  inventory: <InventoryPage />,
+  insurance: <InsurancePage />,
+  suppliers: <SuppliersPage />,
+  property_applications: <ApplicationsPage />,
+  appointments: <AppointmentsPage />,
+  surveys: <SurveysPage />,
+  activity_log: <ActivityLogPage />,
 };
+
+/** View keys handled by real React pages (skip the placeholder generator). */
+const IMPLEMENTED = new Set<string>(['dashboard', 'properties', ...Object.keys(FEATURE_PAGES)]);
 
 // Auth gate wraps the layout so the whole app requires a valid session.
 function GatedLayout() {
