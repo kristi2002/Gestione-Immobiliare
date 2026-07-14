@@ -466,8 +466,14 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .leads-viewtoggle button.active { background: var(--color-primary); color: #fff; box-shadow: 0 4px 10px rgba(49,134,213,.28); }
 .leads-viewtoggle button svg { width: 18px; height: 18px; }
 
-.kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(258px, 1fr); gap: 16px; overflow-x: auto; padding: 4px 2px 14px; align-items: start; }
-.kanban__col { background: #f4f7fb; border: 1px solid var(--color-border); border-radius: 14px; display: flex; flex-direction: column; min-height: 120px; }
+/* Horizontally scrolling pipeline. Columns grow to fill on wide screens and
+   scroll (never clip) when the 6 statuses exceed the available width. */
+.kanban { display: flex; gap: 16px; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 16px; align-items: start; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: #c2ccda #e9eef5; }
+.kanban::-webkit-scrollbar { height: 10px; }
+.kanban::-webkit-scrollbar-track { background: #e9eef5; border-radius: 999px; }
+.kanban::-webkit-scrollbar-thumb { background: #c2ccda; border-radius: 999px; border: 2px solid #e9eef5; }
+.kanban::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+.kanban__col { flex: 1 0 240px; max-width: 340px; scroll-snap-align: start; background: #f4f7fb; border: 1px solid var(--color-border); border-radius: 14px; display: flex; flex-direction: column; min-height: 120px; }
 .kanban__head { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 14px; border-radius: 13px 13px 0 0; color: #fff; font-weight: 700; font-size: 14.5px; letter-spacing: .01em; position: relative; }
 .kanban__count { position: absolute; right: 12px; background: rgba(255,255,255,.28); color: #fff; min-width: 22px; height: 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; padding: 0 6px; }
 .kanban__body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
