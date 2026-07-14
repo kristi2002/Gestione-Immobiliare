@@ -378,6 +378,9 @@
                 ? ` · ${mediaTotal} file totali`
                 : '';
             const inCompare = compareIds.has(p.id);
+            const priceHtml = p.price != null
+                ? `<div class="prop-price">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '<small>/mese</small>' : ''}</div>`
+                : '';
             const coverHtml = p.cover_url
                 ? `<img src="${escapeHtml(mediaUrl(p.cover_url))}" alt="Anteprima ${escapeHtml(p.address)}" class="entity-card__cover-img" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;entity-card__cover-placeholder&quot; aria-hidden=&quot;true&quot;><span class=&quot;entity-card__cover-icon&quot;>&#x1F3E0;</span><span>Nessuna foto</span></div>'">`
                 : `<div class="entity-card__cover-placeholder" aria-hidden="true"><span class="entity-card__cover-icon"><i data-lucide="home"></i></span><span>Nessuna foto</span></div>`;
@@ -394,11 +397,16 @@
                         <div class="entity-card__street">${escapeHtml(p.address)}</div>
                         <div class="entity-card__city text-muted">${escapeHtml(p.city)}${p.cap ? ' · ' + escapeHtml(p.cap) : ''}</div>
                     </div>
+                    ${priceHtml}
                 </div>
                 <div class="entity-card__body">
                     <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="user"></i></span>${escapeHtml(p.client_surname)} ${escapeHtml(p.client_name)}</div>
                     ${chips.length ? `<div class="prop-chips">${chips.join('')}</div>` : ''}
                     ${p.description ? `<p class="entity-card__desc">${escapeHtml(p.description.length > 120 ? p.description.slice(0, 120) + '…' : p.description)}</p>` : ''}
+                </div>
+                <div class="prop-cta">
+                    <button class="btn btn-open-prop" data-id="${p.id}"><i data-lucide="eye"></i> Scheda</button>
+                    ${window.canWrite !== false ? `<button class="btn btn-edit-prop" data-id="${p.id}"><i data-lucide="pencil"></i> Modifica</button>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__stat">
@@ -417,6 +425,19 @@
                 </div>
             </div>`;
         }).join('');
+
+        els.grid.querySelectorAll('.btn-open-prop').forEach(b => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(b.dataset.id, 10) });
+            });
+        });
+        els.grid.querySelectorAll('.btn-edit-prop').forEach(b => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.App) window.App.navigateTo('property_edit', { propertyId: parseInt(b.dataset.id, 10) });
+            });
+        });
 
         els.grid.querySelectorAll('.prop-bulk-cb').forEach(cb => {
             cb.addEventListener('click', (e) => e.stopPropagation());

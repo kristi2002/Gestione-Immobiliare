@@ -317,9 +317,31 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .filter-pills--inset { padding: 0 20px 12px; }
 .entity-grid--inset { padding: 4px 20px 18px; }
 
+/* Bare table wrappers (views not yet wrapped in a list-card) get the same
+   white-card treatment so every table view reads like the mockups. */
+.table-wrapper:not(.list-card .table-wrapper) {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
 /* Entity cards — align with the mockup card language */
 .entity-card { border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--color-border); }
 .entity-card--clickable:hover { box-shadow: var(--shadow-md); border-color: #cfe0f2; }
+
+/* Property card: blue price + Scheda/Modifica CTA row (mockup) */
+.prop-price { font-size: 18px; font-weight: 800; color: var(--color-primary); white-space: nowrap; letter-spacing: -0.01em; }
+.prop-price small { font-size: 11.5px; font-weight: 600; color: var(--color-text-muted); margin-left: 2px; }
+.entity-card__prop-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.prop-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 16px 12px; }
+.prop-cta .btn { justify-content: center; height: 36px; font-weight: 700; font-size: 13px; border-radius: 9px; }
+.prop-cta .btn svg, .prop-cta .btn [data-lucide] { width: 15px; height: 15px; }
+.prop-cta .btn-open-prop { background: #fff; border: 1.5px solid var(--color-primary); color: var(--color-primary); }
+.prop-cta .btn-open-prop:hover { background: var(--color-primary-light); }
+.prop-cta .btn-edit-prop { background: #eef2f7; border: 1px solid var(--color-border); color: var(--color-text); }
+.prop-cta .btn-edit-prop:hover { background: #e2e9f2; }
+.prop-cta .btn-open-prop:only-child { grid-column: 1 / -1; }
 
 /* Cards / panels */
 .db-card, .card {
