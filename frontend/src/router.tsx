@@ -34,6 +34,8 @@ const RemindersPage = lazy(() => import('@/features/reminders/RemindersPage'));
 const ValuationPage = lazy(() => import('@/features/valuation/ValuationPage'));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
 const ForecastPage = lazy(() => import('@/features/forecast/ForecastPage'));
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage'));
+const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
 const PlaceholderPage = lazy(() => import('@/pages/PlaceholderPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -64,6 +66,8 @@ const FEATURE_PAGES: Record<string, ReactElement> = {
   valuation: <ValuationPage />,
   settings: <SettingsPage />,
   forecast: <ForecastPage />,
+  reports: <ReportsPage />,
+  calendar: <CalendarPage />,
 };
 
 /** View keys handled by real React pages (skip the placeholder generator). */
