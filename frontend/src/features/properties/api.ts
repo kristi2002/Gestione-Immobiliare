@@ -25,6 +25,7 @@ function toParams(filters: PropertyFilters): Record<string, string | number | un
     min_price: filters.min_price ?? undefined,
     max_price: filters.max_price ?? undefined,
     min_sqm: filters.min_sqm ?? undefined,
+    client_id: filters.client_id ?? undefined,
     sort: filters.sort && filters.sort !== 'default' ? filters.sort : undefined,
     page: filters.page ?? 1,
     limit: filters.limit ?? 24,

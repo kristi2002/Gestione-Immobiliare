@@ -74,6 +74,7 @@ export interface PropertyFilters {
   min_price?: number | null;
   max_price?: number | null;
   min_sqm?: number | null;
+  client_id?: number | null;
   sort?: PropertySort;
   page?: number;
   limit?: number;
