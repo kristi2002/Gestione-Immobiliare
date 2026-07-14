@@ -72,6 +72,29 @@
         </div>
         <div id="clients-pagination" class="pagination-container"></div>
     </div>
+
+    <!-- Right detail rail (proprietari.png) -->
+    <aside class="detail-rail" id="client-rail" hidden aria-label="Dettaglio proprietario">
+        <button type="button" class="detail-rail__close" id="rail-close" aria-label="Chiudi">&times;</button>
+        <div class="detail-rail__id">
+            <span class="detail-rail__avatar" id="rail-avatar">—</span>
+            <h3 id="rail-name">—</h3>
+            <div class="detail-rail__chips" id="rail-chips"></div>
+        </div>
+        <div class="detail-rail__sec">
+            <h4>Contatti</h4>
+            <div class="detail-rail__box" id="rail-contacts"></div>
+        </div>
+        <div class="detail-rail__sec">
+            <h4>Documenti</h4>
+            <div id="rail-docs"><p class="text-muted detail-rail__empty">—</p></div>
+        </div>
+        <div class="detail-rail__sec">
+            <h4>Immobili collegati</h4>
+            <div id="rail-props"><p class="text-muted detail-rail__empty">—</p></div>
+        </div>
+        <button type="button" class="btn btn--primary detail-rail__cta" id="rail-open-full">Visualizza Completo</button>
+    </aside>
 </div>
 
 <!-- CSV import preview modal -->

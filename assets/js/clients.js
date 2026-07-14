@@ -40,8 +40,104 @@
         els.pagination   = document.getElementById('clients-pagination');
 
         bindEvents();
+        bindRail();
         loadClients();
         loadStats();
+    }
+
+    // -------------------------------------------------------------------------
+    // Right detail rail (proprietari.png): identity + contacts + documents +
+    // linked properties, with "Visualizza Completo" opening the full profile.
+    // -------------------------------------------------------------------------
+
+    let railClientId = null;
+
+    function bindRail() {
+        const rail = document.getElementById('client-rail');
+        if (!rail) return;
+        document.getElementById('rail-close')?.addEventListener('click', closeRail);
+        document.getElementById('rail-open-full')?.addEventListener('click', () => {
+            if (railClientId && window.App) {
+                closeRail();
+                window.App.navigateTo('client_profile', { clientId: railClientId });
+            }
+        });
+        document.addEventListener('keydown', function onEsc(e) {
+            if (e.key === 'Escape' && !rail.hidden) closeRail();
+            if (!document.body.contains(rail)) document.removeEventListener('keydown', onEsc);
+        });
+    }
+
+    function closeRail() {
+        const rail = document.getElementById('client-rail');
+        if (rail) rail.hidden = true;
+        railClientId = null;
+        els.grid?.querySelectorAll('.lt-row.is-active').forEach(r => r.classList.remove('is-active'));
+    }
+
+    async function openRail(id) {
+        const c = clients.find(x => x.id === id);
+        const rail = document.getElementById('client-rail');
+        if (!c || !rail) return;
+        railClientId = id;
+
+        els.grid.querySelectorAll('.lt-row').forEach(r =>
+            r.classList.toggle('is-active', Number(r.dataset.id) === id));
+
+        const accent = ((c.id % 8) + 8) % 8;
+        const av = document.getElementById('rail-avatar');
+        av.textContent = ((c.name[0] || '') + (c.surname[0] || '')).toUpperCase();
+        av.className = `detail-rail__avatar av-a${accent}`;
+        document.getElementById('rail-name').textContent = `${c.name} ${c.surname}`;
+        document.getElementById('rail-chips').innerHTML =
+            `<span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span>`
+            + `<span class="badge pill--blue">${c.property_count == 1 ? '1 immobile' : (Number(c.property_count) || 0) + ' immobili'}</span>`;
+        document.getElementById('rail-contacts').innerHTML = [
+            c.phone ? `<div>Telefono: <a href="tel:${escapeHtml(c.phone)}">${escapeHtml(c.phone)}</a></div>` : '',
+            c.email ? `<div>Email: <a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a></div>` : '',
+            c.codice_fiscale ? `<div>CF: ${escapeHtml(c.codice_fiscale)}</div>` : '',
+        ].filter(Boolean).join('') || '<span class="text-muted">Nessun contatto registrato.</span>';
+
+        const docsBox = document.getElementById('rail-docs');
+        const propsBox = document.getElementById('rail-props');
+        docsBox.innerHTML = propsBox.innerHTML = '<p class="text-muted detail-rail__empty">Caricamento…</p>';
+        rail.hidden = false;
+
+        const [docs, props] = await Promise.all([
+            fetch(`api/documents.php?client_id=${id}&limit=5`).then(r => r.json()).catch(() => null),
+            fetch(`api/properties.php?client_id=${id}&limit=5`).then(r => r.json()).catch(() => null),
+        ]);
+        if (railClientId !== id) return; // switched while loading
+
+        const docItems = docs?.success ? (docs.data.items || docs.data || []) : [];
+        docsBox.innerHTML = docItems.length
+            ? docItems.slice(0, 5).map(d =>
+                `<a class="rail-doc" href="${escapeHtml(d.download_url || 'api/download_document.php?id=' + d.id)}" target="_blank" rel="noopener">
+                    <i data-lucide="file-text"></i><span>${escapeHtml(d.title || d.original_name || 'Documento')}</span>
+                </a>`).join('')
+            : '<p class="text-muted detail-rail__empty">Nessun documento.</p>';
+
+        const propItems = props?.success ? (props.data.items || props.data || []) : [];
+        propsBox.innerHTML = propItems.length
+            ? propItems.slice(0, 5).map(p => {
+                const img = p.cover_url
+                    ? `<span class="rail-prop__img" style="background-image:url('${escapeHtml(p.cover_url)}')"></span>`
+                    : '<span class="rail-prop__img"><i data-lucide="home"></i></span>';
+                const price = p.price != null
+                    ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '')
+                    : '';
+                return `<div class="rail-prop" data-prop="${p.id}">${img}
+                    <div class="rail-prop__txt"><b>${escapeHtml(p.address || '')}, ${escapeHtml(p.city || '')}</b><span>${price}</span></div>
+                </div>`;
+            }).join('')
+            : '<p class="text-muted detail-rail__empty">Nessun immobile collegato.</p>';
+        propsBox.querySelectorAll('.rail-prop').forEach(el =>
+            el.addEventListener('click', () => {
+                closeRail();
+                if (window.App) window.App.navigateTo('property_profile', { propertyId: Number(el.dataset.prop) });
+            }));
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     function bindEvents() {
@@ -256,7 +352,7 @@
         els.grid.querySelectorAll('.lt-row').forEach(row => {
             row.addEventListener('click', (e) => {
                 if (!e.target.closest('button, input, a')) {
-                    if (window.App) window.App.navigateTo('client_profile', { clientId: Number(row.dataset.id) });
+                    openRail(Number(row.dataset.id));
                 }
             });
         });
