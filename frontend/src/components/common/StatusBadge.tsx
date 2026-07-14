@@ -26,6 +26,11 @@ const STATUS_MAP: Record<string, StatusMeta> = {
   // price type
   vendita: { label: 'Vendita', variant: 'primary' },
   affitto: { label: 'Affitto', variant: 'secondary' },
+  // contracts / invoices
+  draft: { label: 'Bozza', variant: 'neutral' },
+  sent: { label: 'Inviato', variant: 'primary' },
+  signed: { label: 'Firmato', variant: 'success' },
+  expired: { label: 'Scaduto', variant: 'danger' },
 };
 
 interface StatusBadgeProps {

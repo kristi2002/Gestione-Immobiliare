@@ -14,11 +14,18 @@ const ClientsPage = lazy(() => import('@/features/clients/ClientsPage'));
 const LeadsPage = lazy(() => import('@/features/leads/LeadsPage'));
 const TenantsPage = lazy(() => import('@/features/tenants/TenantsPage'));
 const AgentsPage = lazy(() => import('@/features/agents/AgentsPage'));
+const ContractsPage = lazy(() => import('@/features/contracts/ContractsPage'));
+const PaymentsPage = lazy(() => import('@/features/payments/PaymentsPage'));
+const InvoicesPage = lazy(() => import('@/features/invoices/InvoicesPage'));
+const CommissionsPage = lazy(() => import('@/features/commissions/CommissionsPage'));
 const PlaceholderPage = lazy(() => import('@/pages/PlaceholderPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 /** View keys handled by real React pages (skip the placeholder generator). */
-const IMPLEMENTED = new Set(['dashboard', 'properties', 'clients', 'leads', 'tenants', 'agents']);
+const IMPLEMENTED = new Set([
+  'dashboard', 'properties', 'clients', 'leads', 'tenants', 'agents',
+  'contracts', 'payments', 'invoices', 'commissions',
+]);
 
 /** view key → real page element. */
 const FEATURE_PAGES: Record<string, ReactElement> = {
@@ -26,6 +33,10 @@ const FEATURE_PAGES: Record<string, ReactElement> = {
   leads: <LeadsPage />,
   tenants: <TenantsPage />,
   agents: <AgentsPage />,
+  contracts: <ContractsPage />,
+  payments: <PaymentsPage />,
+  invoices: <InvoicesPage />,
+  commissions: <CommissionsPage />,
 };
 
 // Auth gate wraps the layout so the whole app requires a valid session.
