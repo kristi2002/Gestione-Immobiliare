@@ -21,6 +21,14 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'stats') {
+                apiSuccess([
+                    'total'      => (int) $db->query('SELECT COUNT(*) FROM meter_readings')->fetchColumn(),
+                    'month'      => (int) $db->query("SELECT COUNT(*) FROM meter_readings WHERE reading_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')")->fetchColumn(),
+                    'meters'     => (int) $db->query('SELECT COUNT(DISTINCT CONCAT(property_id, "-", meter_type)) FROM meter_readings')->fetchColumn(),
+                    'last_date'  => (string) ($db->query('SELECT MAX(reading_date) FROM meter_readings')->fetchColumn() ?: '—'),
+                ]);
+            }
             if (!empty($_GET['summary']) && isset($_GET['property_id'])) {
                 getMeterSummary($db, (int) $_GET['property_id']);
             } elseif ($id) {

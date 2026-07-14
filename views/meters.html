@@ -11,6 +11,37 @@
 
     <div id="meters-alert" class="alert" style="display:none;"></div>
 
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="gauge"></i></span>
+            <div class="stat-mini__txt"><small>Contatori Censiti</small><b id="mstat-meters">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="list-checks"></i></span>
+            <div class="stat-mini__txt"><small>Letture Totali</small><b id="mstat-total">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="calendar-check"></i></span>
+            <div class="stat-mini__txt"><small>Letture questo mese</small><b id="mstat-month">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="clock"></i></span>
+            <div class="stat-mini__txt"><small>Ultima lettura</small><b id="mstat-last" style="font-size:15px">—</b></div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        fetch('api/meter_readings.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) return;
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+            set('mstat-meters', j.data.meters); set('mstat-total', j.data.total);
+            set('mstat-month', j.data.month);
+            var d = j.data.last_date;
+            set('mstat-last', d && d !== '—' ? d.split('-').reverse().join('/') : '—');
+        }).catch(function () {});
+    })();
+    </script>
+
     <div class="toolbar">
         <select id="meters-property-filter" class="form-select" style="max-width:280px;">
             <option value="">Tutti gli immobili</option>

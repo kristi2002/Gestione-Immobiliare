@@ -22,6 +22,14 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'stats') {
+                apiSuccess([
+                    'today'      => (int) $db->query("SELECT COUNT(*) FROM appointments WHERE DATE(appointment_date) = CURDATE() AND status != 'cancelled'")->fetchColumn(),
+                    'week'       => (int) $db->query("SELECT COUNT(*) FROM appointments WHERE YEARWEEK(appointment_date, 1) = YEARWEEK(CURDATE(), 1) AND status != 'cancelled'")->fetchColumn(),
+                    'scheduled'  => (int) $db->query("SELECT COUNT(*) FROM appointments WHERE status = 'scheduled' AND appointment_date >= NOW()")->fetchColumn(),
+                    'done_month' => (int) $db->query("SELECT COUNT(*) FROM appointments WHERE status = 'completed' AND appointment_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')")->fetchColumn(),
+                ]);
+            }
             $id ? getAppointment($db, $id) : listAppointments($db);
             break;
         case 'POST':

@@ -22,6 +22,14 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'stats') {
+                apiSuccess([
+                    'total'    => (int) $db->query('SELECT COUNT(*) FROM buildings')->fetchColumn(),
+                    'units'    => (int) $db->query('SELECT COALESCE(SUM(total_units),0) FROM buildings')->fetchColumn(),
+                    'cities'   => (int) $db->query('SELECT COUNT(DISTINCT city) FROM buildings WHERE city IS NOT NULL AND city != ""')->fetchColumn(),
+                    'new_year' => (int) $db->query('SELECT COUNT(*) FROM buildings WHERE YEAR(created_at) = YEAR(CURDATE())')->fetchColumn(),
+                ]);
+            }
             $id ? getBuilding($db, $id) : listBuildings($db);
             break;
         case 'POST':

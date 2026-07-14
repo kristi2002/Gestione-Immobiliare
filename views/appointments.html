@@ -9,6 +9,35 @@
 
     <div id="appointments-alert" class="alert" style="display:none;"></div>
 
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="calendar"></i></span>
+            <div class="stat-mini__txt"><small>Visite Oggi</small><b id="astat-today">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="calendar-days"></i></span>
+            <div class="stat-mini__txt"><small>Questa Settimana</small><b id="astat-week">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="clock"></i></span>
+            <div class="stat-mini__txt"><small>Programmate</small><b id="astat-scheduled">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="check-circle-2"></i></span>
+            <div class="stat-mini__txt"><small>Completate (mese)</small><b id="astat-done">—</b></div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        fetch('api/appointments.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) return;
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+            set('astat-today', j.data.today); set('astat-week', j.data.week);
+            set('astat-scheduled', j.data.scheduled); set('astat-done', j.data.done_month);
+        }).catch(function () {});
+    })();
+    </script>
+
     <div class="toolbar">
         <select id="appt-status-filter" class="form-select">
             <option value="">Tutti gli stati</option>

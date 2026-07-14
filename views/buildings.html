@@ -11,6 +11,35 @@
 
     <div id="buildings-alert" class="alert" style="display:none;"></div>
 
+    <div class="list-stats">
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="building"></i></span>
+            <div class="stat-mini__txt"><small>Edifici Totali</small><b id="bstat-total">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="door-open"></i></span>
+            <div class="stat-mini__txt"><small>Unità Totali</small><b id="bstat-units">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="map-pin"></i></span>
+            <div class="stat-mini__txt"><small>Città</small><b id="bstat-cities">—</b></div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="plus-circle"></i></span>
+            <div class="stat-mini__txt"><small>Aggiunti quest'anno</small><b id="bstat-new">—</b></div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        fetch('api/buildings.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) return;
+            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+            set('bstat-total', j.data.total); set('bstat-units', j.data.units);
+            set('bstat-cities', j.data.cities); set('bstat-new', j.data.new_year);
+        }).catch(function () {});
+    })();
+    </script>
+
     <div class="toolbar">
         <div class="search-box">
             <input type="search" id="buildings-search" class="form-input" placeholder="Cerca per nome o indirizzo…" autocomplete="off">
