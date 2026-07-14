@@ -1,8 +1,9 @@
-import { Building2, ImageOff } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { DataTable, type Column } from '@/components/common/DataTable';
+import { ImageWithFallback } from '@/components/common/ImageWithFallback';
 import { formatCurrency } from '@/lib/format';
 import type { RecentProperty } from '@/types/dashboard';
 
@@ -11,22 +12,18 @@ interface Props {
   isLoading: boolean;
 }
 
-function Thumb({ url }: { url: string | null }) {
-  if (!url) {
-    return (
-      <div className="flex size-11 items-center justify-center rounded-lg bg-slate-100 text-muted">
-        <ImageOff className="size-4" />
-      </div>
-    );
-  }
-  return <img src={url} alt="" className="size-11 rounded-lg object-cover" loading="lazy" />;
-}
-
 const columns: Column<RecentProperty>[] = [
   {
     id: 'thumb',
     header: '',
-    cell: (p) => <Thumb url={p.cover_url} />,
+    cell: (p) => (
+      <ImageWithFallback
+        src={p.cover_url}
+        alt={p.address}
+        className="size-11 rounded-lg object-cover"
+        fallbackClassName="size-11 rounded-lg"
+      />
+    ),
     className: 'w-14',
   },
   {

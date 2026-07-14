@@ -94,6 +94,41 @@ function listProperties(PDO $db): void
         $params['client_id'] = $clientId;
     }
 
+    // Optional facet filters (power the Immobili filter bar).
+    $type = trim($_GET['property_type'] ?? '');
+    if ($type !== '') {
+        $where .= ' AND p.property_type = :ptype';
+        $params['ptype'] = $type;
+    }
+
+    $priceType = trim($_GET['price_type'] ?? '');
+    if (in_array($priceType, ['vendita', 'affitto'], true)) {
+        $where .= ' AND p.price_type = :price_type';
+        $params['price_type'] = $priceType;
+    }
+
+    if (is_numeric($_GET['min_price'] ?? null)) {
+        $where .= ' AND p.price >= :min_price';
+        $params['min_price'] = (float) $_GET['min_price'];
+    }
+    if (is_numeric($_GET['max_price'] ?? null)) {
+        $where .= ' AND p.price <= :max_price';
+        $params['max_price'] = (float) $_GET['max_price'];
+    }
+    if (is_numeric($_GET['min_sqm'] ?? null)) {
+        $where .= ' AND p.sqm >= :min_sqm';
+        $params['min_sqm'] = (int) $_GET['min_sqm'];
+    }
+
+    // Whitelisted sort — never interpolate user input into ORDER BY.
+    $orderBy = match ($_GET['sort'] ?? '') {
+        'price_asc'  => 'p.price ASC',
+        'price_desc' => 'p.price DESC',
+        'recent'     => 'p.created_at DESC',
+        'sqm_desc'   => 'p.sqm DESC',
+        default      => 'p.city ASC, p.address ASC',
+    };
+
     $countSql = "SELECT COUNT(*) FROM properties p
             INNER JOIN clients c ON c.id = p.client_id
             $where";
@@ -126,7 +161,7 @@ function listProperties(PDO $db): void
             INNER JOIN clients c ON c.id = p.client_id
             LEFT JOIN property_media m ON m.property_id = p.id
             $where
-            GROUP BY p.id ORDER BY p.city ASC, p.address ASC";
+            GROUP BY p.id ORDER BY $orderBy";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
     apiPaginatedSuccess($items, $total, $pagination);
