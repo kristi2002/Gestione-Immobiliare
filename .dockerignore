@@ -13,6 +13,7 @@ backups/*
 *.md
 !README.md
 node_modules
+immobiliare design/
 Dockerfile
 docker-compose*.yml
 render.yaml

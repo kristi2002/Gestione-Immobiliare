@@ -1,6 +1,6 @@
 # Gestionale Immobiliare — Architecture
 
-> **Live at:** https://testdemo.it — Hetzner VPS + Coolify + Traefik  
+> **Live at:** https://immobiliare.testdemo.it — Hetzner VPS + Coolify + Traefik  
 > **Last updated:** June 2026
 
 Real estate agency admin dashboard for managing owners (*proprietari*), properties (*immobili*), documents, communications, reminders, tenants (*inquilini*), and social media. Built as a **classic PHP monolith** with a **MySQL** backend and a **vanilla JavaScript** frontend loaded via AJAX.

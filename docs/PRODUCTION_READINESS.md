@@ -11,13 +11,13 @@ Documento di riferimento per capire **cosa è già pronto**, **cosa manca** e **
 
 **Ultimo aggiornamento:** giugno 2026 (superato il 2026-07-10 — vedi banner sopra)  
 **Stack:** PHP 8.3 + MySQL 8 + Apache — Hetzner VPS + Coolify + Traefik  
-**URL live:** https://testdemo.it ✅
+**URL live:** https://immobiliare.testdemo.it ✅ (il dominio nudo testdemo.it non è più collegato all'app: 503)
 
 ---
 
 ## Sommario esecutivo — Stato attuale (giugno 2026)
 
-L'app è **in produzione** su https://testdemo.it. Le integrazioni principali sono configurate e funzionanti. Rimangono gap di sicurezza critici da risolvere subito (password admin, cron secret, validazione webhook Twilio).
+L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni principali sono configurate e funzionanti. Rimangono gap di sicurezza critici da risolvere subito (password admin, cron secret, validazione webhook Twilio).
 
 | Area | Stato |
 |------|--------|

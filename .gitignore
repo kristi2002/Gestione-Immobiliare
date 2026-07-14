@@ -15,5 +15,8 @@ uploads/social/*
 .phpunit.result.cache
 *.log
 
+# Design reference mockups — kept locally, never deployed or tracked
+immobiliare design/
+
 # Local dev scratch (port-conflict workaround, not for CI/prod)
 docker-compose.dryrun.yml

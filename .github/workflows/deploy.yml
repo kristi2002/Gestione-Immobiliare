@@ -1,5 +1,14 @@
 name: Deploy to Coolify
 
+# Coolify already auto-deploys every push to main through its own GitHub
+# webhook (verified 2026-07-14: the VPS has one image built per commit SHA,
+# seconds after each push). This workflow is only an OPTIONAL second trigger
+# for setups where that webhook is absent.
+#
+# IMPORTANT: the `secrets` context is not allowed in step-level `if:`
+# expressions — using it there makes the whole workflow file invalid and every
+# run fail in 0 seconds. Read secrets via job-level `env` and test in shell.
+
 on:
   push:
     branches: [main]
@@ -7,17 +16,16 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+      COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
     steps:
-      - name: Skip deploy when token is missing
-        if: ${{ secrets.COOLIFY_TOKEN == '' }}
-        run: echo "COOLIFY_TOKEN is not configured; skipping deploy trigger."
-
-      - name: Trigger Coolify deploy
-        if: ${{ secrets.COOLIFY_TOKEN != '' && secrets.COOLIFY_WEBHOOK_URL != '' }}
+      - name: Trigger Coolify deploy (skips when secrets are not configured)
         run: |
-          # COOLIFY_WEBHOOK_URL is a repo secret, e.g.
+          if [ -z "$COOLIFY_TOKEN" ] || [ -z "$COOLIFY_WEBHOOK_URL" ]; then
+            echo "::notice::COOLIFY_TOKEN / COOLIFY_WEBHOOK_URL secrets not set — skipping. Coolify's own GitHub webhook already deploys pushes to main."
+            exit 0
+          fi
+          # COOLIFY_WEBHOOK_URL example:
           #   https://coolify.your-domain.it/api/v1/deploy?uuid=XXXX&force=false
-          # Prefer HTTPS so the bearer token isn't sent in clear text.
-          curl -s "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            --fail
+          curl -sS --fail "$COOLIFY_WEBHOOK_URL" -H "Authorization: Bearer $COOLIFY_TOKEN"

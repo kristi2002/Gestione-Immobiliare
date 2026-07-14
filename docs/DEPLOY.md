@@ -1,7 +1,7 @@
 # Deployment Guide — Gestione Immobiliare
 
 > **Current deployment:** Hetzner VPS (Ubuntu) + Coolify control panel  
-> **Live URL:** https://testdemo.it  
+> **Live URL:** https://immobiliare.testdemo.it  (the bare testdemo.it domain is no longer bound to this app and returns 503)  
 > **Status:** ✅ Live and working as of June 2026
 
 ---
@@ -44,7 +44,7 @@ Hetzner VPS (91.99.137.240)
 ```
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://testdemo.it
+APP_URL=https://immobiliare.testdemo.it
 FORCE_HTTPS=true
 
 DB_HOST=k6ctgb6t5pco3p4qabrgl8h3   # Coolify internal DB hostname
