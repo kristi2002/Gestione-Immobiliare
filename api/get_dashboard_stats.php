@@ -101,9 +101,9 @@ try {
     $recentPaymentsStmt->execute();
     $recentPayments = $recentPaymentsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Recently added properties for the right rail
+    // Recently added properties — "Immobili Recenti" table
     $recentPropertiesStmt = $db->prepare(
-        "SELECT p.id, p.address, p.city, p.price, p.price_type, p.property_type,
+        "SELECT p.id, p.address, p.city, p.price, p.price_type, p.property_type, p.status,
                 COALESCE(
                     (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
                     (SELECT fm.file_path FROM property_media fm
@@ -115,10 +115,53 @@ try {
          FROM properties p
          WHERE p.status != 'archived'
          ORDER BY p.created_at DESC
-         LIMIT 4"
+         LIMIT 6"
     );
     $recentPropertiesStmt->execute();
     $recentProperties = $recentPropertiesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Today's appointments — "Appuntamenti di Oggi" rail
+    $apptStmt = $db->prepare(
+        "SELECT a.id, a.appointment_date, a.duration_minutes, a.status, a.notes,
+                p.address AS property_address, p.property_type,
+                COALESCE(
+                    NULLIF(TRIM(CONCAT(COALESCE(c.name,''),' ',COALESCE(c.surname,''))), ''),
+                    NULLIF(TRIM(CONCAT(COALESCE(l.name,''),' ',COALESCE(l.surname,''))), '')
+                ) AS person_name,
+                au.username AS agent_name
+         FROM appointments a
+         LEFT JOIN properties p ON a.property_id = p.id
+         LEFT JOIN clients c ON a.client_id = c.id
+         LEFT JOIN leads l ON a.lead_id = l.id
+         LEFT JOIN admin_users au ON a.agent_id = au.id
+         WHERE DATE(a.appointment_date) = CURDATE()
+           AND a.status != 'cancelled'
+         ORDER BY a.appointment_date ASC
+         LIMIT 6"
+    );
+    $apptStmt->execute();
+    $appointmentsToday = $apptStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Monthly created-counts (last 8 months) — real series for the stat sparklines
+    $propSparkStmt = $db->query(
+        "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym,
+                COUNT(*) AS n,
+                SUM(price_type = 'vendita') AS n_sale,
+                SUM(price_type = 'affitto') AS n_rent
+         FROM properties
+         WHERE status != 'archived'
+           AND created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 7 MONTH)
+         GROUP BY ym ORDER BY ym ASC"
+    );
+    $propertySpark = $propSparkStmt->fetchAll(PDO::FETCH_ASSOC);
+    $leadSparkStmt = $db->query(
+        "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS n
+         FROM leads
+         WHERE status NOT IN ('lost','archived')
+           AND created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 7 MONTH)
+         GROUP BY ym ORDER BY ym ASC"
+    );
+    $leadSpark = $leadSparkStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Recent communications for the right rail feed
     $recentCommsStmt = $db->prepare(
@@ -180,6 +223,9 @@ try {
         'recent_payments'      => $recentPayments,
         'recent_properties'    => $recentProperties,
         'recent_communications'=> $recentCommunications,
+        'appointments_today'   => $appointmentsToday,
+        'property_spark'       => $propertySpark,
+        'lead_spark'           => $leadSpark,
     ]);
 } catch (PDOException $e) {
     apiError('Unable to fetch dashboard statistics.', 500);

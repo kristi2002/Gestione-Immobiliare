@@ -1,74 +1,67 @@
 <div class="dashboard-view">
-    <div class="db-pagehead">
-        <div>
-            <h1 id="dashboard-greeting">Dashboard</h1>
-            <p id="dashboard-sub" class="text-muted">Panoramica dell'attività</p>
-        </div>
-        <div class="db-drop" id="dashboard-period"><i data-lucide="calendar"></i><span id="dashboard-date">—</span></div>
-    </div>
-
     <div id="dashboard-error" class="alert alert--error" style="display:none;"></div>
 
     <!-- Stat cards -->
     <div class="db-stats">
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="building-2"></i></div>
-            <div class="db-stat__label">Immobili totali</div>
+            <div class="db-stat__label">Immobili Totali</div>
             <div class="db-stat__value loading" id="stat-properties">—</div>
-            <div class="db-delta flat" id="delta-properties"><span>in gestione</span></div>
+            <div class="db-delta flat" id="delta-properties"><span>in portafoglio</span></div>
+            <canvas class="db-stat__spark" id="spark-properties" width="110" height="26"></canvas>
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="tag"></i></div>
-            <div class="db-stat__label">In vendita</div>
+            <div class="db-stat__label">In Vendita</div>
             <div class="db-stat__value loading" id="stat-sale">—</div>
-            <div class="db-delta flat"><span>annunci attivi</span></div>
+            <div class="db-delta flat" id="delta-sale"><span>annunci attivi</span></div>
+            <canvas class="db-stat__spark" id="spark-sale" width="110" height="26"></canvas>
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="key-round"></i></div>
-            <div class="db-stat__label">In affitto</div>
+            <div class="db-stat__label">In Affitto</div>
             <div class="db-stat__value loading" id="stat-rent">—</div>
-            <div class="db-delta flat"><span>annunci attivi</span></div>
+            <div class="db-delta flat" id="delta-rent"><span>annunci attivi</span></div>
+            <canvas class="db-stat__spark" id="spark-rent" width="110" height="26"></canvas>
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="target"></i></div>
-            <div class="db-stat__label">Leads attivi</div>
+            <div class="db-stat__label">Leads Attivi</div>
             <div class="db-stat__value loading" id="stat-leads">—</div>
             <div class="db-delta flat" id="delta-leads"><span>potenziali clienti</span></div>
+            <canvas class="db-stat__spark" id="spark-leads" width="110" height="26"></canvas>
         </div>
     </div>
 
-    <!-- Main grid -->
+    <!-- Chart + today's appointments -->
     <div class="db-grid">
-        <div class="db-col">
-            <div class="db-card">
-                <div class="db-card__head">
-                    <div><h3>Andamento entrate</h3><p>Vendite e locazioni · <span id="chart-year">—</span></p></div>
+        <div class="db-card">
+            <div class="db-card__head">
+                <div><h3>Andamento Entrate</h3><p>Vendite e locazioni · <span id="chart-year">—</span></p></div>
+                <div class="db-legend">
+                    <span class="db-legend__item"><i class="db-legend__dot"></i>Entrate</span>
                     <div class="db-drop">Annuale <i data-lucide="chevron-down"></i></div>
                 </div>
-                <div class="db-chartwrap"><canvas id="chart-revenue"></canvas></div>
             </div>
-
-            <div class="db-card">
-                <div class="db-card__head"><h3>Ultime transazioni</h3><a href="view.php?name=payments" class="db-link" data-view="payments">Vedi tutte →</a></div>
-                <table class="db-table">
-                    <thead><tr><th>CLIENTE</th><th>IMMOBILE</th><th>TIPO</th><th>IMPORTO</th><th>STATO</th></tr></thead>
-                    <tbody id="tx-body">
-                        <tr><td colspan="5" class="db-empty">Caricamento…</td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <div class="db-chartwrap"><canvas id="chart-revenue"></canvas></div>
         </div>
 
-        <div class="db-col">
-            <div class="db-card">
-                <div class="db-card__head"><h3>Nuovi immobili</h3><a href="view.php?name=properties" class="db-link" data-view="properties">Tutti →</a></div>
-                <div class="db-list" id="new-properties"><div class="db-empty">Caricamento…</div></div>
-            </div>
+        <div class="db-card">
+            <div class="db-card__head"><h3>Appuntamenti di Oggi</h3><a href="view.php?name=appointments" class="db-link" data-view="appointments">Tutti →</a></div>
+            <div class="db-list" id="today-appts"><div class="db-empty">Caricamento…</div></div>
+        </div>
+    </div>
 
-            <div class="db-card">
-                <div class="db-card__head"><h3>Comunicazioni</h3><a href="view.php?name=communications" class="db-link" data-view="communications" title="Comunicazioni"><i data-lucide="mail" style="width:18px;color:#aeb8c5;"></i></a></div>
-                <div class="db-list" id="recent-comms"><div class="db-empty">Caricamento…</div></div>
-            </div>
+    <!-- Recent properties table -->
+    <div class="db-card" style="margin-top:20px">
+        <div class="db-card__head"><h3>Immobili Recenti</h3><a href="view.php?name=properties" class="db-link" data-view="properties">Vedi tutti →</a></div>
+        <div class="db-tablewrap">
+            <table class="db-table">
+                <thead><tr><th>Immobile</th><th>Tipo</th><th>Contratto</th><th>Prezzo</th><th>Stato</th><th>Azione</th></tr></thead>
+                <tbody id="recent-props-body">
+                    <tr><td colspan="6" class="db-empty">Caricamento…</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -78,11 +71,6 @@
     'use strict';
 
     const API_URL = 'api/get_dashboard_stats.php';
-    const MONTHS = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-    const AVATAR_TINTS = [
-        ['#deeef9', '#206bac'], ['#e7f7ee', '#16a34a'], ['#f3e8ff', '#7c3aed'],
-        ['#fdf3e3', '#d97706'], ['#fdecec', '#dc2626'], ['#e0f2fe', '#0369a1'],
-    ];
     let revenueChart = null;
 
     function esc(str) {
@@ -96,51 +84,62 @@
             minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: decimals ? 2 : 0
         });
     }
-    function initials(name, surname) {
-        const a = (name || '').trim(), b = (surname || '').trim();
-        return ((a[0] || '') + (b[0] || (a[1] || ''))).toUpperCase() || '?';
-    }
-    function tintFor(i) { return AVATAR_TINTS[i % AVATAR_TINTS.length]; }
     function mediaUrl(path) {
         if (!path) return '';
         if (/^https?:\/\//i.test(path) || path.startsWith('/')) return path;
         return '/' + String(path).replace(/^\.\//, '');
     }
-
-    function relTime(dateStr) {
-        if (!dateStr) return '';
-        const then = new Date(dateStr.replace(' ', 'T'));
-        const mins = Math.floor((Date.now() - then.getTime()) / 60000);
-        if (mins < 1) return 'ora';
-        if (mins < 60) return mins + ' min';
-        const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return hrs + (hrs === 1 ? ' ora' : ' ore');
-        const days = Math.floor(hrs / 24);
-        if (days < 7) return days + (days === 1 ? ' giorno' : ' giorni');
-        return then.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-    }
-
+    function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
     function refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
-
-    function setHeader() {
-        const hour = new Date().getHours();
-        const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
-        const sub = document.getElementById('dashboard-sub');
-        if (sub) sub.textContent = greeting + ', ecco la panoramica della tua attività.';
-        const date = document.getElementById('dashboard-date');
-        if (date) date.textContent = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-    }
 
     function setDelta(elId, newCount, fallback) {
         const el = document.getElementById(elId);
         if (!el) return;
         if (newCount > 0) {
             el.className = 'db-delta up';
-            el.innerHTML = '<i data-lucide="trending-up"></i><b>+' + newCount + '</b><span>nel mese</span>';
+            el.dataset.pill = '+' + newCount;
+            el.innerHTML = '<span>nel mese</span>';
         } else {
             el.className = 'db-delta flat';
             el.innerHTML = '<span>' + esc(fallback) + '</span>';
         }
+    }
+
+    /* --- tiny sparkline painter (real monthly series) --- */
+    function drawSpark(id, series, color) {
+        const cv = document.getElementById(id);
+        if (!cv) return;
+        if (!series || series.length < 2 || series.every(v => v === 0)) { cv.style.display = 'none'; return; }
+        const dpr = window.devicePixelRatio || 1;
+        const w = 110, h = 26;
+        cv.width = w * dpr; cv.height = h * dpr;
+        const c = cv.getContext('2d');
+        c.scale(dpr, dpr);
+        const max = Math.max(...series, 1), min = Math.min(...series, 0);
+        const span = (max - min) || 1;
+        const x = i => 2 + i * ((w - 6) / Math.max(series.length - 1, 1));
+        const y = v => h - 4 - ((v - min) / span) * (h - 9);
+        c.beginPath();
+        series.forEach((v, i) => i ? c.lineTo(x(i), y(v)) : c.moveTo(x(i), y(v)));
+        c.strokeStyle = color; c.lineWidth = 1.8; c.lineJoin = 'round'; c.stroke();
+        c.lineTo(x(series.length - 1), h); c.lineTo(x(0), h); c.closePath();
+        c.globalAlpha = 0.13; c.fillStyle = color; c.fill(); c.globalAlpha = 1;
+        c.beginPath(); c.arc(x(series.length - 1), y(series[series.length - 1]), 2.4, 0, 7);
+        c.fillStyle = color; c.fill();
+    }
+
+    /* Pad {ym,...} rows into an 8-month series ending this month */
+    function monthSeries(rows, key) {
+        const byYm = {};
+        (rows || []).forEach(r => { byYm[r.ym] = Number(r[key] != null ? r[key] : r.n) || 0; });
+        const out = [];
+        const now = new Date();
+        for (let i = 7; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            out.push(byYm[ym] || 0);
+        }
+        return out;
     }
 
     function renderStats(d) {
@@ -149,8 +148,12 @@
         document.getElementById('stat-rent').textContent       = d.properties_for_rent;
         document.getElementById('stat-leads').textContent      = d.total_leads;
         document.querySelectorAll('.db-stat__value.loading').forEach(el => el.classList.remove('loading'));
-        setDelta('delta-properties', d.properties_new_month, 'in gestione');
+        setDelta('delta-properties', d.properties_new_month, 'in portafoglio');
         setDelta('delta-leads', d.leads_new_month, 'potenziali clienti');
+        drawSpark('spark-properties', monthSeries(d.property_spark, 'n'),      '#3186d5');
+        drawSpark('spark-sale',       monthSeries(d.property_spark, 'n_sale'), '#16a34a');
+        drawSpark('spark-rent',       monthSeries(d.property_spark, 'n_rent'), '#7c5cd0');
+        drawSpark('spark-leads',      monthSeries(d.lead_spark, 'n'),          '#f0a83c');
     }
 
     const MONTHS_CAP  = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
@@ -175,7 +178,6 @@
         const yearEl = document.getElementById('chart-year');
         if (yearEl) yearEl.textContent = year;
 
-        // Pad the returned rows into a full 12-month series for the current year.
         const byMonth = {};
         (d.monthly_revenue || []).forEach(r => {
             const [y, m] = r.ym.split('-');
@@ -185,16 +187,16 @@
         let peak = 0;
         for (let i = 1; i < 12; i++) if (data[i] > data[peak]) peak = i;
 
-        const g = ctx.getContext('2d').createLinearGradient(0, 0, 0, 240);
-        g.addColorStop(0, 'rgba(32,107,172,.18)');
-        g.addColorStop(1, 'rgba(32,107,172,0)');
+        const g = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
+        g.addColorStop(0, 'rgba(49,134,213,.30)');
+        g.addColorStop(1, 'rgba(49,134,213,.02)');
 
-        // Draws the dashed marker + value bubble over the peak month (Figma style).
+        // Dashed marker + value bubble over the peak month (mockup style)
         const peakLabel = {
             id: 'peakLabel',
             afterDatasetsDraw(chart) {
                 if (data[peak] <= 0) return;
-                const meta = chart.getDatasetMeta(1);
+                const meta = chart.getDatasetMeta(0);
                 const pt = meta && meta.data[peak];
                 if (!pt) return;
                 const c = chart.ctx, area = chart.chartArea;
@@ -209,7 +211,7 @@
                 const bw = Math.max(w1, w2) + 24, bh = 44;
                 const bx = Math.min(Math.max(pt.x - bw / 2, area.left), area.right - bw);
                 const by = Math.max(pt.y - bh - 14, 2);
-                c.fillStyle = '#0e1626'; roundRect(c, bx, by, bw, bh, 9); c.fill();
+                c.fillStyle = '#1f2a3a'; roundRect(c, bx, by, bw, bh, 9); c.fill();
                 c.textAlign = 'center';
                 c.fillStyle = '#ffffff'; c.font = '700 13px Inter, sans-serif';
                 c.fillText(val, bx + bw / 2, by + 19);
@@ -221,91 +223,97 @@
 
         if (revenueChart) revenueChart.destroy();
         revenueChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: MONTHS_CAP,
-                datasets: [
-                    { type: 'bar', data, backgroundColor: '#eaf0fb', borderRadius: 5,
-                      barPercentage: 0.55, categoryPercentage: 0.7, order: 2 },
-                    { type: 'line', data, borderColor: '#206bac', borderWidth: 2.6, fill: true,
-                      backgroundColor: g, tension: 0.38, pointBackgroundColor: '#fff',
-                      pointBorderColor: '#206bac', pointBorderWidth: 2.5, pointRadius: 4,
-                      pointHoverRadius: 6, order: 1 },
-                ],
+                datasets: [{
+                    data,
+                    borderColor: '#3186d5',
+                    borderWidth: 2.6,
+                    fill: true,
+                    backgroundColor: g,
+                    tension: 0.42,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#3186d5',
+                    pointBorderWidth: 2.2,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 6,
+                }],
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                layout: { padding: { top: 58 } },
+                layout: { padding: { top: 56 } },
                 plugins: { legend: { display: false }, tooltip: { enabled: false } },
                 scales: {
                     x: { grid: { display: false }, border: { display: false }, ticks: { color: '#8a97a8', font: { size: 11.5 } } },
-                    y: { display: false, beginAtZero: true, grace: '15%' },
+                    y: {
+                        beginAtZero: true, grace: '12%',
+                        border: { display: false },
+                        grid: { color: '#eef2f7' },
+                        ticks: { color: '#9aa6b6', font: { size: 11 }, maxTicksLimit: 5,
+                                 callback: v => v >= 1000 ? (v / 1000) + 'k' : v },
+                    },
                 },
             },
             plugins: [peakLabel],
         });
     }
 
-    const STATUS_BADGE = {
-        paid:    ['ok', 'Pagato'],
-        pending: ['wait', 'In attesa'],
-        late:    ['late', 'In ritardo'],
+    /* --- Appuntamenti di Oggi --- */
+    const APPT_STATUS = {
+        scheduled: ['pill--blue',  'Programmata'],
+        completed: ['pill--green', 'Completata'],
+        no_show:   ['pill--amber', 'No-show'],
     };
 
-    function renderTransactions(rows) {
-        const body = document.getElementById('tx-body');
+    function renderAppointments(rows) {
+        const box = document.getElementById('today-appts');
         if (!rows || !rows.length) {
-            body.innerHTML = '<tr><td colspan="5" class="db-empty">Nessuna transazione recente.</td></tr>';
-            return;
-        }
-        body.innerHTML = rows.map((r, i) => {
-            const name = ((r.tenant_name || '') + ' ' + (r.tenant_surname || '')).trim() || 'Inquilino';
-            const [bg, fg] = tintFor(i);
-            const tipo = r.price_type === 'vendita' ? 'Vendita' : 'Affitto';
-            const badge = STATUS_BADGE[r.status] || ['wait', esc(r.status)];
-            return `<tr>
-                <td><div class="db-cli"><span class="db-av" style="background:${bg};color:${fg}">${esc(initials(r.tenant_name, r.tenant_surname))}</span><b>${esc(name)}</b></div></td>
-                <td class="db-addr">${esc(r.property_address || '—')}</td>
-                <td>${tipo}</td>
-                <td class="db-amt">${fmtEuro(r.amount)}</td>
-                <td><span class="db-badge ${badge[0]}">${esc(badge[1])}</span></td>
-            </tr>`;
-        }).join('');
-    }
-
-    function renderProperties(rows) {
-        const box = document.getElementById('new-properties');
-        if (!rows || !rows.length) {
-            box.innerHTML = '<div class="db-empty">Nessun immobile recente.</div>';
+            box.innerHTML = '<div class="db-empty">Nessun appuntamento oggi.</div>';
             return;
         }
         box.innerHTML = rows.map(r => {
-            const place = [r.address, r.city].filter(Boolean).map(esc).join(' · ') || '—';
-            const cover = mediaUrl(r.cover_url);
-            const thumb = '<i data-lucide="home"></i>'
-                + (cover ? `<img src="${esc(cover)}" alt="" onerror="this.remove()">` : '');
-            return `<a class="db-prop" href="view.php?name=properties" data-view="properties">
-                <div class="db-prop__thumb">${thumb}</div>
-                <div class="db-prop__b"><b>${fmtEuro(r.price)}</b><span>${place}</span></div>
-                <i class="db-prop__more" data-lucide="more-vertical"></i>
-            </a>`;
+            const time = (r.appointment_date || '').slice(11, 16) || '—';
+            const title = [cap(r.property_type), r.property_address].filter(Boolean).join(' · ') || 'Appuntamento';
+            const subParts = [r.person_name, r.agent_name ? 'Agente: ' + r.agent_name : ''].filter(Boolean);
+            const st = APPT_STATUS[r.status] || ['pill--blue', cap(r.status)];
+            return `<div class="appt">
+                <span class="appt__time">${esc(time)}</span>
+                <span class="appt__bar" data-status="${esc(r.status)}"></span>
+                <div class="appt__body"><b>${esc(title)}</b><span>${esc(subParts.join(' · ') || '—')}</span></div>
+                <span class="badge ${st[0]}">${esc(st[1])}</span>
+            </div>`;
         }).join('');
     }
 
-    function renderComms(rows) {
-        const box = document.getElementById('recent-comms');
+    /* --- Immobili Recenti table --- */
+    const PROP_STATUS = {
+        available: ['pill--green', 'Disponibile'],
+        rented:    ['pill--blue',  'Affittato'],
+        sold:      ['pill--violet','Venduto'],
+        pending:   ['pill--amber', 'In trattativa'],
+    };
+
+    function renderRecentProps(rows) {
+        const body = document.getElementById('recent-props-body');
         if (!rows || !rows.length) {
-            box.innerHTML = '<div class="db-empty">Nessuna comunicazione.</div>';
+            body.innerHTML = '<tr><td colspan="6" class="db-empty">Nessun immobile recente.</td></tr>';
             return;
         }
-        box.innerHTML = rows.map((r, i) => {
-            const who = ((r.client_name || '') + ' ' + (r.client_surname || '')).trim() || 'Contatto';
-            const [bg, fg] = tintFor(i);
-            return `<div class="db-msg">
-                <span class="db-av" style="background:${bg};color:${fg}">${esc(initials(r.client_name, r.client_surname))}</span>
-                <div class="db-msg__b"><b>${esc(who)}</b><span>${esc(r.subject || '(nessun oggetto)')}</span></div>
-                <span class="db-msg__t">${esc(relTime(r.created_at))}</span>
-            </div>`;
+        body.innerHTML = rows.map(r => {
+            const cover = mediaUrl(r.cover_url);
+            const thumb = `<span class="db-thumb"><i data-lucide="home"></i>${cover ? `<img src="${esc(cover)}" alt="" onerror="this.remove()">` : ''}</span>`;
+            const st = PROP_STATUS[r.status] || ['pill--blue', cap(r.status)];
+            const contratto = r.price_type === 'vendita' ? 'Vendita' : 'Affitto';
+            const priceSuffix = r.price_type === 'affitto' ? '<small class="db-permonth">/mese</small>' : '';
+            return `<tr>
+                <td><div class="db-cli">${thumb}<div class="db-propcell"><b>${esc(r.address || '—')}</b><span class="db-city">${esc(r.city || '')}</span></div></div></td>
+                <td><span class="badge chip--type">${esc(cap(r.property_type || '—'))}</span></td>
+                <td>${contratto}</td>
+                <td class="db-amt">${fmtEuro(r.price)}${priceSuffix}</td>
+                <td><span class="badge ${st[0]}">${esc(st[1])}</span></td>
+                <td><a class="db-rowaction" href="view.php?name=properties" data-view="properties" title="Apri immobili" aria-label="Apri immobili"><i data-lucide="arrow-right"></i></a></td>
+            </tr>`;
         }).join('');
     }
 
@@ -326,9 +334,8 @@
             const d = json.data;
             renderStats(d);
             renderChart(d);
-            renderTransactions(d.recent_payments);
-            renderProperties(d.recent_properties);
-            renderComms(d.recent_communications);
+            renderAppointments(d.appointments_today);
+            renderRecentProps(d.recent_properties);
             refreshIcons();
             bindSpaLinks();
         } catch (err) {
@@ -338,7 +345,6 @@
         }
     }
 
-    setHeader();
     refreshIcons();
     load();
 })();

@@ -7,6 +7,13 @@ $role     = getCurrentRole();
 $branding = getPublicBranding();
 $agencyName = $branding['agency_name'] ?: 'Gestionale Immobiliare';
 $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
+// Wordmark split: last word becomes the big serif name, the rest the eyebrow
+// ("Immobiliare Orlandi" → IMMOBILIARE / ORLANDI, like the design mockups).
+$brandWords   = preg_split('/\s+/', trim($agencyName)) ?: [];
+$brandName    = mb_strtoupper((string) array_pop($brandWords), 'UTF-8');
+if ($brandName === '') { $brandName = 'GESTIONALE'; }
+$brandEyebrow = mb_strtoupper(trim(implode(' ', $brandWords)), 'UTF-8');
+if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -16,9 +23,9 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
     <meta name="csrf-token" content="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
     <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_color'] ?? '#2563eb', ENT_QUOTES, 'UTF-8') ?>">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
-    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <title><?= htmlspecialchars($agencyName) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,25 +47,35 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
     <div class="app-layout">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
-                <a class="sidebar-brand__mark" href="view.php?name=dashboard" data-view="dashboard" title="<?= htmlspecialchars($agencyName) ?>">
+                <a class="sb-brand topbar-link" href="view.php?name=dashboard" data-view="dashboard" title="<?= htmlspecialchars($agencyName) ?>">
                     <?php if (!empty($branding['logo_path'])): ?>
-                        <img src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="Logo">
+                        <img class="sb-brand__logo" src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="<?= htmlspecialchars($agencyName) ?>">
                     <?php else: ?>
-                        <i data-lucide="building-2"></i>
+                        <span class="sb-brand__ico"><i data-lucide="home"></i></span>
+                        <span class="sb-brand__eyebrow"><?= htmlspecialchars($brandEyebrow) ?></span>
+                        <b class="sb-brand__name"><?= htmlspecialchars($brandName) ?></b>
                     <?php endif; ?>
                 </a>
-                <div class="sidebar-brand__txt">
-                    <b><?= htmlspecialchars($agencyName) ?></b>
-                    <small><?= htmlspecialchars($tagline) ?></small>
-                </div>
                 <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Chiudi menu">&times;</button>
             </div>
+            <?php if (canAccessView('agents')): ?>
+            <a class="sb-profile topbar-link" href="view.php?name=agents" data-view="agents" title="Profilo agente">
+                <span class="sb-profile__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                <span class="sb-profile__meta"><b><?= htmlspecialchars($username) ?></b><small><?= htmlspecialchars(str_replace('_', ' ', $role)) ?></small></span>
+                <span class="sb-profile__chev"><i data-lucide="chevron-right"></i></span>
+            </a>
+            <?php else: ?>
+            <span class="sb-profile">
+                <span class="sb-profile__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
+                <span class="sb-profile__meta"><b><?= htmlspecialchars($username) ?></b><small><?= htmlspecialchars(str_replace('_', ' ', $role)) ?></small></span>
+            </span>
+            <?php endif; ?>
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="view.php?name=dashboard" class="nav-link active" data-view="dashboard"><i class="nav-icon" data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a></li>
                 </ul>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Persone</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <li><a href="view.php?name=clients" class="nav-link" data-view="clients"><i class="nav-icon" data-lucide="users"></i><span class="nav-label">Proprietari</span></a></li>
@@ -74,7 +91,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Immobili</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <li><a href="view.php?name=properties" class="nav-link" data-view="properties"><i class="nav-icon" data-lucide="building-2"></i><span class="nav-label">Immobili</span></a></li>
@@ -102,7 +119,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Documenti</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('contracts')): ?>
@@ -115,7 +132,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Finanze</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('payments')): ?>
@@ -139,7 +156,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Gestione</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('maintenance_workflow')): ?>
@@ -160,7 +177,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Comunicazioni</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <li><a href="view.php?name=communications" class="nav-link" data-view="communications"><i class="nav-icon" data-lucide="mail"></i><span class="nav-label">Comunicazioni</span></a></li>
@@ -176,7 +193,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Agenda</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('appointments')): ?>
@@ -192,7 +209,7 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                     </ul>
                 </details>
 
-                <details class="nav-group">
+                <details class="nav-group" open>
                     <summary><span class="nav-group-label">Sistema</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('activity_log')): ?>
@@ -214,6 +231,10 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
         <div class="main-wrapper">
             <header class="topbar">
                 <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Apri/chiudi menu"><span></span><span></span><span></span></button>
+                <div class="topbar-title">
+                    <h1 id="page-title">Dashboard</h1>
+                    <p class="topbar-sub" id="topbar-sub"></p>
+                </div>
                 <div class="global-search">
                     <i class="global-search__icon" data-lucide="search"></i>
                     <input type="search" id="global-search-input" class="global-search__input" placeholder="Cerca proprietari, immobili, inquilini, lead…" autocomplete="off" aria-label="Ricerca globale">
@@ -235,17 +256,6 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
                             <div class="notif-dropdown__list" id="notif-list"><p class="notif-empty text-muted">Nessuna notifica.</p></div>
                         </div>
                     </div>
-                    <?php if (canAccessView('agents')): ?>
-                    <a href="view.php?name=agents" class="topbar-link topbar-user" data-view="agents" title="Profilo agente">
-                        <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
-                        <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
-                    </a>
-                    <?php else: ?>
-                    <span class="topbar-user" title="<?= htmlspecialchars($username) ?>">
-                        <span class="topbar-user__avatar"><?= strtoupper(substr($username, 0, 1)) ?></span>
-                        <span class="topbar-user__meta"><span class="topbar-user__name"><?= htmlspecialchars($username) ?></span><small><?= htmlspecialchars($role) ?></small></span>
-                    </span>
-                    <?php endif; ?>
                 </div>
             </header>
             <main id="app-content" class="app-content">
@@ -260,6 +270,16 @@ $tagline    = $branding['agency_tagline'] ?: 'Immobiliare';
     <script src="assets/js/pagination.js?v=<?= @filemtime(__DIR__ . '/assets/js/pagination.js') ?: time() ?>"></script>
     <script src="assets/js/filters.js?v=<?= @filemtime(__DIR__ . '/assets/js/filters.js') ?: time() ?>"></script>
     <script src="assets/js/datepicker.js?v=<?= @filemtime(__DIR__ . '/assets/js/datepicker.js') ?: time() ?>"></script>
+    <script>
+    // Topbar welcome line — "Benvenuto, <utente> · Lunedì 14 Luglio 2026"
+    (function () {
+        var el = document.getElementById('topbar-sub');
+        if (!el) return;
+        var d = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        d = d.charAt(0).toUpperCase() + d.slice(1);
+        el.textContent = 'Benvenuto, ' + <?= json_encode($username) ?> + ' · ' + d;
+    })();
+    </script>
     <script src="assets/js/app.js?v=<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
     <script src="assets/js/notifications.js"></script>
     <script>

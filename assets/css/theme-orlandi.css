@@ -1,41 +1,21 @@
 /* =====================================================================
-   theme-orlandi.css — "immobiliare design" mockup theme
-   Retints the existing token system + adds the mockup-specific
-   stat-card treatment (colored top accents, sparklines, delta pills).
-   Load AFTER style.css and branding.css.php so it wins the cascade.
-   BUILD-STAMP: orlandi-darknav-20260714a
+   theme-orlandi.css — "immobiliare design" mockup design system
+   The authoritative look for the admin app: floating dark-navy sidebar
+   (wordmark + profile card), floating white topbar with the page title,
+   accent-topped stat cards, azure primary. Loads AFTER style.css and
+   branding.css.php so it wins the cascade.
+   BUILD-STAMP: orlandi-shell-20260714b
    ===================================================================== */
-
-/* --- Authoritative dark-navy sidebar (mockup). Hardened with !important to
-       defeat the 4 stacked .sidebar background rules left in style.css by the
-       earlier light-Landify + ocean-gradient redesigns. Single source of truth. --- */
-.app-layout .sidebar {
-    background: #232a36 !important;
-    color: #cbd3df !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
-    box-shadow: none !important;
-}
-.app-layout .sidebar .sidebar-brand__txt b { color: #ffffff !important; }
-.app-layout .sidebar .sidebar-brand__txt small { color: rgba(255,255,255,0.6) !important; }
-.app-layout .sidebar .nav-link { color: rgba(255,255,255,0.82) !important; }
-.app-layout .sidebar .nav-link:hover { background: rgba(255,255,255,0.07) !important; color:#fff !important; }
-.app-layout .sidebar .nav-link.active { background: var(--color-primary) !important; color:#fff !important; box-shadow: 0 6px 14px rgba(49,134,213,.35) !important; }
-.app-layout .sidebar .nav-link.active .nav-icon,
-.app-layout .sidebar .nav-link.active [data-lucide] { color:#fff !important; }
-.app-layout .sidebar details.nav-group > summary { color: rgba(255,255,255,0.5) !important; font-weight:700 !important; }
-.app-layout .sidebar details.nav-group > summary:hover { color:#fff !important; }
-.app-layout .sidebar .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1) !important; }
-.app-layout .sidebar .sidebar-footer .btn { color: rgba(255,255,255,0.9) !important; border-color: rgba(255,255,255,0.24) !important; }
 
 :root {
     /* --- exact palette sampled from the mockups --- */
     --color-primary:        #3186d5;   /* azure accent (buttons, active nav) */
     --color-primary-dark:   #276fb4;
     --color-primary-light:  #e3eefb;
-    --color-sidebar-bg:     #282e3a;   /* slate-navy sidebar */
-    --color-sidebar-hover:  rgba(255,255,255,0.06);
+    --color-sidebar-bg:     #222834;   /* flat slate-navy sidebar */
+    --color-sidebar-hover:  rgba(255,255,255,0.07);
     --color-sidebar-active: #3186d5;
-    --color-bg:             #eef2f7;   /* soft blue-gray page */
+    --color-bg:             #e9eef5;   /* soft blue-gray canvas */
     --color-surface:        #ffffff;
     --color-text:           #1f2a3a;
     --color-text-muted:     #6b7688;
@@ -48,18 +28,107 @@
     --radius-sm:            10px;
     --shadow:               0 1px 2px rgba(30,42,58,.04), 0 1px 3px rgba(30,42,58,.05);
     --shadow-md:            0 8px 24px rgba(30,42,58,.07), 0 2px 6px rgba(30,42,58,.05);
+    --sidebar-width:        252px;
+    --shell-gap:            14px;      /* breathing room around the floating panels */
 }
 
-/* Sidebar brand + active pill to match mockup */
-.sidebar { background: var(--color-sidebar-bg); }
-.nav-link.active,
-.sidebar-nav .nav-link.active {
-    background: var(--color-sidebar-active);
-    color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 6px 14px rgba(49,134,213,.35);
+/* =====================================================================
+   App shell — floating panels on the blue-gray canvas
+   ===================================================================== */
+body { background: var(--color-bg); }
+
+/* --- Sidebar: full-height floating navy panel --- */
+.sidebar {
+    top: var(--shell-gap);
+    left: var(--shell-gap);
+    height: calc(100vh - (var(--shell-gap) * 2));
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(15, 25, 40, 0.18);
+    overflow: hidden;
 }
-.nav-link.active .nav-icon { color: #fff; }
+.main-wrapper { margin-left: calc(var(--sidebar-width) + var(--shell-gap)); }
+
+/* Brand — centered house mark + IMMOBILIARE / ORLANDI wordmark */
+.sidebar-brand { padding: 22px 14px 14px; position: relative; }
+.sb-brand {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    width: 100%; text-decoration: none; color: #fff; text-align: center; min-width: 0;
+}
+.sb-brand__logo { max-height: 54px; max-width: 82%; object-fit: contain; border-radius: 8px; }
+.sb-brand__ico { width: 34px; height: 34px; color: #fff; margin-bottom: 4px; }
+.sb-brand__ico svg, .sb-brand__ico [data-lucide] { width: 34px; height: 34px; }
+.sb-brand__eyebrow {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.34em;
+    color: rgba(255, 255, 255, 0.85); white-space: nowrap; overflow: hidden;
+    max-width: 100%; text-overflow: ellipsis; padding-left: 0.34em; /* optically recenter tracked text */
+}
+.sb-brand__name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 27px; font-weight: 600; letter-spacing: 0.06em;
+    color: #fff; line-height: 1.15; white-space: nowrap; overflow: hidden;
+    max-width: 100%; text-overflow: ellipsis;
+}
+.sidebar-brand .sidebar-close-btn { position: absolute; top: 10px; right: 10px; }
+
+/* Profile card under the brand */
+.sb-profile {
+    display: flex; align-items: center; gap: 10px;
+    margin: 8px 12px 6px; padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 13px; text-decoration: none;
+    transition: background var(--transition, 0.18s ease);
+}
+a.sb-profile:hover { background: rgba(255, 255, 255, 0.1); }
+.sb-profile__avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #3186d5, #7c5cd0);
+    color: #fff; font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+}
+.sb-profile__meta { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1; }
+.sb-profile__meta b { color: #fff; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-profile__meta small { color: rgba(255, 255, 255, 0.55); font-size: 11.5px; text-transform: capitalize; }
+.sb-profile__chev { color: rgba(255, 255, 255, 0.4); flex-shrink: 0; }
+.sb-profile__chev svg, .sb-profile__chev [data-lucide] { width: 16px; height: 16px; }
+
+/* Nav — flat icon menu with section labels */
+.sidebar-nav { padding: 6px 12px 12px; }
+details.nav-group > summary { padding: 13px 10px 5px; }
+.nav-link { font-size: 13.5px; border-radius: 10px; }
+
+/* --- Topbar: floating white card carrying the page title --- */
+.topbar {
+    height: auto; min-height: 74px;
+    margin: var(--shell-gap) var(--shell-gap) 4px calc(var(--shell-gap) / 2 + 4px);
+    padding: 12px 18px;
+    border: none; border-bottom: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    top: 0;
+}
+.topbar-title { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; margin-right: 6px; }
+.topbar-title h1 {
+    font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: var(--color-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw;
+}
+.topbar-sub { font-size: 12.5px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; }
+@media (max-width: 1100px) { .topbar-sub { display: none; } .topbar-title h1 { font-size: 18px; } }
+
+.app-content { padding: 18px 18px 44px calc(var(--shell-gap) / 2 + 4px); }
+
+/* Mobile: the sidebar becomes a full-height overlay again, panels lose margins */
+@media (max-width: 768px) {
+    .sidebar { top: 0; left: 0; height: 100vh; border-radius: 0; }
+    .main-wrapper { margin-left: 0; }
+    .topbar { margin: 10px 10px 4px; min-height: 60px; padding: 8px 12px; }
+    .topbar-title h1 { max-width: 40vw; }
+    .app-content { padding: 12px 10px 40px; }
+}
+
+/* =====================================================================
+   Shared components
+   ===================================================================== */
 
 /* --- Stat cards: colored top accent + sparkline + delta pill --- */
 .db-stat {
@@ -80,23 +149,28 @@
 }
 .db-stats .db-stat:nth-child(1) { --accent: #3186d5; }
 .db-stats .db-stat:nth-child(2) { --accent: #16a34a; }
-.db-stats .db-stat:nth-child(3) { --accent: #e08a1e; }
+.db-stats .db-stat:nth-child(3) { --accent: #7c5cd0; }
 .db-stats .db-stat:nth-child(4) { --accent: #f0a83c; }
 
 .db-stat__chip {
     position: absolute;
-    top: 18px; right: 18px;
-    width: 42px; height: 42px;
+    top: 26px; right: 18px;
+    width: 44px; height: 44px;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--accent, var(--color-primary)) 14%, #fff);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent, var(--color-primary)) 13%, #fff);
     color: var(--accent, var(--color-primary));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent, var(--color-primary)) 22%, #fff);
+    margin: 0;
 }
-.db-stat__chip svg { width: 20px; height: 20px; }
-.db-stat__label { color: var(--color-text-muted); font-size: 14px; font-weight: 500; margin-bottom: 4px; }
-.db-stat__value { font-size: 34px; font-weight: 800; letter-spacing: -.02em; color: var(--color-text); line-height: 1.1; }
+.db-stat__chip svg, .db-stat__chip [data-lucide] { width: 20px; height: 20px; color: inherit; }
+.db-stat__label { color: var(--color-text-muted); font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+.db-stat__value { font-size: 33px; font-weight: 800; letter-spacing: -.02em; color: var(--color-text); line-height: 1.1; }
 
-/* delta pill (e.g. -8%, +21%) */
+/* sparkline slot (canvas painted by the view JS) */
+.db-stat__spark { display: block; margin-top: 10px; width: 110px; height: 26px; }
+
+/* delta pill (e.g. +8%, -3%) */
 .db-delta {
     display: inline-flex; align-items: center; gap: 4px;
     margin-top: 10px; font-size: 12.5px; font-weight: 600;
@@ -109,9 +183,50 @@
 }
 .db-delta.up::before   { content: attr(data-pill); background: #e7f7ee; color: #16a34a; }
 .db-delta.down::before { content: attr(data-pill); background: #fdecec; color: #dc2626; }
+.db-delta.up::before:empty, .db-delta.down::before:empty { display: none; }
+
+/* --- Dashboard: chart legend, appointments rail, recent-properties table --- */
+.db-grid > * { min-width: 0; }  /* grid items must be allowed to shrink (ellipsis) */
+.db-list .appt { padding-left: 0; padding-right: 0; }
+.db-legend { display: flex; align-items: center; gap: 14px; }
+.db-legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-text-muted); font-weight: 600; }
+.db-legend__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--color-primary); display: inline-block; }
+
+.appt { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid #eef2f7; }
+.appt:first-child { border-top: none; }
+.appt__time { font-weight: 800; font-size: 13.5px; color: var(--color-text); width: 42px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.appt__bar { width: 4px; align-self: stretch; border-radius: 4px; background: var(--color-primary); flex-shrink: 0; min-height: 34px; }
+.appt__bar[data-status="completed"] { background: #16a34a; }
+.appt__bar[data-status="no_show"]   { background: #e08a1e; }
+.appt__body { flex: 1; min-width: 0; }
+.appt__body b { display: block; font-size: 13.5px; font-weight: 700; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appt__body span { display: block; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appt .badge { flex-shrink: 0; }
+
+.db-tablewrap { overflow-x: auto; }
+.db-thumb {
+    width: 44px; height: 44px; border-radius: 9px; overflow: hidden; position: relative;
+    background: #e3eefb; color: #7ba7d4; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.db-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.db-thumb [data-lucide], .db-thumb svg { width: 19px; height: 19px; }
+.db-propcell { min-width: 0; }
+.db-propcell b { display: block; font-weight: 600; }
+.db-city { font-size: 12px; color: var(--color-text-muted); display: block; }
+.db-permonth { font-size: 11px; color: var(--color-text-muted); font-weight: 500; margin-left: 2px; }
+.chip--type { background: #e3eefb; color: #276fb4; text-transform: capitalize; }
+.pill--violet { background: #f0e9fd; color: #7c3aed; }
+.db-rowaction {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--color-primary-light); color: var(--color-primary);
+}
+.db-rowaction:hover { background: var(--color-primary); color: #fff; }
+.db-rowaction [data-lucide], .db-rowaction svg { width: 16px; height: 16px; }
 
 /* Cards / panels */
-.db-card {
+.db-card, .card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
