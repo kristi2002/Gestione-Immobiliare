@@ -27,6 +27,11 @@ const ApplicationsPage = lazy(() => import('@/features/applications/Applications
 const AppointmentsPage = lazy(() => import('@/features/appointments/AppointmentsPage'));
 const SurveysPage = lazy(() => import('@/features/surveys/SurveysPage'));
 const ActivityLogPage = lazy(() => import('@/features/activity/ActivityLogPage'));
+const BuildingsPage = lazy(() => import('@/features/buildings/BuildingsPage'));
+const ExpensesPage = lazy(() => import('@/features/expenses/ExpensesPage'));
+const DocumentsPage = lazy(() => import('@/features/documents/DocumentsPage'));
+const RemindersPage = lazy(() => import('@/features/reminders/RemindersPage'));
+const ValuationPage = lazy(() => import('@/features/valuation/ValuationPage'));
 const PlaceholderPage = lazy(() => import('@/pages/PlaceholderPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -50,6 +55,11 @@ const FEATURE_PAGES: Record<string, ReactElement> = {
   appointments: <AppointmentsPage />,
   surveys: <SurveysPage />,
   activity_log: <ActivityLogPage />,
+  buildings: <BuildingsPage />,
+  expenses: <ExpensesPage />,
+  documents: <DocumentsPage />,
+  reminders: <RemindersPage />,
+  valuation: <ValuationPage />,
 };
 
 /** View keys handled by real React pages (skip the placeholder generator). */
