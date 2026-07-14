@@ -47,6 +47,24 @@
         else window.App.navigateTo('clients');
     }
 
+    // Populate the "Agente di riferimento" dropdown from active agents.
+    async function loadAgents(selectedId) {
+        const sel = $('ce-agent');
+        if (!sel) return;
+        try {
+            const res  = await fetch(`${API}?action=agents`);
+            const json = await res.json();
+            if (!json.success) return;
+            (json.data || []).forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = String(a.id);
+                opt.textContent = a.username;
+                sel.appendChild(opt);
+            });
+            if (selectedId != null && selectedId !== '') sel.value = String(selectedId);
+        } catch (_) { /* leave the "Non assegnato" default */ }
+    }
+
     async function loadClient() {
         try {
             const res  = await fetch(`${API}?id=${clientId}`);
@@ -61,6 +79,7 @@
             $('ce-email').value   = c.email || '';
             $('ce-status').value  = c.status || 'active';
             $('ce-notes').value   = c.internal_notes || '';
+            await loadAgents(c.assigned_agent_id);
         } catch (err) {
             showAlert('Impossibile caricare il proprietario: ' + err.message, 'error');
         }
@@ -130,6 +149,7 @@
             email:          $('ce-email').value.trim(),
             status:         $('ce-status').value,
             internal_notes: $('ce-notes').value.trim(),
+            assigned_agent_id: $('ce-agent').value ? Number($('ce-agent').value) : null,
         };
 
         const saveBtn = $('ce-save');
@@ -221,6 +241,7 @@
             loadIdDocs();
         } else {
             $('ce-title').textContent = 'Nuovo Proprietario';
+            loadAgents();
             // Show the Carta di Identità card too, but uploads need a saved owner.
             $('ce-id-card-section').hidden = false;
             const hint = '<p class="text-muted" style="font-size:13px;margin:0;">Salva il proprietario per caricare</p>';

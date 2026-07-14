@@ -308,6 +308,13 @@ details.nav-group > summary { padding: 13px 10px 5px; }
     padding: 4px 11px; font-weight: 700; font-size: 12.5px;
 }
 .lt-count svg, .lt-count [data-lucide] { width: 14px; height: 14px; }
+
+/* Agente Ref. cell (proprietari.png): small avatar + agent name */
+.lt-agent { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lt-agent > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.lt-agent--none { font-size: 13px; }
+.lt-av--sm { width: 28px; height: 28px; font-size: 11px; }
+
 .lt-actions { text-align: right; white-space: nowrap; }
 .lt-actions .btn { padding: 6px 8px; }
 .lt-actions .btn svg, .lt-actions .btn [data-lucide] { width: 15px; height: 15px; }

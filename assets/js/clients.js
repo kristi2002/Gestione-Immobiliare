@@ -200,7 +200,7 @@
 
         const url = `${API}?${params}`;
 
-        softLoad(els.grid, '<tr><td colspan="6" class="entity-loading">Caricamento…</td></tr>');
+        softLoad(els.grid, '<tr><td colspan="7" class="entity-loading">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(url);
@@ -218,7 +218,7 @@
             Pagination.render(els.pagination, parsed, (p) => { currentPage = p; loadClients(); });
         } catch (err) {
             els.grid.classList.remove('is-loading');
-            els.grid.innerHTML = `<tr><td colspan="6" class="entity-error">${escapeHtml(err.message)}</td></tr>`;
+            els.grid.innerHTML = `<tr><td colspan="7" class="entity-error">${escapeHtml(err.message)}</td></tr>`;
         }
     }
 
@@ -266,7 +266,7 @@
         const list = Array.isArray(clients) ? clients : [];
 
         if (list.length === 0) {
-            els.grid.innerHTML = '<tr><td colspan="6" class="entity-empty">Nessun proprietario trovato.</td></tr>';
+            els.grid.innerHTML = '<tr><td colspan="7" class="entity-empty">Nessun proprietario trovato.</td></tr>';
             return;
         }
 
@@ -279,6 +279,13 @@
                 c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : '',
                 c.phone ? `<small>${escapeHtml(c.phone)}</small>` : '',
             ].filter(Boolean).join('') || '<small class="text-muted">Nessun contatto</small>';
+            // Agente Ref. — assigned agent avatar + name, or an unassigned placeholder.
+            const agentCell = c.agent_name
+                ? `<div class="lt-agent">
+                        <span class="lt-av lt-av--sm av-a${((Number(c.assigned_agent_id) % 8) + 8) % 8}">${escapeHtml(agentInitials(c.agent_name))}</span>
+                        <span>${escapeHtml(c.agent_name)}</span>
+                   </div>`
+                : '<span class="text-muted lt-agent--none">Non assegnato</span>';
             return `
             <tr class="lt-row" data-id="${c.id}">
                 <td class="lt-check"><input type="checkbox" class="client-checkbox" data-id="${c.id}" ${checked} title="Seleziona"></td>
@@ -294,12 +301,9 @@
                 <td class="lt-contacts">${contacts}</td>
                 <td><span class="lt-count"><i data-lucide="building-2"></i>${Number(c.property_count) || 0}</span></td>
                 <td><span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
+                <td>${agentCell}</td>
                 <td class="lt-actions">
-                    ${c.phone && window.WA ? window.WA.buttonHtml(c.phone) : ''}
-                    <button class="btn btn--sm btn--ghost btn-comm" data-id="${c.id}" title="Comunicazioni"><i data-lucide="mail"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-print-id" data-id="${c.id}" title="Stampa carta di identità"><i data-lucide="id-card"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Archivia"><i data-lucide="archive"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-rail" data-id="${c.id}" title="Dettagli proprietario" aria-label="Apri dettaglio proprietario"><i data-lucide="more-vertical"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -313,39 +317,13 @@
         });
 
 
-        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
+        // Row actions collapse to a single kebab (⋮) that opens the detail rail,
+        // matching the proprietari.png mockup. Edit / comunicazioni / archivia /
+        // stampa CI now live inside the rail's full profile ("Visualizza Completo").
+        els.grid.querySelectorAll('.btn-rail').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (window.App) window.App.navigateTo('client_edit', { clientId: Number(btn.dataset.id) });
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-comm').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (window.App) window.App.navigateTo('communications', { clientId: Number(btn.dataset.id) });
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const client = clients.find(c => c.id == btn.dataset.id);
-                if (client) openDeleteModal(client.id, `${client.name} ${client.surname}`);
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-print-id').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                loadAndPrintIdDoc(Number(btn.dataset.id));
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-copy').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                copyToClipboard(btn.dataset.copy, btn);
+                openRail(Number(btn.dataset.id));
             });
         });
 
@@ -578,6 +556,13 @@
         const div = document.createElement('div');
         div.textContent = str == null ? '' : str;
         return div.innerHTML;
+    }
+
+    // Initials for an agent's display name/username (e.g. "luca.rossi" -> "LR").
+    function agentInitials(name) {
+        const parts = String(name || '').split(/[.\s_@-]+/).filter(Boolean);
+        const ini = ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+        return ini || (String(name || '')[0] || '?').toUpperCase();
     }
 
     // -------------------------------------------------------------------------

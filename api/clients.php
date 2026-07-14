@@ -28,6 +28,9 @@ try {
             if (($_GET['action'] ?? '') === 'stats') {
                 clientStats($db);
             }
+            if (($_GET['action'] ?? '') === 'agents') {
+                listAgents($db);
+            }
             $id ? getClient($db, $id) : listClients($db);
             break;
         case 'POST':
@@ -112,10 +115,12 @@ function listClients(PDO $db): void
     $countSql = "SELECT COUNT(*) FROM clients c $where";
 
     $dataSql = "SELECT c.id, c.name, c.surname, c.codice_fiscale, c.phone, c.email,
-                   c.internal_notes, c.creation_date, c.status,
+                   c.internal_notes, c.creation_date, c.status, c.assigned_agent_id,
+                   a.username AS agent_name,
                    COUNT(p.id) AS property_count
             FROM clients c
             LEFT JOIN properties p ON p.client_id = c.id AND p.status != 'archived'
+            LEFT JOIN admin_users a ON a.id = c.assigned_agent_id
             $where
             GROUP BY c.id ORDER BY c.surname ASC, c.name ASC";
 
@@ -126,9 +131,10 @@ function listClients(PDO $db): void
 function getClient(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
-        "SELECT c.*, COUNT(p.id) AS property_count
+        "SELECT c.*, a.username AS agent_name, COUNT(p.id) AS property_count
          FROM clients c
          LEFT JOIN properties p ON p.client_id = c.id AND p.status != 'archived'
+         LEFT JOIN admin_users a ON a.id = c.assigned_agent_id
          WHERE c.id = :id
          GROUP BY c.id"
     );
@@ -145,11 +151,11 @@ function getClient(PDO $db, int $id): void
 function createClient(PDO $db): void
 {
     $data = apiGetJsonBody();
-    $validated = validateClientInput($data);
+    $validated = validateClientInput($db, $data);
 
     $stmt = $db->prepare(
-        "INSERT INTO clients (name, surname, codice_fiscale, phone, email, internal_notes, status)
-         VALUES (:name, :surname, :codice_fiscale, :phone, :email, :internal_notes, :status)"
+        "INSERT INTO clients (name, surname, codice_fiscale, phone, email, internal_notes, status, assigned_agent_id)
+         VALUES (:name, :surname, :codice_fiscale, :phone, :email, :internal_notes, :status, :assigned_agent_id)"
     );
     $stmt->execute($validated);
 
@@ -165,12 +171,13 @@ function updateClient(PDO $db, int $id): void
     }
 
     $data      = apiGetJsonBody();
-    $validated = validateClientInput($data);
+    $validated = validateClientInput($db, $data);
 
     $stmt = $db->prepare(
         "UPDATE clients
          SET name = :name, surname = :surname, codice_fiscale = :codice_fiscale,
-             phone = :phone, email = :email, internal_notes = :internal_notes, status = :status
+             phone = :phone, email = :email, internal_notes = :internal_notes, status = :status,
+             assigned_agent_id = :assigned_agent_id
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -196,7 +203,7 @@ function deleteClient(PDO $db, int $id): void
 // Validation
 // ---------------------------------------------------------------------------
 
-function validateClientInput(array $data): array
+function validateClientInput(PDO $db, array $data): array
 {
     $name    = trim($data['name'] ?? '');
     $surname = trim($data['surname'] ?? '');
@@ -205,6 +212,21 @@ function validateClientInput(array $data): array
     $email   = trim($data['email'] ?? '') ?: null;
     $notes   = trim($data['internal_notes'] ?? '') ?: null;
     $status  = trim($data['status'] ?? 'active');
+    $agentId = $data['assigned_agent_id'] ?? null;
+    if ($agentId === '' || $agentId === 0 || $agentId === '0') {
+        $agentId = null;
+    }
+    if ($agentId !== null) {
+        $agentId = (int) $agentId;
+        $chk = $db->prepare(
+            "SELECT 1 FROM admin_users
+             WHERE id = :id AND is_active = 1 AND role IN ('super_admin','admin','agent')"
+        );
+        $chk->execute(['id' => $agentId]);
+        if (!$chk->fetchColumn()) {
+            apiError('Agente di riferimento non valido.');
+        }
+    }
 
     if ($name === '') {
         apiError('Il nome è obbligatorio.');
@@ -226,14 +248,28 @@ function validateClientInput(array $data): array
     }
 
     return [
-        'name'           => $name,
-        'surname'        => $surname,
-        'codice_fiscale' => $cf,
-        'phone'          => $phone,
-        'email'          => $email,
-        'internal_notes' => $notes,
-        'status'         => $status,
+        'name'              => $name,
+        'surname'           => $surname,
+        'codice_fiscale'    => $cf,
+        'phone'             => $phone,
+        'email'             => $email,
+        'internal_notes'    => $notes,
+        'status'            => $status,
+        'assigned_agent_id' => $agentId,
     ];
+}
+
+/**
+ * Active agents (admin_users) selectable as an owner's "Agente Ref.".
+ */
+function listAgents(PDO $db): void
+{
+    $rows = $db->query(
+        "SELECT id, username, role FROM admin_users
+         WHERE is_active = 1 AND role IN ('super_admin','admin','agent')
+         ORDER BY username ASC"
+    )->fetchAll();
+    apiSuccess($rows);
 }
 
 function fetchClientById(PDO $db, int $id): ?array

@@ -138,11 +138,20 @@ $nMaint      = 15 * $scale;
 
 // ── Clients ─────────────────────────────────────────────────────────────────
 
+// Agents an owner can be assigned to (Agente Ref.) — active admin/agent users.
+$agentIds = $db->query(
+    "SELECT id FROM admin_users
+     WHERE is_active = 1 AND role IN ('super_admin','admin','agent')"
+)->fetchAll(PDO::FETCH_COLUMN);
+if (!$agentIds) {
+    $agentIds = [$adminId];
+}
+
 say("Seeding $nClients clients…");
 $clientIds = [];
 $insClient = $db->prepare(
-    'INSERT INTO clients (name, surname, phone, email, internal_notes, status, creation_date)
-     VALUES (:name, :surname, :phone, :email, :notes, :status, :created)'
+    'INSERT INTO clients (name, surname, phone, email, internal_notes, status, creation_date, assigned_agent_id)
+     VALUES (:name, :surname, :phone, :email, :notes, :status, :created, :agent)'
 );
 
 for ($i = 1; $i <= $nClients; $i++) {
@@ -156,6 +165,8 @@ for ($i = 1; $i <= $nClients; $i++) {
         'notes'   => '[DEMO] Cliente di test generato automaticamente.',
         'status'  => pick(['active', 'active', 'active', 'inactive']),
         'created' => randDateTime(800, 0),
+        // ~15% left unassigned so the "Non assegnato" state is visible too.
+        'agent'   => random_int(1, 100) <= 85 ? pick($agentIds) : null,
     ]);
     $clientIds[] = (int) $db->lastInsertId();
 }
