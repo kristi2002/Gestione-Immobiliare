@@ -6840,9 +6840,10 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 }
 .topbar-filters:empty { display: none; flex: 0 0 0; }
 
-/* When the page filters are riding in the topbar, hand them the room:
-   the global search shrinks so both fit on one line. */
-.topbar--has-filters .global-search { flex: 0 1 300px; max-width: 300px; }
+/* When the page filters ride in the topbar, the merged filter row carries its
+   own search box — so hide the global search entirely and give the whole row to
+   the filters (no two search bars competing on one line). */
+.topbar--has-filters .global-search { display: none; }
 
 .toolbar.toolbar--merged {
     /* Strip the card chrome — it's now just a row of controls in the bar. */
