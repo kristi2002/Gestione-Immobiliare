@@ -147,6 +147,13 @@ function runSqlFile(PDO $db, string $file): void
         if ($statement === '') {
             continue;
         }
+        // `USE <db>;` directives hardcode the dev database name and break on any
+        // deployment whose schema is named differently (prod uses `default`).
+        // The runner already connects to the configured DB, so these are both
+        // wrong and unnecessary — skip them.
+        if (preg_match('/^USE\s+[`\w]+\s*$/i', $statement)) {
+            continue;
+        }
         $db->exec($statement);
     }
 }
