@@ -1,44 +1,22 @@
 /**
  * Properties (Immobili) — CRUD + multimedia gallery (Phase 3)
+ *
+ * ES module entry (controller). Holds ALL mutable state and every function that
+ * reads/writes state or the DOM. Pure config/helpers/templates live in the
+ * stateless sibling modules imported below. The SPA loader cache-busts this
+ * entry so it re-executes on every visit; the sub-modules stay cached singletons.
  */
-(function () {
-    'use strict';
+import {
+    API, CLIENTS_API, MEDIA_API, APPRAISAL_API, COMPARE_API, EXPORT_API,
+    RATING_LABELS, STATUS_LABELS, MEDIA_LABELS, MEDIA_ACCEPT, PAGE_LIMIT,
+} from './constants.js';
+import {
+    nowLocalDatetime, csvCell, mediaUrl, isVideoMedia, isImageMedia,
+    escapeHtml, buildSocialCaption,
+} from './helpers.js';
+import { renderGalleryItem } from './templates.js';
 
-    const API           = 'api/properties.php';
-    const CLIENTS_API   = 'api/clients.php';
-    const MEDIA_API     = 'api/property_media.php';
-    const APPRAISAL_API = 'api/property_appraisals.php';
-    const COMPARE_API   = 'api/property_comparison.php';
-    const EXPORT_API    = 'api/property_export.php';
-
-    const RATING_LABELS = {
-        ottimo: 'Ottimo', buono: 'Buono', discreto: 'Discreto', da_ristrutturare: 'Da ristrutturare',
-    };
     let importRows = [];
-
-    const STATUS_LABELS = {
-        available: 'Disponibile',
-        rented:    'Affittato',
-        sold:      'Venduto',
-        archived:  'Archiviato',
-    };
-
-    const MEDIA_LABELS = {
-        photo:      'Foto',
-        video:      'Video',
-        floor_plan: 'Planimetria',
-        house_map:  'Cartina casa',
-        attachment: 'Allegato',
-    };
-
-    const MEDIA_ACCEPT = {
-        photo:      'image/jpeg,image/png,image/webp,image/gif',
-        video:      'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov',
-        floor_plan: 'image/jpeg,image/png,image/webp',
-        house_map:  'image/jpeg,image/png,image/webp',
-    };
-
-    const COVER_MEDIA_TYPES = new Set(['photo', 'floor_plan', 'house_map']);
 
     let properties     = [];
     let clients        = [];
@@ -47,7 +25,6 @@
     let deleteTargetId = null;
     let searchTimer    = null;
     let currentPage    = 1;
-    const PAGE_LIMIT   = 16;
     let selectedIds    = new Set();
     let compareIds     = new Set();
     let mapMode        = false;
@@ -799,11 +776,6 @@
         URL.revokeObjectURL(a.href);
     }
 
-    function csvCell(val) {
-        const s = String(val ?? '');
-        return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-    }
-
     async function generateMandato() {
         const propertyId = parseInt(document.getElementById('property-id').value, 10);
         const clientId = parseInt(document.getElementById('property-client').value, 10);
@@ -819,21 +791,6 @@
         const json = await res.json();
         if (json.success) window.open(json.data.download, '_blank');
         else alert(json.error || 'Errore generazione mandato');
-    }
-
-    function mediaUrl(path) {
-        if (!path) return '';
-        if (/^https?:\/\//i.test(path) || path.startsWith('/')) return path;
-        return '/' + String(path).replace(/^\.\//, '');
-    }
-
-    function isVideoMedia(m) {
-        return (m.mime_type && m.mime_type.startsWith('video/')) || m.media_type === 'video';
-    }
-
-    function isImageMedia(m) {
-        return (m.mime_type && m.mime_type.startsWith('image/'))
-            || ['photo', 'floor_plan', 'house_map'].includes(m.media_type);
     }
 
     function renderGallery() {
@@ -879,42 +836,6 @@
                 if (item) openLightbox(item);
             });
         });
-    }
-
-    function renderGalleryItem(m) {
-        const url = mediaUrl(m.url);
-        const isImage = isImageMedia(m) && m.mime_type !== 'application/pdf';
-        const isVideo = isVideoMedia(m);
-        const isPdf   = m.mime_type === 'application/pdf';
-        const canCover = COVER_MEDIA_TYPES.has(m.media_type) && isImage && !isVideo;
-
-        let preview;
-        if (isVideo) {
-            preview = `<video src="${escapeHtml(url)}" class="gallery-item__video" muted playsinline preload="metadata"></video><span class="gallery-item__play">▶</span>`;
-        } else if (isImage) {
-            preview = `<img src="${escapeHtml(url)}" alt="${escapeHtml(m.original_name)}" class="gallery-item__img">`;
-        } else if (isPdf) {
-            preview = `<div class="gallery-item__doc"><i data-lucide="file-text"></i> PDF</div>`;
-        } else {
-            preview = `<div class="gallery-item__doc"><i data-lucide="paperclip"></i> File</div>`;
-        }
-
-        return `
-            <div class="gallery-item${m.is_cover ? ' gallery-item--cover' : ''}" data-id="${m.id}">
-                <div class="gallery-item__preview" role="button" tabindex="0" title="Visualizza">
-                    ${preview}
-                    ${m.is_cover ? '<span class="gallery-item__cover-badge">Anteprima</span>' : ''}
-                </div>
-                <div class="gallery-item__meta">
-                    <span class="gallery-item__type">${MEDIA_LABELS[m.media_type] || m.media_type}</span>
-                    <span class="gallery-item__name" title="${escapeHtml(m.original_name)}">${escapeHtml(truncate(m.original_name, 22))}</span>
-                </div>
-                <div class="gallery-item__actions">
-                    ${canCover && !m.is_cover ? `<button type="button" class="btn btn--xs btn--ghost btn-set-cover" data-id="${m.id}" title="Usa come anteprima card"><i data-lucide="star"></i> Anteprima</button>` : ''}
-                    ${isVideo || isPdf || (!isImage && !isVideo) ? `<a href="${escapeHtml(url)}" class="btn btn--xs btn--ghost" target="_blank" rel="noopener"${isVideo || isPdf ? ' download' : ''}>${isVideo ? 'Apri' : 'Scarica'}</a>` : ''}
-                    <button type="button" class="gallery-item__delete btn-delete-media" data-id="${m.id}" title="Elimina">&times;</button>
-                </div>
-            </div>`;
     }
 
     function updateMediaFileAccept() {
@@ -1133,26 +1054,6 @@
     }
 
     // ── Social post modal (#13) ───────────────────────────────────────────────
-    function buildSocialCaption(p) {
-        const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box/Garage', terreno:'Terreno', altro:'Immobile' };
-        const lines = [];
-        const head = `${TYPE[p.property_type] || 'Immobile'} in ${p.price_type === 'vendita' ? 'vendita' : 'affitto'}`;
-        lines.push(`✨ ${head}${p.city ? ' — ' + p.city : ''}`);
-        lines.push('');
-        if (p.address) lines.push(`📍 ${p.address}${p.city ? ', ' + p.city : ''}`);
-        const specs = [];
-        if (p.sqm) specs.push(`${p.sqm} m²`);
-        if (p.locali) specs.push(`${p.locali} locali`);
-        if (p.rooms) specs.push(`${p.rooms} camere`);
-        if (p.bathrooms) specs.push(`${p.bathrooms} bagni`);
-        if (specs.length) lines.push(`🏠 ${specs.join(' · ')}`);
-        if (p.price) lines.push(`💶 € ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}`);
-        if (p.description) { lines.push(''); lines.push(p.description); }
-        lines.push('');
-        lines.push('📞 Contattaci per maggiori informazioni!');
-        return lines.join('\n');
-    }
-
     function loadSocialMedia(propertyId) {
         const picker = document.getElementById('social-media-picker');
         fetch(`api/property_media.php?property_id=${propertyId}`)
@@ -1199,12 +1100,6 @@
     function closeSocialModal() {
         const m = document.getElementById('social-modal');
         if (m) m.hidden = true;
-    }
-
-    function pad2(n) { return String(n).padStart(2, '0'); }
-    function nowLocalDatetime() {
-        const d = new Date();
-        return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
     }
 
     async function submitSocialPost(e) {
@@ -1420,17 +1315,6 @@
         els.alert._timer = setTimeout(() => {
             els.alert.style.display = 'none';
         }, 4000);
-    }
-
-    function truncate(str, len) {
-        return str.length > len ? str.slice(0, len) + '…' : str;
-    }
-
-    function escapeHtml(str) {
-        if (str == null) return '';
-        const div = document.createElement('div');
-        div.textContent = String(str);
-        return div.innerHTML;
     }
 
     // -------------------------------------------------------------------------
@@ -1740,4 +1624,3 @@
     }
 
     init();
-})();

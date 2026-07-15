@@ -449,6 +449,11 @@
                 await new Promise((resolve, reject) => {
                     const newScript = document.createElement('script');
 
+                    // Propagate the type so ES modules (type="module") execute as
+                    // modules; classic scripts have no type and are unaffected.
+                    const scriptType = oldScript.getAttribute('type');
+                    if (scriptType) newScript.type = scriptType;
+
                     if (oldScript.src) {
                         const src = oldScript.getAttribute('src');
                         const bust = src.includes('?') ? '&' : '?';

@@ -1,11 +1,19 @@
-(function () {
-    'use strict';
+/**
+ * Scheda Immobile (property profile) — CRUD + gallery + contracts/invoices/reminders.
+ *
+ * ES module entry (controller). Holds ALL mutable state and every function that
+ * reads/writes state or the DOM. Pure config/helpers/templates live in the
+ * stateless sibling modules imported below. The SPA loader cache-busts this
+ * entry so it re-executes on every visit; the sub-modules stay cached singletons.
+ */
+import { MEDIA_PAGE_SIZE } from './constants.js';
+import { esc, ppFmtDate, ppMoney, pciItNumber, pciItDate } from './helpers.js';
+import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.js';
 
     const propertyId = window.App?.viewParams?.propertyId;
     let currentProperty = null;
     let allMedia = [];
     let mediaPage = 1;
-    const MEDIA_PAGE_SIZE = 12;
     let lightboxIndex = 0;
 
     // ── Bootstrap ────────────────────────────────────────────────────────────
@@ -88,51 +96,6 @@
         container.querySelector('[data-lightbox-all]')?.addEventListener('click', () => openLightbox(0));
     }
 
-    function buildGalleryHtml(photos) {
-        if (photos.length === 0) {
-            return '<div class="pp-gallery-placeholder"><span class="pp-gallery-placeholder__icon"><i data-lucide="image"></i></span><span>Nessuna foto disponibile</span></div>';
-        }
-
-        const coverIdx = photos.findIndex(p => p.is_cover == 1 || p.is_cover === true);
-        const mainIdx = coverIdx >= 0 ? coverIdx : 0;
-        const main = photos[mainIdx];
-        const rest = photos.filter((_, i) => i !== mainIdx);
-
-        if (photos.length === 1) {
-            return `<div class="pp-gallery-single">
-                <div class="pp-gallery-main-wrap" data-lightbox="0">
-                    <img src="${esc(main.file_path)}" alt="Foto principale" class="pp-gallery-main-img">
-                    <button class="pp-gallery-btn-all" data-lightbox-all="1"><i data-lucide="search"></i> Visualizza foto</button>
-                </div>
-            </div>`;
-        }
-
-        // show up to 4 thumbnails on right side
-        const showCount = Math.min(rest.length, 4);
-        const remaining = photos.length - 1 - showCount;
-
-        let thumbsHtml = '';
-        rest.slice(0, showCount).forEach((photo, i) => {
-            const realIndex = photos.indexOf(photo);
-            const isLast = i === showCount - 1;
-            const overlay = isLast && remaining > 0
-                ? `<div class="pp-gallery-thumb-overlay">+${remaining} foto</div>`
-                : '';
-            thumbsHtml += `<div class="pp-gallery-thumb" data-lightbox="${realIndex}">${overlay}<img src="${esc(photo.file_path)}" alt="Foto ${i + 2}"></div>`;
-        });
-
-        const gridClass = (showCount <= 2 ? 'pp-gallery-thumbs--col' : 'pp-gallery-thumbs--grid') + ' pp-gallery-thumbs--c' + showCount;
-
-        return `<div class="pp-gallery-split">
-            <div class="pp-gallery-main-wrap" data-lightbox="0">
-                <img src="${esc(main.file_path)}" alt="Foto principale" class="pp-gallery-main-img">
-                <button class="pp-gallery-btn-all" data-lightbox-all="1"><i data-lucide="images"></i> Tutte le foto (${photos.length})</button>
-            </div>
-            <div class="pp-gallery-thumbs ${gridClass}">
-                ${thumbsHtml}
-            </div>
-        </div>`;
-    }
 
     // ── Info section (below gallery) ──────────────────────────────────────────
 
@@ -358,25 +321,6 @@
     }
 
     // ── Social: confirm + publish now (listing info only — never fatture/contratti) ──
-    function buildSocialCaption(p) {
-        const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box/Garage', terreno:'Terreno', altro:'Immobile' };
-        const lines = [];
-        lines.push(`✨ ${TYPE[p.property_type] || 'Immobile'} in ${p.price_type === 'vendita' ? 'vendita' : 'affitto'}${p.city ? ' — ' + p.city : ''}`);
-        lines.push('');
-        if (p.address) lines.push(`📍 ${p.address}${p.city ? ', ' + p.city : ''}`);
-        const specs = [];
-        if (p.sqm) specs.push(`${p.sqm} m²`);
-        if (p.locali) specs.push(`${p.locali} locali`);
-        if (p.rooms) specs.push(`${p.rooms} camere`);
-        if (p.bathrooms) specs.push(`${p.bathrooms} bagni`);
-        if (specs.length) lines.push(`🏠 ${specs.join(' · ')}`);
-        if (p.energy_class) lines.push(`⚡ Classe energetica ${String(p.energy_class).toUpperCase()}`);
-        if (p.price) lines.push(`💶 € ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}`);
-        if (p.description) { lines.push(''); lines.push(p.description); }
-        lines.push('');
-        lines.push('📞 Contattaci per maggiori informazioni!');
-        return lines.join('\n');
-    }
 
     function propertyImages() {
         return (allMedia || []).filter(m => (m.mime_type || '').startsWith('image/') || ['photo', 'image'].includes(m.media_type));
@@ -475,14 +419,6 @@
             .catch(() => showAlert('Errore generazione mandato', 'error'));
     }
 
-    function buildChips(p) {
-        const chips = [];
-        if (p.sqm) chips.push('📐 ' + p.sqm + ' mq');
-        if (p.rooms) chips.push('🛏 ' + p.rooms + ' stanze');
-        if (p.bathrooms) chips.push('🚿 ' + p.bathrooms + ' bagni');
-        if (p.features) p.features.split(',').map(f => f.trim()).filter(Boolean).forEach(f => chips.push(f));
-        return chips;
-    }
 
     // ── Highlights under gallery (#8) ─────────────────────────────────────────
     function renderHighlights(p) {
@@ -523,17 +459,7 @@
     }
 
     // ── Contratti & Fatture side sections (#6, #7, #9) ────────────────────────
-    function ppFmtDate(d) { return d ? new Date(d).toLocaleDateString('it-IT') : ''; }
-    function ppMoney(v) { return v != null && v !== '' ? '€ ' + Number(v).toLocaleString('it-IT') : ''; }
 
-    function docFilesHtml(docs, reload) {
-        if (!docs.length) return '';
-        return docs.map(d => `
-            <div class="pp-side-item pp-side-item--file">
-                <a href="${esc(d.download_url || ('api/download_document.php?id=' + d.id))}" target="_blank" class="pp-side-item__name"><i data-lucide="paperclip"></i> ${esc(d.original_name || 'File')}</a>
-                <button class="btn btn--xs btn--danger" data-del-doc="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
-            </div>`).join('');
-    }
 
     function bindDocDeletes(container, reload) {
         container.querySelectorAll('[data-del-doc]').forEach(btn => {
@@ -757,23 +683,6 @@
         return _pdfjsPromise;
     }
 
-    function pciItNumber(raw) {
-        if (!raw) return null;
-        // Italian formatting: 1.200,50 → 1200.50
-        let s = String(raw).trim().replace(/\./g, '').replace(',', '.');
-        const n = parseFloat(s);
-        return isNaN(n) ? null : n;
-    }
-    function pciItDate(raw) {
-        if (!raw) return null;
-        const m = String(raw).match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
-        if (!m) return null;
-        let [, d, mo, y] = m;
-        if (y.length === 2) y = (parseInt(y, 10) > 50 ? '19' : '20') + y;
-        d = d.padStart(2, '0'); mo = mo.padStart(2, '0');
-        if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31) return null;
-        return `${y}-${mo}-${d}`;
-    }
     function pciMark(id) { document.getElementById(id)?.classList.add('pci-autofilled'); }
 
     function applyPdfHeuristics(text) {
@@ -1458,10 +1367,5 @@
         setTimeout(() => { el.style.display = 'none'; }, 5000);
     }
 
-    function esc(str) {
-        if (str == null) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
 
     init();
-})();
