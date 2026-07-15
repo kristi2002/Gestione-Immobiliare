@@ -49,7 +49,8 @@ export default function CalendarPage() {
   const byDay = useMemo(() => {
     const map = new Map<string, Appt[]>();
     for (const a of data?.items ?? []) {
-      const key = a.appointment_date.slice(0, 10);
+      const key = a.appointment_date?.slice(0, 10);
+      if (!key) continue; // skip rows with no/blank date instead of crashing
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }

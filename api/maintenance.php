@@ -37,7 +37,7 @@ try {
         "SELECT m.id, m.title, m.status, m.priority, m.reported_date, m.eta_date,
                 m.started_date, m.completed_date, m.cost, m.rating, m.progress,
                 p.address AS property_address,
-                TRIM(CONCAT(COALESCE(t.first_name,''),' ',COALESCE(t.last_name,''))) AS tenant_name,
+                t.name AS tenant_name,
                 s.name AS supplier_name
          FROM maintenance_requests m
          LEFT JOIN properties p ON p.id = m.property_id

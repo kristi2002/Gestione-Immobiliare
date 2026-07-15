@@ -44,7 +44,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (isLoading || !data) {
+  if (isLoading || !data?.branding) {
     return (
       <div className="animate-fade-in space-y-6">
         <PageHeader title="Impostazioni" subtitle="Configurazione dell'agenzia" />
@@ -58,7 +58,17 @@ export default function SettingsPage() {
     );
   }
 
-  const { branding, mail, whatsapp, meta, backup, fatturazione, twofa } = data;
+  // Sub-sections default to empty so a partial/malformed payload degrades to an
+  // empty form instead of crashing (branding presence is guaranteed by the guard above).
+  const {
+    branding,
+    mail = {},
+    whatsapp = {},
+    meta = {},
+    backup = {},
+    fatturazione = {},
+    twofa = { enabled: false },
+  } = data;
 
   return (
     <div className="animate-fade-in space-y-6">
