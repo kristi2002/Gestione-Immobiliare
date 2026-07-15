@@ -27,6 +27,17 @@
     RewriteRule ^database/ - [F,L]
     RewriteRule ^cron/ - [F,L]
     RewriteRule ^backups/ - [F,L]
+    # Raw React source (the build output is served from /app, not /frontend)
+    RewriteRule ^frontend/ - [F,L]
+
+    # React admin SPA under /app: serve the built index.html for any client-side
+    # route (deep links like /app/clients, /app/properties/42). Real files
+    # (/app/assets/*, /app/index.html) are served directly; /api, /uploads etc.
+    # live outside /app and are untouched.
+    RewriteCond %{REQUEST_URI} ^/app/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ /app/index.html [L]
 
     # Defense-in-depth: deny ALL direct access to the uploaded-documents tree
     # (ID scans, contracts, generated PDFs/invoices, private attachments). These
