@@ -7,10 +7,10 @@ Web-based admin dashboard for real estate agencies. Manage property owners, list
 > 📁 **Full documentation is in the [`/docs`](./docs/) folder** — architecture, database ERD, integrations, gaps, and deploy guide.
 >
 > 🟢 **Deployment-readiness (2026-07-10) — start here:**
-> [`docs/VERIFICATION_REPORT.md`](./docs/VERIFICATION_REPORT.md) (verified current state) ·
+> [`docs/reports/VERIFICATION_REPORT.md`](./docs/reports/VERIFICATION_REPORT.md) (verified current state) ·
 > [`docs/CHANGES_2026-07.md`](./docs/CHANGES_2026-07.md) (all changes) ·
-> [`docs/DEPLOYMENT_PLAN.md`](./docs/DEPLOYMENT_PLAN.md) (plan + phase log) ·
-> [`docs/GDPR.md`](./docs/GDPR.md).
+> [`docs/deployment/DEPLOYMENT_PLAN.md`](./docs/deployment/DEPLOYMENT_PLAN.md) (plan + phase log) ·
+> [`docs/security/GDPR.md`](./docs/security/GDPR.md).
 > Fresh install: load `database/schema_production.sql`, then `php database/migrate.php` (the Docker entrypoint does this automatically).
 
 ---
@@ -82,7 +82,7 @@ secca / imposta di registro tracking), Antiriciclaggio (adeguata verifica D.lgs 
 catastali + APE, unified fiscal deadline dashboard (Scadenzario), ISTAT rent-adjustment calculator,
 portal publish-state tracking, SEPA/SDD mandates, AI listing copywriter, and reverse Magic Match
 (property → compatible leads). Some features need an external channel/key to go live (FatturaPA SdI
-intermediary, `AI_API_KEY`, portal APIs) — see `docs/FEATURE_IMPLEMENTATION_PLAN.md`.
+intermediary, `AI_API_KEY`, portal APIs) — see `docs/planning/FEATURE_IMPLEMENTATION_PLAN.md`.
 
 ---
 
