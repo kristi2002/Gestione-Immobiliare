@@ -1,0 +1,256 @@
+/* ============================================================================
+   SHELL + DASHBOARD REDESIGN  (light sidebar, top bar over content)
+   Landify-inspired refresh. This block is intentionally last so it overrides
+   the earlier shell rules via source order.
+   ============================================================================ */
+:root {
+    --rd-nav:      #5b6a80;
+    --rd-active:   #e6f1fb;
+    --rd-line:     #eef2f7;
+    --rd-search:   #f3f6fa;
+}
+
+/* --- Layout: sidebar is full height, top bar lives inside the main column --- */
+.sidebar {
+    top: 0;
+    height: 100vh;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-right: 1px solid var(--color-border);
+    box-shadow: none;
+}
+.main-wrapper {
+    margin-top: 0;                 /* top bar is no longer a fixed full-width bar */
+    height: 100vh;
+}
+.topbar {
+    position: sticky;
+    top: 0;
+    left: auto;
+    right: auto;
+    width: auto;
+    box-shadow: none;
+    border-bottom: 1px solid var(--color-border);
+    padding-left: 28px;
+    padding-right: 28px;
+    z-index: 15;
+}
+.app-content { height: auto; flex: 1; }
+
+/* --- Sidebar brand (logo moved out of the top bar) --- */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 18px 16px 14px;
+    min-width: 0;
+}
+.sidebar-brand__mark {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.sidebar-brand__mark img { max-width: 100%; max-height: 36px; object-fit: contain; }
+.sidebar-brand__mark [data-lucide] { width: 20px; height: 20px; }
+.sidebar-brand__txt { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.sidebar-brand__txt b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--color-text); }
+.sidebar-brand__txt small {
+    font-size: 10.5px; font-weight: 500; color: var(--rd-nav);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- Sidebar nav, light theme --- */
+.sidebar-nav { padding: 4px 12px 12px; }
+.sidebar-nav ul { display: flex; flex-direction: column; gap: 2px; }
+.nav-link {
+    border-radius: 9px;
+    border-left: none;
+    padding: 9px 12px;
+    gap: 12px;
+    color: var(--rd-nav);
+    font-weight: 500;
+    font-size: 13.5px;
+}
+.nav-link:hover { background: #f4f7fb; color: var(--color-text); }
+.nav-link.active {
+    background: var(--rd-active);
+    color: var(--color-primary);
+    border-left: none;
+    font-weight: 600;
+}
+.nav-link .nav-icon,
+.nav-link [data-lucide] { width: 19px; height: 19px; }
+details.nav-group > summary { color: #8493a6; }
+details.nav-group > summary:hover { color: var(--rd-nav); }
+.sidebar-footer { border-top: 1px solid var(--rd-line); }
+.sidebar-footer .btn { color: var(--rd-nav); }
+
+/* --- Top bar bits --- */
+.global-search {
+    background: var(--rd-search);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    height: 42px;
+    max-width: 440px;
+}
+.global-search:focus-within { background: var(--color-surface); border-color: var(--color-primary); }
+.topbar-new {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 42px; padding: 0 16px;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: #fff; font-weight: 600; font-size: 13.5px;
+    border: none; cursor: pointer; text-decoration: none;
+    transition: background var(--transition);
+}
+.topbar-new:hover { background: var(--color-primary-dark); }
+.topbar-new [data-lucide] { width: 16px; height: 16px; }
+
+/* ============================ Dashboard content ============================ */
+.db-pagehead { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.db-pagehead h1 { font-size: 22px; font-weight: 700; color: var(--color-text); }
+.db-pagehead p { font-size: 13px; color: var(--color-text-muted); margin-top: 3px; }
+.db-drop {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 40px; padding: 0 12px 0 14px;
+    border: 1px solid var(--color-border); background: var(--color-surface);
+    border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--color-text);
+    cursor: pointer;
+}
+.db-drop [data-lucide] { width: 15px; height: 15px; color: #8a97a8; }
+
+.db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 20px; }
+.db-stat {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow);
+}
+.db-stat__chip {
+    width: 40px; height: 40px; border-radius: 11px;
+    background: var(--color-primary-light);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.db-stat__chip [data-lucide] { width: 20px; height: 20px; color: var(--color-primary); }
+.db-stat__label { font-size: 13px; color: var(--color-text-muted); font-weight: 500; }
+.db-stat__value { font-size: 26px; font-weight: 700; margin: 4px 0 8px; color: var(--color-text); }
+.db-delta { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.db-delta [data-lucide] { width: 14px; height: 14px; }
+.db-delta b { font-weight: 600; }
+.db-delta span { color: var(--color-text-muted); }
+.db-delta.up { color: var(--color-success); }
+.db-delta.down { color: var(--color-danger); }
+.db-delta.flat { color: var(--color-text-muted); }
+
+.db-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+.db-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.db-card {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.db-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 20px 0; }
+.db-card__head h3 { font-size: 15.5px; font-weight: 700; color: var(--color-text); }
+.db-card__head p { font-size: 12.5px; color: var(--color-text-muted); margin-top: 3px; }
+.db-link { color: var(--color-primary); font-weight: 600; font-size: 13px; text-decoration: none; }
+.db-link:hover { text-decoration: underline; }
+.db-chartwrap { padding: 14px 16px 16px; height: 280px; position: relative; }
+
+.db-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.db-table thead th {
+    text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--color-text-muted); padding: 14px 8px 12px; border-bottom: 1px solid var(--rd-line);
+}
+.db-table thead th:first-child { padding-left: 20px; }
+.db-table thead th:last-child { padding-right: 20px; text-align: right; }
+.db-table tbody td { padding: 13px 8px; border-bottom: 1px solid var(--rd-line); vertical-align: middle; color: var(--color-text); }
+.db-table tbody tr:last-child td { border-bottom: none; }
+.db-table tbody td:first-child { padding-left: 20px; }
+.db-table tbody td:last-child { padding-right: 20px; text-align: right; }
+.db-cli { display: flex; align-items: center; gap: 10px; }
+.db-cli b { font-weight: 600; }
+.db-av {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.db-addr { color: var(--color-text-muted); }
+.db-amt { font-weight: 700; }
+.db-badge { display: inline-block; padding: 5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.db-badge.ok   { background: #e7f7ee; color: #0e7a38; }
+.db-badge.wait { background: #fdf3e3; color: #a35c07; }
+.db-badge.late { background: #fdecec; color: #b91c1c; }
+
+.db-list { padding: 4px 20px 12px; }
+.db-prop { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rd-line); text-decoration: none; }
+.db-prop:first-child { border-top: none; }
+.db-prop__thumb {
+    position: relative;
+    width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #dbeafe, #93c5fd);
+}
+.db-prop__thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.db-prop__thumb [data-lucide] { width: 22px; height: 22px; color: #fff; }
+.db-prop__b { flex: 1; min-width: 0; }
+.db-prop__b b { font-size: 14px; font-weight: 700; display: block; color: var(--color-text); }
+.db-prop__b b { text-decoration: none; }
+.db-prop__b span {
+    font-size: 12px; color: var(--color-text-muted); display: block;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-decoration: none;
+}
+.db-prop:hover .db-prop__b span { color: var(--color-primary); }
+.db-prop__more { color: #aeb8c5; flex-shrink: 0; }
+.db-msg { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--rd-line); }
+.db-msg:first-child { border-top: none; }
+.db-msg__b { flex: 1; min-width: 0; }
+.db-msg__b b { font-size: 13px; font-weight: 600; display: block; color: var(--color-text); }
+.db-msg__b span { font-size: 12px; color: var(--color-text-muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-msg__t { font-size: 11.5px; color: var(--color-text-muted); font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.db-empty { padding: 22px 16px; text-align: center; color: var(--color-text-muted); font-size: 13px; }
+
+@media (max-width: 1100px) {
+    .db-grid { grid-template-columns: 1fr; }
+    .db-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* --- Mobile re-assertion: the sidebar is a full-height overlay, top bar
+       sits inside the scrolling column. Re-declared here so it wins over the
+       earlier @media block regardless of source order. --- */
+@media (max-width: 768px) {
+    .main-wrapper { margin-left: 0; height: auto; }
+    .sidebar { top: 0; height: 100vh; transform: translateX(-100%); box-shadow: var(--shadow-md); }
+    .sidebar.open { transform: translateX(0); }
+    .topbar { position: sticky; padding-left: 16px; padding-right: 16px; }
+    .topbar-new span { display: none; }             /* icon-only + button on phones */
+    .db-stats { grid-template-columns: 1fr; }
+    .db-pagehead h1 { font-size: 19px; }
+}
+
+/* ----------------------------------------------------------------------------
+   Sidebar theme: flat dark navy (immobiliare design mockups). Self-contained
+   recolour — swap this whole block to change the sidebar palette.
+   The geometry (floating panel, radius) lives in theme-orlandi.css.
+   ---------------------------------------------------------------------------- */
+.sidebar {
+    background: var(--color-sidebar-bg, #222834);
+    color: #cbd3df;
+    border-right: none;
+}
+.sidebar-close-btn { color: rgba(255, 255, 255, 0.7); }
+.sidebar-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.nav-link { color: rgba(255, 255, 255, 0.82); }
+.nav-link:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.nav-link.active { background: var(--color-primary); color: #fff; font-weight: 600; box-shadow: 0 6px 14px rgba(49, 134, 213, 0.35); }
+.nav-link.active [data-lucide] { color: #fff; }
+.nav-link .nav-icon { color: rgba(255, 255, 255, 0.55); }
+.nav-link:hover .nav-icon, .nav-link.active .nav-icon { color: #fff; }
+details.nav-group > summary { color: rgba(255, 255, 255, 0.42); font-weight: 700; }
+details.nav-group > summary:hover { color: rgba(255, 255, 255, 0.75); }
+.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.sidebar-footer .btn { background: transparent; color: rgba(255, 255, 255, 0.9); border-color: rgba(255, 255, 255, 0.22); }
+.sidebar-footer .btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+
+/* ============================================================================
