@@ -28,6 +28,8 @@ export interface PropertyListItem {
   media_count: string | number;
   photo_count: string | number;
   monthly_rent: string | null;
+  latitude: string | null;
+  longitude: string | null;
   created_at: string;
 }
 

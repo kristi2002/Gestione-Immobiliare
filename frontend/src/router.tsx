@@ -36,6 +36,15 @@ const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
 const ForecastPage = lazy(() => import('@/features/forecast/ForecastPage'));
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage'));
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
+const MapPage = lazy(() => import('@/features/map/MapPage'));
+const PortalsPage = lazy(() => import('@/features/portals/PortalsPage'));
+const ScadenzarioPage = lazy(() => import('@/features/scadenzario/ScadenzarioPage'));
+const MaintenancePage = lazy(() => import('@/features/maintenance/MaintenancePage'));
+const AmlPage = lazy(() => import('@/features/aml/AmlPage'));
+const CommunicationsPage = lazy(() => import('@/features/communications/CommunicationsPage'));
+const WhatsappInboxPage = lazy(() => import('@/features/whatsapp/WhatsappInboxPage'));
+const SocialPage = lazy(() => import('@/features/social/SocialPage'));
+const AutomationsPage = lazy(() => import('@/features/automations/AutomationsPage'));
 const PlaceholderPage = lazy(() => import('@/pages/PlaceholderPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -68,6 +77,15 @@ const FEATURE_PAGES: Record<string, ReactElement> = {
   forecast: <ForecastPage />,
   reports: <ReportsPage />,
   calendar: <CalendarPage />,
+  map: <MapPage />,
+  portal_sync: <PortalsPage />,
+  scadenzario: <ScadenzarioPage />,
+  maintenance_workflow: <MaintenancePage />,
+  aml: <AmlPage />,
+  communications: <CommunicationsPage />,
+  whatsapp_inbox: <WhatsappInboxPage />,
+  social: <SocialPage />,
+  automations: <AutomationsPage />,
 };
 
 /** View keys handled by real React pages (skip the placeholder generator). */
