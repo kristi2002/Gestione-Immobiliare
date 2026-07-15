@@ -11,6 +11,17 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # ── Public website (sito vetrina "Immobiliare Orlandi") ──────────────────
+    # The static marketing site lives in /web-orlandi/ and is already reachable
+    # at  https://<questo-dominio>/web-orlandi/ .
+    # To serve it on its OWN (sub)domain instead: point that domain's DNS at this
+    # server, add the domain to this service in Coolify, then replace
+    # PUBLIC-DOMAIN-HERE below with it (e.g. www.immobiliareorlandi.it) and
+    # UNCOMMENT the three lines. The gestionale on its own domain is unaffected.
+    #   RewriteCond %{HTTP_HOST} ^(www\.)?PUBLIC-DOMAIN-HERE$ [NC]
+    #   RewriteCond %{REQUEST_URI} !^/web-orlandi/
+    #   RewriteRule ^(.*)$ /web-orlandi/$1 [L]
+
     # Block web access to sensitive directories
     RewriteRule ^config/ - [F,L]
     RewriteRule ^database/ - [F,L]

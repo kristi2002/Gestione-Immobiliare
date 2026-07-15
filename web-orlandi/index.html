@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Immobiliare Orlandi — Civitanova Marche</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── RESET & TOKENS ──────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:       #004B87;
+      --blue-dark:  #003261;
+      --blue-light: #0066BB;
+      --gold:       #C9A84C;
+      --gold-light: #E8C96A;
+      --white:      #FFFFFF;
+      --off-white:  #F5F7FA;
+      --text:       #1A2333;
+      --text-muted: #6B7A90;
+      --border:     #DDE3EC;
+      --radius:     12px;
+      --shadow-sm:  0 2px 8px rgba(0,75,135,.08);
+      --shadow-md:  0 8px 32px rgba(0,75,135,.14);
+      --shadow-lg:  0 20px 60px rgba(0,75,135,.18);
+      --transition: .3s cubic-bezier(.4,0,.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--white);
+      overflow-x: hidden;
+    }
+
+    /* ── SCROLLBAR ───────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--off-white); }
+    ::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 3px; }
+
+    /* ── UTILITIES ───────────────────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section    { padding: 96px 0; }
+    .section--gray { background: var(--off-white); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 16px; border-radius: 50px;
+      font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      background: rgba(201,168,76,.15); color: var(--gold);
+      border: 1px solid rgba(201,168,76,.3);
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      color: var(--blue-dark);
+      line-height: 1.2;
+    }
+
+    .section-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 560px;
+    }
+
+    .gold-line {
+      width: 56px; height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 2px; margin: 16px 0;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px; border-radius: 50px;
+      font-size: .95rem; font-weight: 600;
+      cursor: pointer; border: none;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .btn--primary {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      color: var(--blue-dark);
+      box-shadow: 0 4px 16px rgba(201,168,76,.35);
+    }
+    .btn--primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(201,168,76,.5);
+    }
+
+    .btn--outline {
+      background: transparent;
+      color: var(--white);
+      border: 2px solid rgba(255,255,255,.5);
+    }
+    .btn--outline:hover {
+      background: rgba(255,255,255,.1);
+      border-color: var(--white);
+    }
+
+    .btn--blue {
+      background: var(--blue);
+      color: var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn--blue:hover {
+      background: var(--blue-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* ── NAVIGATION ─────────────────────────────── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      padding: 0 24px;
+      background: rgba(0,50,97,.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(201,168,76,.2);
+      transition: var(--transition);
+    }
+
+    .nav__inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 72px;
+    }
+
+    .nav__logo {
+      display: flex; align-items: center; gap: 12px;
+      text-decoration: none;
+    }
+
+    .nav__logo-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav__logo-icon svg { width: 26px; height: 26px; fill: var(--blue-dark); }
+
+    .nav__logo-text { color: var(--white); }
+    .nav__logo-text .brand { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; line-height: 1; }
+    .nav__logo-text .sub   { font-size: .7rem; font-weight: 500; color: var(--gold-light); letter-spacing: .1em; text-transform: uppercase; }
+
+    .nav__links {
+      display: flex; align-items: center; gap: 32px;
+      list-style: none;
+    }
+
+    .nav__links a {
+      color: rgba(255,255,255,.8);
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 500;
+      transition: var(--transition);
+      position: relative;
+    }
+    .nav__links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+      height: 2px; background: var(--gold);
+      transform: scaleX(0); transition: var(--transition);
+    }
+    .nav__links a:hover { color: var(--white); }
+    .nav__links a:hover::after { transform: scaleX(1); }
+
+    .nav__cta { margin-left: 8px; padding: 10px 22px; font-size: .875rem; }
+
+    /* ── HERO ──────────────────────────────────── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex; align-items: center;
+      overflow: hidden;
+    }
+
+    .hero__bg {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, #003261 0%, #004B87 40%, #0066BB 100%);
+    }
+
+    /* Geometric decorations */
+    .hero__bg::before {
+      content: '';
+      position: absolute; right: -80px; top: -80px;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,168,76,.12) 0%, transparent 70%);
+    }
+    .hero__bg::after {
+      content: '';
+      position: absolute; left: -60px; bottom: -60px;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.05) 0%, transparent 70%);
+    }
+
+    .hero__pattern {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .hero__inner {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+      align-items: center;
+      max-width: 1200px; margin: 0 auto; padding: 120px 24px 80px;
+      width: 100%;
+    }
+
+    .hero__content { color: var(--white); }
+
+    .hero__eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 24px;
+      font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--gold-light);
+    }
+    .hero__eyebrow::before {
+      content: ''; width: 28px; height: 2px;
+      background: var(--gold-light);
+    }
+
+    .hero__title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .hero__title em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero__desc {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,.75);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      max-width: 460px;
+    }
+
+    .hero__actions { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 48px; }
+
+    .hero__stats {
+      display: flex; gap: 32px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,.15);
+    }
+
+    .hero__stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem; font-weight: 700;
+      color: var(--gold-light);
+    }
+    .hero__stat-label {
+      font-size: .8rem; font-weight: 500;
+      color: rgba(255,255,255,.6);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+
+    /* Hero card panel */
+    .hero__card-panel {
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .hero__card {
+      background: rgba(255,255,255,.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 20px;
+      padding: 24px;
+      color: var(--white);
+      transition: var(--transition);
+    }
+    .hero__card:hover {
+      background: rgba(255,255,255,.15);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .hero__card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .hero__card-badge {
+      font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 50px;
+      background: var(--gold); color: var(--blue-dark);
+    }
+    .hero__card-badge.new { background: #22C55E; color: #fff; }
+
+    .hero__card-price {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem; font-weight: 700;
+      color: var(--gold-light);
+    }
+
+    .hero__card-title {
+      font-weight: 600; font-size: 1rem;
+      margin-bottom: 6px;
+    }
+    .hero__card-loc {
+      font-size: .85rem;
+      color: rgba(255,255,255,.6);
+      display: flex; align-items: center; gap: 4px;
+      margin-bottom: 14px;
+    }
+    .hero__card-features {
+      display: flex; gap: 16px;
+      font-size: .82rem;
+      color: rgba(255,255,255,.7);
+    }
+    .hero__card-features span { display: flex; align-items: center; gap: 4px; }
+
+    /* ── SEARCH BAR ──────────────────────────────── */
+    .search-bar {
+      background: var(--white);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      padding: 28px 32px;
+      margin: -48px auto 0;
+      position: relative; z-index: 10;
+      max-width: 1000px;
+    }
+
+    .search-bar__tabs {
+      display: flex; gap: 4px;
+      margin-bottom: 24px;
+    }
+
+    .search-tab {
+      padding: 8px 20px;
+      border-radius: 50px;
+      font-size: .875rem; font-weight: 600;
+      cursor: pointer; border: none;
+      background: transparent; color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .search-tab.active, .search-tab:hover {
+      background: var(--blue); color: var(--white);
+    }
+
+    .search-bar__fields {
+      display: grid; grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 16px; align-items: end;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: .75rem; font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+
+    .field-group input,
+    .field-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: .95rem;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--off-white);
+      appearance: none;
+      transition: var(--transition);
+      outline: none;
+    }
+    .field-group input:focus,
+    .field-group select:focus {
+      border-color: var(--blue);
+      background: var(--white);
+    }
+
+    .search-btn {
+      padding: 12px 28px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      color: var(--white);
+      border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+      transition: var(--transition);
+      box-shadow: 0 4px 16px rgba(0,75,135,.3);
+    }
+    .search-btn:hover {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,75,135,.4);
+    }
+
+    /* ── PROPERTIES GRID ─────────────────────────── */
+    .properties-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 48px;
+    }
+
+    .prop-card {
+      background: var(--white);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .prop-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-md);
+    }
+    .prop-card--featured {
+      grid-column: span 1;
+    }
+
+    .prop-card__img {
+      height: 220px;
+      position: relative;
+      overflow: hidden;
+    }
+    .prop-card__img-inner {
+      width: 100%; height: 100%;
+      background-size: cover; background-position: center;
+      transition: transform .6s cubic-bezier(.4,0,.2,1);
+    }
+    .prop-card:hover .prop-card__img-inner { transform: scale(1.06); }
+
+    /* Gradient photo placeholders using CSS */
+    .img--apt     { background: linear-gradient(160deg, #1a5276 0%, #2471a3 50%, #5499c9 100%); }
+    .img--villa   { background: linear-gradient(160deg, #1a4a2e 0%, #27784e 50%, #52be80 100%); }
+    .img--sea     { background: linear-gradient(160deg, #004B87 0%, #0077b6 50%, #48cae4 100%); }
+    .img--office  { background: linear-gradient(160deg, #3d1a7a 0%, #6c3fad 50%, #9b72cf 100%); }
+    .img--loft    { background: linear-gradient(160deg, #7a3a1a 0%, #c0672a 50%, #e8a06e 100%); }
+    .img--terrace { background: linear-gradient(160deg, #004B87 0%, #C9A84C 100%); }
+
+    .prop-card__img-inner::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.45) 0%, transparent 60%);
+    }
+
+    .prop-card__tag {
+      position: absolute; top: 14px; left: 14px;
+      z-index: 2;
+      font-size: .72rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 50px;
+    }
+    .tag--vendita  { background: var(--blue);  color: var(--white); }
+    .tag--affitto  { background: var(--gold);  color: var(--blue-dark); }
+    .tag--nuovo    { background: #22C55E;       color: var(--white); }
+
+    .prop-card__fav {
+      position: absolute; top: 14px; right: 14px; z-index: 2;
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,.9);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: var(--transition);
+    }
+    .prop-card__fav:hover { background: var(--white); transform: scale(1.1); }
+    .prop-card__fav svg { width: 16px; height: 16px; fill: none; stroke: var(--blue); stroke-width: 2; }
+
+    .prop-card__body { padding: 20px; }
+
+    .prop-card__price {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem; font-weight: 700;
+      color: var(--blue); margin-bottom: 6px;
+    }
+
+    .prop-card__title {
+      font-weight: 600; font-size: .975rem;
+      color: var(--text); margin-bottom: 6px;
+    }
+
+    .prop-card__loc {
+      display: flex; align-items: center; gap: 5px;
+      font-size: .825rem; color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .prop-card__divider {
+      height: 1px; background: var(--border);
+      margin-bottom: 14px;
+    }
+
+    .prop-card__features {
+      display: flex; gap: 14px;
+      font-size: .825rem; color: var(--text-muted);
+    }
+    .prop-card__feature { display: flex; align-items: center; gap: 5px; }
+
+    /* ── SERVICES ────────────────────────────────── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 48px;
+    }
+
+    .service-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 36px 28px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      text-align: center;
+    }
+    .service-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--blue);
+    }
+
+    .service-icon {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .service-icon svg { width: 30px; height: 30px; fill: none; stroke: var(--white); stroke-width: 1.8; }
+
+    .service-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem; font-weight: 700;
+      color: var(--blue-dark);
+      margin-bottom: 10px;
+    }
+    .service-desc {
+      font-size: .9rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ── WHY US ──────────────────────────────────── */
+    .why-inner {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 80px; align-items: center;
+    }
+
+    .why__visual {
+      position: relative;
+    }
+
+    .why__main-card {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 60%, var(--blue-light) 100%);
+      border-radius: 24px;
+      padding: 48px 40px;
+      color: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+    .why__main-card::before {
+      content: '';
+      position: absolute; right: -40px; top: -40px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.07);
+    }
+    .why__main-card::after {
+      content: '';
+      position: absolute; left: -30px; bottom: -30px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(201,168,76,.1);
+    }
+
+    .why__big-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 5rem; font-weight: 900;
+      color: var(--gold-light);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .why__big-label {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 24px;
+    }
+    .why__quote {
+      font-size: .9rem;
+      color: rgba(255,255,255,.65);
+      line-height: 1.65;
+      font-style: italic;
+      border-left: 3px solid var(--gold);
+      padding-left: 16px;
+    }
+
+    .why__floating {
+      position: absolute;
+      background: var(--white);
+      border-radius: 16px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow-md);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .why__floating--tl { top: -16px; left: -20px; }
+    .why__floating--br { bottom: -16px; right: -20px; }
+
+    .why__floating-icon {
+      width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .why__floating-icon--gold { background: rgba(201,168,76,.15); }
+    .why__floating-icon--blue { background: rgba(0,75,135,.1); }
+    .why__floating-icon svg { width: 20px; height: 20px; }
+
+    .why__floating-v  { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--blue-dark); line-height: 1; }
+    .why__floating-l  { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+
+    .why__items { margin-top: 40px; display: flex; flex-direction: column; gap: 20px; }
+
+    .why-item {
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .why-item__icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      background: rgba(0,75,135,.08);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .why-item__icon svg { width: 22px; height: 22px; fill: none; stroke: var(--blue); stroke-width: 1.8; }
+    .why-item__title { font-weight: 600; color: var(--text); margin-bottom: 4px; font-size: .975rem; }
+    .why-item__desc  { font-size: .875rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── TESTIMONIALS ────────────────────────────── */
+    .testimonials-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 24px; margin-top: 48px;
+    }
+
+    .testi-card {
+      background: var(--white);
+      border-radius: 20px; padding: 28px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .testi-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+
+    .testi-stars { display: flex; gap: 3px; margin-bottom: 14px; }
+    .testi-stars span { font-size: 1rem; color: var(--gold); }
+
+    .testi-text {
+      font-size: .925rem;
+      color: var(--text);
+      line-height: 1.7;
+      margin-bottom: 18px;
+      font-style: italic;
+    }
+
+    .testi-divider { height: 1px; background: var(--border); margin-bottom: 18px; }
+
+    .testi-author { display: flex; align-items: center; gap: 12px; }
+    .testi-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem; font-weight: 700; color: var(--white);
+      flex-shrink: 0;
+    }
+    .av--a { background: linear-gradient(135deg, var(--blue), var(--blue-light)); }
+    .av--b { background: linear-gradient(135deg, var(--gold), var(--gold-light)); }
+    .av--c { background: linear-gradient(135deg, #27784e, #52be80); }
+
+    .testi-name  { font-weight: 600; font-size: .9rem; color: var(--text); }
+    .testi-role  { font-size: .78rem; color: var(--text-muted); }
+
+    /* ── CTA BANNER ──────────────────────────────── */
+    .cta {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 50%, var(--blue-light) 100%);
+      padding: 80px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .cta::after {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,168,76,.15) 0%, transparent 70%);
+      right: -100px; top: -100px;
+    }
+    .cta__inner { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+    .cta__title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700; color: var(--white);
+      margin: 16px 0 14px;
+    }
+    .cta__desc {
+      color: rgba(255,255,255,.75);
+      line-height: 1.7; font-size: 1rem;
+      margin-bottom: 32px;
+    }
+    .cta__actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── CONTACT ─────────────────────────────────── */
+    .contact-inner {
+      display: grid; grid-template-columns: 1fr 1.4fr;
+      gap: 64px; align-items: start;
+    }
+
+    .contact-info { display: flex; flex-direction: column; gap: 24px; }
+
+    .contact-item {
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .contact-item__icon {
+      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .contact-item__icon svg { width: 22px; height: 22px; fill: none; stroke: var(--white); stroke-width: 1.8; }
+    .contact-item__label { font-size: .78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .contact-item__value { font-weight: 500; color: var(--text); }
+    .contact-item__value a { color: var(--blue); text-decoration: none; }
+    .contact-item__value a:hover { text-decoration: underline; }
+
+    .contact-form {
+      background: var(--white);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+    }
+
+    .contact-form h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem; font-weight: 700;
+      color: var(--blue-dark);
+      margin-bottom: 8px;
+    }
+    .contact-form p { font-size: .9rem; color: var(--text-muted); margin-bottom: 28px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: .78rem; font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 13px 16px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: .95rem;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--off-white);
+      appearance: none;
+      outline: none;
+      transition: var(--transition);
+      resize: none;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      border-color: var(--blue);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(0,75,135,.08);
+    }
+    .form-group textarea { height: 110px; }
+
+    .form-submit {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      color: var(--white);
+      border: none; border-radius: 12px;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 16px rgba(0,75,135,.3);
+    }
+    .form-submit:hover {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,75,135,.4);
+    }
+
+    /* ── FOOTER ──────────────────────────────────── */
+    .footer {
+      background: var(--blue-dark);
+      color: rgba(255,255,255,.7);
+      padding: 64px 24px 32px;
+    }
+
+    .footer__inner {
+      max-width: 1200px; margin: 0 auto;
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px; margin-bottom: 48px;
+    }
+
+    .footer__brand .brand { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--white); }
+    .footer__brand .sub   { font-size: .72rem; color: var(--gold-light); letter-spacing: .1em; text-transform: uppercase; }
+    .footer__brand p      { font-size: .875rem; line-height: 1.65; margin: 16px 0; }
+
+    .footer__socials { display: flex; gap: 10px; }
+    .footer__social {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.7);
+      text-decoration: none;
+      transition: var(--transition);
+      font-size: .8rem; font-weight: 700;
+    }
+    .footer__social:hover { background: var(--gold); color: var(--blue-dark); }
+
+    .footer__col h4 {
+      color: var(--white);
+      font-size: .875rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 16px;
+    }
+    .footer__col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer__col ul li a {
+      color: rgba(255,255,255,.6);
+      text-decoration: none;
+      font-size: .875rem;
+      transition: var(--transition);
+    }
+    .footer__col ul li a:hover { color: var(--gold-light); }
+
+    .footer__bottom {
+      max-width: 1200px; margin: 0 auto;
+      padding-top: 28px;
+      border-top: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+      font-size: .825rem;
+    }
+
+    .footer__bottom a { color: var(--gold-light); text-decoration: none; }
+
+    /* ── SECTION HEADER CENTER ───────────────────── */
+    .section-header { margin-bottom: 12px; }
+    .section-header--center { text-align: center; }
+    .section-header--center .gold-line { margin: 16px auto; }
+    .section-header--center .section-subtitle { margin: 0 auto; }
+
+    /* ── RESPONSIVE ──────────────────────────────── */
+    @media (max-width: 1024px) {
+      .hero__inner        { grid-template-columns: 1fr; gap: 40px; }
+      .hero__card-panel   { display: none; }
+      .why-inner          { grid-template-columns: 1fr; }
+      .why__visual        { display: none; }
+      .contact-inner      { grid-template-columns: 1fr; }
+      .footer__inner      { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .properties-grid    { grid-template-columns: 1fr; }
+      .services-grid      { grid-template-columns: 1fr; }
+      .testimonials-grid  { grid-template-columns: 1fr; }
+      .search-bar__fields { grid-template-columns: 1fr; }
+      .form-row           { grid-template-columns: 1fr; }
+      .footer__inner      { grid-template-columns: 1fr; }
+      .nav__links         { display: none; }
+      .section            { padding: 64px 0; }
+    }
+
+    /* ── ANIMATION ───────────────────────────────── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hero__content > * { animation: fadeInUp .7s ease both; }
+    .hero__content > *:nth-child(1) { animation-delay: .1s; }
+    .hero__content > *:nth-child(2) { animation-delay: .2s; }
+    .hero__content > *:nth-child(3) { animation-delay: .3s; }
+    .hero__content > *:nth-child(4) { animation-delay: .4s; }
+    .hero__content > *:nth-child(5) { animation-delay: .5s; }
+  </style>
+</head>
+<body>
+
+<!-- ░░ NAV ░░ -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="#" class="nav__logo">
+      <div class="nav__logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav__logo-text">
+        <div class="brand">Orlandi</div>
+        <div class="sub">Immobiliare</div>
+      </div>
+    </a>
+    <ul class="nav__links">
+      <li><a href="#annunci">Annunci</a></li>
+      <li><a href="#servizi">Servizi</a></li>
+      <li><a href="#agenzia">L'Agenzia</a></li>
+      <li><a href="#contatti">Contatti</a></li>
+    </ul>
+    <a href="#contatti" class="btn btn--primary nav__cta">📞 Chiamaci</a>
+  </div>
+</nav>
+
+<!-- ░░ HERO ░░ -->
+<section class="hero">
+  <div class="hero__bg"></div>
+  <div class="hero__pattern"></div>
+  <div class="hero__inner">
+    <div class="hero__content">
+      <div class="hero__eyebrow">Civitanova Marche &amp; dintorni</div>
+      <h1 class="hero__title">
+        Trova la tua<br/>
+        <em>casa ideale</em><br/>
+        con Orlandi
+      </h1>
+      <p class="hero__desc">
+        Dal 1985 siamo il punto di riferimento per compravendite e affitti a Civitanova Marche.
+        Professionalità, trasparenza e un portfolio esclusivo di proprietà selezionate.
+      </p>
+      <div class="hero__actions">
+        <a href="#annunci" class="btn btn--primary">🔍 Cerca Immobili</a>
+        <a href="#contatti" class="btn btn--outline">Valuta il tuo immobile</a>
+      </div>
+      <div class="hero__stats">
+        <div>
+          <div class="hero__stat-value">40+</div>
+          <div class="hero__stat-label">Anni di esperienza</div>
+        </div>
+        <div>
+          <div class="hero__stat-value">1.200+</div>
+          <div class="hero__stat-label">Immobili trattati</div>
+        </div>
+        <div>
+          <div class="hero__stat-value">98%</div>
+          <div class="hero__stat-label">Clienti soddisfatti</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature cards -->
+    <div class="hero__card-panel">
+      <div class="hero__card">
+        <div class="hero__card-header">
+          <span class="hero__card-badge new">Nuovo</span>
+          <span class="hero__card-price">€ 285.000</span>
+        </div>
+        <div class="hero__card-title">Appartamento Lungomare</div>
+        <div class="hero__card-loc">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Civitanova Marche Centro
+        </div>
+        <div class="hero__card-features">
+          <span>🛏 3 locali</span>
+          <span>🚿 2 bagni</span>
+          <span>📐 110 m²</span>
+        </div>
+      </div>
+      <div class="hero__card">
+        <div class="hero__card-header">
+          <span class="hero__card-badge">In evidenza</span>
+          <span class="hero__card-price">€ 1.200/mese</span>
+        </div>
+        <div class="hero__card-title">Villa con Giardino Privato</div>
+        <div class="hero__card-loc">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Civitanova Alta
+        </div>
+        <div class="hero__card-features">
+          <span>🛏 4 locali</span>
+          <span>🚿 2 bagni</span>
+          <span>📐 180 m²</span>
+        </div>
+      </div>
+      <div class="hero__card">
+        <div class="hero__card-header">
+          <span class="hero__card-badge">Vista Mare</span>
+          <span class="hero__card-price">€ 420.000</span>
+        </div>
+        <div class="hero__card-title">Attico panoramico fronte mare</div>
+        <div class="hero__card-loc">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Porto Civitanova
+        </div>
+        <div class="hero__card-features">
+          <span>🛏 2 locali</span>
+          <span>🚿 1 bagno</span>
+          <span>📐 75 m²</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ SEARCH BAR ░░ -->
+<div style="padding: 0 24px;">
+  <div class="search-bar">
+    <div class="search-bar__tabs">
+      <button class="search-tab active">Acquisto</button>
+      <button class="search-tab">Affitto</button>
+      <button class="search-tab">Valutazione</button>
+    </div>
+    <div class="search-bar__fields">
+      <div class="field-group">
+        <label>Zona / Quartiere</label>
+        <input type="text" placeholder="Es. Civitanova Centro, Porto, Alta..." />
+      </div>
+      <div class="field-group">
+        <label>Tipologia</label>
+        <select>
+          <option>Tutte le tipologie</option>
+          <option>Appartamento</option>
+          <option>Villa</option>
+          <option>Attico</option>
+          <option>Loft</option>
+          <option>Ufficio</option>
+          <option>Locale commerciale</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Budget massimo</label>
+        <select>
+          <option>Qualsiasi prezzo</option>
+          <option>Fino a €100.000</option>
+          <option>Fino a €200.000</option>
+          <option>Fino a €350.000</option>
+          <option>Fino a €500.000</option>
+          <option>Oltre €500.000</option>
+        </select>
+      </div>
+      <button class="search-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Cerca
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ PROPERTIES ░░ -->
+<section class="section" id="annunci">
+  <div class="container">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:8px;">
+      <div>
+        <div class="badge">✨ Immobili in evidenza</div>
+        <div class="section-title" style="margin-top:12px;">Proprietà selezionate</div>
+        <div class="gold-line"></div>
+        <p class="section-subtitle">Scopri il nostro portfolio di immobili esclusivi a Civitanova Marche e dintorni.</p>
+      </div>
+      <a href="#" class="btn btn--blue">Vedi tutti gli annunci →</a>
+    </div>
+
+    <div class="properties-grid">
+      <!-- Card 1 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--sea"></div>
+          <span class="prop-card__tag tag--vendita">Vendita</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 420.000</div>
+          <div class="prop-card__title">Attico panoramico fronte mare</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Porto Civitanova
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🛏 2 locali</div>
+            <div class="prop-card__feature">🚿 1 bagno</div>
+            <div class="prop-card__feature">📐 75 m²</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--villa"></div>
+          <span class="prop-card__tag tag--vendita">Vendita</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 580.000</div>
+          <div class="prop-card__title">Villa bifamiliare con giardino</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Civitanova Alta
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🛏 5 locali</div>
+            <div class="prop-card__feature">🚿 3 bagni</div>
+            <div class="prop-card__feature">📐 280 m²</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--apt"></div>
+          <span class="prop-card__tag tag--nuovo">Nuovo</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 285.000</div>
+          <div class="prop-card__title">Appartamento Lungomare luminoso</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Civitanova Marche Centro
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🛏 3 locali</div>
+            <div class="prop-card__feature">🚿 2 bagni</div>
+            <div class="prop-card__feature">📐 110 m²</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--affitto" style="background:linear-gradient(160deg,#5c3d1e 0%,#a0622a 50%,#d4935c 100%)"></div>
+          <span class="prop-card__tag tag--affitto">Affitto</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 800/mese</div>
+          <div class="prop-card__title">Bilocale moderno in centro</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Via Dalmazia, Civitanova
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🛏 2 locali</div>
+            <div class="prop-card__feature">🚿 1 bagno</div>
+            <div class="prop-card__feature">📐 60 m²</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--office"></div>
+          <span class="prop-card__tag tag--vendita">Vendita</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 195.000</div>
+          <div class="prop-card__title">Ufficio direzionale ristrutturato</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Centro Direzionale
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🏢 Open space</div>
+            <div class="prop-card__feature">🚿 2 bagni</div>
+            <div class="prop-card__feature">📐 130 m²</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--terrace"></div>
+          <span class="prop-card__tag tag--affitto">Affitto</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 1.200/mese</div>
+          <div class="prop-card__title">Villa con terrazza panoramica</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Civitanova Alta Panoramica
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🛏 4 locali</div>
+            <div class="prop-card__feature">🚿 2 bagni</div>
+            <div class="prop-card__feature">📐 180 m²</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ SERVICES ░░ -->
+<section class="section section--gray" id="servizi">
+  <div class="container">
+    <div class="section-header section-header--center">
+      <div class="badge">🏆 I nostri servizi</div>
+      <div class="section-title" style="margin-top:12px;">Tutto ciò di cui hai bisogno</div>
+      <div class="gold-line"></div>
+      <p class="section-subtitle">Un team di professionisti al tuo fianco in ogni fase della compravendita o locazione.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+        </div>
+        <div class="service-title">Compravendita</div>
+        <p class="service-desc">Ti guidiamo dalla ricerca dell'immobile ideale fino al rogito notarile, con totale assistenza burocratica e legale.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="service-title">Affitti &amp; Locazioni</div>
+        <p class="service-desc">Gestione completa degli affitti: pubblicità, selezione inquilini, contrattualistica e gestione dei pagamenti.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <div class="service-title">Valutazione Gratuita</div>
+        <p class="service-desc">Perizia professionale del tuo immobile basata su analisi di mercato locale aggiornata. Senza impegno.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div class="service-title">Consulenza Mutui</div>
+        <p class="service-desc">Collaboriamo con i principali istituti bancari per trovare le condizioni di mutuo più vantaggiose per te.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </div>
+        <div class="service-title">Immobili Commerciali</div>
+        <p class="service-desc">Portfolio dedicato a negozi, uffici, capannoni e locali commerciali nel territorio marchigiano.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="service-title">Assistenza Post-Vendita</div>
+        <p class="service-desc">Il nostro rapporto non finisce con il contratto. Ti supportiamo anche dopo l'acquisto per ogni necessità.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ WHY US ░░ -->
+<section class="section" id="agenzia">
+  <div class="container">
+    <div class="why-inner">
+      <div class="why__visual">
+        <div class="why__main-card">
+          <div class="why__big-number">40+</div>
+          <div class="why__big-label">Anni di storia a Civitanova</div>
+          <p class="why__quote">
+            "La fiducia dei nostri clienti è il fondamento su cui abbiamo costruito la nostra reputazione nel mercato immobiliare marchigiano."
+          </p>
+          <div style="margin-top:32px; display:flex; gap:24px;">
+            <div>
+              <div style="font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; color:var(--gold-light);">1.200+</div>
+              <div style="font-size:.78rem; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:.06em;">Immobili venduti</div>
+            </div>
+            <div>
+              <div style="font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; color:var(--gold-light);">98%</div>
+              <div style="font-size:.78rem; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:.06em;">Soddisfazione</div>
+            </div>
+          </div>
+        </div>
+        <div class="why__floating why__floating--tl">
+          <div class="why__floating-icon why__floating-icon--gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div>
+            <div class="why__floating-v">★ 4.9</div>
+            <div class="why__floating-l">Google Reviews</div>
+          </div>
+        </div>
+        <div class="why__floating why__floating--br">
+          <div class="why__floating-icon why__floating-icon--blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#004B87" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/></svg>
+          </div>
+          <div>
+            <div class="why__floating-v">85+</div>
+            <div class="why__floating-l">Annunci attivi</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="badge">💼 Perché sceglierci</div>
+        <h2 class="section-title" style="margin-top:12px;">
+          Esperienza e passione<br/>al tuo servizio
+        </h2>
+        <div class="gold-line"></div>
+        <p class="section-subtitle">
+          Siamo una realtà locale consolidata. Conosciamo ogni angolo di Civitanova Marche
+          e del territorio marchigiano. Il nostro obiettivo è trovare l'immobile giusto per te,
+          non vendere il primo disponibile.
+        </p>
+        <div class="why__items">
+          <div class="why-item">
+            <div class="why-item__icon">
+              <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+              <div class="why-item__title">Trasparenza totale</div>
+              <div class="why-item__desc">Nessun costo nascosto, nessuna sorpresa. Ogni fase è chiara e documentata.</div>
+            </div>
+          </div>
+          <div class="why-item">
+            <div class="why-item__icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="why-item__title">Risposta in 24 ore</div>
+              <div class="why-item__desc">Il nostro team è sempre disponibile. Rispondiamo a ogni richiesta entro 24 ore.</div>
+            </div>
+          </div>
+          <div class="why-item">
+            <div class="why-item__icon">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+              <div class="why-item__title">Team di esperti locali</div>
+              <div class="why-item__desc">Agenti con anni di esperienza sul territorio, formati e aggiornati continuamente.</div>
+            </div>
+          </div>
+          <div class="why-item">
+            <div class="why-item__icon">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div class="why-item__title">Sicurezza garantita</div>
+              <div class="why-item__desc">Verifichiamo ogni aspetto legale e urbanistico prima di procedere con qualsiasi trattativa.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ TESTIMONIALS ░░ -->
+<section class="section section--gray">
+  <div class="container">
+    <div class="section-header section-header--center">
+      <div class="badge">💬 Recensioni clienti</div>
+      <h2 class="section-title" style="margin-top:12px;">Cosa dicono di noi</h2>
+      <div class="gold-line"></div>
+      <p class="section-subtitle">La soddisfazione dei nostri clienti è la nostra migliore referenza.</p>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testi-card">
+        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="testi-text">"Esperienza fantastica! L'agenzia Orlandi ci ha trovato l'appartamento dei sogni in pochissimo tempo. Professionali e sempre disponibili."</p>
+        <div class="testi-divider"></div>
+        <div class="testi-author">
+          <div class="testi-avatar av--a">M</div>
+          <div><div class="testi-name">Marco Ferretti</div><div class="testi-role">Acquisto appartamento · 2024</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="testi-text">"Ho venduto la mia casa in meno di tre settimane al prezzo che speravo. Orlandi conosce perfettamente il mercato locale. Consigliatissimi!"</p>
+        <div class="testi-divider"></div>
+        <div class="testi-author">
+          <div class="testi-avatar av--b">S</div>
+          <div><div class="testi-name">Stefania Morelli</div><div class="testi-role">Vendita villa · 2024</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+        <p class="testi-text">"Ci hanno assistito dall'inizio alla fine, anche con la pratica del mutuo. Un servizio a 360° che va ben oltre la semplice intermediazione."</p>
+        <div class="testi-divider"></div>
+        <div class="testi-author">
+          <div class="testi-avatar av--c">L</div>
+          <div><div class="testi-name">Luca &amp; Anna Benedetti</div><div class="testi-role">Prima casa · 2023</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ CTA BANNER ░░ -->
+<section class="cta">
+  <div class="cta__inner">
+    <div class="badge">📋 Valutazione gratuita</div>
+    <h2 class="cta__title">Vuoi vendere o affittare il tuo immobile?</h2>
+    <p class="cta__desc">
+      Richiedi una valutazione gratuita e senza impegno. I nostri esperti ti forniranno
+      una stima accurata basata sul mercato attuale di Civitanova Marche.
+    </p>
+    <div class="cta__actions">
+      <a href="#contatti" class="btn btn--primary">Richiedi valutazione gratuita</a>
+      <a href="tel:+39073400000" class="btn btn--outline">📞 Chiamaci ora</a>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ CONTACT ░░ -->
+<section class="section" id="contatti">
+  <div class="container">
+    <div class="contact-inner">
+      <div>
+        <div class="badge">📍 Dove siamo</div>
+        <h2 class="section-title" style="margin-top:12px;">Contattaci</h2>
+        <div class="gold-line"></div>
+        <p class="section-subtitle" style="margin-bottom:36px;">
+          Siamo a Civitanova Marche e pronti ad aiutarti. Vieni a trovarci in agenzia o scrivici.
+        </p>
+        <div class="contact-info">
+          <div class="contact-item">
+            <div class="contact-item__icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <div>
+              <div class="contact-item__label">Indirizzo</div>
+              <div class="contact-item__value">Via Roma 42, 62012 Civitanova Marche (MC)</div>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-item__icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.6 1.24h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></svg></div>
+            <div>
+              <div class="contact-item__label">Telefono</div>
+              <div class="contact-item__value"><a href="tel:+39073400000">+39 0734 000 000</a></div>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-item__icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+            <div>
+              <div class="contact-item__label">Email</div>
+              <div class="contact-item__value"><a href="mailto:info@immobiliareorlandi.it">info@immobiliareorlandi.it</a></div>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-item__icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div>
+              <div class="contact-item__label">Orari</div>
+              <div class="contact-item__value">Lun–Ven 9:00–13:00 / 15:30–19:30<br/>Sab 9:30–13:00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-form">
+        <h3>Invia una richiesta</h3>
+        <p>Compila il modulo e ti ricontatteremo entro 24 ore.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nome</label>
+            <input type="text" placeholder="Mario" />
+          </div>
+          <div class="form-group">
+            <label>Cognome</label>
+            <input type="text" placeholder="Rossi" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" placeholder="mario@email.it" />
+          </div>
+          <div class="form-group">
+            <label>Telefono</label>
+            <input type="tel" placeholder="+39 333 000 0000" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Interesse</label>
+          <select>
+            <option>Acquisto immobile</option>
+            <option>Vendita immobile</option>
+            <option>Affitto</option>
+            <option>Valutazione gratuita</option>
+            <option>Consulenza mutuo</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Messaggio</label>
+          <textarea placeholder="Descrivi brevemente la tua richiesta..."></textarea>
+        </div>
+        <button class="form-submit">✉️ Invia richiesta</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ FOOTER ░░ -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <div class="brand">Immobiliare Orlandi</div>
+      <div class="sub">Civitanova Marche</div>
+      <p>Dal 1985 il tuo punto di riferimento per compravendite, affitti e investimenti immobiliari nelle Marche.</p>
+      <div class="footer__socials">
+        <a href="#" class="footer__social">f</a>
+        <a href="#" class="footer__social">in</a>
+        <a href="#" class="footer__social">ig</a>
+        <a href="#" class="footer__social">yt</a>
+      </div>
+    </div>
+    <div class="footer__col">
+      <h4>Immobili</h4>
+      <ul>
+        <li><a href="#">Appartamenti</a></li>
+        <li><a href="#">Ville</a></li>
+        <li><a href="#">Attici</a></li>
+        <li><a href="#">Immobili commerciali</a></li>
+        <li><a href="#">Affitti</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Servizi</h4>
+      <ul>
+        <li><a href="#">Compravendita</a></li>
+        <li><a href="#">Valutazione gratuita</a></li>
+        <li><a href="#">Consulenza mutui</a></li>
+        <li><a href="#">Gestione locazioni</a></li>
+        <li><a href="#">Assistenza legale</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Agenzia</h4>
+      <ul>
+        <li><a href="#">Chi siamo</a></li>
+        <li><a href="#">Il nostro team</a></li>
+        <li><a href="#">Recensioni</a></li>
+        <li><a href="#">Blog immobiliare</a></li>
+        <li><a href="#">Contatti</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer__bottom">
+    <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
+    <span>
+      <a href="#">Privacy Policy</a> · <a href="#">Cookie Policy</a> · <a href="#">Note legali</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Smooth tab switching
+  document.querySelectorAll('.search-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  // Nav shadow on scroll
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (window.scrollY > 40) {
+      nav.style.boxShadow = '0 4px 24px rgba(0,50,97,.3)';
+    } else {
+      nav.style.boxShadow = 'none';
+    }
+  });
+</script>
+</body>
+</html>
