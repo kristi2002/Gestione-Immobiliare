@@ -47,6 +47,8 @@ const SocialPage = lazy(() => import('@/features/social/SocialPage'));
 const AutomationsPage = lazy(() => import('@/features/automations/AutomationsPage'));
 const PlaceholderPage = lazy(() => import('@/pages/PlaceholderPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
+const Login2FAPage = lazy(() => import('@/features/auth/Login2FAPage'));
 
 /** view key → real page element. Keys in this map become real routes; every
  * other nav item falls through to the placeholder. */
@@ -139,18 +141,19 @@ const peopleRoutes: RouteObject[] = ALL_NAV_ITEMS.filter((item) => item.key in F
   element: <RequireView viewKey={item.key}>{FEATURE_PAGES[item.key]}</RequireView>,
 }));
 
-export const router = createBrowserRouter(
-  [
-    {
-      element: <GatedLayout />,
-      children: [
-        { index: true, element: <DashboardPage /> },
-        ...propertyRoutes,
-        ...peopleRoutes,
-        ...placeholderRoutes,
-        { path: '*', element: <NotFoundPage /> },
-      ],
-    },
-  ],
-  { basename: '/app' },
-);
+export const router = createBrowserRouter([
+  // Public routes — must render outside GatedLayout/AuthProvider, since the
+  // user has no session yet when reaching them.
+  { path: 'login', element: <LoginPage /> },
+  { path: 'login/2fa', element: <Login2FAPage /> },
+  {
+    element: <GatedLayout />,
+    children: [
+      { index: true, element: <DashboardPage /> },
+      ...propertyRoutes,
+      ...peopleRoutes,
+      ...placeholderRoutes,
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+]);
