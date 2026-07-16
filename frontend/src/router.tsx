@@ -2,6 +2,7 @@ import { lazy, type ReactElement } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { IntroGate } from '@/features/intro/IntroGate';
 import { RequireView } from '@/features/auth/RequireView';
 import { ALL_NAV_ITEMS } from '@/config/navigation';
 
@@ -95,7 +96,9 @@ const IMPLEMENTED = new Set<string>(['dashboard', 'properties', ...Object.keys(F
 function GatedLayout() {
   return (
     <AuthProvider>
-      <AppLayout />
+      <IntroGate>
+        <AppLayout />
+      </IntroGate>
     </AuthProvider>
   );
 }
