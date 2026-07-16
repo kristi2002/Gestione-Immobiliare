@@ -1,4 +1,5 @@
 import { Target, Mail, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +79,8 @@ const columns: Column<Lead>[] = [
 ];
 
 export function LeadsTable({ items, isLoading }: { items: Lead[] | undefined; isLoading: boolean }) {
+  const navigate = useNavigate();
+
   return (
     <Card className="p-2">
       <DataTable
@@ -86,6 +89,7 @@ export function LeadsTable({ items, isLoading }: { items: Lead[] | undefined; is
         isLoading={isLoading}
         rowKey={(l) => l.id}
         skeletonRows={8}
+        onRowClick={(l) => navigate(`/leads/${l.id}/edit`)}
         empty={{ icon: Target, title: 'Nessun lead trovato', description: 'Prova a modificare i filtri.' }}
       />
     </Card>

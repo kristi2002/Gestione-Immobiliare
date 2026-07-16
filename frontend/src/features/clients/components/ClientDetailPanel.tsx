@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Phone, Mail, Building2, UserRound, ExternalLink, MousePointerClick } from 'lucide-react';
+import { Phone, Mail, Building2, UserRound, ExternalLink, MousePointerClick, Pencil } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -108,12 +108,20 @@ export function ClientDetailPanel({ clientId }: { clientId: number | null }) {
         )}
       </div>
 
-      <Button className="mt-6 w-full" asChild>
-        <a href={`/index.php?view=client_profile&id=${client.id}`}>
-          <ExternalLink className="size-4" />
-          Visualizza Completo
-        </a>
-      </Button>
+      <div className="mt-6 flex gap-2">
+        <Button variant="outline" asChild>
+          <Link to={`/clients/${client.id}/edit`}>
+            <Pencil className="size-4" />
+            Modifica
+          </Link>
+        </Button>
+        <Button className="flex-1" asChild>
+          <a href={`/index.php?view=client_profile&id=${client.id}`}>
+            <ExternalLink className="size-4" />
+            Visualizza Completo
+          </a>
+        </Button>
+      </div>
     </Card>
   );
 }

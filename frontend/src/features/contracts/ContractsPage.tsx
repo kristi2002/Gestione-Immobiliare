@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Search, ScrollText, Home } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -83,6 +84,7 @@ const columns: Column<Contract>[] = [
 ];
 
 export default function ContractsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
@@ -100,10 +102,10 @@ export default function ContractsPage() {
         subtitle="Locazioni, compravendite e mandati"
         actions={
           <Button asChild>
-            <a href="/index.php?view=contract_edit">
+            <Link to="/contracts/new">
               <Plus className="size-4" />
               Nuovo Contratto
-            </a>
+            </Link>
           </Button>
         }
       />
@@ -134,6 +136,7 @@ export default function ContractsPage() {
             isLoading={isLoading}
             rowKey={(c) => c.id}
             skeletonRows={8}
+            onRowClick={(c) => navigate(`/contracts/${c.id}/edit`)}
             empty={{ icon: ScrollText, title: 'Nessun contratto', description: 'Prova a modificare i filtri.' }}
           />
         </Card>

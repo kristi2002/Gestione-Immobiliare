@@ -1,4 +1,5 @@
 import { Bell, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Badge } from '@/components/ui/badge';
 import type { Column } from '@/components/common/DataTable';
@@ -85,6 +86,7 @@ const columns: Column<Reminder>[] = [
 ];
 
 export default function RemindersPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<Reminder>
       title="Promemoria"
@@ -102,8 +104,9 @@ export default function RemindersPage() {
           { value: 'completed', label: 'Completati' },
         ],
       }}
-      newHref="/index.php?view=reminders"
+      newTo="/reminders/new"
       newLabel="Nuovo Promemoria"
+      onRowClick={(r) => navigate(`/reminders/${r.id}/edit`)}
       empty={{ icon: Bell, title: 'Nessun promemoria', description: 'Crea il primo promemoria.' }}
     />
   );

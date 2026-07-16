@@ -1,18 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 1 — build the React admin SPA (served under /app in the final image).
-# glibc base to match the Debian runtime (avoids musl rollup/esbuild binaries).
-# Uses `npm install` (not `npm ci`) so linux-native optional deps resolve even
-# when package-lock.json was generated on another OS.
-# ─────────────────────────────────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS frontend-build
-WORKDIR /build
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install --no-audit --no-fund
-COPY frontend/ ./
-RUN npm run build
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage 2 — PHP/Apache runtime
+# PHP/Apache runtime. The app is the legacy PHP admin (index.php shell + vanilla
+# JS in assets/js/*). The React SPA migration (frontend/) was abandoned — its
+# source stays in the repo but is neither built nor copied into the image, so
+# index.php is what Apache serves at "/".
 # ─────────────────────────────────────────────────────────────────────────────
 FROM php:8.3-apache-bookworm
 
@@ -127,11 +117,6 @@ EOF
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 COPY . /var/www/html/
-
-# Built React admin SPA → served at /app (its Vite base + router basename).
-# The raw frontend/ source that `COPY .` also brought in is blocked from the web
-# by the root .htaccess (RewriteRule ^frontend/ - [F]).
-COPY --from=frontend-build /build/dist /var/www/html/app
 
 # Install PHP dependencies (production only — no dev tools in image)
 # Using `composer update` so Docker regenerates composer.lock from composer.json

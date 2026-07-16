@@ -247,13 +247,16 @@ function validateBuildingInput(array $data): array
     $name       = trim($data['name'] ?? '');
     $address    = trim($data['address'] ?? '');
     $city       = trim($data['city'] ?? '');
-    $totalUnits = isset($data['total_units']) && $data['total_units'] !== '' ? (int) $data['total_units'] : null;
+    // total_units is NOT NULL (no default) in the buildings table — default
+    // to 0 rather than null when left blank, or the INSERT/UPDATE fails with
+    // a raw "Column 'total_units' cannot be null" integrity-constraint error.
+    $totalUnits = isset($data['total_units']) && $data['total_units'] !== '' ? (int) $data['total_units'] : 0;
     $notes      = trim($data['notes'] ?? '') ?: null;
 
     if ($name === '') apiError('Nome edificio obbligatorio.');
     if ($address === '') apiError('Indirizzo obbligatorio.');
     if ($city === '') apiError('Città obbligatoria.');
-    if ($totalUnits !== null && $totalUnits < 0) apiError('Numero unità non valido.');
+    if ($totalUnits < 0) apiError('Numero unità non valido.');
 
     return [
         'name'        => $name,

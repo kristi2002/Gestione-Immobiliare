@@ -1,4 +1,5 @@
 import { Truck, Mail, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Rating } from '@/components/common/Rating';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,7 @@ const columns: Column<Supplier>[] = [
 ];
 
 export default function SuppliersPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<Supplier>
       title="Fornitori"
@@ -57,8 +59,9 @@ export default function SuppliersPage() {
       rowKey={(s) => s.id}
       itemLabel="fornitori"
       searchPlaceholder="Cerca per nome o categoria…"
-      newHref="/index.php?view=suppliers"
+      newTo="/suppliers/new"
       newLabel="Nuovo Fornitore"
+      onRowClick={(s) => navigate(`/suppliers/${s.id}/edit`)}
       empty={{ icon: Truck, title: 'Nessun fornitore', description: 'Aggiungi il primo fornitore.' }}
     />
   );

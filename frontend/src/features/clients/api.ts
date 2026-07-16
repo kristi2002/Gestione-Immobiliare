@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { AgentOption, Client, ClientStats, Paginated } from '@/types/people';
 
@@ -34,6 +34,17 @@ export function useClients(filters: ClientFilters) {
   });
 }
 
+/** Full active-client list for a form's "select a proprietario" dropdown. */
+export function useClientOptions() {
+  return useQuery({
+    queryKey: [...clientKeys.all, 'options'] as const,
+    queryFn: ({ signal }) =>
+      api.get<Paginated<Client>>('clients.php', { params: { status: 'active', page: 1, limit: 1000 }, signal }),
+    staleTime: 5 * 60_000,
+    select: (data) => data.items,
+  });
+}
+
 export function useClientStats() {
   return useQuery({
     queryKey: clientKeys.stats,
@@ -46,6 +57,33 @@ export function useClient(id: number | null) {
     queryKey: clientKeys.detail(id ?? 0),
     queryFn: ({ signal }) => api.get<Client>('clients.php', { params: { id: id! }, signal }),
     enabled: !!id && id > 0,
+  });
+}
+
+export interface ClientFormValues {
+  name: string;
+  surname: string;
+  codice_fiscale: string;
+  phone: string;
+  email: string;
+  status: string;
+  assigned_agent_id: string;
+  internal_notes: string;
+}
+
+export function useCreateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: ClientFormValues) => api.post<Client>('clients.php', values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: clientKeys.all }),
+  });
+}
+
+export function useUpdateClient(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: ClientFormValues) => api.put<Client>('clients.php', values, { params: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: clientKeys.all }),
   });
 }
 

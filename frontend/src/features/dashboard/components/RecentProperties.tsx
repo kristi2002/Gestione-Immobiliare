@@ -1,4 +1,5 @@
 import { Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -61,7 +62,7 @@ export function RecentProperties({ data, isLoading }: Props) {
       <CardHeader>
         <CardTitle>Immobili Recenti</CardTitle>
         <Button variant="ghost" size="sm" asChild>
-          <a href="/app/properties">Vedi tutti</a>
+          <Link to="/properties">Vedi tutti</Link>
         </Button>
       </CardHeader>
 

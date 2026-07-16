@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -39,10 +40,10 @@ export default function ClientsPage() {
         subtitle="Gestione proprietari immobiliari"
         actions={
           <Button asChild>
-            <a href="/index.php?view=client_edit">
+            <Link to="/clients/new">
               <Plus className="size-4" />
               Nuovo Proprietario
-            </a>
+            </Link>
           </Button>
         }
       />

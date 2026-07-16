@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -41,10 +42,10 @@ export default function PaymentsPage() {
         subtitle="Registro incassi, canoni e transazioni"
         actions={
           <Button asChild>
-            <a href="/index.php?view=payment_edit">
+            <Link to="/payments/new">
               <Plus className="size-4" />
               Registra Pagamento
-            </a>
+            </Link>
           </Button>
         }
       />

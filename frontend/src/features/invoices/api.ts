@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import type { Invoice, Paginated } from '@/types/finance';
 
@@ -11,7 +11,45 @@ export interface InvoiceFilters {
 export const invoiceKeys = {
   all: ['invoices'] as const,
   list: (f: InvoiceFilters) => [...invoiceKeys.all, 'list', f] as const,
+  detail: (id: number) => [...invoiceKeys.all, 'detail', id] as const,
 };
+
+export interface InvoiceFormValues {
+  client_id: string;
+  lead_id: string;
+  description: string;
+  amount: string;
+  vat_rate: string;
+  status: string;
+  issue_date: string;
+  due_date: string;
+  paid_date: string;
+  notes: string;
+}
+
+export function useInvoice(id: number | undefined) {
+  return useQuery({
+    queryKey: invoiceKeys.detail(id ?? 0),
+    queryFn: ({ signal }) => api.get<Invoice>('invoices.php', { params: { id }, signal }),
+    enabled: id != null,
+  });
+}
+
+export function useCreateInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: InvoiceFormValues) => api.post<Invoice>('invoices.php', values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: invoiceKeys.all }),
+  });
+}
+
+export function useUpdateInvoice(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: InvoiceFormValues) => api.put<Invoice>('invoices.php', values, { params: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: invoiceKeys.all }),
+  });
+}
 
 /** Full set (capped) for computing header KPIs — no stats endpoint exists. */
 export function useInvoiceAggregate() {

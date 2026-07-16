@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Receipt, Euro, CheckCircle2, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -60,6 +61,7 @@ const columns: Column<Invoice>[] = [
 ];
 
 export default function InvoicesPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
 
@@ -75,10 +77,10 @@ export default function InvoicesPage() {
         subtitle="Fatturazione e incassi"
         actions={
           <Button asChild>
-            <a href="/index.php?view=invoice_edit">
+            <Link to="/invoices/new">
               <Plus className="size-4" />
               Nuova Fattura
-            </a>
+            </Link>
           </Button>
         }
       />
@@ -114,6 +116,7 @@ export default function InvoicesPage() {
             isLoading={isLoading}
             rowKey={(i) => i.id}
             skeletonRows={8}
+            onRowClick={(i) => navigate(`/invoices/${i.id}/edit`)}
             empty={{ icon: Receipt, title: 'Nessuna fattura', description: 'Prova a modificare i filtri.' }}
           />
         </Card>

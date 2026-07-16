@@ -12,9 +12,9 @@
     --color-primary:        #3186d5;   /* azure accent (buttons, active nav) */
     --color-primary-dark:   #276fb4;
     --color-primary-light:  #e3eefb;
-    --color-sidebar-bg:     #222834;   /* flat slate-navy sidebar */
-    --color-sidebar-hover:  rgba(255,255,255,0.07);
-    --color-sidebar-active: #3186d5;
+    --color-sidebar-bg:     #06224F;   /* dark navy sidebar (ported from React design) */
+    --color-sidebar-hover:  rgba(255,255,255,0.1);
+    --color-sidebar-active: #0B3D91;   /* royal-blue active pill */
     --color-bg:             #e9eef5;   /* soft blue-gray canvas */
     --color-surface:        #ffffff;
     --color-text:           #1f2a3a;
@@ -95,7 +95,7 @@ a.sb-profile:hover { background: rgba(255, 255, 255, 0.1); }
 /* Nav — flat icon menu with section labels */
 .sidebar-nav { padding: 6px 12px 12px; }
 details.nav-group > summary { padding: 13px 10px 5px; }
-.nav-link { font-size: 13.5px; border-radius: 10px; }
+.nav-link { font-size: 14px; border-radius: 12px; }
 
 /* --- Topbar: floating white card carrying the page title --- */
 .topbar {

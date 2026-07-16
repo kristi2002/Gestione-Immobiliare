@@ -1,4 +1,5 @@
 import { CalendarCheck, Home, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Badge } from '@/components/ui/badge';
 import type { Column } from '@/components/common/DataTable';
@@ -68,6 +69,7 @@ const columns: Column<Appointment>[] = [
 ];
 
 export default function AppointmentsPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<Appointment>
       title="Visite"
@@ -86,8 +88,9 @@ export default function AppointmentsPage() {
           { value: 'cancelled', label: 'Annullate' },
         ],
       }}
-      newHref="/index.php?view=appointment_edit"
+      newTo="/appointments/new"
       newLabel="Nuova Visita"
+      onRowClick={(a) => navigate(`/appointments/${a.id}/edit`)}
       empty={{ icon: CalendarCheck, title: 'Nessuna visita', description: 'Pianifica il primo appuntamento.' }}
     />
   );

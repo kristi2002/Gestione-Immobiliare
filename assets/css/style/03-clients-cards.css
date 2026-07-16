@@ -997,6 +997,13 @@ body.nav-open {
     background: #f8fafc;
 }
 
+/* Chiavi cards emit a single action button in the footer. The default
+   space-between pins a lone child to the left; right-align it instead so the
+   "Modifica" button sits at the right edge (see views/keys.html → .keys-view). */
+.keys-view .entity-card__footer {
+    justify-content: flex-end;
+}
+
 .entity-card__stat {
     display: flex;
     align-items: center;

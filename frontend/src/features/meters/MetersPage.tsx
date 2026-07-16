@@ -1,4 +1,5 @@
 import { Gauge, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Badge } from '@/components/ui/badge';
 import type { Column } from '@/components/common/DataTable';
@@ -51,6 +52,7 @@ const columns: Column<MeterReading>[] = [
 ];
 
 export default function MetersPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<MeterReading>
       title="Contatori"
@@ -60,8 +62,9 @@ export default function MetersPage() {
       rowKey={(m) => m.id}
       itemLabel="letture"
       searchPlaceholder="Cerca per immobile…"
-      newHref="/index.php?view=meters"
+      newTo="/meters/new"
       newLabel="Nuova Lettura"
+      onRowClick={(m) => navigate(`/meters/${m.id}/edit`)}
       empty={{ icon: Gauge, title: 'Nessuna lettura', description: 'Registra la prima lettura.' }}
     />
   );

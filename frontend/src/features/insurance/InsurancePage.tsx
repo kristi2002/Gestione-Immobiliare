@@ -1,4 +1,5 @@
 import { ShieldCheck, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import type { Column } from '@/components/common/DataTable';
 import { formatCurrency, formatDate } from '@/lib/format';
@@ -45,6 +46,7 @@ const columns: Column<InsurancePolicy>[] = [
 ];
 
 export default function InsurancePage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<InsurancePolicy>
       title="Assicurazioni"
@@ -54,8 +56,9 @@ export default function InsurancePage() {
       rowKey={(p) => p.id}
       itemLabel="polizze"
       searchPlaceholder="Cerca per assicuratore o immobile…"
-      newHref="/index.php?view=insurance"
+      newTo="/insurance/new"
       newLabel="Nuova Polizza"
+      onRowClick={(p) => navigate(`/insurance/${p.id}/edit`)}
       empty={{ icon: ShieldCheck, title: 'Nessuna polizza', description: 'Aggiungi la prima polizza.' }}
     />
   );
