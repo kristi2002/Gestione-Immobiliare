@@ -3,11 +3,11 @@ import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/common/ErrorState';
 import type { Lead, LeadStatus } from '@/types/people';
 import { KANBAN_COLUMNS } from '../config';
-import { useBoardLeads, useMoveLead } from '../api';
+import { useMoveLead, type useBoardLeads } from '../api';
 import { LeadColumn } from './LeadColumn';
 
-export function LeadKanban() {
-  const { byStatus, counts, isLoading, isError, refetch } = useBoardLeads();
+export function LeadKanban({ board }: { board: ReturnType<typeof useBoardLeads> }) {
+  const { byStatus, counts, isLoading, isError, refetch } = board;
   const move = useMoveLead();
   const dragged = useRef<Lead | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);

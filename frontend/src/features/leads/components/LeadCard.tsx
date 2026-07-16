@@ -1,4 +1,5 @@
 import { Home, Clock, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { initials } from '@/lib/format';
@@ -15,12 +16,14 @@ interface Props {
 
 export function LeadCard({ lead, dot, onDragStart, onDragEnd, isDragging }: Props) {
   const budget = budgetRange(lead);
+  const navigate = useNavigate();
 
   return (
     <article
       draggable
       onDragStart={() => onDragStart(lead)}
       onDragEnd={onDragEnd}
+      onClick={() => navigate(`/leads/${lead.id}/edit`)}
       className={cn(
         'group cursor-grab rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-all active:cursor-grabbing',
         'hover:border-primary/30 hover:shadow-card',

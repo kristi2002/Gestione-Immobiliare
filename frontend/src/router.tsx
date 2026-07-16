@@ -12,6 +12,7 @@ const PropertiesPage = lazy(() => import('@/features/properties/PropertiesPage')
 const PropertyDetailPage = lazy(() => import('@/features/properties/PropertyDetailPage'));
 const ClientsPage = lazy(() => import('@/features/clients/ClientsPage'));
 const LeadsPage = lazy(() => import('@/features/leads/LeadsPage'));
+const LeadFormPage = lazy(() => import('@/features/leads/LeadFormPage'));
 const TenantsPage = lazy(() => import('@/features/tenants/TenantsPage'));
 const AgentsPage = lazy(() => import('@/features/agents/AgentsPage'));
 const ContractsPage = lazy(() => import('@/features/contracts/ContractsPage'));
@@ -141,6 +142,27 @@ const peopleRoutes: RouteObject[] = ALL_NAV_ITEMS.filter((item) => item.key in F
   element: <RequireView viewKey={item.key}>{FEATURE_PAGES[item.key]}</RequireView>,
 }));
 
+// Lead create/edit — gated by "lead_edit", the backend's own distinct
+// permission key for this action (separate from "leads", the list view).
+const leadFormRoutes: RouteObject[] = [
+  {
+    path: 'leads/new',
+    element: (
+      <RequireView viewKey="lead_edit">
+        <LeadFormPage />
+      </RequireView>
+    ),
+  },
+  {
+    path: 'leads/:id/edit',
+    element: (
+      <RequireView viewKey="lead_edit">
+        <LeadFormPage />
+      </RequireView>
+    ),
+  },
+];
+
 export const router = createBrowserRouter([
   // Public routes — must render outside GatedLayout/AuthProvider, since the
   // user has no session yet when reaching them.
@@ -151,6 +173,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       ...propertyRoutes,
+      ...leadFormRoutes,
       ...peopleRoutes,
       ...placeholderRoutes,
       { path: '*', element: <NotFoundPage /> },
