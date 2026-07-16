@@ -151,188 +151,233 @@
       <button class="search-tab" data-panel="valutazione" role="tab"><span class="tab-dot"></span>Valutazione</button>
     </div>
 
+    <!-- SVG icon defs (referenced via <use>) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <g id="i-home"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V13h6v8"/></g>
+        <g id="i-pin"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></g>
+        <g id="i-bed"><path d="M2 9V5m0 4h20v10M2 9v10m20-6H2m20 6v-4M6 9V7h5v2"/></g>
+        <g id="i-bath"><path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3zM6 12V5a2 2 0 0 1 4 0M8 20l-1 2m10-2 1 2"/></g>
+        <g id="i-euro"><path d="M18 6.5A7.5 7.5 0 0 0 6.8 9M18 17.5A7.5 7.5 0 0 1 6.8 15M4 10.5h9M4 13.5h8"/></g>
+        <g id="i-sqm"><path d="M15 3h6v6M9 21H3v-3M21 3l-7 7M3 21l7-7M3 8V3h5M16 21h5v-5"/></g>
+        <g id="i-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></g>
+        <g id="i-key"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m11 12 9-9m-3 3 3 3m-6 0 2 2"/></g>
+        <g id="i-sofa"><path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3M3 14a2 2 0 0 1 4 0v1h10v-1a2 2 0 0 1 4 0v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3zM6 19v2m12-2v2"/></g>
+        <g id="i-state"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18v3h3l5.7-5.7a4.5 4.5 0 0 0 6-6L14.5 12l-2.5-2.5 2.7-3.2z"/></g>
+        <g id="i-cal"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></g>
+      </defs>
+    </svg>
+
     <!-- TUTTI GLI ANNUNCI -->
-    <div class="search-panel search-panel--tutti active" data-panel="tutti">
-      <div class="field-group">
-        <label>Zona / Quartiere</label>
-        <input type="text" placeholder="Ovunque — Es. Centro, Porto, Alta..." />
-      </div>
-      <div class="field-group">
-        <label>Contratto</label>
-        <div class="select-wrap">
-          <select>
-            <option>Vendita e affitto</option>
-            <option>Solo vendita</option>
-            <option>Solo affitto</option>
-          </select>
+    <div class="search-panel active" data-panel="tutti">
+      <div class="f-grid">
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-home"/></svg>
+          <select><option value="">Tipologia</option><option>Appartamento</option><option>Villa</option><option>Attico</option><option>Loft</option><option>Ufficio</option><option>Locale commerciale</option><option>Terreno</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-key"/></svg>
+          <select><option value="">Contratto</option><option>Vendita</option><option>Affitto</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <select><option value="">Città</option><option>Civitanova Marche</option><option>Porto Sant'Elpidio</option><option>Montecosaro</option><option>Potenza Picena</option><option>Fermo</option><option>Macerata</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <input type="text" placeholder="Zona" />
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bed"/></svg>
+          <select><option value="">Camere</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option><option>5+</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bath"/></svg>
+          <select><option value="">Bagni</option><option>1+</option><option>2+</option><option>3+</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-euro"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Prezzo min" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-euro"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Prezzo max" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-search"/></svg>
+          <input type="text" placeholder="ID / Referenza" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Sup. min m²" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Sup. max m²" />
+        </div>
+        <div class="f-cell f-cell--btn">
+          <button class="search-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
+            Mostra tutti
+          </button>
         </div>
       </div>
-      <div class="field-group">
-        <label>Tipologia</label>
-        <div class="select-wrap">
-          <select>
-            <option>Tutte le tipologie</option>
-            <option>Appartamento</option>
-            <option>Villa</option>
-            <option>Attico</option>
-            <option>Loft</option>
-            <option>Ufficio</option>
-            <option>Locale commerciale</option>
-          </select>
-        </div>
-      </div>
-      <button class="search-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        Mostra tutti
-      </button>
     </div>
 
     <!-- ACQUISTO -->
-    <div class="search-panel search-panel--acquisto" data-panel="acquisto">
-      <div class="field-group">
-        <label>Zona / Quartiere</label>
-        <input type="text" placeholder="Es. Civitanova Centro, Porto..." />
-      </div>
-      <div class="field-group">
-        <label>Tipologia</label>
-        <div class="select-wrap">
-          <select>
-            <option>Tutte le tipologie</option>
-            <option>Appartamento</option>
-            <option>Villa</option>
-            <option>Attico</option>
-            <option>Loft</option>
-            <option>Locale commerciale</option>
-          </select>
+    <div class="search-panel" data-panel="acquisto">
+      <div class="f-grid">
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-home"/></svg>
+          <select><option value="">Tipologia</option><option>Appartamento</option><option>Villa</option><option>Attico</option><option>Loft</option><option>Locale commerciale</option><option>Terreno</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <select><option value="">Città</option><option>Civitanova Marche</option><option>Porto Sant'Elpidio</option><option>Montecosaro</option><option>Potenza Picena</option><option>Fermo</option><option>Macerata</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <input type="text" placeholder="Zona — Es. Centro, Porto..." />
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-state"/></svg>
+          <select><option value="">Stato immobile</option><option>Nuovo / In costruzione</option><option>Ristrutturato</option><option>Buono / Abitabile</option><option>Da ristrutturare</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bed"/></svg>
+          <select><option value="">Camere</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option><option>5+</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bath"/></svg>
+          <select><option value="">Bagni</option><option>1+</option><option>2+</option><option>3+</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-euro"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Prezzo min" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-euro"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Prezzo max" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-search"/></svg>
+          <input type="text" placeholder="ID / Referenza" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Sup. min m²" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Sup. max m²" />
+        </div>
+        <div class="f-cell f-cell--btn">
+          <button class="search-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
+            Cerca
+          </button>
         </div>
       </div>
-      <div class="field-group">
-        <label>Budget massimo</label>
-        <div class="select-wrap">
-          <select>
-            <option>Qualsiasi prezzo</option>
-            <option>Fino a €100.000</option>
-            <option>Fino a €200.000</option>
-            <option>Fino a €350.000</option>
-            <option>Fino a €500.000</option>
-            <option>Oltre €500.000</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-group">
-        <label>Locali</label>
-        <div class="select-wrap">
-          <select>
-            <option>Qualsiasi</option>
-            <option>1+ locale</option>
-            <option>2+ locali</option>
-            <option>3+ locali</option>
-            <option>4+ locali</option>
-            <option>5+ locali</option>
-          </select>
-        </div>
-      </div>
-      <button class="search-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        Cerca
-      </button>
     </div>
 
     <!-- AFFITTO -->
-    <div class="search-panel search-panel--affitto" data-panel="affitto">
-      <div class="field-group">
-        <label>Zona / Quartiere</label>
-        <input type="text" placeholder="Es. Lungomare, Centro..." />
-      </div>
-      <div class="field-group">
-        <label>Tipologia</label>
-        <div class="select-wrap">
-          <select>
-            <option>Tutte le tipologie</option>
-            <option>Appartamento</option>
-            <option>Villa</option>
-            <option>Attico</option>
-            <option>Stanza / Posto letto</option>
-            <option>Ufficio</option>
-          </select>
+    <div class="search-panel" data-panel="affitto">
+      <div class="f-grid">
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-home"/></svg>
+          <select><option value="">Tipologia</option><option>Appartamento</option><option>Villa</option><option>Attico</option><option>Stanza / Posto letto</option><option>Ufficio</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <select><option value="">Città</option><option>Civitanova Marche</option><option>Porto Sant'Elpidio</option><option>Montecosaro</option><option>Potenza Picena</option><option>Fermo</option><option>Macerata</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <input type="text" placeholder="Zona — Es. Lungomare, Centro..." />
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-sofa"/></svg>
+          <select><option value="">Arredamento</option><option>Arredato</option><option>Parzialmente arredato</option><option>Non arredato</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bed"/></svg>
+          <select><option value="">Camere</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bath"/></svg>
+          <select><option value="">Bagni</option><option>1+</option><option>2+</option><option>3+</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-euro"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Canone min /mese" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-euro"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Canone max /mese" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-search"/></svg>
+          <input type="text" placeholder="ID / Referenza" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Sup. min m²" />
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Sup. max m²" />
+        </div>
+        <div class="f-cell f-cell--btn">
+          <button class="search-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
+            Cerca
+          </button>
         </div>
       </div>
-      <div class="field-group">
-        <label>Canone mensile max</label>
-        <div class="select-wrap">
-          <select>
-            <option>Qualsiasi canone</option>
-            <option>Fino a €500/mese</option>
-            <option>Fino a €800/mese</option>
-            <option>Fino a €1.200/mese</option>
-            <option>Fino a €2.000/mese</option>
-            <option>Oltre €2.000/mese</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-group">
-        <label>Arredamento</label>
-        <div class="select-wrap">
-          <select>
-            <option>Indifferente</option>
-            <option>Arredato</option>
-            <option>Parzialmente arredato</option>
-            <option>Non arredato</option>
-          </select>
-        </div>
-      </div>
-      <button class="search-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        Cerca
-      </button>
     </div>
 
     <!-- VALUTAZIONE -->
-    <div class="search-panel search-panel--valutazione" data-panel="valutazione">
-      <div class="field-group">
-        <label>Indirizzo dell'immobile</label>
-        <input type="text" placeholder="Es. Via Roma 42, Civitanova Marche" />
-      </div>
-      <div class="field-group">
-        <label>Tipologia</label>
-        <div class="select-wrap">
-          <select>
-            <option>Appartamento</option>
-            <option>Villa</option>
-            <option>Attico</option>
-            <option>Loft</option>
-            <option>Terreno</option>
-            <option>Locale commerciale</option>
-          </select>
+    <div class="search-panel" data-panel="valutazione">
+      <div class="f-grid">
+        <div class="f-cell f-cell--wide">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <input type="text" placeholder="Indirizzo — Es. Via Roma 42, Civitanova Marche" />
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-home"/></svg>
+          <select><option value="">Tipologia</option><option>Appartamento</option><option>Villa</option><option>Attico</option><option>Loft</option><option>Terreno</option><option>Locale commerciale</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-pin"/></svg>
+          <select><option value="">Città</option><option>Civitanova Marche</option><option>Porto Sant'Elpidio</option><option>Montecosaro</option><option>Potenza Picena</option><option>Fermo</option><option>Macerata</option></select>
+        </div>
+        <div class="f-cell">
+          <svg class="f-ico"><use href="#i-sqm"/></svg>
+          <input type="text" inputmode="numeric" placeholder="Superficie m²" />
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bed"/></svg>
+          <select><option value="">Camere</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-bath"/></svg>
+          <select><option value="">Bagni</option><option>1</option><option>2</option><option>3+</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-state"/></svg>
+          <select><option value="">Stato immobile</option><option>Ristrutturato / Nuovo</option><option>Buono / Abitabile</option><option>Da ristrutturare</option></select>
+        </div>
+        <div class="f-cell f-cell--select">
+          <svg class="f-ico"><use href="#i-cal"/></svg>
+          <select><option value="">Anno di costruzione</option><option>Dopo il 2010</option><option>1990–2010</option><option>1970–1990</option><option>Prima del 1970</option></select>
+        </div>
+        <div class="f-cell f-cell--btn f-cell--btn-wide">
+          <button class="search-btn search-btn--gold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><use href="#i-home"/></svg>
+            Valuta gratis
+          </button>
         </div>
       </div>
-      <div class="field-group">
-        <label>Superficie</label>
-        <div class="select-wrap">
-          <select>
-            <option>Non lo so</option>
-            <option>Fino a 50 m²</option>
-            <option>50–90 m²</option>
-            <option>90–140 m²</option>
-            <option>140–200 m²</option>
-            <option>Oltre 200 m²</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-group">
-        <label>Stato immobile</label>
-        <div class="select-wrap">
-          <select>
-            <option>Buono / Abitabile</option>
-            <option>Ristrutturato / Nuovo</option>
-            <option>Da ristrutturare</option>
-          </select>
-        </div>
-      </div>
-      <button class="search-btn search-btn--gold">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 14h6M9 17h6"/></svg>
-        Valuta gratis
-      </button>
     </div>
   </div>
 </div>
@@ -693,6 +738,13 @@
   // position indicator on load + keep it aligned on resize
   window.addEventListener('load',   () => moveIndicator(document.querySelector('.search-tab.active')));
   window.addEventListener('resize', () => moveIndicator(document.querySelector('.search-tab.active')));
+
+  // darken select text once a real value is chosen
+  document.querySelectorAll('.f-cell select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      sel.closest('.f-cell').classList.toggle('has-value', sel.value !== '');
+    });
+  });
 
   // Nav shadow on scroll
   window.addEventListener('scroll', () => {
