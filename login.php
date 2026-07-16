@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/bootstrap.php';
 require_once __DIR__ . '/config/login_throttle.php';
 
 if (isLoggedIn()) {
-    header('Location: index.php');
+    header('Location: /');
     exit;
 }
 
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $step = attemptLoginStep($username, $password);
             if ($step === 'ok') {
                 recordLoginAttempt(true);
-                header('Location: index.php');
+                header('Location: /');
                 exit;
             } elseif ($step === '2fa') {
                 recordLoginAttempt(true);

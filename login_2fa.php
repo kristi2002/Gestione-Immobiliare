@@ -5,7 +5,7 @@ require_once __DIR__ . '/config/totp.php';
 require_once __DIR__ . '/config/login_throttle.php';
 
 if (isLoggedIn()) {
-    header('Location: index.php');
+    header('Location: /');
     exit;
 }
 
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($verified) {
             recordLoginAttempt(true);
             completeAdminLogin((int) $user['id'], $user['username'], $user['role'] ?? 'admin');
-            header('Location: index.php');
+            header('Location: /');
             exit;
         }
 
