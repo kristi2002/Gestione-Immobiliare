@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Building2, MapPin, Minus, Plus, Search, X } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -468,7 +469,7 @@ export default function MapPage() {
                   <StatusBadge status={selectedPin.item.status} />
                 </div>
                 <Button asChild size="sm" className="mt-3 w-full">
-                  <a href={`/app/properties/${selectedPin.item.id}`}>Vedi Scheda</a>
+                  <Link to={`/properties/${selectedPin.item.id}`}>Vedi Scheda</Link>
                 </Button>
               </Card>
             </div>

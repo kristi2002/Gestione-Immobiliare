@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 1 — build the React admin SPA (served under /app in the final image).
+# Stage 1 — build the React admin SPA (served at web root in the final image).
 # glibc base to match the Debian runtime (avoids musl rollup/esbuild binaries).
 # Uses `npm install` (not `npm ci`) so linux-native optional deps resolve even
 # when package-lock.json was generated on another OS.
@@ -128,10 +128,14 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/
 
 COPY . /var/www/html/
 
-# Built React admin SPA → served at /app (its Vite base + router basename).
+# Built React admin SPA → served at web root (its Vite base is now "/"). Runs
+# after `COPY .` above, so dist/index.html + dist/_app-assets/* land alongside
+# the legacy PHP tree without colliding with it (index.php vs index.html,
+# _app-assets/ vs the legacy assets/ dir — see .htaccess DirectoryIndex + the
+# root SPA-fallback rewrite for how "/" picks the React shell over index.php).
 # The raw frontend/ source that `COPY .` also brought in is blocked from the web
 # by the root .htaccess (RewriteRule ^frontend/ - [F]).
-COPY --from=frontend-build /build/dist /var/www/html/app
+COPY --from=frontend-build /build/dist /var/www/html/
 
 # Install PHP dependencies (production only — no dev tools in image)
 # Using `composer update` so Docker regenerates composer.lock from composer.json
