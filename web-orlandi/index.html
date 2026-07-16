@@ -149,6 +149,13 @@
 <!-- ░░ SEARCH BAR ░░ -->
 <div style="padding: 0 24px;">
   <div class="search-bar">
+    <h2 class="search-bar__title">Cerca Immobili</h2>
+    <div class="search-bar__divider"></div>
+    <button class="filters-toggle" id="filtersToggle" aria-expanded="false" aria-controls="searchCollapse">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      Filtra
+    </button>
+    <div class="search-bar__collapse" id="searchCollapse">
     <div class="search-bar__tabs" role="tablist">
       <div class="search-bar__indicator" id="tabIndicator"></div>
       <button class="search-tab active" data-panel="tutti" role="tab"><span class="tab-dot"></span>Tutti gli annunci</button>
@@ -221,12 +228,6 @@
           <svg class="f-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sqm"/></svg>
           <input type="text" inputmode="numeric" placeholder="Sup. max m²" />
         </div>
-        <div class="f-cell f-cell--btn">
-          <button class="search-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
-            Mostra tutti
-          </button>
-        </div>
       </div>
     </div>
 
@@ -276,12 +277,6 @@
         <div class="f-cell">
           <svg class="f-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sqm"/></svg>
           <input type="text" inputmode="numeric" placeholder="Sup. max m²" />
-        </div>
-        <div class="f-cell f-cell--btn">
-          <button class="search-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
-            Cerca
-          </button>
         </div>
       </div>
     </div>
@@ -333,12 +328,6 @@
           <svg class="f-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sqm"/></svg>
           <input type="text" inputmode="numeric" placeholder="Sup. max m²" />
         </div>
-        <div class="f-cell f-cell--btn">
-          <button class="search-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
-            Cerca
-          </button>
-        </div>
       </div>
     </div>
 
@@ -377,14 +366,14 @@
           <svg class="f-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cal"/></svg>
           <select><option value="">Anno di costruzione</option><option>Dopo il 2010</option><option>1990–2010</option><option>1970–1990</option><option>Prima del 1970</option></select>
         </div>
-        <div class="f-cell f-cell--btn f-cell--btn-wide">
-          <button class="search-btn search-btn--gold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><use href="#i-home"/></svg>
-            Valuta gratis
-          </button>
-        </div>
       </div>
     </div>
+    </div><!-- /search-bar__collapse -->
+
+    <button class="search-btn search-bar__cta" id="searchCta">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#i-search"/></svg>
+      <span id="searchCtaText">Mostra tutti</span>
+    </button>
   </div>
 </div>
 
@@ -401,7 +390,10 @@
       <a href="#" class="btn btn--blue">Vedi tutti gli annunci →</a>
     </div>
 
-    <div class="properties-grid">
+    <!-- ── In Vendita ── -->
+    <div class="properties-group">
+      <h3 class="properties-group__title">In Vendita</h3>
+      <div class="properties-grid properties-carousel" data-carousel>
       <!-- Card 1 -->
       <div class="prop-card">
         <div class="prop-card__img">
@@ -477,31 +469,6 @@
         </div>
       </div>
 
-      <!-- Card 4 -->
-      <div class="prop-card">
-        <div class="prop-card__img">
-          <div class="prop-card__img-inner img--affitto"></div>
-          <span class="prop-card__tag tag--affitto">Affitto</span>
-          <div class="prop-card__fav">
-            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-        </div>
-        <div class="prop-card__body">
-          <div class="prop-card__price">€ 800/mese</div>
-          <div class="prop-card__title">Bilocale moderno in centro</div>
-          <div class="prop-card__loc">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            Via Dalmazia, Civitanova
-          </div>
-          <div class="prop-card__divider"></div>
-          <div class="prop-card__features">
-            <div class="prop-card__feature">🛏 2 locali</div>
-            <div class="prop-card__feature">🚿 1 bagno</div>
-            <div class="prop-card__feature">📐 60 m²</div>
-          </div>
-        </div>
-      </div>
-
       <!-- Card 5 -->
       <div class="prop-card">
         <div class="prop-card__img">
@@ -523,6 +490,39 @@
             <div class="prop-card__feature">🏢 Open space</div>
             <div class="prop-card__feature">🚿 2 bagni</div>
             <div class="prop-card__feature">📐 130 m²</div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+      <div class="carousel-dots" aria-hidden="true"></div>
+    </div>
+
+    <!-- ── In Affitto ── -->
+    <div class="properties-group">
+      <h3 class="properties-group__title">In Affitto</h3>
+      <div class="properties-grid properties-carousel" data-carousel>
+      <!-- Card 4 -->
+      <div class="prop-card">
+        <div class="prop-card__img">
+          <div class="prop-card__img-inner img--affitto"></div>
+          <span class="prop-card__tag tag--affitto">Affitto</span>
+          <div class="prop-card__fav">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+        </div>
+        <div class="prop-card__body">
+          <div class="prop-card__price">€ 800/mese</div>
+          <div class="prop-card__title">Bilocale moderno in centro</div>
+          <div class="prop-card__loc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Via Dalmazia, Civitanova
+          </div>
+          <div class="prop-card__divider"></div>
+          <div class="prop-card__features">
+            <div class="prop-card__feature">🛏 2 locali</div>
+            <div class="prop-card__feature">🚿 1 bagno</div>
+            <div class="prop-card__feature">📐 60 m²</div>
           </div>
         </div>
       </div>
@@ -551,6 +551,8 @@
           </div>
         </div>
       </div>
+      </div>
+      <div class="carousel-dots" aria-hidden="true"></div>
     </div>
   </div>
 </section>
@@ -788,13 +790,26 @@
     indicator.style.transform = 'translateX(' + tab.offsetLeft + 'px)';
   }
 
+  const ctaText   = document.getElementById('searchCtaText');
+  const ctaLabels = { tutti: 'Mostra tutti', acquisto: 'Cerca', affitto: 'Cerca', valutazione: 'Valuta gratis' };
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       moveIndicator(tab);
       panels.forEach(p => p.classList.toggle('active', p.dataset.panel === tab.dataset.panel));
+      ctaText.textContent = ctaLabels[tab.dataset.panel] || 'Cerca';
     });
+  });
+
+  // "Filtra" toggle: expand/collapse the filter area
+  const filtersToggle = document.getElementById('filtersToggle');
+  const searchBar     = document.querySelector('.search-bar');
+  filtersToggle.addEventListener('click', () => {
+    const open = searchBar.classList.toggle('filters-open');
+    filtersToggle.setAttribute('aria-expanded', open);
+    if (open) moveIndicator(document.querySelector('.search-tab.active'));
   });
 
   // position indicator on load + keep it aligned on resize
@@ -806,6 +821,29 @@
     sel.addEventListener('change', () => {
       sel.closest('.f-cell').classList.toggle('has-value', sel.value !== '');
     });
+  });
+
+  // Property carousels (mobile): dots that track the swipe position
+  document.querySelectorAll('[data-carousel]').forEach(carousel => {
+    const dotsBox = carousel.parentElement.querySelector('.carousel-dots');
+    if (!dotsBox) return;
+    const cards = carousel.querySelectorAll('.prop-card');
+
+    cards.forEach((card, i) => {
+      const dot = document.createElement('span');
+      if (i === 0) dot.classList.add('active');
+      dot.addEventListener('click', () => {
+        carousel.scrollTo({ left: card.offsetLeft - carousel.offsetLeft, behavior: 'smooth' });
+      });
+      dotsBox.appendChild(dot);
+    });
+
+    const dots = dotsBox.querySelectorAll('span');
+    carousel.addEventListener('scroll', () => {
+      const max = carousel.scrollWidth - carousel.clientWidth;
+      const i = max > 0 ? Math.round(carousel.scrollLeft / max * (cards.length - 1)) : 0;
+      dots.forEach((d, j) => d.classList.toggle('active', j === i));
+    }, { passive: true });
   });
 
   // Nav shadow on scroll

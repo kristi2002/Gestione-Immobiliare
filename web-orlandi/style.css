@@ -7,6 +7,8 @@
   --blue-light: #0066BB;
   --gold:       #C9A84C;
   --gold-light: #E8C96A;
+  --orange:       #F58A1F;
+  --orange-light: #FBB040;
   --white:      #FFFFFF;
   --off-white:  #F5F7FA;
   --text:       #1A2333;
@@ -333,6 +335,44 @@ body {
   border: 1px solid rgba(0,75,135,.06);
 }
 
+.search-bar__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: .01em;
+}
+
+.search-bar__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0 12px;
+}
+
+.filters-toggle {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 auto 4px;
+  padding: 8px 18px;
+  border: none; border-radius: 50px;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: .9rem; font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color .25s ease, background .25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.filters-toggle:hover { color: var(--orange); background: rgba(245,138,31,.08); }
+.search-bar.filters-open .filters-toggle { color: var(--orange); }
+
+/* collapsed by default — the Filtra button reveals tabs + fields */
+.search-bar__collapse { display: none; }
+.search-bar.filters-open .search-bar__collapse {
+  display: block;
+  margin-top: 14px;
+  animation: panelIn .45s cubic-bezier(.22,.9,.28,1) both;
+}
+
 .search-bar__tabs {
   position: relative;
   display: inline-flex; gap: 2px;
@@ -348,8 +388,8 @@ body {
   position: absolute; top: 5px; bottom: 5px; left: 0;
   width: 0;
   border-radius: 50px;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
-  box-shadow: 0 4px 14px rgba(0,75,135,.35);
+  background: linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+  box-shadow: 0 4px 14px rgba(245,138,31,.35);
   transition: transform .45s cubic-bezier(.32,.72,.24,1), width .45s cubic-bezier(.32,.72,.24,1);
   will-change: transform, width;
   z-index: 0;
@@ -411,7 +451,7 @@ body {
 }
 .f-cell:hover        { background: #FAFBFD; }
 .f-cell:focus-within { background: #F3F7FB; }
-.f-cell:focus-within .f-ico { stroke: var(--blue); transform: scale(1.08); }
+.f-cell:focus-within .f-ico { stroke: var(--orange); transform: scale(1.08); }
 
 .f-cell--wide { grid-column: span 2; }
 
@@ -436,7 +476,7 @@ body {
   stroke-linecap: round; stroke-linejoin: round;
   transition: stroke .25s ease, transform .25s ease;
 }
-.f-cell:hover .f-ico { stroke: var(--blue); }
+.f-cell:hover .f-ico { stroke: var(--orange); }
 
 .f-cell input,
 .f-cell select {
@@ -520,8 +560,8 @@ body {
 .search-panel .field-group select { padding-left: 13px; font-size: .9rem; }
 
 .search-btn {
-  padding: 12px 28px;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+  padding: 14px 28px;
+  background: linear-gradient(90deg, var(--orange) 0%, var(--orange-light) 100%);
   color: var(--white);
   border: none; border-radius: 10px;
   font-size: .95rem; font-weight: 600;
@@ -529,14 +569,21 @@ body {
   display: flex; align-items: center; gap: 8px;
   white-space: nowrap;
   transition: var(--transition);
-  box-shadow: 0 4px 16px rgba(0,75,135,.3);
+  box-shadow: 0 4px 16px rgba(245,138,31,.35);
 }
 .search-btn:hover {
-  background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+  background: linear-gradient(90deg, #E07A10 0%, var(--orange) 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,75,135,.4);
+  box-shadow: 0 8px 24px rgba(245,138,31,.45);
 }
 .search-btn:active { transform: translateY(0) scale(.97); }
+
+/* full-width CTA under the filter card (like the reference) */
+.search-bar__cta {
+  width: 100%;
+  justify-content: center;
+  margin-top: 16px;
+}
 
 .search-btn--gold {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
@@ -556,6 +603,47 @@ body {
   gap: 28px;
   margin-top: 48px;
 }
+
+.properties-group { margin-top: 48px; }
+.properties-group__title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--blue-dark);
+  padding-left: 14px;
+  border-left: 4px solid var(--gold);
+}
+.properties-group .properties-grid { margin-top: 22px; }
+
+/* Carousel: horizontal swipe row with snap, on every viewport */
+.properties-carousel {
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 6px 6px 12px;
+}
+.properties-carousel::-webkit-scrollbar { display: none; }
+.properties-carousel .prop-card {
+  flex: 0 0 calc((100% - 56px) / 3);   /* 3 cards visible on desktop */
+  scroll-snap-align: start;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.carousel-dots span {
+  width: 8px; height: 8px;
+  border-radius: 50px;
+  background: var(--border);
+  transition: var(--transition);
+  cursor: pointer;
+}
+.carousel-dots span.active { width: 24px; background: var(--blue); }
 
 .prop-card {
   background: var(--white);
@@ -1232,6 +1320,7 @@ body.no-scroll { overflow: hidden; }
   .nav__cta           { display: none; }
   .hero__inner        { grid-template-columns: 1fr; gap: 40px; }
   .hero__card-panel   { display: none; }
+  .properties-carousel .prop-card { flex-basis: calc((100% - 28px) / 2); }  /* 2 cards on tablet */
   .why-inner          { grid-template-columns: 1fr; }
   .why__visual        { display: none; }
   .contact-inner      { grid-template-columns: 1fr; }
@@ -1239,7 +1328,18 @@ body.no-scroll { overflow: hidden; }
 }
 
 @media (max-width: 768px) {
-  .properties-grid    { grid-template-columns: 1fr; }
+  /* Property carousels: one card per swipe, next card peeking in */
+  .properties-carousel {
+    gap: 16px;
+    margin-left: -24px;
+    margin-right: -24px;
+    padding: 4px 24px 8px;
+  }
+  .properties-carousel .prop-card {
+    flex: 0 0 82%;
+    max-width: 340px;
+    scroll-snap-align: center;
+  }
   .services-grid      { grid-template-columns: 1fr; }
   .testimonials-grid  { grid-template-columns: 1fr; }
   .f-grid              { grid-template-columns: 1fr 1fr; }
