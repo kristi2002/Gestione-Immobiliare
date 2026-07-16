@@ -156,9 +156,17 @@
                 observer.observe(document.body, { childList: true, subtree: true });
             }
 
-            const startView = new URLSearchParams(window.location.search).get('view');
+            const sp = new URLSearchParams(window.location.search);
+            const startView = sp.get('view');
             if (startView && this.viewTitles[startView]) {
-                this.navigateTo(startView);
+                // Restore any scalar params (e.g. clientId) that syncUrl() wrote,
+                // so a reloaded/bookmarked detail view keeps its id.
+                const params = {};
+                for (const [k, v] of sp.entries()) {
+                    if (k === 'view') continue;
+                    params[k] = /^-?\d+$/.test(v) ? Number(v) : v;
+                }
+                this.navigateTo(startView, params);
             } else {
                 this.loadView('view.php?name=dashboard', 'dashboard');
             }
@@ -170,13 +178,13 @@
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
 
-                    const href  = link.getAttribute('href');
-                    const view  = link.dataset.view;
+                    const view = link.dataset.view;
 
                     if (view === this.currentView) return;
 
-                    this.setActiveNav(link);
-                    this.loadView(href, view);
+                    // Route through navigateTo so the URL is kept in sync (clears
+                    // any stale detail-view params like clientId from a profile).
+                    this.navigateTo(view);
                     this.closeSidebar();
                 });
             });
@@ -473,6 +481,7 @@
         /** Navigate to a view programmatically (e.g. from client profile) */
         navigateTo(viewKey, params = {}) {
             this.viewParams = params;
+            this.syncUrl(viewKey, params);
             const link = document.querySelector(`.nav-link[data-view="${viewKey}"]`);
             const href = link
                 ? link.getAttribute('href')
@@ -482,6 +491,25 @@
                 this.setActiveNav(link);
             }
             this.loadView(href, viewKey);
+        },
+
+        /**
+         * Reflect the current view + its scalar params in the URL query string.
+         * Detail views keep their id in memory only (App.viewParams); without
+         * this, reloading or bookmarking e.g. a client profile loses the
+         * clientId and the view errors with "ID proprietario non specificato".
+         * Mirrored by init(), which parses these params back on load.
+         */
+        syncUrl(viewKey, params = {}) {
+            try {
+                const qs = new URLSearchParams({ view: viewKey });
+                Object.entries(params || {}).forEach(([k, v]) => {
+                    if (v !== null && v !== undefined && typeof v !== 'object') {
+                        qs.set(k, String(v));
+                    }
+                });
+                history.replaceState(null, '', 'index.php?' + qs.toString());
+            } catch (e) { /* history API unavailable — non-fatal */ }
         },
     };
 
