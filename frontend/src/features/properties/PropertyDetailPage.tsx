@@ -62,10 +62,10 @@ export default function PropertyDetailPage() {
             <div className="flex items-center gap-3">
               {!isLoading && property && <StatusBadge status={property.status} />}
               <Button asChild>
-                <a href={`/index.php?view=property_edit&id=${propertyId}`}>
+                <Link to={`/properties/${propertyId}/edit`}>
                   <Pencil className="size-4" />
                   Modifica
-                </a>
+                </Link>
               </Button>
             </div>
           </div>

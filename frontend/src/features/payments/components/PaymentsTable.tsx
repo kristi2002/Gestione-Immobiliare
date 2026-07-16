@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Banknote, Check, Home } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ function tenantName(p: Payment): string {
 }
 
 export function PaymentsTable({ items, isLoading }: { items: Payment[] | undefined; isLoading: boolean }) {
+  const navigate = useNavigate();
   const markPaid = useMarkPaid();
 
   const columns: Column<Payment>[] = [
@@ -57,7 +59,10 @@ export function PaymentsTable({ items, isLoading }: { items: Payment[] | undefin
             variant="outline"
             size="sm"
             disabled={markPaid.isPending}
-            onClick={() => markPaid.mutate(p)}
+            onClick={(e) => {
+              e.stopPropagation();
+              markPaid.mutate(p);
+            }}
           >
             <Check className="size-4" />
             Segna pagato
@@ -74,6 +79,7 @@ export function PaymentsTable({ items, isLoading }: { items: Payment[] | undefin
         isLoading={isLoading}
         rowKey={(p) => p.id}
         skeletonRows={8}
+        onRowClick={(p) => navigate(`/payments/${p.id}/edit`)}
         empty={{ icon: Banknote, title: 'Nessun pagamento', description: 'Nessun pagamento per i filtri selezionati.' }}
       />
     </Card>

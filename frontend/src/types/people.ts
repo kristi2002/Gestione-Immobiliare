@@ -79,6 +79,9 @@ export interface Tenant {
   property_address: string | null;
   property_city: string | null;
   has_portal_access: number | boolean;
+  iban: string | null;
+  sdd_mandate_ref: string | null;
+  sdd_mandate_date: string | null;
   created_at: string;
 }
 

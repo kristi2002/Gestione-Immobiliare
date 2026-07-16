@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Briefcase, Clock, CheckCircle2, Hash } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -75,6 +76,7 @@ const columns: Column<Commission>[] = [
 ];
 
 export default function CommissionsPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
   const [page, setPage] = useState(1);
@@ -91,10 +93,10 @@ export default function CommissionsPage() {
         subtitle="Compensi e provvigioni degli agenti"
         actions={
           <Button asChild>
-            <a href="/index.php?view=commissions">
+            <Link to="/commissions/new">
               <Plus className="size-4" />
               Nuova Provvigione
-            </a>
+            </Link>
           </Button>
         }
       />
@@ -130,6 +132,7 @@ export default function CommissionsPage() {
             isLoading={isLoading}
             rowKey={(c) => c.id}
             skeletonRows={8}
+            onRowClick={(c) => navigate(`/commissions/${c.id}/edit`)}
             empty={{ icon: Briefcase, title: 'Nessuna provvigione', description: 'Prova a modificare i filtri.' }}
           />
         </Card>

@@ -1,4 +1,5 @@
 import { Key, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Badge } from '@/components/ui/badge';
 import type { Column } from '@/components/common/DataTable';
@@ -42,6 +43,7 @@ const columns: Column<PropertyKey>[] = [
 ];
 
 export default function KeysPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<PropertyKey>
       title="Chiavi"
@@ -51,8 +53,9 @@ export default function KeysPage() {
       rowKey={(k) => k.id}
       itemLabel="chiavi"
       searchPlaceholder="Cerca per immobile o detentore…"
-      newHref="/index.php?view=keys"
+      newTo="/keys/new"
       newLabel="Nuova Chiave"
+      onRowClick={(k) => navigate(`/keys/${k.id}/edit`)}
       empty={{ icon: Key, title: 'Nessuna chiave registrata', description: 'Aggiungi la prima chiave.' }}
     />
   );

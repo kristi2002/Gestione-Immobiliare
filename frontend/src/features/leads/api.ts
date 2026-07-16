@@ -86,6 +86,16 @@ export function useLeadsList(filters: { search?: string; status?: string; intere
   });
 }
 
+/** Full lead list for a form's "select a lead" dropdown. */
+export function useLeadOptions() {
+  return useQuery({
+    queryKey: [...leadKeys.all, 'options'] as const,
+    queryFn: ({ signal }) => api.get<Paginated<Lead>>('leads.php', { params: { page: 1, limit: 1000 }, signal }),
+    staleTime: 5 * 60_000,
+    select: (data) => data.items,
+  });
+}
+
 export function useLeadAgents() {
   return useQuery({
     queryKey: leadKeys.agents,

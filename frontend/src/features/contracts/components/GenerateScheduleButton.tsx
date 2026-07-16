@@ -35,7 +35,15 @@ export function GenerateScheduleButton({ contract }: { contract: Contract }) {
   }
 
   return (
-    <Button variant="outline" size="sm" disabled={gen.isPending} onClick={() => gen.mutate(contract.id)}>
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={gen.isPending}
+      onClick={(e) => {
+        e.stopPropagation();
+        gen.mutate(contract.id);
+      }}
+    >
       {gen.isPending ? <Loader2 className="size-4 animate-spin" /> : <CalendarPlus className="size-4" />}
       Genera scadenzario
     </Button>

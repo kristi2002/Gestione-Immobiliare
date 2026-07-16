@@ -13,7 +13,44 @@ export const paymentKeys = {
   all: ['payments'] as const,
   list: (f: PaymentFilters) => [...paymentKeys.all, 'list', f] as const,
   stats: [...['payments'], 'stats'] as const,
+  detail: (id: number) => [...paymentKeys.all, 'detail', id] as const,
 };
+
+export interface PaymentFormValues {
+  tenant_id: string;
+  property_id: string;
+  contract_id: string;
+  amount: string;
+  due_date: string;
+  paid_date: string;
+  status: string;
+  method: string;
+  notes: string;
+}
+
+export function usePayment(id: number | undefined) {
+  return useQuery({
+    queryKey: paymentKeys.detail(id ?? 0),
+    queryFn: ({ signal }) => api.get<Payment>('payments.php', { params: { id }, signal }),
+    enabled: id != null,
+  });
+}
+
+export function useCreatePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: PaymentFormValues) => api.post<Payment>('payments.php', values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: paymentKeys.all }),
+  });
+}
+
+export function useUpdatePayment(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: PaymentFormValues) => api.put<Payment>('payments.php', values, { params: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: paymentKeys.all }),
+  });
+}
 
 export function usePayments(filters: PaymentFilters) {
   return useQuery({

@@ -30,6 +30,10 @@ let csrfToken: string | null = null;
 export function setCsrfToken(token: string | null): void {
   csrfToken = token;
 }
+/** For callers that can't go through `api.post`/`api.put` (e.g. FormData uploads). */
+export function getCsrfToken(): string | null {
+  return csrfToken;
+}
 
 // --- 401 handler: the auth layer registers a redirect-to-login callback -----
 let onUnauthorized: (() => void) | null = null;

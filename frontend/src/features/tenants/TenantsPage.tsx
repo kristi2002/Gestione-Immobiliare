@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Search, KeyRound, UserCheck, FileText, CalendarClock, Home, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -71,6 +72,7 @@ const columns: Column<Tenant>[] = [
 ];
 
 export default function TenantsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const debounced = useDebounce(search, 350);
@@ -87,10 +89,10 @@ export default function TenantsPage() {
         subtitle="Gestione inquilini e contratti di locazione"
         actions={
           <Button asChild>
-            <a href="/index.php?view=tenant_edit">
+            <Link to="/tenants/new">
               <Plus className="size-4" />
               Nuovo Inquilino
-            </a>
+            </Link>
           </Button>
         }
       />
@@ -137,6 +139,7 @@ export default function TenantsPage() {
             isLoading={isLoading}
             rowKey={(t) => t.id}
             skeletonRows={8}
+            onRowClick={(t) => navigate(`/tenants/${t.id}/edit`)}
             empty={{ icon: CheckCircle2, title: 'Nessun inquilino trovato', description: 'Prova a modificare la ricerca.' }}
           />
         </Card>

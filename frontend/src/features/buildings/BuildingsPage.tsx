@@ -1,4 +1,5 @@
 import { Building, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Badge } from '@/components/ui/badge';
 import type { Column } from '@/components/common/DataTable';
@@ -46,6 +47,7 @@ const columns: Column<BuildingRow>[] = [
 ];
 
 export default function BuildingsPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<BuildingRow>
       title="Edifici"
@@ -55,8 +57,9 @@ export default function BuildingsPage() {
       rowKey={(b) => b.id}
       itemLabel="edifici"
       searchPlaceholder="Cerca per nome o indirizzo…"
-      newHref="/index.php?view=buildings"
+      newTo="/buildings/new"
       newLabel="Nuovo Edificio"
+      onRowClick={(b) => navigate(`/buildings/${b.id}/edit`)}
       empty={{ icon: Building, title: 'Nessun edificio', description: 'Aggiungi il primo stabile.' }}
     />
   );

@@ -83,7 +83,7 @@ export default function DocumentsPage() {
       rowKey={(d) => d.id}
       itemLabel="documenti"
       searchPlaceholder="Cerca per titolo o tipo…"
-      newHref="/index.php?view=documents"
+      newTo="/documents/new"
       newLabel="Nuovo Documento"
       empty={{ icon: FileText, title: 'Nessun documento', description: 'Carica il primo documento.' }}
     />

@@ -13,6 +13,23 @@ const PropertyDetailPage = lazy(() => import('@/features/properties/PropertyDeta
 const ClientsPage = lazy(() => import('@/features/clients/ClientsPage'));
 const LeadsPage = lazy(() => import('@/features/leads/LeadsPage'));
 const LeadFormPage = lazy(() => import('@/features/leads/LeadFormPage'));
+const BuildingFormPage = lazy(() => import('@/features/buildings/BuildingFormPage'));
+const KeyFormPage = lazy(() => import('@/features/keys/KeyFormPage'));
+const MeterFormPage = lazy(() => import('@/features/meters/MeterFormPage'));
+const InventoryFormPage = lazy(() => import('@/features/inventory/InventoryFormPage'));
+const SupplierFormPage = lazy(() => import('@/features/suppliers/SupplierFormPage'));
+const DocumentFormPage = lazy(() => import('@/features/documents/DocumentFormPage'));
+const InsuranceFormPage = lazy(() => import('@/features/insurance/InsuranceFormPage'));
+const ReminderFormPage = lazy(() => import('@/features/reminders/ReminderFormPage'));
+const CommissionFormPage = lazy(() => import('@/features/commissions/CommissionFormPage'));
+const ExpenseFormPage = lazy(() => import('@/features/expenses/ExpenseFormPage'));
+const AppointmentFormPage = lazy(() => import('@/features/appointments/AppointmentFormPage'));
+const ClientFormPage = lazy(() => import('@/features/clients/ClientFormPage'));
+const TenantFormPage = lazy(() => import('@/features/tenants/TenantFormPage'));
+const InvoiceFormPage = lazy(() => import('@/features/invoices/InvoiceFormPage'));
+const PaymentFormPage = lazy(() => import('@/features/payments/PaymentFormPage'));
+const ContractFormPage = lazy(() => import('@/features/contracts/ContractFormPage'));
+const PropertyFormPage = lazy(() => import('@/features/properties/PropertyFormPage'));
 const TenantsPage = lazy(() => import('@/features/tenants/TenantsPage'));
 const AgentsPage = lazy(() => import('@/features/agents/AgentsPage'));
 const ContractsPage = lazy(() => import('@/features/contracts/ContractsPage'));
@@ -142,26 +159,46 @@ const peopleRoutes: RouteObject[] = ALL_NAV_ITEMS.filter((item) => item.key in F
   element: <RequireView viewKey={item.key}>{FEATURE_PAGES[item.key]}</RequireView>,
 }));
 
-// Lead create/edit — gated by "lead_edit", the backend's own distinct
-// permission key for this action (separate from "leads", the list view).
-const leadFormRoutes: RouteObject[] = [
-  {
-    path: 'leads/new',
-    element: (
-      <RequireView viewKey="lead_edit">
-        <LeadFormPage />
-      </RequireView>
-    ),
-  },
-  {
-    path: 'leads/:id/edit',
-    element: (
-      <RequireView viewKey="lead_edit">
-        <LeadFormPage />
-      </RequireView>
-    ),
-  },
+// Create/edit routes for every entity whose "Nuovo X"/"Modifica" used to
+// bounce out to the legacy PHP admin (/index.php?view=X_edit). viewKey is
+// the backend's own permission key for the action — a handful of entities
+// (lead_edit, property_edit, contract_edit, payment_edit, expense_edit,
+// invoice_edit, appointment_edit, tenant_edit, client_edit) have a distinct
+// edit permission separate from their list-view key; the rest share one key
+// for both (matching how the legacy PHP itself gates them — a single modal
+// on the list view, not a separate page/permission).
+// Maintenance and Valuation are deliberately excluded: neither has a real
+// create/edit contract to port (see the react-cutover branch notes) —
+// Maintenance's "Nuova Richiesta" was already a dead link to a legacy view
+// that doesn't exist, and Valuation's list is wired to an unrelated,
+// mismatched backend (property_appraisals.php vs. the real valuation.php
+// OMI-quotations feature) that needs a product decision before any form is
+// built against it.
+const ENTITY_FORMS: { path: string; viewKey: string; element: ReactElement; noEdit?: boolean }[] = [
+  { path: 'leads', viewKey: 'lead_edit', element: <LeadFormPage /> },
+  { path: 'properties', viewKey: 'property_edit', element: <PropertyFormPage /> },
+  { path: 'buildings', viewKey: 'buildings', element: <BuildingFormPage /> },
+  { path: 'keys', viewKey: 'keys', element: <KeyFormPage /> },
+  { path: 'meters', viewKey: 'meters', element: <MeterFormPage /> },
+  { path: 'inventory', viewKey: 'inventory', element: <InventoryFormPage /> },
+  { path: 'suppliers', viewKey: 'suppliers', element: <SupplierFormPage /> },
+  { path: 'documents', viewKey: 'documents', element: <DocumentFormPage />, noEdit: true },
+  { path: 'insurance', viewKey: 'insurance', element: <InsuranceFormPage /> },
+  { path: 'reminders', viewKey: 'reminders', element: <ReminderFormPage /> },
+  { path: 'commissions', viewKey: 'commissions', element: <CommissionFormPage /> },
+  { path: 'expenses', viewKey: 'expense_edit', element: <ExpenseFormPage /> },
+  { path: 'appointments', viewKey: 'appointment_edit', element: <AppointmentFormPage /> },
+  { path: 'clients', viewKey: 'client_edit', element: <ClientFormPage /> },
+  { path: 'tenants', viewKey: 'tenant_edit', element: <TenantFormPage /> },
+  { path: 'invoices', viewKey: 'invoice_edit', element: <InvoiceFormPage /> },
+  { path: 'payments', viewKey: 'payment_edit', element: <PaymentFormPage /> },
+  { path: 'contracts', viewKey: 'contract_edit', element: <ContractFormPage /> },
 ];
+
+const entityFormRoutes: RouteObject[] = ENTITY_FORMS.flatMap(({ path, viewKey, element, noEdit }) => [
+  { path: `${path}/new`, element: <RequireView viewKey={viewKey}>{element}</RequireView> },
+  ...(noEdit ? [] : [{ path: `${path}/:id/edit`, element: <RequireView viewKey={viewKey}>{element}</RequireView> }]),
+]);
 
 export const router = createBrowserRouter([
   // Public routes — must render outside GatedLayout/AuthProvider, since the
@@ -173,7 +210,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       ...propertyRoutes,
-      ...leadFormRoutes,
+      ...entityFormRoutes,
       ...peopleRoutes,
       ...placeholderRoutes,
       { path: '*', element: <NotFoundPage /> },

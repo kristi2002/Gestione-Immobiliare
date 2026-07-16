@@ -59,6 +59,17 @@ export interface Contract {
   tenant_surname: string | null;
   client_name: string | null;
   client_surname: string | null;
+  contract_subtype: string | null;
+  cedolare_secca: number | boolean;
+  registration_number: string | null;
+  registration_date: string | null;
+  registration_office: string | null;
+  imposta_registro_due_date: string | null;
+  registration_tax_annual: string | null;
+  stamp_duty: string | null;
+  istat_update_enabled: number | boolean;
+  istat_baseline_index: string | null;
+  istat_baseline_month: string | null;
   created_at: string;
 }
 

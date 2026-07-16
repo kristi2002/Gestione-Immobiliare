@@ -1,4 +1,5 @@
 import { Wallet, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Badge } from '@/components/ui/badge';
 import type { Column } from '@/components/common/DataTable';
@@ -53,6 +54,7 @@ const columns: Column<Expense>[] = [
 ];
 
 export default function ExpensesPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<Expense>
       title="Spese"
@@ -62,8 +64,9 @@ export default function ExpensesPage() {
       rowKey={(e) => e.id}
       itemLabel="spese"
       searchPlaceholder="Cerca per descrizione o categoria…"
-      newHref="/index.php?view=expense_edit"
+      newTo="/expenses/new"
       newLabel="Nuova Spesa"
+      onRowClick={(e) => navigate(`/expenses/${e.id}/edit`)}
       empty={{ icon: Wallet, title: 'Nessuna spesa', description: 'Registra la prima spesa.' }}
     />
   );

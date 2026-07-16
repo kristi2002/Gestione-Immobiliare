@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -26,7 +27,11 @@ interface ResourceListPageProps<T> {
   rowKey: (row: T) => string | number;
   itemLabel: string;
   empty: { icon?: LucideIcon; title: string; description?: string };
-  /** New-record link (legacy editor). */
+  /** New-record route (client-side navigation, e.g. "/buildings/new"). */
+  newTo?: string;
+  /** Legacy escape-hatch fallback for the few entities not yet ported to a
+   * React create/edit form (e.g. Valuation — see router.tsx's ENTITY_FORMS
+   * comment). Ignored when newTo is set. */
   newHref?: string;
   newLabel?: string;
   searchable?: boolean;
@@ -52,6 +57,7 @@ export function ResourceListPage<T>({
   rowKey,
   itemLabel,
   empty,
+  newTo,
   newHref,
   newLabel,
   searchable = true,
@@ -89,13 +95,22 @@ export function ResourceListPage<T>({
         actions={
           <>
             {headerActions}
-            {newHref && (
+            {newTo ? (
               <Button asChild>
-                <a href={newHref}>
+                <Link to={newTo}>
                   <Plus className="size-4" />
                   {newLabel ?? 'Nuovo'}
-                </a>
+                </Link>
               </Button>
+            ) : (
+              newHref && (
+                <Button asChild>
+                  <a href={newHref}>
+                    <Plus className="size-4" />
+                    {newLabel ?? 'Nuovo'}
+                  </a>
+                </Button>
+              )
             )}
           </>
         }

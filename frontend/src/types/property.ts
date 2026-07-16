@@ -50,6 +50,34 @@ export interface Property extends PropertyListItem {
   latitude: string | null;
   longitude: string | null;
   price_history: PriceHistoryEntry[];
+  building_id: number | null;
+  locali: number | null;
+  total_floors: number | null;
+  energy_class: string | null;
+  heating: string | null;
+  elevator: number | null;
+  furnished: string | null;
+  balconies: number | null;
+  terraces: number | null;
+  garden: string | null;
+  parking_spaces: number | null;
+  condition_state: string | null;
+  exposure: string | null;
+  condo_fees: string | null;
+  reference_code: string | null;
+  geo_confidence: string | null;
+  cadastral_comune: string | null;
+  cadastral_foglio: string | null;
+  cadastral_particella: string | null;
+  cadastral_subalterno: string | null;
+  cadastral_category: string | null;
+  cadastral_class: string | null;
+  cadastral_rendita: string | null;
+  cadastral_zone: string | null;
+  ape_number: string | null;
+  ape_issue_date: string | null;
+  ape_expiry_date: string | null;
+  ipe_value: string | null;
 }
 
 export interface PropertyMedia {

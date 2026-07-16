@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Pagination } from '@/components/common/Pagination';
@@ -48,10 +49,10 @@ export default function PropertiesPage() {
           <>
             <ViewToggle />
             <Button asChild>
-              <a href="/index.php?view=property_edit">
+              <Link to="/properties/new">
                 <Plus className="size-4" />
                 Aggiungi Immobile
-              </a>
+              </Link>
             </Button>
           </>
         }

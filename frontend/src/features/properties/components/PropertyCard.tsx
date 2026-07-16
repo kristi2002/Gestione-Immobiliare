@@ -76,10 +76,10 @@ export function PropertyCard({ property }: { property: PropertyListItem }) {
             </Link>
           </Button>
           <Button variant="ghost" size="sm" className="flex-1" asChild>
-            <a href={`/index.php?view=property_edit&id=${property.id}`}>
+            <Link to={`/properties/${property.id}/edit`}>
               <Pencil className="size-4" />
               Modifica
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

@@ -308,7 +308,7 @@ export default function MapPage() {
             description="Aggiungi immobili al portafoglio per visualizzarli sulla mappa."
             action={
               <Button asChild>
-                <a href="/index.php?view=property_edit">Nuovo immobile</a>
+                <Link to="/properties/new">Nuovo immobile</Link>
               </Button>
             }
           />

@@ -1,4 +1,5 @@
 import { Package, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ResourceListPage } from '@/features/_shared/ResourceListPage';
 import { Rating } from '@/components/common/Rating';
 import type { Column } from '@/components/common/DataTable';
@@ -31,6 +32,7 @@ const columns: Column<InventoryItem>[] = [
 ];
 
 export default function InventoryPage() {
+  const navigate = useNavigate();
   return (
     <ResourceListPage<InventoryItem>
       title="Inventario"
@@ -40,8 +42,9 @@ export default function InventoryPage() {
       rowKey={(i) => i.id}
       itemLabel="articoli"
       searchPlaceholder="Cerca per articolo o immobile…"
-      newHref="/index.php?view=inventory"
+      newTo="/inventory/new"
       newLabel="Nuovo Articolo"
+      onRowClick={(i) => navigate(`/inventory/${i.id}/edit`)}
       empty={{ icon: Package, title: 'Inventario vuoto', description: 'Aggiungi il primo articolo.' }}
     />
   );
