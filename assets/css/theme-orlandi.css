@@ -587,10 +587,22 @@ details.nav-group > summary { padding: 13px 10px 5px; }
     --font-brand: "Playfair Display", Georgia, "Times New Roman", serif;
     --ds-navy:  #06224F;   /* --color-sidebar in the design system */
     --ds-royal: #0B3D91;   /* --color-primary in the design system */
+    --sidebar-width: 240px; /* React w-60 — overrides the floating-panel 252px */
 }
 
-/* Rail colour */
-.sidebar { background: var(--ds-navy); }
+/* Flush full-height navy rail — matches the React AppShell sidebar
+   (fixed inset-y-0 left-0, no radius/gap/shadow). Overrides the earlier
+   floating-panel geometry in this file so the admin sidebar reads exactly
+   like the React design. The ≤768px overlay rules below still apply. */
+.sidebar {
+    background: var(--ds-navy);
+    top: 0;
+    left: 0;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+}
+.main-wrapper { margin-left: var(--sidebar-width); }
 
 /* Brand lockup — 40px icon box + stacked IMMOBILIARE / ORLANDI wordmark */
 .sidebar-brand { padding: 20px 18px 12px; }
