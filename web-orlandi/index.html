@@ -23,6 +23,7 @@
     </a>
     <ul class="nav__links">
       <li><a href="#annunci">Annunci</a></li>
+      <li><a href="mappa.html">Mappa</a></li>
       <li><a href="#servizi">Servizi</a></li>
       <li><a href="chi-siamo.html">Chi Siamo</a></li>
       <li><a href="contattaci.html">Contatti</a></li>
@@ -44,9 +45,11 @@
 <aside class="sidebar" id="mobileSidebar" aria-hidden="true">
   <button class="sidebar__close" id="sidebarClose" aria-label="Chiudi menu">✕</button>
   <a href="#annunci"  class="sidebar__link">Annunci</a>
+  <a href="mappa.html" class="sidebar__link">Mappa</a>
   <a href="#servizi"  class="sidebar__link">Servizi</a>
   <a href="chi-siamo.html"  class="sidebar__link">Chi Siamo</a>
   <a href="contattaci.html" class="sidebar__link">Contatti</a>
+  <a href="appuntamento.html" class="sidebar__link">Richiedi un appuntamento</a>
   <a href="contattaci.html" class="btn btn--primary sidebar__cta">📞 Contattaci</a>
 </aside>
 
@@ -657,8 +660,35 @@
     </p>
     <div class="cta__actions">
       <a href="contattaci.html" class="btn btn--primary">Richiedi valutazione gratuita</a>
-      <a href="tel:+39073400000" class="btn btn--outline">📞 Chiamaci ora</a>
+      <a href="appuntamento.html" class="btn btn--primary">📅 Richiedi un appuntamento</a>
+      <a href="tel:+39073400000" class="btn btn--outline">📞 Contattaci ora</a>
     </div>
+  </div>
+</section>
+
+<!-- ░░ NEWSLETTER ░░ -->
+<section class="newsletter">
+  <div class="newsletter__inner">
+    <div class="newsletter__text">
+      <div class="badge">✉️ Newsletter</div>
+      <h2 class="newsletter__title">Resta aggiornato sul mercato immobiliare</h2>
+      <p class="newsletter__desc">
+        Iscriviti alla newsletter di Immobiliare Orlandi: nuovi immobili in anteprima,
+        andamento del mercato di Civitanova Marche e consigli per comprare o vendere al meglio.
+      </p>
+    </div>
+    <form class="newsletter__form" id="newsletterForm" novalidate>
+      <div class="newsletter__field">
+        <svg class="newsletter__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+        <input type="email" id="newsletterEmail" name="email" placeholder="La tua email" autocomplete="email" required>
+        <button type="submit" class="btn btn--primary newsletter__btn">Iscriviti</button>
+      </div>
+      <label class="newsletter__privacy">
+        <input type="checkbox" id="newsletterConsent" required>
+        <span>Ho letto la <a href="#">Privacy Policy</a> e acconsento al trattamento dei dati per l'invio della newsletter.</span>
+      </label>
+      <p class="newsletter__feedback" id="newsletterFeedback" role="status" aria-live="polite"></p>
+    </form>
   </div>
 </section>
 
@@ -705,6 +735,35 @@
         <li><a href="#">Blog immobiliare</a></li>
         <li><a href="contattaci.html">Contatti</a></li>
       </ul>
+    </div>
+  </div>
+  <div class="footer__payments">
+    <span class="footer__payments-label">Metodi di pagamento accettati</span>
+    <div class="footer__payments-icons">
+      <span class="pay-badge" title="Visa" aria-label="Visa">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#fff"/><text x="24" y="21" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" font-style="italic" fill="#1A1F71">VISA</text></svg>
+      </span>
+      <span class="pay-badge" title="Mastercard" aria-label="Mastercard">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#fff"/><circle cx="20" cy="16" r="9" fill="#EB001B"/><circle cx="28" cy="16" r="9" fill="#F79E1B" fill-opacity=".9"/></svg>
+      </span>
+      <span class="pay-badge" title="American Express" aria-label="American Express">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#2E77BC"/><text x="24" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#fff">AMEX</text></svg>
+      </span>
+      <span class="pay-badge" title="PayPal" aria-label="PayPal">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#fff"/><text x="24" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="bold" font-style="italic"><tspan fill="#003087">Pay</tspan><tspan fill="#009CDE">Pal</tspan></text></svg>
+      </span>
+      <span class="pay-badge" title="Apple Pay" aria-label="Apple Pay">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#000"/><path fill="#fff" d="M17.8 12.6c.5-.6.8-1.4.7-2.2-.7 0-1.5.5-2 1.1-.4.5-.8 1.4-.7 2.1.8.1 1.6-.4 2-1zm.7 1.2c-1.1-.1-2 .6-2.6.6-.5 0-1.3-.6-2.2-.6-1.1 0-2.2.7-2.7 1.7-1.2 2-.3 5 .8 6.6.5.8 1.2 1.7 2 1.6.8 0 1.1-.5 2.1-.5s1.3.5 2.1.5c.9 0 1.5-.8 2-1.6.6-.9.9-1.8.9-1.8s-1.7-.7-1.7-2.6c0-1.6 1.3-2.4 1.4-2.4-.8-1.2-2-1.4-2.1-1.5z"/><text x="34" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="600" fill="#fff">Pay</text></svg>
+      </span>
+      <span class="pay-badge" title="Google Pay" aria-label="Google Pay">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#fff" stroke="#e0e0e0"/><text x="24" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="600"><tspan fill="#4285F4">G</tspan><tspan fill="#5f6368"> Pay</tspan></text></svg>
+      </span>
+      <span class="pay-badge" title="Satispay" aria-label="Satispay">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#F94C43"/><text x="24" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#fff">satispay</text></svg>
+      </span>
+      <span class="pay-badge" title="Bonifico bancario" aria-label="Bonifico bancario">
+        <svg viewBox="0 0 48 32" role="img"><rect width="48" height="32" rx="4" fill="#fff"/><text x="24" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#1B2A4A">SEPA</text></svg>
+      </span>
     </div>
   </div>
   <div class="footer__bottom">
@@ -775,6 +834,29 @@
   document.getElementById('sidebarClose').addEventListener('click', () => setSidebar(false));
   sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setSidebar(false)));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') setSidebar(false); });
+
+  // Newsletter signup
+  const nlForm     = document.getElementById('newsletterForm');
+  const nlEmail    = document.getElementById('newsletterEmail');
+  const nlConsent  = document.getElementById('newsletterConsent');
+  const nlFeedback = document.getElementById('newsletterFeedback');
+
+  nlForm.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!nlEmail.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nlEmail.value)) {
+      nlFeedback.textContent = 'Inserisci un indirizzo email valido.';
+      nlFeedback.className = 'newsletter__feedback is-error';
+      return;
+    }
+    if (!nlConsent.checked) {
+      nlFeedback.textContent = 'Devi accettare la Privacy Policy per iscriverti.';
+      nlFeedback.className = 'newsletter__feedback is-error';
+      return;
+    }
+    nlFeedback.textContent = '✓ Iscrizione avvenuta con successo! Controlla la tua casella email.';
+    nlFeedback.className = 'newsletter__feedback is-success';
+    nlForm.reset();
+  });
 </script>
 </body>
 </html>

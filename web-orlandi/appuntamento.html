@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Richiedi un appuntamento — Immobiliare Orlandi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .appt-inner {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .appt-photo {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    .appt-photo img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      object-fit: cover;
+    }
+    .appt-photo__caption {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 28px 24px 20px;
+      background: linear-gradient(to top, rgba(0,50,97,.92), rgba(0,50,97,0));
+      color: var(--white);
+    }
+    .appt-photo__caption strong { font-family: 'Playfair Display', serif; font-size: 1.05rem; display: block; }
+    .appt-photo__caption span   { font-size: .85rem; opacity: .85; }
+    .appt-steps { margin-top: 28px; display: grid; gap: 14px; }
+    .appt-step  { display: flex; gap: 14px; align-items: flex-start; }
+    .appt-step__num {
+      flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%;
+      background: var(--blue); color: var(--gold-light);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: .9rem;
+    }
+    .appt-step__text strong { display: block; color: var(--text); font-size: .95rem; }
+    .appt-step__text span   { font-size: .85rem; color: var(--text-muted); }
+    .form-feedback { display: none; margin-top: 16px; padding: 14px 16px; border-radius: var(--radius); font-size: .9rem; }
+    .form-feedback.is-ok    { display: block; background: #E8F5EC; color: #1E7A3C; border: 1px solid #BFE3CB; }
+    .form-feedback.is-error { display: block; background: #FDEBEC; color: #B3261E; border: 1px solid #F5C6C9; }
+    .privacy-check { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px; font-size: .82rem; color: var(--text-muted); }
+    .privacy-check input { margin-top: 3px; }
+    .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; }
+    @media (max-width: 900px) {
+      .appt-inner { grid-template-columns: 1fr; }
+      .appt-photo img { min-height: 300px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ░░ NAV ░░ -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">
+      <div class="nav__logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav__logo-text">
+        <div class="brand">Orlandi</div>
+        <div class="sub">Immobiliare</div>
+      </div>
+    </a>
+    <ul class="nav__links">
+      <li><a href="index.html#annunci">Annunci</a></li>
+      <li><a href="mappa.html">Mappa</a></li>
+      <li><a href="index.html#servizi">Servizi</a></li>
+      <li><a href="chi-siamo.html">Chi Siamo</a></li>
+      <li><a href="contattaci.html">Contatti</a></li>
+    </ul>
+    <a href="contattaci.html" class="btn btn--primary nav__cta">📞 Contattaci</a>
+    <button class="nav__burger" id="navBurger" aria-label="Apri menu" aria-expanded="false" aria-controls="mobileSidebar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="house" d="M3.5 9.7L12 3.4l8.5 6.3V19.6a1 1 0 01-1 1h-15a1 1 0 01-1-1V9.7z"/>
+        <line class="line line--1" x1="8" y1="10.3" x2="16" y2="10.3"/>
+        <line class="line line--2" x1="8" y1="13.5" x2="16" y2="13.5"/>
+        <line class="line line--3" x1="8" y1="16.7" x2="16" y2="16.7"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ░░ MOBILE SIDEBAR ░░ -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="mobileSidebar" aria-hidden="true">
+  <button class="sidebar__close" id="sidebarClose" aria-label="Chiudi menu">✕</button>
+  <a href="index.html#annunci"  class="sidebar__link">Annunci</a>
+  <a href="mappa.html" class="sidebar__link">Mappa</a>
+  <a href="index.html#servizi"  class="sidebar__link">Servizi</a>
+  <a href="chi-siamo.html"  class="sidebar__link">Chi Siamo</a>
+  <a href="contattaci.html" class="sidebar__link">Contatti</a>
+  <a href="appuntamento.html" class="sidebar__link">Richiedi un appuntamento</a>
+  <a href="contattaci.html" class="btn btn--primary sidebar__cta">📞 Contattaci</a>
+</aside>
+
+<!-- ░░ PAGE HERO ░░ -->
+<header class="page-hero">
+  <div class="badge">📅 Consulenza personalizzata</div>
+  <h1 class="section-title" style="margin-top:14px;">Richiedi un appuntamento</h1>
+  <div class="gold-line"></div>
+  <p>Fissa un incontro con uno dei nostri consulenti: in agenzia, presso l'immobile o in videochiamata.</p>
+</header>
+
+<!-- ░░ APPOINTMENT ░░ -->
+<section class="section" id="appuntamento">
+  <div class="container">
+    <div class="appt-inner">
+
+      <div>
+        <div class="appt-photo">
+          <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=900&q=80"
+               alt="Consulente immobiliare Orlandi durante un colloquio con un cliente" loading="lazy" />
+          <div class="appt-photo__caption">
+            <strong>I nostri consulenti ti ascoltano</strong>
+            <span>Oltre 35 anni di esperienza sul mercato di Civitanova Marche</span>
+          </div>
+        </div>
+        <div class="appt-steps">
+          <div class="appt-step">
+            <div class="appt-step__num">1</div>
+            <div class="appt-step__text"><strong>Compila il modulo</strong><span>Indica il motivo dell'incontro e quando preferisci essere ricevuto.</span></div>
+          </div>
+          <div class="appt-step">
+            <div class="appt-step__num">2</div>
+            <div class="appt-step__text"><strong>Ti richiamiamo entro 24 ore</strong><span>Un consulente conferma data e ora dell'appuntamento.</span></div>
+          </div>
+          <div class="appt-step">
+            <div class="appt-step__num">3</div>
+            <div class="appt-step__text"><strong>Incontro senza impegno</strong><span>In agenzia, sul posto o in videochiamata: scegli tu.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-form">
+        <h3>Prenota il tuo incontro</h3>
+        <p>Compila il modulo: ti ricontatteremo entro 24 ore per confermare l'appuntamento.</p>
+        <form id="apptForm" novalidate>
+          <div class="hp-field" aria-hidden="true">
+            <label>Sito web<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="apptName">Nome *</label>
+              <input id="apptName" name="name" type="text" placeholder="Mario" required />
+            </div>
+            <div class="form-group">
+              <label for="apptSurname">Cognome *</label>
+              <input id="apptSurname" name="surname" type="text" placeholder="Rossi" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="apptEmail">Email</label>
+              <input id="apptEmail" name="email" type="email" placeholder="mario@email.it" />
+            </div>
+            <div class="form-group">
+              <label for="apptPhone">Telefono *</label>
+              <input id="apptPhone" name="phone" type="tel" placeholder="+39 333 000 0000" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="apptType">Motivo dell'appuntamento *</label>
+            <select id="apptType" name="appointment_type">
+              <option value="valutazione">Valutazione gratuita del mio immobile</option>
+              <option value="visita_immobile">Visita di un immobile in annuncio</option>
+              <option value="vendita">Vendere un immobile</option>
+              <option value="affitto">Affittare / cercare in affitto</option>
+              <option value="consulenza">Consulenza (mutuo, investimento, legale)</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="apptDate">Data preferita</label>
+              <input id="apptDate" name="preferred_date" type="date" />
+            </div>
+            <div class="form-group">
+              <label for="apptTime">Fascia oraria</label>
+              <select id="apptTime" name="preferred_time">
+                <option value="">Indifferente</option>
+                <option value="mattina">Mattina (9:00–13:00)</option>
+                <option value="pomeriggio">Pomeriggio (15:30–18:00)</option>
+                <option value="sera">Tardo pomeriggio (18:00–19:30)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="apptMessage">Messaggio</label>
+            <textarea id="apptMessage" name="message" placeholder="Raccontaci brevemente di cosa hai bisogno..."></textarea>
+          </div>
+          <div class="privacy-check">
+            <input id="apptPrivacy" type="checkbox" required />
+            <label for="apptPrivacy">Ho letto l'informativa privacy e acconsento al trattamento dei miei dati per essere ricontattato. *</label>
+          </div>
+          <button type="submit" class="form-submit" id="apptSubmit">📅 Richiedi appuntamento</button>
+          <div class="form-feedback" id="apptFeedback" role="status"></div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ░░ FOOTER ░░ -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <div class="brand">Immobiliare Orlandi</div>
+      <div class="sub">Civitanova Marche</div>
+      <p>Dal 1985 il tuo punto di riferimento per compravendite, affitti e investimenti immobiliari nelle Marche.</p>
+      <div class="footer__socials">
+        <a href="#" class="footer__social">f</a>
+        <a href="#" class="footer__social">in</a>
+        <a href="#" class="footer__social">ig</a>
+        <a href="#" class="footer__social">yt</a>
+      </div>
+    </div>
+    <div class="footer__col">
+      <h4>Immobili</h4>
+      <ul>
+        <li><a href="#">Appartamenti</a></li>
+        <li><a href="#">Ville</a></li>
+        <li><a href="#">Attici</a></li>
+        <li><a href="#">Immobili commerciali</a></li>
+        <li><a href="#">Affitti</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Servizi</h4>
+      <ul>
+        <li><a href="#">Compravendita</a></li>
+        <li><a href="#">Valutazione gratuita</a></li>
+        <li><a href="appuntamento.html">Richiedi un appuntamento</a></li>
+        <li><a href="#">Consulenza mutui</a></li>
+        <li><a href="#">Gestione locazioni</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Agenzia</h4>
+      <ul>
+        <li><a href="chi-siamo.html">Chi siamo</a></li>
+        <li><a href="#">Il nostro team</a></li>
+        <li><a href="#">Recensioni</a></li>
+        <li><a href="#">Blog immobiliare</a></li>
+        <li><a href="contattaci.html">Contatti</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer__bottom">
+    <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
+    <span>
+      <a href="#">Privacy Policy</a> · <a href="#">Cookie Policy</a> · <a href="#">Note legali</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Nav shadow on scroll
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (window.scrollY > 40) {
+      nav.style.boxShadow = '0 4px 24px rgba(0,50,97,.3)';
+    } else {
+      nav.style.boxShadow = 'none';
+    }
+  });
+
+  // Mobile sidebar
+  const burger  = document.getElementById('navBurger');
+  const sidebar = document.getElementById('mobileSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  function setSidebar(open) {
+    burger.classList.toggle('is-open', open);
+    sidebar.classList.toggle('is-open', open);
+    overlay.classList.toggle('is-open', open);
+    document.body.classList.toggle('no-scroll', open);
+    burger.setAttribute('aria-expanded', open);
+    sidebar.setAttribute('aria-hidden', !open);
+  }
+
+  burger.addEventListener('click', () => setSidebar(!sidebar.classList.contains('is-open')));
+  overlay.addEventListener('click', () => setSidebar(false));
+  document.getElementById('sidebarClose').addEventListener('click', () => setSidebar(false));
+  sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setSidebar(false)));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setSidebar(false); });
+
+  // Appointment form
+  const apptForm     = document.getElementById('apptForm');
+  const apptFeedback = document.getElementById('apptFeedback');
+  const apptSubmit   = document.getElementById('apptSubmit');
+  const apptDate     = document.getElementById('apptDate');
+  apptDate.min = new Date().toISOString().slice(0, 10);
+
+  apptForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    apptFeedback.className = 'form-feedback';
+
+    if (!apptForm.reportValidity()) return;
+
+    const payload = Object.fromEntries(new FormData(apptForm).entries());
+    apptSubmit.disabled = true;
+    apptSubmit.textContent = 'Invio in corso…';
+
+    try {
+      const res  = await fetch('../api/appointment_request.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        apptForm.reset();
+        apptFeedback.textContent = '✅ Richiesta inviata! Ti ricontatteremo entro 24 ore per confermare l\'appuntamento.';
+        apptFeedback.classList.add('is-ok');
+      } else {
+        apptFeedback.textContent = '⚠️ ' + (json.error || 'Si è verificato un errore. Riprova o contattaci al +39 0734 000 000.');
+        apptFeedback.classList.add('is-error');
+      }
+    } catch (err) {
+      apptFeedback.textContent = '⚠️ Impossibile contattare il server. Riprova o contattaci al +39 0734 000 000.';
+      apptFeedback.classList.add('is-error');
+    } finally {
+      apptSubmit.disabled = false;
+      apptSubmit.textContent = '📅 Richiedi appuntamento';
+    }
+  });
+</script>
+</body>
+</html>

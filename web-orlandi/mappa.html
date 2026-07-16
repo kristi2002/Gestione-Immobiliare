@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mappa immobili — Immobiliare Orlandi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Map page ─────────────────────────────────────────── */
+    .map-page { padding: 120px 0 96px; background: var(--off-white); }
+    .map-page .container { max-width: 1200px; }
+    .map-head { text-align: center; margin-bottom: 32px; }
+    .map-head h1 { font-family: 'Playfair Display', serif; font-size: clamp(30px, 4vw, 44px); color: var(--text); margin: 14px 0 10px; }
+    .map-head p { color: var(--text-muted); max-width: 560px; margin: 0 auto; }
+
+    .map-toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+      background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 16px; box-shadow: var(--shadow-sm); margin-bottom: 20px;
+    }
+    .map-search { position: relative; flex: 1 1 280px; display: flex; gap: 10px; }
+    .map-search input {
+      flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 50px;
+      font: 500 14px 'Inter', sans-serif; color: var(--text); outline: none;
+      transition: var(--transition);
+    }
+    .map-search input:focus { border-color: var(--blue-light); box-shadow: 0 0 0 3px rgba(0,102,187,.12); }
+    .map-chips { display: flex; gap: 8px; }
+    .map-chip {
+      padding: 10px 18px; border-radius: 50px; border: 1px solid var(--border);
+      background: var(--white); color: var(--text-muted); font: 600 13px 'Inter', sans-serif;
+      cursor: pointer; transition: var(--transition);
+    }
+    .map-chip:hover { border-color: var(--blue-light); color: var(--blue); }
+    .map-chip.active { background: var(--blue); border-color: var(--blue); color: var(--white); }
+
+    .map-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: stretch; }
+    #listingsMap {
+      height: 620px; border-radius: var(--radius); border: 1px solid var(--border);
+      box-shadow: var(--shadow-md); z-index: 1;
+    }
+    .map-list {
+      height: 620px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+      padding-right: 4px;
+    }
+    .map-list__empty {
+      background: var(--white); border: 1px dashed var(--border); border-radius: var(--radius);
+      padding: 32px 20px; text-align: center; color: var(--text-muted); font-size: 14px;
+    }
+    .map-item {
+      display: flex; gap: 12px; background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px; cursor: pointer; transition: var(--transition);
+    }
+    .map-item:hover, .map-item.is-active {
+      border-color: var(--gold); box-shadow: var(--shadow-md); transform: translateY(-2px);
+    }
+    .map-item__thumb {
+      width: 86px; height: 74px; flex: none; border-radius: 8px; overflow: hidden;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      display: flex; align-items: center; justify-content: center; color: var(--white); font-size: 22px;
+    }
+    .map-item__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .map-item__body { min-width: 0; }
+    .map-item__price { font: 700 15px 'Inter', sans-serif; color: var(--blue); }
+    .map-item__price small { font-weight: 500; color: var(--text-muted); }
+    .map-item__addr { font-size: 13px; color: var(--text); margin: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .map-item__meta { font-size: 12px; color: var(--text-muted); }
+    .map-item__dist { display: inline-block; margin-top: 4px; font: 600 11px 'Inter', sans-serif; color: var(--gold); }
+
+    .map-popup { font-family: 'Inter', sans-serif; min-width: 190px; }
+    .map-popup img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; display: block; }
+    .map-popup__price { font-weight: 700; color: var(--blue); font-size: 15px; }
+    .map-popup__addr { font-size: 12.5px; color: var(--text); margin: 2px 0; }
+    .map-popup__meta { font-size: 11.5px; color: var(--text-muted); }
+
+    .map-status { margin: 10px 4px 0; font-size: 13px; color: var(--text-muted); min-height: 18px; }
+    .map-status.is-error { color: #c0392b; }
+
+    @media (max-width: 900px) {
+      .map-layout { grid-template-columns: 1fr; }
+      #listingsMap { height: 420px; }
+      .map-list { height: auto; max-height: 420px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ░░ NAV ░░ -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">
+      <div class="nav__logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav__logo-text">
+        <div class="brand">Orlandi</div>
+        <div class="sub">Immobiliare</div>
+      </div>
+    </a>
+    <ul class="nav__links">
+      <li><a href="index.html#annunci">Annunci</a></li>
+      <li><a href="mappa.html">Mappa</a></li>
+      <li><a href="index.html#servizi">Servizi</a></li>
+      <li><a href="chi-siamo.html">Chi Siamo</a></li>
+      <li><a href="contattaci.html">Contatti</a></li>
+    </ul>
+    <a href="contattaci.html" class="btn btn--primary nav__cta">📞 Contattaci</a>
+    <button class="nav__burger" id="navBurger" aria-label="Apri menu" aria-expanded="false" aria-controls="mobileSidebar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="house" d="M3.5 9.7L12 3.4l8.5 6.3V19.6a1 1 0 01-1 1h-15a1 1 0 01-1-1V9.7z"/>
+        <line class="line line--1" x1="8" y1="10.3" x2="16" y2="10.3"/>
+        <line class="line line--2" x1="8" y1="13.5" x2="16" y2="13.5"/>
+        <line class="line line--3" x1="8" y1="16.7" x2="16" y2="16.7"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ░░ MOBILE SIDEBAR ░░ -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="mobileSidebar" aria-hidden="true">
+  <button class="sidebar__close" id="sidebarClose" aria-label="Chiudi menu">✕</button>
+  <a href="index.html#annunci" class="sidebar__link">Annunci</a>
+  <a href="mappa.html" class="sidebar__link">Mappa</a>
+  <a href="index.html#servizi" class="sidebar__link">Servizi</a>
+  <a href="chi-siamo.html" class="sidebar__link">Chi Siamo</a>
+  <a href="contattaci.html" class="sidebar__link">Contatti</a>
+  <a href="appuntamento.html" class="sidebar__link">Richiedi un appuntamento</a>
+  <a href="contattaci.html" class="btn btn--primary sidebar__cta">📞 Contattaci</a>
+</aside>
+
+<!-- ░░ MAP ░░ -->
+<section class="map-page">
+  <div class="container">
+    <div class="map-head">
+      <div class="badge">🗺️ Cerca sulla mappa</div>
+      <h1>Immobili sulla mappa</h1>
+      <p>Cerca una città o una zona: la mappa si centra sul luogo scelto e ti mostra gli immobili disponibili nei dintorni.</p>
+    </div>
+
+    <div class="map-toolbar">
+      <form class="map-search" id="mapSearchForm">
+        <input type="text" id="mapSearchInput" placeholder="Es. Civitanova Marche, Lungomare Sud…" autocomplete="off" />
+        <button type="submit" class="btn btn--primary">Cerca</button>
+      </form>
+      <div class="map-chips" id="mapChips">
+        <button class="map-chip active" data-type="">Tutti</button>
+        <button class="map-chip" data-type="vendita">In vendita</button>
+        <button class="map-chip" data-type="affitto">In affitto</button>
+      </div>
+    </div>
+
+    <div class="map-layout">
+      <div id="listingsMap"></div>
+      <aside class="map-list" id="mapList">
+        <div class="map-list__empty">Caricamento immobili…</div>
+      </aside>
+    </div>
+    <p class="map-status" id="mapStatus" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- ░░ FOOTER ░░ -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <div class="brand">Immobiliare Orlandi</div>
+      <div class="sub">Civitanova Marche</div>
+      <p>Dal 1985 il tuo punto di riferimento per compravendite, affitti e investimenti immobiliari nelle Marche.</p>
+      <div class="footer__socials">
+        <a href="#" class="footer__social">f</a>
+        <a href="#" class="footer__social">in</a>
+        <a href="#" class="footer__social">ig</a>
+        <a href="#" class="footer__social">yt</a>
+      </div>
+    </div>
+    <div class="footer__col">
+      <h4>Immobili</h4>
+      <ul>
+        <li><a href="index.html#annunci">Appartamenti</a></li>
+        <li><a href="index.html#annunci">Ville</a></li>
+        <li><a href="index.html#annunci">Attici</a></li>
+        <li><a href="index.html#annunci">Immobili commerciali</a></li>
+        <li><a href="mappa.html">Mappa immobili</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Servizi</h4>
+      <ul>
+        <li><a href="#">Compravendita</a></li>
+        <li><a href="#">Valutazione gratuita</a></li>
+        <li><a href="#">Consulenza mutui</a></li>
+        <li><a href="#">Gestione locazioni</a></li>
+        <li><a href="#">Assistenza legale</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Agenzia</h4>
+      <ul>
+        <li><a href="chi-siamo.html">Chi siamo</a></li>
+        <li><a href="#">Il nostro team</a></li>
+        <li><a href="#">Recensioni</a></li>
+        <li><a href="#">Blog immobiliare</a></li>
+        <li><a href="contattaci.html">Contatti</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer__bottom">
+    <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
+    <span>
+      <a href="#">Privacy Policy</a> · <a href="#">Cookie Policy</a> · <a href="#">Note legali</a>
+    </span>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ── Nav shadow + mobile sidebar (shared with the other pages) ──
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    nav.style.boxShadow = window.scrollY > 40 ? '0 4px 24px rgba(0,50,97,.3)' : 'none';
+  });
+  const burger  = document.getElementById('navBurger');
+  const sidebar = document.getElementById('mobileSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  function setSidebar(open) {
+    burger.classList.toggle('is-open', open);
+    sidebar.classList.toggle('is-open', open);
+    overlay.classList.toggle('is-open', open);
+    document.body.classList.toggle('no-scroll', open);
+    burger.setAttribute('aria-expanded', open);
+    sidebar.setAttribute('aria-hidden', !open);
+  }
+  burger.addEventListener('click', () => setSidebar(!sidebar.classList.contains('is-open')));
+  overlay.addEventListener('click', () => setSidebar(false));
+  document.getElementById('sidebarClose').addEventListener('click', () => setSidebar(false));
+  sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setSidebar(false)));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setSidebar(false); });
+
+  // ── Listings map ──
+  const API_URL       = '../api/public_listings.php';
+  const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+  const DEFAULT_VIEW  = { center: [43.3062, 13.7280], zoom: 13 }; // Civitanova Marche
+  const NEARBY_KM     = 10; // radius used to rank "around the searched place"
+
+  const mapEl    = document.getElementById('listingsMap');
+  const listEl   = document.getElementById('mapList');
+  const statusEl = document.getElementById('mapStatus');
+
+  const map = L.map(mapEl).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  const markersLayer = L.layerGroup().addTo(map);
+  let allListings   = [];
+  let activeType    = '';
+  let searchCenter  = null;   // L.LatLng of the last place search
+  let searchCircle  = null;
+  const markerById  = new Map();
+
+  const fmtPrice = p => p == null ? 'Prezzo su richiesta'
+    : '€ ' + Number(p).toLocaleString('it-IT', { maximumFractionDigits: 0 });
+  const priceSuffix = t => t === 'affitto' ? ' <small>/mese</small>' : '';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function pinIcon(type) {
+    const color = type === 'affitto' ? '#0066BB' : '#C9A84C';
+    return L.divIcon({
+      className: '',
+      html: `<svg width="30" height="40" viewBox="0 0 30 40"><path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 25 15 25s15-14.5 15-25C30 6.7 23.3 0 15 0z" fill="${color}"/><circle cx="15" cy="14" r="6" fill="#fff"/></svg>`,
+      iconSize: [30, 40],
+      iconAnchor: [15, 40],
+      popupAnchor: [0, -38],
+    });
+  }
+
+  function distanceKm(l) {
+    if (!searchCenter) return null;
+    return map.distance(searchCenter, [l.latitude, l.longitude]) / 1000;
+  }
+
+  function visibleListings() {
+    let items = allListings.filter(l => !activeType || l.price_type === activeType);
+    if (searchCenter) {
+      items = items
+        .map(l => ({ ...l, _dist: distanceKm(l) }))
+        .sort((a, b) => a._dist - b._dist);
+    }
+    return items;
+  }
+
+  function render() {
+    markersLayer.clearLayers();
+    markerById.clear();
+    const items = visibleListings();
+
+    items.forEach(l => {
+      const img = l.cover_url ? `<img src="../${esc(l.cover_url)}" alt="" loading="lazy">` : '';
+      const marker = L.marker([l.latitude, l.longitude], { icon: pinIcon(l.price_type) })
+        .bindPopup(`<div class="map-popup">${img}
+          <div class="map-popup__price">${fmtPrice(l.price)}${priceSuffix(l.price_type)}</div>
+          <div class="map-popup__addr">${esc(l.address)}, ${esc(l.city)}</div>
+          <div class="map-popup__meta">${l.sqm ? esc(l.sqm) + ' m² · ' : ''}${l.rooms ? esc(l.rooms) + ' locali · ' : ''}${l.bathrooms ? esc(l.bathrooms) + ' bagni' : ''}</div>
+        </div>`);
+      marker.addTo(markersLayer);
+      markerById.set(l.id, marker);
+    });
+
+    if (!items.length) {
+      listEl.innerHTML = '<div class="map-list__empty">Nessun immobile disponibile in questa ricerca.</div>';
+      return;
+    }
+
+    listEl.innerHTML = items.map(l => `
+      <article class="map-item" data-id="${l.id}">
+        <div class="map-item__thumb">${l.cover_url ? `<img src="../${esc(l.cover_url)}" alt="" loading="lazy">` : '🏠'}</div>
+        <div class="map-item__body">
+          <div class="map-item__price">${fmtPrice(l.price)}${priceSuffix(l.price_type)}</div>
+          <div class="map-item__addr">${esc(l.address)}, ${esc(l.city)}</div>
+          <div class="map-item__meta">${l.sqm ? esc(l.sqm) + ' m² · ' : ''}${l.rooms ? esc(l.rooms) + ' locali · ' : ''}${l.bathrooms ? esc(l.bathrooms) + ' bagni' : ''}</div>
+          ${l._dist != null ? `<span class="map-item__dist">📍 a ${l._dist < 1 ? Math.round(l._dist * 1000) + ' m' : l._dist.toFixed(1) + ' km'} dalla ricerca</span>` : ''}
+        </div>
+      </article>`).join('');
+
+    listEl.querySelectorAll('.map-item').forEach(item => {
+      item.addEventListener('click', () => {
+        listEl.querySelectorAll('.map-item').forEach(i => i.classList.remove('is-active'));
+        item.classList.add('is-active');
+        const m = markerById.get(Number(item.dataset.id));
+        if (m) {
+          map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 15), { duration: .6 });
+          m.openPopup();
+        }
+      });
+    });
+  }
+
+  function setStatus(msg, isError = false) {
+    statusEl.textContent = msg;
+    statusEl.classList.toggle('is-error', isError);
+  }
+
+  async function loadListings() {
+    try {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      if (!res.ok || json.success === false) throw new Error(json.message || res.status);
+      allListings = (json.data && json.data.items) || [];
+      render();
+      if (allListings.length) {
+        map.fitBounds(allListings.map(l => [l.latitude, l.longitude]), { padding: [40, 40], maxZoom: 15 });
+        setStatus(`${allListings.length} immobili disponibili sulla mappa.`);
+      } else {
+        setStatus('Al momento non ci sono immobili geolocalizzati da mostrare.');
+      }
+    } catch (err) {
+      listEl.innerHTML = '<div class="map-list__empty">Impossibile caricare gli immobili.</div>';
+      setStatus('Errore nel caricamento degli immobili. Riprova più tardi.', true);
+    }
+  }
+
+  // Place search via Nominatim (OpenStreetMap), limited to Italy
+  document.getElementById('mapSearchForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const q = document.getElementById('mapSearchInput').value.trim();
+    if (!q) return;
+    setStatus('Ricerca in corso…');
+    try {
+      const url = `${NOMINATIM_URL}?format=json&limit=1&countrycodes=it&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
+      const results = await res.json();
+      if (!results.length) { setStatus(`Nessun luogo trovato per “${q}”.`, true); return; }
+
+      const { lat, lon, display_name } = results[0];
+      searchCenter = L.latLng(Number(lat), Number(lon));
+      if (searchCircle) map.removeLayer(searchCircle);
+      searchCircle = L.circle(searchCenter, {
+        radius: NEARBY_KM * 1000, color: '#004B87', weight: 1.5,
+        fillColor: '#0066BB', fillOpacity: .06,
+      }).addTo(map);
+      map.flyTo(searchCenter, 13, { duration: .8 });
+
+      render();
+      const nearby = visibleListings().filter(l => l._dist <= NEARBY_KM).length;
+      setStatus(`${display_name.split(',').slice(0, 2).join(',')} — ${nearby} immobili entro ${NEARBY_KM} km.`);
+    } catch {
+      setStatus('Errore durante la ricerca del luogo. Riprova.', true);
+    }
+  });
+
+  // Filter chips
+  document.getElementById('mapChips').addEventListener('click', e => {
+    const chip = e.target.closest('.map-chip');
+    if (!chip) return;
+    document.querySelectorAll('.map-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeType = chip.dataset.type;
+    render();
+  });
+
+  loadListings();
+</script>
+</body>
+</html>

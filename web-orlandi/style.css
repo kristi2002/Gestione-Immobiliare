@@ -864,6 +864,82 @@ body {
 }
 .cta__actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
+/* ── NEWSLETTER ──────────────────────────────── */
+.newsletter {
+  background: var(--off-white);
+  border-top: 1px solid var(--border);
+  padding: 72px 24px;
+}
+.newsletter__inner {
+  max-width: 1080px; margin: 0 auto;
+  display: grid; grid-template-columns: 1.1fr 1fr;
+  gap: 48px; align-items: center;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 48px 56px;
+  position: relative; overflow: hidden;
+}
+.newsletter__inner::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+}
+.newsletter__title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-weight: 700; color: var(--blue-dark);
+  margin: 14px 0 10px;
+}
+.newsletter__desc {
+  color: var(--text-muted);
+  line-height: 1.7; font-size: .95rem;
+}
+.newsletter__field {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 6px 6px 18px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.newsletter__field:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0,75,135,.12);
+}
+.newsletter__icon { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+.newsletter__field input[type="email"] {
+  flex: 1; min-width: 0;
+  border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: .95rem; color: var(--text);
+  padding: 10px 0;
+}
+.newsletter__field input[type="email"]::placeholder { color: var(--text-muted); }
+.newsletter__btn { border-radius: 999px; white-space: nowrap; }
+.newsletter__privacy {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-top: 14px;
+  font-size: .78rem; color: var(--text-muted); line-height: 1.5;
+  cursor: pointer;
+}
+.newsletter__privacy input { margin-top: 2px; accent-color: var(--blue); }
+.newsletter__privacy a { color: var(--blue); text-decoration: underline; }
+.newsletter__feedback { margin-top: 12px; font-size: .85rem; min-height: 1.2em; }
+.newsletter__feedback.is-success { color: #1E7B45; }
+.newsletter__feedback.is-error   { color: #C0392B; }
+
+@media (max-width: 860px) {
+  .newsletter__inner { grid-template-columns: 1fr; gap: 28px; padding: 36px 28px; text-align: center; }
+  .newsletter__privacy { text-align: left; }
+}
+@media (max-width: 480px) {
+  .newsletter__field { flex-wrap: wrap; border-radius: var(--radius); padding: 12px; }
+  .newsletter__field input[type="email"] { width: 100%; padding: 6px 0; }
+  .newsletter__btn { width: 100%; }
+}
+
 /* ── CONTACT ─────────────────────────────────── */
 .contact-inner {
   display: grid; grid-template-columns: 1fr 1.4fr;
@@ -997,6 +1073,38 @@ body {
   transition: var(--transition);
 }
 .footer__col ul li a:hover { color: var(--gold-light); }
+
+/* ── PAYMENT METHODS STRIP ───────────────────── */
+.footer__payments {
+  max-width: 1200px; margin: 0 auto;
+  padding: 24px 0;
+  border-top: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+}
+
+.footer__payments-label {
+  font-size: .72rem; color: rgba(255,255,255,.5);
+  text-transform: uppercase; letter-spacing: .1em; font-weight: 600;
+}
+
+.footer__payments-icons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.pay-badge {
+  display: inline-flex;
+  width: 48px; height: 32px;
+  border-radius: 4px; overflow: hidden;
+  opacity: .85;
+  transition: var(--transition);
+}
+.pay-badge:hover { opacity: 1; transform: translateY(-2px); }
+.pay-badge svg { width: 100%; height: 100%; display: block; }
+
+@media (max-width: 640px) {
+  .footer__payments { justify-content: center; text-align: center; flex-direction: column; gap: 12px; }
+  .footer__payments-icons { justify-content: center; }
+  .pay-badge { width: 42px; height: 28px; }
+}
 
 .footer__bottom {
   max-width: 1200px; margin: 0 auto;
