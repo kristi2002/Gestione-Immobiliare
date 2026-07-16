@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog Immobiliare — Immobiliare Orlandi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ░░ NAV ░░ -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">
+      <div class="nav__logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav__logo-text">
+        <div class="brand">Orlandi</div>
+        <div class="sub">Immobiliare</div>
+      </div>
+    </a>
+    <ul class="nav__links">
+      <li><a href="index.html#annunci">Annunci</a></li>
+      <li><a href="mappa.html">Mappa</a></li>
+      <li><a href="index.html#servizi">Servizi</a></li>
+      <li><a href="chi-siamo.html">Chi Siamo</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="contattaci.html">Contatti</a></li>
+      <li><a href="appuntamento.html">Appuntamento</a></li>
+    </ul>
+    <a href="contattaci.html" class="btn btn--primary nav__cta">📞 Contattaci</a>
+    <button class="nav__burger" id="navBurger" aria-label="Apri menu" aria-expanded="false" aria-controls="mobileSidebar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="house" d="M3.5 9.7L12 3.4l8.5 6.3V19.6a1 1 0 01-1 1h-15a1 1 0 01-1-1V9.7z"/>
+        <line class="line line--1" x1="8" y1="10.3" x2="16" y2="10.3"/>
+        <line class="line line--2" x1="8" y1="13.5" x2="16" y2="13.5"/>
+        <line class="line line--3" x1="8" y1="16.7" x2="16" y2="16.7"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ░░ MOBILE SIDEBAR ░░ -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="mobileSidebar" aria-hidden="true">
+  <button class="sidebar__close" id="sidebarClose" aria-label="Chiudi menu">✕</button>
+  <a href="index.html#annunci"  class="sidebar__link">Annunci</a>
+  <a href="mappa.html" class="sidebar__link">Mappa</a>
+  <a href="index.html#servizi"  class="sidebar__link">Servizi</a>
+  <a href="chi-siamo.html"  class="sidebar__link">Chi Siamo</a>
+  <a href="blog.html" class="sidebar__link">Blog</a>
+  <a href="contattaci.html" class="sidebar__link">Contatti</a>
+  <a href="appuntamento.html" class="sidebar__link">Richiedi un appuntamento</a>
+  <a href="contattaci.html" class="btn btn--primary sidebar__cta">📞 Contattaci</a>
+</aside>
+
+<!-- ░░ PAGE HERO ░░ -->
+<header class="page-hero">
+  <div class="badge">📰 Blog immobiliare</div>
+  <h1 class="section-title" style="margin-top:14px;">Notizie e consigli</h1>
+  <div class="gold-line"></div>
+  <p>Guide, analisi di mercato e consigli pratici per comprare, vendere e affittare a Civitanova Marche e dintorni.</p>
+</header>
+
+<!-- ░░ BLOG LISTING ░░ -->
+<section class="section" id="blogList">
+  <div class="container">
+
+    <!-- Category filter -->
+    <div class="blog-filters" id="blogFilters" role="tablist" aria-label="Filtra articoli per categoria">
+      <button class="blog-chip active" data-cat="tutti">Tutti</button>
+      <button class="blog-chip" data-cat="mercato">Mercato</button>
+      <button class="blog-chip" data-cat="guide">Guide</button>
+      <button class="blog-chip" data-cat="mutui">Mutui &amp; Fisco</button>
+      <button class="blog-chip" data-cat="casa">Vivere la casa</button>
+    </div>
+
+    <!-- Featured post -->
+    <article class="blog-featured" data-cat="mercato">
+      <div class="blog-featured__img" style="background:linear-gradient(135deg,#003261 0%,#004B87 55%,#0066BB 100%)">
+        <span class="blog-card__tag">Mercato</span>
+      </div>
+      <div class="blog-featured__body">
+        <div class="blog-card__meta">
+          <span>📅 10 luglio 2026</span><span>·</span><span>⏱ 6 min di lettura</span>
+        </div>
+        <h2 class="blog-featured__title">Mercato immobiliare a Civitanova Marche: l'andamento del 2026</h2>
+        <p class="blog-card__excerpt">
+          Prezzi al metro quadro, zone più richieste e previsioni per il secondo semestre:
+          la nostra analisi del mercato locale tra lungomare, centro e Civitanova Alta.
+        </p>
+        <a class="btn btn--blue" href="#articolo-1" data-article="articolo-1">Leggi l'articolo →</a>
+      </div>
+    </article>
+
+    <!-- Posts grid -->
+    <div class="blog-grid">
+
+      <article class="blog-card" data-cat="guide">
+        <div class="blog-card__img" style="background:linear-gradient(160deg,#1c4d24 0%,#3d8a4a 55%,#7ec98a 100%)">
+          <span class="blog-card__tag">Guide</span>
+        </div>
+        <div class="blog-card__body">
+          <div class="blog-card__meta"><span>📅 28 giugno 2026</span><span>·</span><span>⏱ 5 min</span></div>
+          <h3 class="blog-card__title">Vendere casa: i 7 documenti da preparare prima dell'annuncio</h3>
+          <p class="blog-card__excerpt">APE, visura catastale, conformità urbanistica: la checklist completa per arrivare pronti al rogito senza sorprese.</p>
+          <a class="blog-card__link" href="#articolo-2" data-article="articolo-2">Leggi tutto →</a>
+        </div>
+      </article>
+
+      <article class="blog-card" data-cat="mutui">
+        <div class="blog-card__img" style="background:linear-gradient(160deg,#5c3d1e 0%,#a0622a 55%,#d4935c 100%)">
+          <span class="blog-card__tag">Mutui &amp; Fisco</span>
+        </div>
+        <div class="blog-card__body">
+          <div class="blog-card__meta"><span>📅 15 giugno 2026</span><span>·</span><span>⏱ 4 min</span></div>
+          <h3 class="blog-card__title">Mutuo prima casa nel 2026: tassi, agevolazioni e requisiti</h3>
+          <p class="blog-card__excerpt">Fondo garanzia under 36, tasso fisso o variabile, quanto anticipo serve davvero: facciamo chiarezza con esempi concreti.</p>
+          <a class="blog-card__link" href="#articolo-3" data-article="articolo-3">Leggi tutto →</a>
+        </div>
+      </article>
+
+      <article class="blog-card" data-cat="guide">
+        <div class="blog-card__img" style="background:linear-gradient(160deg,#4a1e5c 0%,#7a2aa0 55%,#b45cd4 100%)">
+          <span class="blog-card__tag">Guide</span>
+        </div>
+        <div class="blog-card__body">
+          <div class="blog-card__meta"><span>📅 2 giugno 2026</span><span>·</span><span>⏱ 5 min</span></div>
+          <h3 class="blog-card__title">Affittare in sicurezza: come scegliere l'inquilino giusto</h3>
+          <p class="blog-card__excerpt">Referenze, garanzie, tipologie di contratto (4+4, transitorio, cedolare secca): tutto quello che un proprietario deve sapere.</p>
+          <a class="blog-card__link" href="#articolo-4" data-article="articolo-4">Leggi tutto →</a>
+        </div>
+      </article>
+
+      <article class="blog-card" data-cat="mercato">
+        <div class="blog-card__img" style="background:linear-gradient(160deg,#0e3b4d 0%,#1a6e8a 55%,#5cb8d4 100%)">
+          <span class="blog-card__tag">Mercato</span>
+        </div>
+        <div class="blog-card__body">
+          <div class="blog-card__meta"><span>📅 20 maggio 2026</span><span>·</span><span>⏱ 4 min</span></div>
+          <h3 class="blog-card__title">Case vacanza sul lungomare: un investimento che rende?</h3>
+          <p class="blog-card__excerpt">Rendimenti degli affitti brevi a Civitanova, stagionalità e costi di gestione: i numeri per decidere con lucidità.</p>
+          <a class="blog-card__link" href="#articolo-5" data-article="articolo-5">Leggi tutto →</a>
+        </div>
+      </article>
+
+      <article class="blog-card" data-cat="casa">
+        <div class="blog-card__img" style="background:linear-gradient(160deg,#5c1e1e 0%,#a02a2a 55%,#d45c5c 100%)">
+          <span class="blog-card__tag">Vivere la casa</span>
+        </div>
+        <div class="blog-card__body">
+          <div class="blog-card__meta"><span>📅 8 maggio 2026</span><span>·</span><span>⏱ 3 min</span></div>
+          <h3 class="blog-card__title">Home staging: piccoli interventi che aumentano il valore percepito</h3>
+          <p class="blog-card__excerpt">Luce, ordine e neutralità: come presentare al meglio un immobile e ridurre i tempi di vendita fino al 40%.</p>
+          <a class="blog-card__link" href="#articolo-6" data-article="articolo-6">Leggi tutto →</a>
+        </div>
+      </article>
+
+      <article class="blog-card" data-cat="mutui">
+        <div class="blog-card__img" style="background:linear-gradient(160deg,#1e2a5c 0%,#2a45a0 55%,#5c7ad4 100%)">
+          <span class="blog-card__tag">Mutui &amp; Fisco</span>
+        </div>
+        <div class="blog-card__body">
+          <div class="blog-card__meta"><span>📅 22 aprile 2026</span><span>·</span><span>⏱ 4 min</span></div>
+          <h3 class="blog-card__title">Bonus casa 2026: le detrazioni ancora attive per chi ristruttura</h3>
+          <p class="blog-card__excerpt">Ristrutturazione, ecobonus e barriere architettoniche: percentuali aggiornate, massimali e come non perdere il beneficio.</p>
+          <a class="blog-card__link" href="#articolo-7" data-article="articolo-7">Leggi tutto →</a>
+        </div>
+      </article>
+
+    </div>
+    <p class="blog-empty" id="blogEmpty" hidden>Nessun articolo in questa categoria, torna presto!</p>
+  </div>
+</section>
+
+<!-- ░░ ARTICLE VIEWS (una per articolo, mostrate via hash) ░░ -->
+<section class="section blog-article" id="articolo-1" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Mercato</div>
+    <h1 class="blog-article__title">Mercato immobiliare a Civitanova Marche: l'andamento del 2026</h1>
+    <div class="blog-card__meta"><span>📅 10 luglio 2026</span><span>·</span><span>⏱ 6 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(135deg,#003261 0%,#004B87 55%,#0066BB 100%)"></div>
+    <div class="blog-article__content">
+      <p>Il mercato immobiliare di Civitanova Marche conferma anche nel 2026 una domanda vivace, trainata dal lungomare e dal centro. I tempi medi di vendita per immobili correttamente prezzati restano sotto i 90 giorni.</p>
+      <h2>Le zone più richieste</h2>
+      <p>Il fronte mare resta l'area con i valori più alti, seguito dal centro e da Civitanova Alta, sempre più apprezzata da famiglie e acquirenti in cerca di tranquillità e panorami. Le zone di Fontespina e San Marone offrono invece il miglior rapporto qualità-prezzo per prime case.</p>
+      <h2>Prezzi e tendenze</h2>
+      <p>I prezzi medi al metro quadro sono in leggera crescita rispetto al 2025, con punte per gli immobili ristrutturati vista mare. Gli immobili da ristrutturare, al contrario, richiedono valutazioni realistiche per incontrare la domanda.</p>
+      <h2>Cosa aspettarsi nel secondo semestre</h2>
+      <p>Con tassi sui mutui in graduale discesa, ci aspettiamo un autunno dinamico soprattutto sul segmento prima casa. Chi vuole vendere ha davanti una finestra favorevole: una valutazione professionale è il primo passo.</p>
+      <p><em>Vuoi conoscere il valore del tuo immobile? <a href="contattaci.html">Richiedi una valutazione gratuita</a>.</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="section blog-article" id="articolo-2" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Guide</div>
+    <h1 class="blog-article__title">Vendere casa: i 7 documenti da preparare prima dell'annuncio</h1>
+    <div class="blog-card__meta"><span>📅 28 giugno 2026</span><span>·</span><span>⏱ 5 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(160deg,#1c4d24 0%,#3d8a4a 55%,#7ec98a 100%)"></div>
+    <div class="blog-article__content">
+      <p>Preparare i documenti prima di pubblicare l'annuncio evita ritardi in trattativa e brutte sorprese al rogito. Ecco la checklist che usiamo con i nostri clienti venditori.</p>
+      <h2>La checklist</h2>
+      <p><strong>1. Atto di provenienza</strong> — rogito, donazione o successione che dimostra la proprietà.</p>
+      <p><strong>2. Visura e planimetria catastale</strong> — devono corrispondere allo stato reale dell'immobile.</p>
+      <p><strong>3. APE</strong> — l'attestato di prestazione energetica è obbligatorio già in fase di annuncio.</p>
+      <p><strong>4. Conformità urbanistica ed edilizia</strong> — eventuali difformità vanno sanate prima della vendita.</p>
+      <p><strong>5. Certificazioni impianti</strong> — se disponibili, aumentano il valore percepito.</p>
+      <p><strong>6. Documentazione condominiale</strong> — regolamento, spese e delibere su lavori straordinari.</p>
+      <p><strong>7. Eventuali ipoteche o vincoli</strong> — meglio dichiararli subito e gestirli con l'agenzia.</p>
+      <p><em>La nostra agenzia verifica gratuitamente la documentazione prima della messa in vendita. <a href="appuntamento.html">Prenota un appuntamento</a>.</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="section blog-article" id="articolo-3" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Mutui &amp; Fisco</div>
+    <h1 class="blog-article__title">Mutuo prima casa nel 2026: tassi, agevolazioni e requisiti</h1>
+    <div class="blog-card__meta"><span>📅 15 giugno 2026</span><span>·</span><span>⏱ 4 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(160deg,#5c3d1e 0%,#a0622a 55%,#d4935c 100%)"></div>
+    <div class="blog-article__content">
+      <p>Comprare la prima casa nel 2026 è tornato più accessibile: i tassi si sono stabilizzati e le agevolazioni per i giovani sono state prorogate.</p>
+      <h2>Tasso fisso o variabile?</h2>
+      <p>Con lo spread attuale tra fisso e variabile molto contenuto, la maggior parte dei nostri clienti sceglie il tasso fisso per la prevedibilità della rata. Il variabile torna interessante solo su durate brevi.</p>
+      <h2>Le agevolazioni attive</h2>
+      <p>Per gli under 36 con ISEE entro i limiti resta attivo il Fondo di garanzia prima casa, che permette di finanziare fino all'80% (in alcuni casi oltre) del valore dell'immobile, oltre alle imposte d'atto ridotte previste per la prima casa.</p>
+      <h2>Quanto anticipo serve?</h2>
+      <p>In media consigliamo di avere da parte il 20% del prezzo più il 10% per spese accessorie (notaio, imposte, agenzia). Collaboriamo con i principali istituti per trovare la soluzione più adatta al tuo profilo.</p>
+      <p><em>Vuoi una consulenza mutuo gratuita? <a href="contattaci.html">Contattaci</a>.</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="section blog-article" id="articolo-4" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Guide</div>
+    <h1 class="blog-article__title">Affittare in sicurezza: come scegliere l'inquilino giusto</h1>
+    <div class="blog-card__meta"><span>📅 2 giugno 2026</span><span>·</span><span>⏱ 5 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(160deg,#4a1e5c 0%,#7a2aa0 55%,#b45cd4 100%)"></div>
+    <div class="blog-article__content">
+      <p>Un buon contratto di locazione inizia molto prima della firma: dalla selezione dell'inquilino. Ecco il metodo che applichiamo nella gestione delle locazioni.</p>
+      <h2>Verifiche preliminari</h2>
+      <p>Reddito dimostrabile (in genere il canone non dovrebbe superare un terzo delle entrate), stabilità lavorativa e referenze dei precedenti proprietari sono i tre pilastri della selezione.</p>
+      <h2>Quale contratto scegliere</h2>
+      <p>Il 4+4 a canone libero offre flessibilità; il 3+2 a canone concordato dà vantaggi fiscali (cedolare al 10% dove applicabile); il transitorio copre esigenze temporanee documentate. La scelta dipende dagli obiettivi del proprietario.</p>
+      <h2>Garanzie aggiuntive</h2>
+      <p>Deposito cauzionale, fideiussione bancaria o assicurativa e polizze contro la morosità riducono ulteriormente il rischio. La nostra gestione locazioni include il controllo dei pagamenti e la gestione delle scadenze.</p>
+      <p><em>Hai un immobile da mettere a reddito? <a href="contattaci.html">Parliamone</a>.</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="section blog-article" id="articolo-5" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Mercato</div>
+    <h1 class="blog-article__title">Case vacanza sul lungomare: un investimento che rende?</h1>
+    <div class="blog-card__meta"><span>📅 20 maggio 2026</span><span>·</span><span>⏱ 4 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(160deg,#0e3b4d 0%,#1a6e8a 55%,#5cb8d4 100%)"></div>
+    <div class="blog-article__content">
+      <p>Civitanova Marche è tra le mete balneari più frequentate delle Marche e gli affitti brevi estivi possono generare rendimenti interessanti — a patto di fare bene i conti.</p>
+      <h2>I ricavi</h2>
+      <p>Un bilocale a pochi passi dal mare, ben arredato e ben gestito, lavora a pieno regime da giugno a settembre, con richieste crescenti anche nei mesi spalla grazie a eventi e turismo di prossimità.</p>
+      <h2>I costi da non dimenticare</h2>
+      <p>Pulizie, utenze, tassa di soggiorno, commissioni dei portali, manutenzione e fiscalità (cedolare sugli affitti brevi) incidono sensibilmente: nel valutare il rendimento netto vanno messi in conto fin dall'inizio.</p>
+      <h2>Il verdetto</h2>
+      <p>Con un acquisto nella zona giusta e una gestione professionale, il rendimento netto può superare quello di un affitto tradizionale, con in più la disponibilità dell'immobile per uso personale. Il fattore decisivo è comprare bene.</p>
+      <p><em>Cerchi un immobile a reddito sul lungomare? <a href="index.html#annunci">Guarda i nostri annunci</a>.</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="section blog-article" id="articolo-6" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Vivere la casa</div>
+    <h1 class="blog-article__title">Home staging: piccoli interventi che aumentano il valore percepito</h1>
+    <div class="blog-card__meta"><span>📅 8 maggio 2026</span><span>·</span><span>⏱ 3 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(160deg,#5c1e1e 0%,#a02a2a 55%,#d45c5c 100%)"></div>
+    <div class="blog-article__content">
+      <p>La prima impressione decide gran parte della trattativa. L'home staging è l'arte di preparare l'immobile per farlo apprezzare al maggior numero di acquirenti possibile.</p>
+      <h2>Le regole d'oro</h2>
+      <p><strong>Ordine e spersonalizzazione:</strong> meno oggetti personali ci sono, più il visitatore riesce a immaginarsi nella casa.</p>
+      <p><strong>Luce:</strong> tende leggere, lampadine calde e visite nelle ore giuste cambiano la percezione degli ambienti.</p>
+      <p><strong>Piccole riparazioni:</strong> una parete tinteggiata di fresco o una guarnizione sistemata costano poco e tolgono obiezioni alla trattativa.</p>
+      <h2>Quanto rende?</h2>
+      <p>Nella nostra esperienza un immobile ben presentato si vende più velocemente e con meno richieste di sconto. Il servizio fotografico professionale, incluso nei nostri incarichi, completa il lavoro.</p>
+      <p><em>Vuoi preparare al meglio il tuo immobile per la vendita? <a href="appuntamento.html">Richiedi un sopralluogo</a>.</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="section blog-article" id="articolo-7" hidden>
+  <div class="container blog-article__container">
+    <a class="blog-article__back" href="#" data-back>← Torna al blog</a>
+    <div class="badge">Mutui &amp; Fisco</div>
+    <h1 class="blog-article__title">Bonus casa 2026: le detrazioni ancora attive per chi ristruttura</h1>
+    <div class="blog-card__meta"><span>📅 22 aprile 2026</span><span>·</span><span>⏱ 4 min di lettura</span><span>·</span><span>✍️ Redazione Orlandi</span></div>
+    <div class="blog-article__hero" style="background:linear-gradient(160deg,#1e2a5c 0%,#2a45a0 55%,#5c7ad4 100%)"></div>
+    <div class="blog-article__content">
+      <p>Il quadro delle agevolazioni edilizie è cambiato molto negli ultimi anni, ma per chi acquista un immobile da ristrutturare restano opportunità concrete.</p>
+      <h2>Le detrazioni principali</h2>
+      <p>Il bonus ristrutturazioni continua a coprire una quota significativa delle spese di recupero edilizio sulla prima casa, recuperabile in dieci anni. A questo si affiancano le agevolazioni per l'efficientamento energetico e per l'eliminazione delle barriere architettoniche.</p>
+      <h2>Attenzione a scadenze e adempimenti</h2>
+      <p>Bonifici parlanti, comunicazioni ENEA dove richieste e titoli edilizi corretti sono condizioni indispensabili: un errore formale può far perdere la detrazione. Consigliamo sempre di coinvolgere un tecnico e il proprio commercialista prima di iniziare i lavori.</p>
+      <h2>Un'opportunità per chi compra</h2>
+      <p>Gli immobili da ristrutturare si acquistano a prezzi più bassi e, con le detrazioni, il costo effettivo dei lavori scende: per molti acquirenti è la strada più conveniente verso la casa ideale.</p>
+      <p><em>Cerchi un immobile da ristrutturare con potenziale? <a href="contattaci.html">Contattaci</a>, ne abbiamo di selezionati.</em></p>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ CTA BANNER ░░ -->
+<section class="cta">
+  <div class="cta__inner">
+    <div class="badge">📋 Valutazione gratuita</div>
+    <h2 class="cta__title">Vuoi vendere o affittare il tuo immobile?</h2>
+    <p class="cta__desc">
+      Richiedi una valutazione gratuita e senza impegno. I nostri esperti ti forniranno
+      una stima accurata basata sul mercato attuale di Civitanova Marche.
+    </p>
+    <div class="cta__actions">
+      <a href="contattaci.html" class="btn btn--primary">Richiedi valutazione gratuita</a>
+      <a href="appuntamento.html" class="btn btn--primary">📅 Richiedi un appuntamento</a>
+      <a href="tel:+39073400000" class="btn btn--outline">📞 Contattaci ora</a>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ FOOTER ░░ -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <div class="brand">Immobiliare Orlandi</div>
+      <div class="sub">Civitanova Marche</div>
+      <p>Dal 1985 il tuo punto di riferimento per compravendite, affitti e investimenti immobiliari nelle Marche.</p>
+      <div class="footer__socials">
+        <a href="#" class="footer__social">f</a>
+        <a href="#" class="footer__social">in</a>
+        <a href="#" class="footer__social">ig</a>
+        <a href="#" class="footer__social">yt</a>
+      </div>
+    </div>
+    <div class="footer__col">
+      <h4>Immobili</h4>
+      <ul>
+        <li><a href="#">Appartamenti</a></li>
+        <li><a href="#">Ville</a></li>
+        <li><a href="#">Attici</a></li>
+        <li><a href="#">Immobili commerciali</a></li>
+        <li><a href="#">Affitti</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Servizi</h4>
+      <ul>
+        <li><a href="#">Compravendita</a></li>
+        <li><a href="#">Valutazione gratuita</a></li>
+        <li><a href="#">Consulenza mutui</a></li>
+        <li><a href="#">Gestione locazioni</a></li>
+        <li><a href="#">Assistenza legale</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4>Agenzia</h4>
+      <ul>
+        <li><a href="chi-siamo.html">Chi siamo</a></li>
+        <li><a href="#">Il nostro team</a></li>
+        <li><a href="#">Recensioni</a></li>
+        <li><a href="blog.html">Blog immobiliare</a></li>
+        <li><a href="contattaci.html">Contatti</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer__bottom">
+    <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
+    <span>
+      <a href="#">Privacy Policy</a> · <a href="#">Cookie Policy</a> · <a href="#">Note legali</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Nav shadow on scroll
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (window.scrollY > 40) {
+      nav.style.boxShadow = '0 4px 24px rgba(0,50,97,.3)';
+    } else {
+      nav.style.boxShadow = 'none';
+    }
+  });
+
+  // Mobile sidebar
+  const burger  = document.getElementById('navBurger');
+  const sidebar = document.getElementById('mobileSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  function setSidebar(open) {
+    burger.classList.toggle('is-open', open);
+    sidebar.classList.toggle('is-open', open);
+    overlay.classList.toggle('is-open', open);
+    document.body.classList.toggle('no-scroll', open);
+    burger.setAttribute('aria-expanded', open);
+    sidebar.setAttribute('aria-hidden', !open);
+  }
+
+  burger.addEventListener('click', () => setSidebar(!sidebar.classList.contains('is-open')));
+  overlay.addEventListener('click', () => setSidebar(false));
+  document.getElementById('sidebarClose').addEventListener('click', () => setSidebar(false));
+  sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setSidebar(false)));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setSidebar(false); });
+
+  // ── Blog: filtro categorie ──
+  const chips     = document.querySelectorAll('.blog-chip');
+  const posts     = document.querySelectorAll('.blog-card, .blog-featured');
+  const blogEmpty = document.getElementById('blogEmpty');
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const cat = chip.dataset.cat;
+      let visible = 0;
+      posts.forEach(p => {
+        const show = cat === 'tutti' || p.dataset.cat === cat;
+        p.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      blogEmpty.hidden = visible > 0;
+    });
+  });
+
+  // ── Blog: vista articolo via hash (lista <-> articolo) ──
+  const listSection = document.getElementById('blogList');
+  const articles    = document.querySelectorAll('.blog-article');
+
+  function showFromHash() {
+    const id = location.hash.replace('#', '');
+    const target = id && document.getElementById(id);
+    const isArticle = target && target.classList.contains('blog-article');
+    listSection.hidden = !!isArticle;
+    articles.forEach(a => { a.hidden = !(isArticle && a.id === id); });
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll('[data-back]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      history.pushState('', document.title, location.pathname);
+      showFromHash();
+    });
+  });
+
+  window.addEventListener('hashchange', showFromHash);
+  showFromHash();
+</script>
+</body>
+</html>

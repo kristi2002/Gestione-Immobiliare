@@ -51,9 +51,20 @@
     .privacy-check { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px; font-size: .82rem; color: var(--text-muted); }
     .privacy-check input { margin-top: 3px; }
     .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; }
+    .date-hint { margin-top: 8px; font-size: .8rem; color: var(--text-muted); }
+    .date-hint.is-error { color: #B3261E; font-weight: 500; }
+    .date-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .date-chip {
+      padding: 3px 10px; border-radius: 999px; font-size: .75rem;
+      background: #FDEBEC; color: #B3261E; border: 1px solid #F5C6C9;
+      text-decoration: line-through;
+    }
     @media (max-width: 900px) {
       .appt-inner { grid-template-columns: 1fr; }
       .appt-photo img { min-height: 300px; }
+      .date-hint  { font-size: .78rem; }
+      .date-chips { gap: 4px; }
+      .date-chip  { padding: 2px 8px; font-size: .7rem; }
     }
   </style>
 </head>
@@ -76,6 +87,7 @@
       <li><a href="mappa.html">Mappa</a></li>
       <li><a href="index.html#servizi">Servizi</a></li>
       <li><a href="chi-siamo.html">Chi Siamo</a></li>
+      <li><a href="blog.html">Blog</a></li>
       <li><a href="contattaci.html">Contatti</a></li>
       <li><a href="appuntamento.html">Appuntamento</a></li>
     </ul>
@@ -99,6 +111,7 @@
   <a href="mappa.html" class="sidebar__link">Mappa</a>
   <a href="index.html#servizi"  class="sidebar__link">Servizi</a>
   <a href="chi-siamo.html"  class="sidebar__link">Chi Siamo</a>
+  <a href="blog.html" class="sidebar__link">Blog</a>
   <a href="contattaci.html" class="sidebar__link">Contatti</a>
   <a href="appuntamento.html" class="sidebar__link">Richiedi un appuntamento</a>
   <a href="contattaci.html" class="btn btn--primary sidebar__cta">📞 Contattaci</a>
@@ -184,6 +197,7 @@
             <div class="form-group">
               <label for="apptDate">Data preferita</label>
               <input id="apptDate" name="preferred_date" type="date" />
+              <div class="date-hint" id="apptDateHint"></div>
             </div>
             <div class="form-group">
               <label for="apptTime">Fascia oraria</label>
@@ -252,7 +266,7 @@
         <li><a href="chi-siamo.html">Chi siamo</a></li>
         <li><a href="#">Il nostro team</a></li>
         <li><a href="#">Recensioni</a></li>
-        <li><a href="#">Blog immobiliare</a></li>
+        <li><a href="blog.html">Blog immobiliare</a></li>
         <li><a href="contattaci.html">Contatti</a></li>
       </ul>
     </div>
@@ -301,13 +315,62 @@
   const apptFeedback = document.getElementById('apptFeedback');
   const apptSubmit   = document.getElementById('apptSubmit');
   const apptDate     = document.getElementById('apptDate');
+  const apptDateHint = document.getElementById('apptDateHint');
   apptDate.min = new Date().toISOString().slice(0, 10);
+
+  // Unavailable dates: Sundays + days already at full capacity (from the API)
+  let unavailableDates = new Set();
+
+  function isUnavailable(iso) {
+    if (!iso) return false;
+    if (new Date(iso + 'T12:00:00').getDay() === 0) return true; // Sunday
+    return unavailableDates.has(iso);
+  }
+
+  function renderDateHint() {
+    const upcoming = [...unavailableDates].sort().slice(0, 8);
+    apptDateHint.className = 'date-hint';
+    apptDateHint.innerHTML = 'Domenica siamo chiusi.' + (upcoming.length
+      ? ' Date già al completo:<div class="date-chips">' +
+        upcoming.map(d => {
+          const [y, m, g] = d.split('-');
+          return '<span class="date-chip">' + g + '/' + m + '/' + y + '</span>';
+        }).join('') + '</div>'
+      : '');
+  }
+
+  fetch('../api/appointment_request.php?action=unavailable_dates')
+    .then(r => r.json())
+    .then(json => {
+      const dates = (json.data && json.data.unavailable_dates) || json.unavailable_dates || [];
+      unavailableDates = new Set(dates.filter(d => new Date(d + 'T12:00:00').getDay() !== 0));
+      renderDateHint();
+    })
+    .catch(() => renderDateHint()); // offline: still show the Sunday rule
+
+  renderDateHint();
+
+  apptDate.addEventListener('change', () => {
+    if (isUnavailable(apptDate.value)) {
+      apptDateHint.className = 'date-hint is-error';
+      apptDateHint.textContent = '⚠️ Questa data non è disponibile: scegli un altro giorno.';
+      apptDate.value = '';
+    } else {
+      renderDateHint();
+    }
+  });
 
   apptForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     apptFeedback.className = 'form-feedback';
 
     if (!apptForm.reportValidity()) return;
+
+    if (isUnavailable(apptDate.value)) {
+      apptFeedback.textContent = '⚠️ La data scelta non è disponibile: seleziona un altro giorno.';
+      apptFeedback.classList.add('is-error');
+      return;
+    }
 
     const payload = Object.fromEntries(new FormData(apptForm).entries());
     apptSubmit.disabled = true;

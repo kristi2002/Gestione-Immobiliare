@@ -78,10 +78,65 @@
     .map-status { margin: 10px 4px 0; font-size: 13px; color: var(--text-muted); min-height: 18px; }
     .map-status.is-error { color: #c0392b; }
 
+    /* Mobile map/list toggle (hidden on desktop) */
+    .map-toggle {
+      display: none; position: relative; margin: 0 auto 14px;
+      background: var(--white); border: 1px solid var(--border); border-radius: 50px;
+      padding: 4px; width: fit-content; box-shadow: var(--shadow-sm);
+    }
+    .map-toggle button {
+      position: relative; z-index: 1; border: 0; background: none; cursor: pointer;
+      padding: 9px 26px; border-radius: 50px; font: 600 13px 'Inter', sans-serif;
+      color: var(--text-muted); transition: color var(--transition);
+    }
+    .map-toggle button.active { color: var(--white); }
+    .map-toggle__pill {
+      position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
+      background: var(--blue); border-radius: 50px; transition: transform var(--transition);
+      will-change: transform;
+    }
+    .map-toggle.show-list .map-toggle__pill { transform: translateX(100%); }
+
+    /* ── Tablet ── */
+    @media (max-width: 1024px) {
+      .map-layout { grid-template-columns: 1fr 320px; gap: 16px; }
+      #listingsMap, .map-list { height: 540px; }
+    }
+
+    /* ── Mobile ── */
     @media (max-width: 900px) {
-      .map-layout { grid-template-columns: 1fr; }
-      #listingsMap { height: 420px; }
-      .map-list { height: auto; max-height: 420px; }
+      .map-page { padding: 96px 0 64px; }
+      .map-head { margin-bottom: 22px; }
+      .map-toolbar { padding: 12px; gap: 10px; }
+      .map-search { flex: 1 1 100%; }
+      .map-search input { font-size: 16px; /* prevents iOS auto-zoom on focus */ padding: 12px 14px; }
+      .map-search .btn { padding: 12px 20px; flex: none; }
+      .map-chips {
+        flex: 1 1 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; padding-bottom: 2px;
+      }
+      .map-chips::-webkit-scrollbar { display: none; }
+      .map-chip { flex: none; padding: 10px 16px; }
+
+      .map-toggle { display: flex; }
+      .map-layout { grid-template-columns: 1fr; gap: 0; }
+      #listingsMap { height: calc(100vh - 320px); min-height: 380px; }
+      .map-list { height: auto; max-height: calc(100vh - 320px); padding-right: 0; }
+
+      /* toggle-driven visibility: only one view at a time on small screens */
+      .map-layout.view-map  .map-list { display: none; }
+      .map-layout.view-list #listingsMap { display: none; }
+
+      .map-item { padding: 10px; }
+      .map-item__thumb { width: 76px; height: 66px; }
+      .map-item:hover { transform: none; } /* no hover-lift on touch */
+    }
+
+    @media (max-width: 480px) {
+      .map-head p { font-size: 14px; }
+      #listingsMap { height: calc(100vh - 300px); min-height: 340px; }
+      .map-popup { min-width: 160px; }
+      .leaflet-popup-content { margin: 10px 12px; }
     }
   </style>
 </head>
@@ -104,6 +159,7 @@
       <li><a href="mappa.html">Mappa</a></li>
       <li><a href="index.html#servizi">Servizi</a></li>
       <li><a href="chi-siamo.html">Chi Siamo</a></li>
+      <li><a href="blog.html">Blog</a></li>
       <li><a href="contattaci.html">Contatti</a></li>
       <li><a href="appuntamento.html">Appuntamento</a></li>
     </ul>
@@ -127,6 +183,7 @@
   <a href="mappa.html" class="sidebar__link">Mappa</a>
   <a href="index.html#servizi" class="sidebar__link">Servizi</a>
   <a href="chi-siamo.html" class="sidebar__link">Chi Siamo</a>
+  <a href="blog.html" class="sidebar__link">Blog</a>
   <a href="contattaci.html" class="sidebar__link">Contatti</a>
   <a href="appuntamento.html" class="sidebar__link">Richiedi un appuntamento</a>
   <a href="contattaci.html" class="btn btn--primary sidebar__cta">📞 Contattaci</a>
@@ -136,7 +193,6 @@
 <section class="map-page">
   <div class="container">
     <div class="map-head">
-      <div class="badge">🗺️ Cerca sulla mappa</div>
       <h1>Immobili sulla mappa</h1>
       <p>Cerca una città o una zona: la mappa si centra sul luogo scelto e ti mostra gli immobili disponibili nei dintorni.</p>
     </div>
@@ -153,7 +209,13 @@
       </div>
     </div>
 
-    <div class="map-layout">
+    <div class="map-toggle" id="mapToggle" role="tablist" aria-label="Vista mappa o elenco">
+      <div class="map-toggle__pill"></div>
+      <button type="button" class="active" data-view="map" role="tab" aria-selected="true">🗺️ Mappa</button>
+      <button type="button" data-view="list" role="tab" aria-selected="false">📋 Elenco</button>
+    </div>
+
+    <div class="map-layout view-map" id="mapLayout">
       <div id="listingsMap"></div>
       <aside class="map-list" id="mapList">
         <div class="map-list__empty">Caricamento immobili…</div>
@@ -203,7 +265,7 @@
         <li><a href="chi-siamo.html">Chi siamo</a></li>
         <li><a href="#">Il nostro team</a></li>
         <li><a href="#">Recensioni</a></li>
-        <li><a href="#">Blog immobiliare</a></li>
+        <li><a href="blog.html">Blog immobiliare</a></li>
         <li><a href="contattaci.html">Contatti</a></li>
       </ul>
     </div>
@@ -334,6 +396,8 @@
         item.classList.add('is-active');
         const m = markerById.get(Number(item.dataset.id));
         if (m) {
+          // on mobile the list hides the map: switch to map view first
+          if (isMobile()) setView('map');
           map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 15), { duration: .6 });
           m.openPopup();
         }
@@ -402,6 +466,40 @@
     chip.classList.add('active');
     activeType = chip.dataset.type;
     render();
+  });
+
+  // ── Mobile map/list toggle ──
+  const mapToggle = document.getElementById('mapToggle');
+  const mapLayout = document.getElementById('mapLayout');
+  const isMobile  = () => window.matchMedia('(max-width: 900px)').matches;
+
+  function setView(view) {
+    mapLayout.classList.toggle('view-map',  view === 'map');
+    mapLayout.classList.toggle('view-list', view === 'list');
+    mapToggle.classList.toggle('show-list', view === 'list');
+    mapToggle.querySelectorAll('button').forEach(b => {
+      const on = b.dataset.view === view;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on);
+    });
+    // Leaflet needs a size recalc after its container becomes visible again
+    if (view === 'map') requestAnimationFrame(() => map.invalidateSize());
+  }
+
+  mapToggle.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-view]');
+    if (btn) setView(btn.dataset.view);
+  });
+
+  // Keep the map tiles correct across orientation changes / desktop resizes,
+  // and make sure both panels are usable again when returning to desktop.
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (!isMobile()) setView('map'); // desktop shows both; 'view-list' would hide the map
+      map.invalidateSize();
+    }, 150);
   });
 
   loadListings();

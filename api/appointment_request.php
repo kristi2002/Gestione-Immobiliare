@@ -24,6 +24,57 @@ apiHandleOptions();
 const APPT_TYPES = ['valutazione', 'visita_immobile', 'vendita', 'affitto', 'consulenza', 'altro'];
 const APPT_TIMES = ['mattina', 'pomeriggio', 'sera'];
 const APPT_MAX_PER_IP_PER_HOUR = 5;
+const APPT_SLOTS_PER_DAY = 6;       // daily capacity across all agents
+const APPT_LOOKAHEAD_DAYS = 60;     // horizon exposed to the public site
+
+/**
+ * GET ?action=unavailable_dates — dates (next 60 days) the public form should block.
+ * A date is unavailable when it is a Sunday (agency closed) or when confirmed
+ * calendar appointments + pending web requests reach the daily slot capacity.
+ * Returns bare date strings only: no personal data leaves this endpoint.
+ */
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (($_GET['action'] ?? '') !== 'unavailable_dates') {
+        apiError('Azione non valida.', 400);
+    }
+    try {
+        $db    = getDB();
+        $start = new DateTime('today');
+        $end   = (clone $start)->modify('+' . APPT_LOOKAHEAD_DAYS . ' days');
+
+        $counts = [];
+        $stmt = $db->prepare(
+            "SELECT DATE(appointment_date) d, COUNT(*) c FROM appointments
+             WHERE status = 'scheduled' AND appointment_date >= ? AND appointment_date < ?
+             GROUP BY DATE(appointment_date)"
+        );
+        $stmt->execute([$start->format('Y-m-d'), $end->format('Y-m-d')]);
+        foreach ($stmt->fetchAll(PDO::FETCH_KEY_PAIR) as $d => $c) {
+            $counts[$d] = ($counts[$d] ?? 0) + (int) $c;
+        }
+        $stmt = $db->prepare(
+            "SELECT preferred_date d, COUNT(*) c FROM appointment_requests
+             WHERE status IN ('new','confirmed') AND preferred_date >= ? AND preferred_date < ?
+             GROUP BY preferred_date"
+        );
+        $stmt->execute([$start->format('Y-m-d'), $end->format('Y-m-d')]);
+        foreach ($stmt->fetchAll(PDO::FETCH_KEY_PAIR) as $d => $c) {
+            $counts[$d] = ($counts[$d] ?? 0) + (int) $c;
+        }
+
+        $unavailable = [];
+        for ($day = clone $start; $day < $end; $day->modify('+1 day')) {
+            $key = $day->format('Y-m-d');
+            if ($day->format('N') === '7' || ($counts[$key] ?? 0) >= APPT_SLOTS_PER_DAY) {
+                $unavailable[] = $key;
+            }
+        }
+        apiSuccess(['unavailable_dates' => $unavailable, 'horizon_days' => APPT_LOOKAHEAD_DAYS]);
+    } catch (PDOException $e) {
+        error_log('appointment_request availability: ' . $e->getMessage());
+        apiError('Errore database.', 500);
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     apiError('Metodo non consentito.', 405);
@@ -71,6 +122,18 @@ try {
         $dt = DateTime::createFromFormat('Y-m-d', $date);
         if (!$dt || $dt->format('Y-m-d') !== $date) apiError('Data preferita non valida.');
         if ($dt < new DateTime('today')) apiError('La data preferita deve essere futura.');
+        if ($dt->format('N') === '7') apiError('La domenica l\'agenzia è chiusa: scegli un altro giorno.');
+        $stmt = $db->prepare(
+            "SELECT
+                (SELECT COUNT(*) FROM appointments
+                 WHERE status = 'scheduled' AND DATE(appointment_date) = ?) +
+                (SELECT COUNT(*) FROM appointment_requests
+                 WHERE status IN ('new','confirmed') AND preferred_date = ?)"
+        );
+        $stmt->execute([$date, $date]);
+        if ((int) $stmt->fetchColumn() >= APPT_SLOTS_PER_DAY) {
+            apiError('La data scelta non è più disponibile: seleziona un altro giorno.');
+        }
         $prefDate = $date;
     }
     $prefTime = in_array($time, APPT_TIMES, true) ? $time : null;
