@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestionale-v15';
+const CACHE_NAME = 'gestionale-v16';
 
 // Only static assets that always return 200 (no auth redirects).
 const PRECACHE_URLS = [
@@ -66,7 +66,7 @@ self.addEventListener('fetch', (event) => {
                 return response;
             })
             .catch(() =>
-                caches.match(event.request).then((cached) => cached || caches.match('/'))
+                caches.match(event.request).then((cached) => cached || caches.match('/index.php'))
             )
     );
 });

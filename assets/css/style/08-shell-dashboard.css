@@ -67,13 +67,13 @@
 .sidebar-nav { padding: 4px 12px 12px; }
 .sidebar-nav ul { display: flex; flex-direction: column; gap: 2px; }
 .nav-link {
-    border-radius: 9px;
+    border-radius: 12px;
     border-left: none;
-    padding: 9px 12px;
+    padding: 10px 12px;
     gap: 12px;
     color: var(--rd-nav);
     font-weight: 500;
-    font-size: 13.5px;
+    font-size: 14px;
 }
 .nav-link:hover { background: #f4f7fb; color: var(--color-text); }
 .nav-link.active {
@@ -83,7 +83,7 @@
     font-weight: 600;
 }
 .nav-link .nav-icon,
-.nav-link [data-lucide] { width: 19px; height: 19px; }
+.nav-link [data-lucide] { width: 18px; height: 18px; }
 details.nav-group > summary { color: #8493a6; }
 details.nav-group > summary:hover { color: var(--rd-nav); }
 .sidebar-footer { border-top: 1px solid var(--rd-line); }
@@ -230,27 +230,35 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 }
 
 /* ----------------------------------------------------------------------------
-   Sidebar theme: flat dark navy (immobiliare design mockups). Self-contained
-   recolour — swap this whole block to change the sidebar palette.
-   The geometry (floating panel, radius) lives in theme-orlandi.css.
+   Sidebar theme: dark navy — ported 1:1 from the React SPA design (abandoned
+   but its look is the agreed target). Tokens: bg #06224F, active pill #0B3D91,
+   white-opacity text tiers. Self-contained recolour — swap this whole block to
+   change the sidebar palette. Geometry (radius, padding) lives above / in
+   theme-orlandi.css.
    ---------------------------------------------------------------------------- */
 .sidebar {
-    background: var(--color-sidebar-bg, #222834);
-    color: #cbd3df;
+    background: var(--color-sidebar-bg, #06224F);
+    color: rgba(255, 255, 255, 0.7);
     border-right: none;
 }
 .sidebar-close-btn { color: rgba(255, 255, 255, 0.7); }
 .sidebar-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
-.nav-link { color: rgba(255, 255, 255, 0.82); }
-.nav-link:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
-.nav-link.active { background: var(--color-primary); color: #fff; font-weight: 600; box-shadow: 0 6px 14px rgba(49, 134, 213, 0.35); }
+.nav-link { color: rgba(255, 255, 255, 0.7); }
+.nav-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.nav-link.active { background: #0B3D91; color: #fff; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
 .nav-link.active [data-lucide] { color: #fff; }
 .nav-link .nav-icon { color: rgba(255, 255, 255, 0.55); }
 .nav-link:hover .nav-icon, .nav-link.active .nav-icon { color: #fff; }
-details.nav-group > summary { color: rgba(255, 255, 255, 0.42); font-weight: 700; }
+details.nav-group > summary {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
 details.nav-group > summary:hover { color: rgba(255, 255, 255, 0.75); }
-.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.sidebar-footer .btn { background: transparent; color: rgba(255, 255, 255, 0.9); border-color: rgba(255, 255, 255, 0.22); }
-.sidebar-footer .btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.sidebar-footer .btn { background: transparent; color: rgba(255, 255, 255, 0.7); border-color: transparent; }
+.sidebar-footer .btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: transparent; }
 
 /* ============================================================================

@@ -8,14 +8,12 @@
     php_value max_input_time 120
 </IfModule>
 
-# ── React admin SPA is now the default frontend at "/" ───────────────────────
-# index.html (Vite build) and the legacy index.php coexist at web root —
-# DirectoryIndex picks index.html first for bare "/" requests. Requesting a
-# legacy PHP entry point by its literal filename (index.php, login.php,
-# view.php, ...) still works unchanged: it's a real file, so the SPA
-# catch-all rewrite below (mod_rewrite) never touches it. mod_dir, not
-# mod_rewrite, so this lives outside the IfModule block below.
-DirectoryIndex index.html index.php
+# ── Legacy PHP admin is the default frontend at "/" ──────────────────────────
+# The React SPA cutover was abandoned: index.php serves at "/" again. The React
+# build (index.html + _app-assets/) is no longer copied into the web root by the
+# Dockerfile, so there is nothing to shadow index.php. DirectoryIndex is pinned
+# to index.php so a bare "/" request always renders the PHP dashboard shell.
+DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -36,31 +34,8 @@ DirectoryIndex index.html index.php
     RewriteRule ^database/ - [F,L]
     RewriteRule ^cron/ - [F,L]
     RewriteRule ^backups/ - [F,L]
-    # Raw React source (the build output is served from web root, not /frontend)
+    # Dormant React source (migration abandoned; kept on disk but never served)
     RewriteRule ^frontend/ - [F,L]
-
-    # Courtesy redirect for old /app/... bookmarks — /app was the SPA's home
-    # before the cutover to "/". Not a security boundary, just a nicety.
-    RewriteRule ^app/(.*)$ /$1 [R=301,L]
-
-    # React admin SPA at root: serve the built index.html for any client-side
-    # route (deep links / refreshes like /clients, /properties/42). Real files
-    # and directories are served directly (this is what lets index.php,
-    # login.php, view.php etc. keep working when hit by their literal URL —
-    # they're real files, so !-f exempts them). Everything owned by another
-    # surface (API, uploads, owner/tenant portals, public site, e-commerce
-    # demo, static asset dirs) is explicitly excluded too.
-    RewriteCond %{REQUEST_URI} !^/api/
-    RewriteCond %{REQUEST_URI} !^/uploads/
-    RewriteCond %{REQUEST_URI} !^/owner/
-    RewriteCond %{REQUEST_URI} !^/tenant/
-    RewriteCond %{REQUEST_URI} !^/web-orlandi/
-    RewriteCond %{REQUEST_URI} !^/ecommerce/
-    RewriteCond %{REQUEST_URI} !^/assets/
-    RewriteCond %{REQUEST_URI} !^/_app-assets/
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ /index.html [L]
 
     # Defense-in-depth: deny ALL direct access to the uploaded-documents tree
     # (ID scans, contracts, generated PDFs/invoices, private attachments). These
