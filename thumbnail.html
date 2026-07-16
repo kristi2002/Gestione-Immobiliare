@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>Immobiliare Orlandi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Brand tokens — sourced from frontend/tailwind.config.ts (single source of truth) */
+  :root {
+    --color-primary: #0B3D91; /* royal blue */
+    --color-secondary: #4A90D9; /* sky blue */
+    --color-navy: #06224F; /* dark navy */
+    --color-success: #22C55E;
+    --color-warning: #F97316;
+    --font-brand: "Playfair Display", Georgia, "Times New Roman", serif;
+  }
+
+  html, body { margin: 0; height: 100%; }
+
+  .wrap {
+    display: flex;
+    width: 1280px;
+    height: 854px;
+    font-family: var(--font-brand);
+  }
+
+  .main {
+    flex: 1;
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 60px;
+  }
+
+  .name { color: #fff; line-height: 1.02; }
+  .name .k { font-size: 44px; font-weight: 600; letter-spacing: .12em; opacity: .8; }
+  .name .n { font-size: 118px; font-weight: 800; margin-top: 6px; }
+
+  .strip { width: 150px; display: flex; flex-direction: column; }
+  .strip div { flex: 1; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="main">
+      <div class="name">
+        <div class="k">IMMOBILIARE</div>
+        <div class="n">ORLANDI</div>
+      </div>
+    </div>
+    <div class="strip">
+      <div style="background: var(--color-warning)"></div>
+      <div style="background: var(--color-success)"></div>
+      <div style="background: var(--color-secondary)"></div>
+      <div style="background: var(--color-navy)"></div>
+    </div>
+  </div>
+</body>
+</html>
