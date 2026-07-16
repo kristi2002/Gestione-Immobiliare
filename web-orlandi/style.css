@@ -433,27 +433,25 @@ body {
 /* ── FILTER GRID (icon fields with hairline dividers) ── */
 .f-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;                      /* hairlines between cells */
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
+  grid-template-columns: 1fr;   /* single-column stacked list */
+  gap: 0;
 }
 
 .f-cell {
-  display: flex; align-items: center; gap: 11px;
-  padding: 4px 16px;
-  min-height: 56px;
+  display: flex; align-items: center; gap: 14px;
+  padding: 4px 8px;
+  min-height: 58px;
   background: var(--white);
   position: relative;
   transition: background .25s ease;
+  border-bottom: 1px solid #EEF1F6;
 }
+.f-cell:last-child { border-bottom: none; }
 .f-cell:hover        { background: #FAFBFD; }
 .f-cell:focus-within { background: #F3F7FB; }
 .f-cell:focus-within .f-ico { stroke: var(--orange); transform: scale(1.08); }
 
-.f-cell--wide { grid-column: span 2; }
+.f-cell--wide { grid-column: auto; }
 
 /* staggered entrance for cells on tab switch */
 .search-panel.active .f-cell { animation: panelIn .4s cubic-bezier(.22,.9,.28,1) both; }
@@ -1342,9 +1340,9 @@ body.no-scroll { overflow: hidden; }
   }
   .services-grid      { grid-template-columns: 1fr; }
   .testimonials-grid  { grid-template-columns: 1fr; }
-  .f-grid              { grid-template-columns: 1fr 1fr; }
+  .f-grid              { grid-template-columns: 1fr; }
   .f-cell--wide,
-  .f-cell--btn         { grid-column: span 2; }
+  .f-cell--btn         { grid-column: auto; }
   .search-bar          { padding: 22px 20px; }
   .search-bar__tabs    { display: flex; width: 100%; overflow-x: auto; scrollbar-width: none; }
   .search-bar__tabs::-webkit-scrollbar { display: none; }
