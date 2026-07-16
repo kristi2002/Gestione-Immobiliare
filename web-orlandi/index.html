@@ -38,6 +38,11 @@
     height: 100%;
     object-fit: cover;
   }
+  /* Portrait phones: a landscape video cropped by 'cover' loses the subject —
+     letterbox it on black instead. */
+  @media (max-width: 768px) and (orientation: portrait) {
+    .intro__video { object-fit: contain; }
+  }
   .intro__skip {
     position: absolute;
     bottom: 2.5rem;
@@ -60,6 +65,14 @@
   .intro__skip:hover { transform: scale(1.05); background: rgba(0, 0, 0, 0.65); }
   .intro__skip:active { transform: scale(0.96); }
   @keyframes intro-skip-in { to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 768px) {
+    .intro__skip {
+      bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+      right: 1.25rem;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.8rem;
+    }
+  }
   body.intro-lock { overflow: hidden; }
 </style>
 <script>
