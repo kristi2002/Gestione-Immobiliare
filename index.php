@@ -29,7 +29,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     <title><?= htmlspecialchars($agencyName) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
     <link rel="stylesheet" href="branding.css.php">
     <link rel="stylesheet" href="assets/css/theme-orlandi.css?v=<?= @filemtime(__DIR__ . '/assets/css/theme-orlandi.css') ?: time() ?>">
@@ -52,8 +52,10 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                         <img class="sb-brand__logo" src="<?= htmlspecialchars($branding['logo_path']) ?>" alt="<?= htmlspecialchars($agencyName) ?>">
                     <?php else: ?>
                         <span class="sb-brand__ico"><i data-lucide="home"></i></span>
-                        <span class="sb-brand__eyebrow"><?= htmlspecialchars($brandEyebrow) ?></span>
-                        <b class="sb-brand__name"><?= htmlspecialchars($brandName) ?></b>
+                        <span class="sb-brand__word">
+                            <span class="sb-brand__eyebrow"><?= htmlspecialchars($brandEyebrow) ?></span>
+                            <b class="sb-brand__name"><?= htmlspecialchars($brandName) ?></b>
+                        </span>
                     <?php endif; ?>
                 </a>
                 <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Chiudi menu">&times;</button>

@@ -573,3 +573,79 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .map-popup__city { color: var(--color-text-muted); font-size: 12.5px; margin: 2px 0 8px; }
 .map-popup__row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .map-popup__price { font-weight: 800; color: #1f2a3a; font-size: 15px; }
+
+/* =====================================================================
+   Sidebar — Immobiliare Orlandi Design System port
+   Source: design-system project ui_kits/app/AppShell.jsx (Sidebar).
+   Deep-navy rail (#06224F) + royal-blue active pill (#0B3D91),
+   icon-box + Playfair wordmark lockup, 12px nav pills, section labels.
+   Appended last so it wins the cascade. Scoped to the sidebar only —
+   the topbar, cards and app primary colour are intentionally untouched.
+   BUILD-STAMP: orlandi-sidebar-ds-20260716
+   ===================================================================== */
+:root {
+    --font-brand: "Playfair Display", Georgia, "Times New Roman", serif;
+    --ds-navy:  #06224F;   /* --color-sidebar in the design system */
+    --ds-royal: #0B3D91;   /* --color-primary in the design system */
+}
+
+/* Rail colour */
+.sidebar { background: var(--ds-navy); }
+
+/* Brand lockup — 40px icon box + stacked IMMOBILIARE / ORLANDI wordmark */
+.sidebar-brand { padding: 20px 18px 12px; }
+.sb-brand {
+    flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 12px; text-align: left;
+}
+.sb-brand__ico {
+    width: 40px; height: 40px; margin: 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; background: rgba(255, 255, 255, 0.1);
+}
+.sb-brand__ico svg, .sb-brand__ico [data-lucide] { width: 22px; height: 22px; }
+.sb-brand__word {
+    display: flex; flex-direction: column; min-width: 0;
+    font-family: var(--font-brand); line-height: 1.05;
+}
+.sb-brand__eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.12em; padding-left: 0;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.sb-brand__name {
+    font-family: var(--font-brand);
+    font-size: 18px; font-weight: 800; letter-spacing: 0; line-height: 1.05; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+
+/* Profile card — match the DS 40px avatar */
+.sb-profile__avatar { width: 40px; height: 40px; }
+
+/* Nav pills */
+.sidebar-nav { padding: 12px 12px 12px; }
+.sidebar-nav ul { gap: 4px; }
+.nav-link {
+    border-radius: 12px; padding: 10px 12px; gap: 12px;
+    font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.7);
+}
+.nav-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.nav-link.active {
+    background: var(--ds-royal); color: #fff; font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+.nav-link .nav-icon, .nav-link [data-lucide] { width: 18px; height: 18px; color: rgba(255, 255, 255, 0.7); }
+.nav-link:hover .nav-icon, .nav-link:hover [data-lucide],
+.nav-link.active .nav-icon, .nav-link.active [data-lucide] { color: #fff; }
+
+/* Section labels */
+details.nav-group > summary { padding: 14px 12px 6px; }
+.nav-group-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.4);
+}
+details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 0.6); }
+.nav-group-arrow { color: rgba(255, 255, 255, 0.3); }
+
+/* Footer */
+.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
