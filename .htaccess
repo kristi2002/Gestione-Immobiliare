@@ -34,8 +34,6 @@ DirectoryIndex index.php
     RewriteRule ^database/ - [F,L]
     RewriteRule ^cron/ - [F,L]
     RewriteRule ^backups/ - [F,L]
-    # Dormant React source (migration abandoned; kept on disk but never served)
-    RewriteRule ^frontend/ - [F,L]
 
     # Defense-in-depth: deny ALL direct access to the uploaded-documents tree
     # (ID scans, contracts, generated PDFs/invoices, private attachments). These

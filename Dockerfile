@@ -1,8 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # PHP/Apache runtime. The app is the legacy PHP admin (index.php shell + vanilla
-# JS in assets/js/*). The React SPA migration (frontend/) was abandoned — its
-# source stays in the repo but is neither built nor copied into the image, so
-# index.php is what Apache serves at "/".
+# JS in assets/js/*). The React SPA migration was abandoned and its source has
+# been removed from the repo, so index.php is what Apache serves at "/".
 # ─────────────────────────────────────────────────────────────────────────────
 FROM php:8.3-apache-bookworm
 

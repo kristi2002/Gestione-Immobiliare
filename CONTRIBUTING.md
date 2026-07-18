@@ -12,7 +12,7 @@ almost never touch the same files because the work splits cleanly by directory.
 
 | Area | Owner | Paths |
 |------|-------|-------|
-| **Frontend** | Juliano | `frontend/` (React SPA), `web-orlandi/` (public site), `views/` + `assets/` (legacy admin UI), `immobiliare design/` (mockups, gitignored) |
+| **Frontend** | Juliano | `web-orlandi/` (public site), `views/` + `assets/` (legacy admin UI), `immobiliare design/` (mockups, gitignored) |
 | **Backend** | Kapo | `api/`, `config/`, `lib/`, `cron/`, `database/`, `scripts/`, `tests/`, `docker/`, and the root PHP entry points (`index.php`, `login*.php`, `apply.php`, `sign.php`, etc.) |
 
 **Shared / coordinate before editing:** `api/*.php` files the frontend calls
@@ -76,7 +76,7 @@ Minimum gate before a backend change hits `main`:
 
 ```bash
 # lint every backend PHP file — must print 0 errors
-find . -name '*.php' -not -path './vendor/*' -not -path './frontend/*' \
+find . -name '*.php' -not -path './vendor/*' \
   -exec php -l {} \; | grep -v 'No syntax errors'
 ```
 
