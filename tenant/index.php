@@ -56,7 +56,7 @@ $ownerClientId = $propOwner ? (int)$propOwner['client_id'] : 0;
 
 // Documents for this property (or linked to the property owner)
 $docsStmt = $db->prepare(
-    "SELECT id, title, original_name, file_type, file_size, created_at
+    "SELECT id, title, original_name, mime_type AS file_type, file_size, created_at
      FROM documents
      WHERE property_id = :pid OR client_id = :cid
      ORDER BY created_at DESC LIMIT 30"
