@@ -3,6 +3,7 @@
  * Tenant maintenance/assistance request endpoint.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/db.php';
 initTenantSession();
 
 header('Content-Type: application/json; charset=utf-8');
