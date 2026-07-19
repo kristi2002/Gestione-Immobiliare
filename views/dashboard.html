@@ -37,10 +37,23 @@
     <div class="db-grid">
         <div class="db-card">
             <div class="db-card__head">
-                <div><h3>Andamento Entrate</h3><p>Vendite e locazioni · <span id="chart-year">—</span></p></div>
+                <div><h3>Andamento Entrate</h3>
+                    <p class="db-chartnav">Vendite e locazioni ·
+                        <button type="button" id="chart-prev" class="db-navbtn" aria-label="Periodo precedente" disabled><i data-lucide="chevron-left"></i></button>
+                        <span id="chart-year">—</span>
+                        <button type="button" id="chart-next" class="db-navbtn" aria-label="Periodo successivo" disabled><i data-lucide="chevron-right"></i></button>
+                    </p>
+                </div>
                 <div class="db-legend">
                     <span class="db-legend__item"><i class="db-legend__dot"></i>Entrate</span>
-                    <div class="db-drop">Annuale <i data-lucide="chevron-down"></i></div>
+                    <div class="db-drop" id="chart-period" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span id="chart-period-label">Annuale</span> <i data-lucide="chevron-down"></i>
+                        <div class="db-drop__menu" role="listbox">
+                            <button type="button" class="db-drop__opt" data-period="settimanale" role="option">Settimanale</button>
+                            <button type="button" class="db-drop__opt" data-period="mensile" role="option">Mensile</button>
+                            <button type="button" class="db-drop__opt is-active" data-period="annuale" role="option">Annuale</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="db-chartwrap"><canvas id="chart-revenue"></canvas></div>
@@ -201,7 +214,6 @@
     }
 
     const MONTHS_CAP  = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-    const MONTHS_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
     function roundRect(c, x, y, w, h, r) {
         c.beginPath();
@@ -218,28 +230,29 @@
         const ctx = document.getElementById('chart-revenue');
         if (!ctx) return;
 
-        const year = d.chart_year || new Date().getFullYear();
-        const yearEl = document.getElementById('chart-year');
-        if (yearEl) yearEl.textContent = year;
+        // Period-aware series from the API (settimanale / mensile / annuale).
+        const rc = d.revenue_chart;
+        if (!rc || !Array.isArray(rc.data)) return;
+        const labels = rc.labels || [];
+        const points = rc.point_labels || labels;   // full labels for tooltip + peak bubble
+        const data   = rc.data.map(v => Number(v) || 0);
 
-        const byMonth = {};
-        (d.monthly_revenue || []).forEach(r => {
-            const [y, m] = r.ym.split('-');
-            if (parseInt(y, 10) === year) byMonth[parseInt(m, 10) - 1] = parseFloat(r.revenue);
-        });
-        const data = Array.from({ length: 12 }, (_, i) => byMonth[i] || 0);
+        const subEl = document.getElementById('chart-year');
+        if (subEl) subEl.textContent = rc.subtitle || '';
+        updateNav(rc);
+
         let peak = 0;
-        for (let i = 1; i < 12; i++) if (data[i] > data[peak]) peak = i;
+        for (let i = 1; i < data.length; i++) if (data[i] > data[peak]) peak = i;
 
         const g = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
         g.addColorStop(0, 'rgba(49,134,213,.30)');
         g.addColorStop(1, 'rgba(49,134,213,.02)');
 
-        // Dashed marker + value bubble over the peak month (mockup style)
+        // Dashed marker + value bubble over the peak point (mockup style)
         const peakLabel = {
             id: 'peakLabel',
             afterDatasetsDraw(chart) {
-                if (data[peak] <= 0) return;
+                if (!data.length || data[peak] <= 0) return;
                 const meta = chart.getDatasetMeta(0);
                 const pt = meta && meta.data[peak];
                 if (!pt) return;
@@ -249,7 +262,7 @@
                 c.beginPath(); c.moveTo(pt.x, area.top); c.lineTo(pt.x, area.bottom); c.stroke();
                 c.setLineDash([]);
                 const val = fmtEuro(data[peak]);
-                const sub = MONTHS_FULL[peak] + ' ' + year;
+                const sub = points[peak] || '';
                 c.font = '700 13px Inter, sans-serif'; const w1 = c.measureText(val).width;
                 c.font = '400 11px Inter, sans-serif'; const w2 = c.measureText(sub).width;
                 const bw = Math.max(w1, w2) + 24, bh = 44;
@@ -269,7 +282,7 @@
         revenueChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: MONTHS_CAP,
+                labels,
                 datasets: [{
                     data,
                     borderColor: '#3186d5',
@@ -302,13 +315,14 @@
                         cornerRadius: 9,
                         caretSize: 5,
                         callbacks: {
-                            title: items => MONTHS_FULL[items[0].dataIndex] + ' ' + year,
+                            title: items => points[items[0].dataIndex] || '',
                             label: item => fmtEuro(item.parsed.y),
                         },
                     },
                 },
                 scales: {
-                    x: { grid: { display: false }, border: { display: false }, ticks: { color: '#8a97a8', font: { size: 11.5 } } },
+                    x: { grid: { display: false }, border: { display: false },
+                         ticks: { color: '#8a97a8', font: { size: 11.5 }, autoSkip: true, maxTicksLimit: 16, maxRotation: 0 } },
                     y: {
                         beginAtZero: true, grace: '12%',
                         border: { display: false },
@@ -388,6 +402,80 @@
         });
     }
 
+    /* --- Period selector (Settimanale / Mensile / Annuale) + navigator --- */
+    let currentPeriod = 'annuale';
+    let currentAnchor = null;   // null => backend picks the latest period with data
+
+    async function loadChart(period, anchor) {
+        try {
+            const params = new URLSearchParams({ chart_only: '1', chart_period: period });
+            if (anchor) params.set('chart_anchor', anchor);
+            const res  = await fetch(`${API_URL}?${params}`);
+            const json = await res.json();
+            if (json.success) renderChart(json.data);
+        } catch (_) { /* leave the current chart in place */ }
+    }
+
+    // Reflect the period's prev/next navigability on the arrow buttons.
+    function updateNav(rc) {
+        currentAnchor = rc.anchor || null;
+        const prevBtn = document.getElementById('chart-prev');
+        const nextBtn = document.getElementById('chart-next');
+        if (prevBtn) { prevBtn.dataset.anchor = rc.prev || ''; prevBtn.disabled = !rc.prev; }
+        if (nextBtn) { nextBtn.dataset.anchor = rc.next || ''; nextBtn.disabled = !rc.next; }
+    }
+
+    function setupPeriodDropdown() {
+        const drop = document.getElementById('chart-period');
+        if (!drop) return;
+        const label = document.getElementById('chart-period-label');
+        const opts  = drop.querySelectorAll('.db-drop__opt');
+
+        const close = () => { drop.classList.remove('is-open'); drop.setAttribute('aria-expanded', 'false'); };
+        const toggle = () => {
+            const open = !drop.classList.contains('is-open');
+            drop.classList.toggle('is-open', open);
+            drop.setAttribute('aria-expanded', String(open));
+        };
+
+        drop.addEventListener('click', (e) => {
+            if (e.target.closest('.db-drop__opt')) return; // option handler deals with it
+            toggle();
+        });
+        drop.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+            else if (e.key === 'Escape') close();
+        });
+
+        opts.forEach(opt => {
+            opt.addEventListener('click', () => {
+                const period = opt.dataset.period;
+                opts.forEach(o => o.classList.toggle('is-active', o === opt));
+                if (label) label.textContent = opt.textContent;
+                close();
+                // Switching granularity resets to the latest period of that kind.
+                currentPeriod = period;
+                currentAnchor = null;
+                loadChart(period, null);
+            });
+        });
+
+        // Prev/next step one week/month/year within the data range.
+        const prevBtn = document.getElementById('chart-prev');
+        const nextBtn = document.getElementById('chart-next');
+        prevBtn?.addEventListener('click', () => {
+            if (prevBtn.disabled || !prevBtn.dataset.anchor) return;
+            loadChart(currentPeriod, prevBtn.dataset.anchor);
+        });
+        nextBtn?.addEventListener('click', () => {
+            if (nextBtn.disabled || !nextBtn.dataset.anchor) return;
+            loadChart(currentPeriod, nextBtn.dataset.anchor);
+        });
+
+        // Close when clicking away.
+        document.addEventListener('click', (e) => { if (!drop.contains(e.target)) close(); });
+    }
+
     async function load() {
         const errorEl = document.getElementById('dashboard-error');
         try {
@@ -409,6 +497,7 @@
     }
 
     refreshIcons();
+    setupPeriodDropdown();
     load();
 })();
 </script>

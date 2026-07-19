@@ -43,15 +43,29 @@ function loadEnv(string $path): void
 
 function env(string $key, mixed $default = null): mixed
 {
-    $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
-    if ($value === false || $value === null || $value === '') {
+    // Distinguish "explicitly set (even to an empty string)" from "absent". Only
+    // fall back to the default when the key is genuinely not present — so an
+    // intentionally empty value (e.g. an empty local DB password) is respected
+    // instead of being silently replaced by the default.
+    if (array_key_exists($key, $_ENV)) {
+        $value = $_ENV[$key];
+    } elseif (array_key_exists($key, $_SERVER)) {
+        $value = $_SERVER[$key];
+    } else {
+        $value = getenv($key);
+        if ($value === false) {
+            return $default;
+        }
+    }
+
+    if ($value === null) {
         return $default;
     }
 
     return match (strtolower((string) $value)) {
-        'true', '(true)'  => true,
+        'true', '(true)'   => true,
         'false', '(false)' => false,
-        'null', '(null)'  => null,
-        default           => $value,
+        'null', '(null)'   => null,
+        default            => $value,
     };
 }

@@ -70,6 +70,8 @@ function generateContractPdf(PDO $db, array $params, int $adminId): array
         ['type' => 'kv', 'pairs' => [
             ['Indirizzo',  $property ? trim($property['address'] . ', ' . $property['city'] . ' ' . ($property['cap'] ?? '')) : '—'],
             ['Superficie', $property && $property['sqm'] ? rtrim(rtrim(number_format((float) $property['sqm'], 2, ',', '.'), '0'), ',') . ' mq' : '—'],
+            // Legally required in the contract (D.Lgs 192/2005 art. 6).
+            ['Classe energetica', $property && !empty($property['energy_class']) ? $property['energy_class'] : 'n.d.'],
         ]],
         ['type' => 'h2', 'text' => 'Conduttore / Inquilino'],
         ['type' => 'kv', 'pairs' => [
@@ -167,6 +169,7 @@ function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): arra
         ['Tipologia',  $typeLabels[$property['property_type'] ?? ''] ?? '—'],
         ['Stato',      $statusLabels[$property['status'] ?? ''] ?? ($property['status'] ?? '—')],
         ['Superficie', !empty($property['sqm']) ? rtrim(rtrim(number_format((float) $property['sqm'], 2, ',', '.'), '0'), ',') . ' mq' : '—'],
+        ['Classe energetica', !empty($property['energy_class']) ? $property['energy_class'] : 'n.d.'],
         ['Locali',     $property['rooms'] !== null && $property['rooms'] !== '' ? (string) $property['rooms'] : '—'],
         ['Bagni',      $property['bathrooms'] !== null && $property['bathrooms'] !== '' ? (string) $property['bathrooms'] : '—'],
         ['Piano',      $property['floor'] ?: '—'],

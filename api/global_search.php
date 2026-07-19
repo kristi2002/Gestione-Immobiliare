@@ -9,8 +9,12 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 apiHandleOptions();
 apiRequireMethod('GET');
+
+// Bound cross-table search scraping (fans out over many tables per call).
+checkRateLimit('global_search', 60, 60);
 
 $q = trim($_GET['q'] ?? '');
 if (mb_strlen($q) < 2) {

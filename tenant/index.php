@@ -3,6 +3,11 @@ require_once __DIR__ . '/../config/bootstrap.php';
 initTenantSession();
 requireTenantAuthWeb();
 
+// Ensure THIS (tenant) session carries a CSRF token — bootstrap only seeded the
+// admin session's token. Exposed to the page so portal writes can send it back.
+initCsrfToken();
+$csrfToken = getCsrfToken();
+
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/settings.php';
 
@@ -48,22 +53,21 @@ $upcomingStmt = $db->prepare(
 $upcomingStmt->execute(['tid' => $tenantId]);
 $upcoming = $upcomingStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Resolve client_id via the property owner
-$propOwner = $db->prepare('SELECT client_id FROM properties WHERE id = :pid');
-$propOwner->execute(['pid' => $tenant['property_id']]);
-$propOwner = $propOwner->fetch(PDO::FETCH_ASSOC);
-$ownerClientId = $propOwner ? (int)$propOwner['client_id'] : 0;
-
-// Documents for this property (or linked to the property owner)
+// Documents strictly scoped to THIS tenant's lease: the rented property or their
+// own contract. Deliberately NOT the property owner's client record — filtering by
+// `client_id = owner` exposed the landlord's personal/ID documents and every other
+// property's paperwork to any tenant. Property/contract scope is the right boundary.
+$tenantContractId = (int) ($contract['contract_id'] ?? 0);
 $docsStmt = $db->prepare(
     "SELECT id, title, original_name, mime_type AS file_type, file_size, created_at
      FROM documents
-     WHERE property_id = :pid OR client_id = :cid
+     WHERE (property_id IS NOT NULL AND property_id = :pid)
+        OR (contract_id IS NOT NULL AND contract_id = :cid)
      ORDER BY created_at DESC LIMIT 30"
 );
 $docsStmt->execute([
-    'pid' => $tenant['property_id'],
-    'cid' => $ownerClientId,
+    'pid' => (int) ($tenant['property_id'] ?? 0),
+    'cid' => $tenantContractId,
 ]);
 $documents = $docsStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -77,8 +81,6 @@ $PAY_STATUS = [
     'late'      => 'In ritardo',
     'cancelled' => 'Annullato',
 ];
-
-$stripeEnabled = !empty(getSetting('stripe_secret_key'));
 
 $branding    = getPublicBranding();
 $name        = $_SESSION['tenant_name'] ?? 'Inquilino';
@@ -239,7 +241,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                         <div class="table-responsive">
                             <table class="data-table" style="width:100%;font-size:14px">
                                 <thead>
-                                    <tr><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Pagato il</th><th>Note</th><?php if ($stripeEnabled): ?><th></th><?php endif; ?></tr>
+                                    <tr><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Pagato il</th><th>Note</th></tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($payments as $pay): ?>
@@ -253,15 +255,6 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                                         </td>
                                         <td><?= $pay['paid_date'] ? date('d/m/Y', strtotime($pay['paid_date'])) : '—' ?></td>
                                         <td class="text-muted" style="font-size:12px"><?= tEsc($pay['notes'] ?? '') ?></td>
-                                        <td>
-                                            <?php if ($stripeEnabled && in_array($pay['status'], ['pending','late'])): ?>
-                                            <button class="btn btn--sm btn--primary btn-pay-stripe"
-                                                    data-payment-id="<?= (int)$pay['id'] ?>"
-                                                    data-amount="<?= tEsc($pay['amount']) ?>">
-                                                💳 Paga online
-                                            </button>
-                                            <?php endif; ?>
-                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -420,7 +413,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
             try {
                 const res  = await fetch('api_maintenance.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= $csrfToken ?>' },
                     body: JSON.stringify({ subject, message, type: selectedType }),
                 });
                 const json = await res.json();
@@ -444,37 +437,12 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
         });
 
 
-        // Stripe online payment
-        document.querySelectorAll('.btn-pay-stripe').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const paymentId = btn.dataset.paymentId;
-                btn.disabled = true;
-                btn.textContent = 'Caricamento…';
-                try {
-                    const res = await fetch('../api/stripe_checkout.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            payment_id: parseInt(paymentId, 10),
-                            success_url: window.location.href + '?paid=1',
-                            cancel_url:  window.location.href,
-                        }),
-                    });
-                    const json = await res.json();
-                    if (json.success && json.data.checkout_url) {
-                        window.location.href = json.data.checkout_url;
-                    } else {
-                        alert(json.error || 'Errore avvio pagamento.');
-                        btn.disabled = false;
-                        btn.textContent = '💳 Paga online';
-                    }
-                } catch (err) {
-                    alert('Errore di rete. Riprova.');
-                    btn.disabled = false;
-                    btn.textContent = '💳 Paga online';
-                }
-            });
-        });
+        // NOTE: the tenant-facing "Paga online" button was removed. It POSTed to
+        // api/stripe_checkout.php, which requires an ADMIN session, so a tenant
+        // click always failed with 401 — a dead payment UI. Re-enabling online
+        // rent payment needs a dedicated tenant-authenticated checkout endpoint
+        // (create a Stripe Checkout Session scoped to the tenant's own payment),
+        // not the admin endpoint. Tracked as future work.
 
         <?php if (isset($_GET['paid'])): ?>
         (function () {

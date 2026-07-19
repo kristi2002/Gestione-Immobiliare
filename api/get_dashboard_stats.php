@@ -11,6 +11,35 @@ apiRequireMethod('GET');
 try {
     $db = getDB();
 
+    // ---- Revenue trend chart (period-aware + navigable) ----
+    // Computed first so the navigator can refetch just the chart (?chart_only=1)
+    // without re-running every dashboard query below.
+    $period = $_GET['chart_period'] ?? 'annuale';
+    if (!in_array($period, ['settimanale', 'mensile', 'annuale'], true)) {
+        $period = 'annuale';
+    }
+
+    // Navigation bounds: prev/next arrows are gated to the range that actually has
+    // data (earliest → latest payment), extended to today so the current period is
+    // always reachable.
+    $bounds  = $db->query("SELECT MIN(due_date) AS mn, MAX(due_date) AS mx FROM payments")
+                  ->fetch(PDO::FETCH_ASSOC);
+    $today   = date('Y-m-d');
+    $minNav  = !empty($bounds['mn']) ? $bounds['mn'] : $today;
+    $maxData = !empty($bounds['mx']) ? $bounds['mx'] : $today;
+    $maxNav  = ($maxData > $today) ? $maxData : $today;
+
+    // Explicit anchor from the navigator (YYYY-MM-DD); otherwise default to the most
+    // recent activity so the chart always opens on a period that has data.
+    $anchorParam = $_GET['chart_anchor'] ?? '';
+    $anchorDate  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $anchorParam) ? $anchorParam : $maxData;
+
+    $revenueChart = buildRevenueChart($db, $period, $anchorDate, $minNav, $maxNav);
+
+    if (isset($_GET['chart_only'])) {
+        apiSuccess(['revenue_chart' => $revenueChart]);
+    }
+
     $totalClients = (int) $db->query(
         "SELECT COUNT(*) FROM clients WHERE status != 'archived'"
     )->fetchColumn();
@@ -219,6 +248,7 @@ try {
         'upcoming_reminders'   => $upcomingReminders,
         'monthly_revenue'      => $monthlyRevenue,
         'chart_year'           => $chartYear,
+        'revenue_chart'        => $revenueChart,
         'pending_this_month'   => $pendingThisMonth,
         'recent_payments'      => $recentPayments,
         'recent_properties'    => $recentProperties,
@@ -229,4 +259,127 @@ try {
     ]);
 } catch (PDOException $e) {
     apiError('Unable to fetch dashboard statistics.', 500);
+}
+
+/**
+ * Build the "Andamento Entrate" revenue series for the requested period, anchored
+ * on a specific week/month/year so the chart is navigable.
+ *
+ * Returns short x-axis labels, full point labels (tooltip + peak bubble), the
+ * paid-revenue data, a header subtitle, plus navigation: the normalised `anchor`
+ * and the `prev`/`next` anchor dates (null when there is no data past that edge).
+ * Everything is localised in Italian.
+ *
+ *   settimanale → 7 days (Mon–Sun) of the anchor's week
+ *   mensile     → each day of the anchor's month
+ *   annuale     → 12 months (Gen–Dic) of the anchor's year
+ *
+ * @param string $minNav earliest navigable date (first payment)
+ * @param string $maxNav latest navigable date (last payment or today)
+ */
+function buildRevenueChart(PDO $db, string $period, string $anchorDate, string $minNav, string $maxNav): array
+{
+    static $MC  = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    static $MF  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    static $DOW = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+
+    $ts = strtotime($anchorDate) ?: time();
+
+    // Paid revenue grouped by day within an inclusive [start, end] date range.
+    $dailySums = function (string $start, string $end) use ($db): array {
+        $stmt = $db->prepare(
+            "SELECT DATE_FORMAT(due_date, '%Y-%m-%d') AS d,
+                    COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END), 0) AS revenue
+             FROM payments
+             WHERE due_date BETWEEN :start AND :end
+             GROUP BY d"
+        );
+        $stmt->execute(['start' => $start, 'end' => $end]);
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[$r['d']] = (float) $r['revenue'];
+        }
+        return $out;
+    };
+
+    if ($period === 'settimanale') {
+        $dow    = (int) date('N', $ts);                       // 1=Mon .. 7=Sun
+        $monday = strtotime('-' . ($dow - 1) . ' days', $ts);
+        $sunday = strtotime('+6 days', $monday);
+        $sums   = $dailySums(date('Y-m-d', $monday), date('Y-m-d', $sunday));
+
+        $labels = $points = $data = [];
+        for ($i = 0; $i < 7; $i++) {
+            $d = strtotime("+$i days", $monday);
+            $labels[] = $DOW[$i];
+            $points[] = $DOW[$i] . ' ' . (int) date('j', $d) . ' ' . $MC[(int) date('n', $d) - 1];
+            $data[]   = $sums[date('Y-m-d', $d)] ?? 0;
+        }
+        $subtitle = 'Settimana ' . (int) date('j', $monday) . '–' . (int) date('j', $sunday)
+            . ' ' . $MC[(int) date('n', $sunday) - 1] . ' ' . date('Y', $sunday);
+
+        $prevMon = strtotime('-7 days', $monday);
+        $nextMon = strtotime('+7 days', $monday);
+        $prev = (date('Y-m-d', strtotime('+6 days', $prevMon)) >= $minNav) ? date('Y-m-d', $prevMon) : null;
+        $next = (date('Y-m-d', $nextMon) <= $maxNav) ? date('Y-m-d', $nextMon) : null;
+        $anchor = date('Y-m-d', $monday);
+    } elseif ($period === 'mensile') {
+        $days = (int) date('t', $ts);
+        $sums = $dailySums(date('Y-m-01', $ts), date('Y-m-' . $days, $ts));
+        $mon  = (int) date('n', $ts);
+        $year = date('Y', $ts);
+        $ymPrefix = date('Y-m-', $ts);
+
+        $labels = $points = $data = [];
+        for ($i = 1; $i <= $days; $i++) {
+            $key = $ymPrefix . str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            $labels[] = (string) $i;
+            $points[] = $i . ' ' . $MF[$mon - 1] . ' ' . $year;
+            $data[]   = $sums[$key] ?? 0;
+        }
+        $subtitle = $MF[$mon - 1] . ' ' . $year;
+
+        $prevFirst = strtotime('first day of -1 month', $ts);
+        $nextFirst = strtotime('first day of +1 month', $ts);
+        $prev = (date('Y-m-t', $prevFirst) >= $minNav) ? date('Y-m-d', $prevFirst) : null;
+        $next = (date('Y-m-d', $nextFirst) <= $maxNav) ? date('Y-m-d', $nextFirst) : null;
+        $anchor = date('Y-m-01', $ts);
+    } else {
+        // annuale (default): 12 months of the anchor year.
+        $year = (int) date('Y', $ts);
+        $stmt = $db->prepare(
+            "SELECT DATE_FORMAT(due_date, '%Y-%m') AS ym,
+                    COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END), 0) AS revenue
+             FROM payments
+             WHERE YEAR(due_date) = :year
+             GROUP BY ym"
+        );
+        $stmt->execute(['year' => $year]);
+        $byMonth = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $byMonth[(int) substr($r['ym'], 5, 2)] = (float) $r['revenue'];
+        }
+        $labels = $points = $data = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $labels[] = $MC[$m - 1];
+            $points[] = $MF[$m - 1] . ' ' . $year;
+            $data[]   = $byMonth[$m] ?? 0;
+        }
+        $subtitle = (string) $year;
+
+        $prev = (($year - 1) . '-12-31' >= $minNav) ? ($year - 1) . '-01-01' : null;
+        $next = (($year + 1) . '-01-01' <= $maxNav) ? ($year + 1) . '-01-01' : null;
+        $anchor = $year . '-01-01';
+    }
+
+    return [
+        'period'       => $period,
+        'labels'       => $labels,
+        'point_labels' => $points,
+        'data'         => $data,
+        'subtitle'     => $subtitle,
+        'anchor'       => $anchor,
+        'prev'         => $prev,
+        'next'         => $next,
+    ];
 }

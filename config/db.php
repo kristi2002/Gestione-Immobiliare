@@ -20,6 +20,23 @@ function getDB(): PDO
     static $pdo = null;
 
     if ($pdo === null) {
+        // Refuse insecure default credentials in production. DB_USER=root or a
+        // blank/'root' password means a misconfigured deploy sits one guess from
+        // full database access — the readiness docs explicitly forbid running prod
+        // as root. Fail loudly rather than silently connecting with god rights.
+        if (env('APP_ENV', 'local') === 'production'
+            && (DB_USER === 'root' || DB_USER === '' || DB_PASS === '' || DB_PASS === 'root')) {
+            error_log('[db] REFUSING to connect in production with insecure default DB credentials'
+                . ' (DB_USER=' . DB_USER . '). Set a dedicated least-privilege DB_USER + DB_PASS in .env.');
+            if (PHP_SAPI === 'cli') {
+                throw new RuntimeException('Insecure default DB credentials in production. Set DB_USER (non-root) and DB_PASS in .env.');
+            }
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Errore di configurazione del server.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         $host = DB_HOST;
         $port = null;
 

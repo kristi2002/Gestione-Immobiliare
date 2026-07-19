@@ -14,7 +14,11 @@ function sendClientEmail(string $to, string $subject, string $body, ?string $htm
     }
 
     if (!$cfg['mail_enabled']) {
-        return ['success' => true, 'status' => 'sent', 'external_id' => 'local-' . uniqid(), 'error' => null];
+        // Mail is DISABLED — nothing is actually sent. We return success so dev
+        // flows aren't blocked, but flag it as a simulation and stamp the id so the
+        // caller/UI can be honest instead of claiming the message was delivered.
+        error_log('[mail] SIMULATED send (mail_enabled=false) to ' . $to . ' — subject: ' . $subject);
+        return ['success' => true, 'status' => 'sent', 'external_id' => 'SIMULATED-' . uniqid(), 'simulated' => true, 'error' => null];
     }
 
     if ($cfg['smtp_host'] !== '') {

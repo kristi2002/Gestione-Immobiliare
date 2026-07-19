@@ -10,6 +10,9 @@ uploads/social/*
 !uploads/documents/.gitkeep
 !uploads/branding/.gitkeep
 !uploads/documents/generated/.gitkeep
+# Keep the per-folder security .htaccess tracked (defense-in-depth for the
+# private documents tree — must survive deploy, not be dropped by the rules above).
+!uploads/documents/.htaccess
 .setup_complete
 .claude/
 .phpunit.result.cache

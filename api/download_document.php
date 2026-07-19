@@ -32,7 +32,9 @@ if (isLoggedIn()) {
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     session_name(TENANT_SESSION_NAME);
     if (!empty($_COOKIE[TENANT_SESSION_NAME])) session_id($_COOKIE[TENANT_SESSION_NAME]);
-    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
+    $cookieSecure = (defined('FORCE_HTTPS') && FORCE_HTTPS)
+        || (function_exists('requestIsHttps') && requestIsHttps());
+    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $cookieSecure, 'httponly' => true, 'samesite' => 'Lax']);
     @session_start();
     if (isTenantLoggedIn()) {
         $isTenantPortal = true;
@@ -42,6 +44,7 @@ if (isLoggedIn()) {
         // Owner session
         session_name('gestionale_owner_session');
         if (!empty($_COOKIE['gestionale_owner_session'])) session_id($_COOKIE['gestionale_owner_session']);
+        session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $cookieSecure, 'httponly' => true, 'samesite' => 'Lax']);
         @session_start();
         if (!empty($_SESSION['owner_client_id'])) {
             $isOwnerPortal = true;
@@ -77,20 +80,23 @@ try {
         $stmt->execute(['id' => $id]);
 
     } elseif ($isTenantPortal) {
-        // Resolve the tenant's current property + that property's owner client,
-        // exactly as the tenant portal does (config/db.php getTenantCurrentContract).
-        $contract       = $tenantId > 0 ? getTenantCurrentContract($db, $tenantId) : null;
-        $tenantPropId   = (int) ($contract['property_id'] ?? 0);
-        $tenantOwnerCid = (int) ($contract['property_client_id'] ?? 0);
+        // Scope strictly to the tenant's OWN lease: a document on their rented
+        // property or attached to their own contract. Deliberately NOT the whole
+        // landlord client (the old `client_id = property owner` arm) — that let any
+        // tenant download the landlord's personal/ID documents and other properties'
+        // contracts. Property/contract match is the correct authorization boundary.
+        $contract         = $tenantId > 0 ? getTenantCurrentContract($db, $tenantId) : null;
+        $tenantPropId     = (int) ($contract['property_id'] ?? 0);
+        $tenantContractId = (int) ($contract['contract_id'] ?? 0);
 
         $stmt = $db->prepare(
             "SELECT original_name, file_path, mime_type
                FROM documents
               WHERE id = :id
                 AND ( (property_id IS NOT NULL AND property_id = :pid)
-                   OR (client_id   IS NOT NULL AND client_id   = :cid) )"
+                   OR (contract_id IS NOT NULL AND contract_id = :cid) )"
         );
-        $stmt->execute(['id' => $id, 'pid' => $tenantPropId, 'cid' => $tenantOwnerCid]);
+        $stmt->execute(['id' => $id, 'pid' => $tenantPropId, 'cid' => $tenantContractId]);
 
     } else { // owner portal
         $stmt = $db->prepare(

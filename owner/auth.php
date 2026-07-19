@@ -28,7 +28,7 @@ function initOwnerSession(): void
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
-        'secure'   => FORCE_HTTPS,
+        'secure'   => FORCE_HTTPS || (function_exists('requestIsHttps') && requestIsHttps()),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);

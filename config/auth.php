@@ -15,7 +15,10 @@ function initSession(): void
 
     session_name(SESSION_NAME);
 
-    $secure = FORCE_HTTPS;
+    // Secure whenever HTTPS is forced OR the request actually arrived over HTTPS,
+    // so the session cookie never rides plaintext on a real TLS connection even if
+    // FORCE_HTTPS was left unset.
+    $secure = FORCE_HTTPS || (function_exists('requestIsHttps') && requestIsHttps());
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
@@ -43,7 +46,7 @@ function initTenantSession(): void
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
-        'secure'   => FORCE_HTTPS,
+        'secure'   => FORCE_HTTPS || (function_exists('requestIsHttps') && requestIsHttps()),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);

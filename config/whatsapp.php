@@ -10,7 +10,11 @@ function sendWhatsAppMessage(string $toPhone, string $body): array
     $cfg = getWhatsAppConfig();
 
     if (!$cfg['enabled']) {
-        return ['success' => true, 'status' => 'sent', 'external_id' => 'wa-sim-' . uniqid(), 'error' => null];
+        // WhatsApp DISABLED — nothing is actually sent. Return success so flows
+        // aren't blocked, but flag it as a simulation (parity with mail.php / meta)
+        // so callers/UI can be honest rather than claiming delivery.
+        error_log('[whatsapp] SIMULATED send (whatsapp disabled) to ' . $toPhone);
+        return ['success' => true, 'status' => 'sent', 'external_id' => 'wa-sim-' . uniqid(), 'simulated' => true, 'error' => null];
     }
 
     if ($cfg['account_sid'] === '' || $cfg['auth_token'] === '' || $cfg['from'] === '') {

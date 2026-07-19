@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/csrf.php';
 initTenantSession();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -18,6 +19,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit(json_encode(['success' => false, 'error' => 'Metodo non consentito.']));
 }
 
+// CSRF defense-in-depth (beyond SameSite=Lax). The token is issued into the
+// tenant session when tenant/index.php renders and sent back as X-CSRF-Token.
+$rawBody   = file_get_contents('php://input');
+$parsed    = json_decode($rawBody, true) ?: [];
+$csrfSent  = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($parsed['csrf_token'] ?? '');
+if ($csrfSent === '' || !hash_equals(getCsrfToken(), (string) $csrfSent)) {
+    http_response_code(403);
+    exit(json_encode(['success' => false, 'error' => 'Token CSRF non valido.']));
+}
+
 $tenantId = getCurrentTenantId();
 $db = getDB();
 
@@ -30,7 +41,7 @@ if (!$tenant) {
     exit(json_encode(['success' => false, 'error' => 'Inquilino non trovato.']));
 }
 
-$input   = json_decode(file_get_contents('php://input'), true) ?: [];
+$input   = $parsed; // already decoded above (php://input is a one-shot stream)
 $subject = trim($input['subject'] ?? '');
 $message = trim($input['message'] ?? '');
 $type    = in_array($input['type'] ?? '', ['maintenance', 'document', 'info', 'other'])

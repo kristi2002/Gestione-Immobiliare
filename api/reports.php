@@ -9,9 +9,13 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 
 apiHandleOptions();
 apiRequireMethod('GET');
+
+// Reports run heavy aggregate queries — bound them per caller.
+checkRateLimit('reports', 30, 60);
 requireViewAccess('reports');
 
 const REPORT_TYPES = ['properties', 'payments', 'expenses'];

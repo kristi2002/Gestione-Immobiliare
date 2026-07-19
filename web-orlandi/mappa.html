@@ -273,7 +273,7 @@
   <div class="footer__bottom">
     <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
     <span>
-      <a href="#">Privacy Policy</a> · <a href="#">Cookie Policy</a> · <a href="#">Note legali</a>
+      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php">Cookie Policy</a> · <a href="#">Note legali</a>
     </span>
   </div>
 </footer>
@@ -369,6 +369,7 @@
           <div class="map-popup__price">${fmtPrice(l.price)}${priceSuffix(l.price_type)}</div>
           <div class="map-popup__addr">${esc(l.address)}, ${esc(l.city)}</div>
           <div class="map-popup__meta">${l.sqm ? esc(l.sqm) + ' m² · ' : ''}${l.rooms ? esc(l.rooms) + ' locali · ' : ''}${l.bathrooms ? esc(l.bathrooms) + ' bagni' : ''}</div>
+          <div class="map-popup__meta">Classe energetica: ${l.energy_class ? esc(l.energy_class) : 'n.d.'}</div>
         </div>`);
       marker.addTo(markersLayer);
       markerById.set(l.id, marker);
@@ -386,6 +387,7 @@
           <div class="map-item__price">${fmtPrice(l.price)}${priceSuffix(l.price_type)}</div>
           <div class="map-item__addr">${esc(l.address)}, ${esc(l.city)}</div>
           <div class="map-item__meta">${l.sqm ? esc(l.sqm) + ' m² · ' : ''}${l.rooms ? esc(l.rooms) + ' locali · ' : ''}${l.bathrooms ? esc(l.bathrooms) + ' bagni' : ''}</div>
+          <div class="map-item__meta">Classe energetica: ${l.energy_class ? esc(l.energy_class) : 'n.d.'}</div>
           ${l._dist != null ? `<span class="map-item__dist">📍 a ${l._dist < 1 ? Math.round(l._dist * 1000) + ' m' : l._dist.toFixed(1) + ' km'} dalla ricerca</span>` : ''}
         </div>
       </article>`).join('');

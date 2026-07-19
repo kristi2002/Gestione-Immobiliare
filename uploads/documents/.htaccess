@@ -1,0 +1,30 @@
+# Defense-in-depth: deny ALL direct web access to uploaded personal documents.
+#
+# This tree holds ID scans, contracts, generated PDFs/invoices and the FatturaPA
+# XML — all personal/fiscal data. It must ONLY ever be reached through the
+# auth-checked PHP streamers (api/download_document.php, api/download_pdf.php,
+# api/media.php, api/fattura_sdi.php), which enforce per-caller ownership and a
+# path-containment guard. Nothing legitimate ever links a raw uploads/documents/
+# URL, so a blanket deny here has no functional cost.
+#
+# This duplicates the root .htaccess `RewriteRule ^uploads/documents/` rule so
+# protection survives even if the root file is lost/overwritten during a
+# deploy/rsync. Both syntaxes are present so it holds on Apache 2.2 and 2.4.
+
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+# Apache 2.2 (and mod_access_compat shims)
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+
+# Never execute anything here, whatever the server config.
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|php8|phps|cgi|pl|py|exe|sh)$">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes -ExecCGI

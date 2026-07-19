@@ -46,8 +46,11 @@ try {
         $params[] = '%' . $city . '%';
     }
 
+    // energy_class (APE) is legally required in property advertisements
+    // (D.Lgs 192/2005 art. 6): the public listing must expose it.
     $sql = "SELECT p.id, p.address, p.city, p.cap, p.province,
                    p.sqm, p.rooms, p.bathrooms, p.property_type,
+                   p.energy_class,
                    p.price, p.price_type, p.latitude, p.longitude,
                    COALESCE(
                        (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),

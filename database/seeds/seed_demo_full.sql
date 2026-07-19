@@ -181,6 +181,13 @@ VALUES
  'Contratto scaduto dicembre 2023. Proprietario ha ceduto la gestione. Da decidere se vendere o rimettere in locazione.',
  'archived', 850.00, 'affitto', 44.4938, 11.3430, 'street');
 
+-- APE energy classes for the demo properties. Legally the class must appear in
+-- every listing/contract (D.Lgs 192/2005); populated here so the demo is compliant.
+UPDATE properties SET energy_class = CASE id
+    WHEN 1 THEN 'C'  WHEN 2 THEN 'B'  WHEN 3 THEN 'G'  WHEN 4 THEN 'D'
+    WHEN 5 THEN 'A2' WHEN 6 THEN 'E'  WHEN 7 THEN 'F'  ELSE energy_class END
+WHERE id BETWEEN 1 AND 7;
+
 -- ════════════════════════════════════════════════════════════
 -- 6. PROPERTY MEDIA
 -- ════════════════════════════════════════════════════════════
@@ -227,15 +234,19 @@ UPDATE properties SET cover_media_id = 20 WHERE id = 7;
 -- ════════════════════════════════════════════════════════════
 -- 7. TENANTS (inquilini)
 -- ════════════════════════════════════════════════════════════
-INSERT INTO tenants (id, property_id, name, surname, email, phone, lease_start, lease_end, monthly_rent, notes, status) VALUES
-(1, 1, 'Alessandro', 'Gatti',      'alessandro.gatti@gmail.com',    '+39 333 901 2345', '2024-01-01', '2026-12-31', 900.00,
+-- NOTE: tenants no longer carry property/lease columns — that relationship lives
+-- in `contracts` (property_id, tenant_id, start_date, end_date, monthly_rent), see
+-- getTenantCurrentContract(). The leases for tenants 1-3 are in the contracts
+-- INSERT below; tenant 4 is a historical inactive tenant (lease expired 2023).
+INSERT INTO tenants (id, name, surname, email, phone, notes, status) VALUES
+(1, 'Alessandro', 'Gatti',      'alessandro.gatti@gmail.com',    '+39 333 901 2345',
  'Impiegato stabile in azienda multinazionale. Referenze ottime. Pagamenti quasi sempre in anticipo. Ha segnalato problema caldaia a giugno 2024.', 'active'),
-(2, 4, 'Valentina',  'Moretti',    'valentina.moretti@gmail.com',   '+39 347 802 3456', '2023-09-01', '2025-08-31', 750.00,
+(2, 'Valentina',  'Moretti',    'valentina.moretti@gmail.com',   '+39 347 802 3456',
  'Insegnante scuola media. Inquilina silenziosa, mantiene l\'immobile in buone condizioni. Lieve ritardo a marzo per problema bancario.', 'active'),
-(3, 6, 'Carlo',      'Ferretti',   'carlo.ferretti@modaferretti.it','+39 011 703 4567', '2024-03-01', '2026-02-28', 1200.00,
+(3, 'Carlo',      'Ferretti',   'carlo.ferretti@modaferretti.it','+39 011 703 4567',
  'Titolare negozio abbigliamento "Moda Ferretti". Puntuale nei pagamenti. Chiede ampliamento spazi nel 2025.', 'active'),
-(4, 7, 'Maria',      'Pellegrini', 'maria.pellegrini@libero.it',    '+39 051 604 5678', '2022-01-01', '2023-12-31', 850.00,
- 'Contratto scaduto. Ha rilasciato l\'immobile in buone condizioni. Deposito restituito integralmente.', 'inactive');
+(4, 'Maria',      'Pellegrini', 'maria.pellegrini@libero.it',    '+39 051 604 5678',
+ 'Contratto scaduto (locazione 2022-2023, Via Larga 7). Ha rilasciato l\'immobile in buone condizioni. Deposito restituito integralmente.', 'inactive');
 
 -- ════════════════════════════════════════════════════════════
 -- 8. TENANT PORTAL USERS
@@ -306,12 +317,14 @@ INSERT INTO documents (id, doc_type, title, client_id, property_id, file_path, o
 -- ════════════════════════════════════════════════════════════
 -- 13. CONTRACTS (contratti)
 -- ════════════════════════════════════════════════════════════
-INSERT INTO contracts (id, property_id, tenant_id, client_id, title, contract_type, status, start_date, end_date, monthly_rent, deposit, document_id, notes, created_by) VALUES
-(1, 1, 1, 1, 'Locazione Via Tortona 28 — Gatti 2024-2026',         'locazione',    'signed', '2024-01-01', '2026-12-31', 900.00,   1800.00, 1,  'Contratto 4+4. Prima registrazione. Cedolare secca 21%. Deposito versato.',    1),
-(2, 4, 2, 3, 'Locazione Via Appia Nuova 334 — Moretti 2023-2025',  'locazione',    'signed', '2023-09-01', '2025-08-31', 750.00,   1500.00, 4,  'Contratto transitorio 18 mesi. Rinnovo automatico salvo disdetta 60gg.',       2),
-(3, 6, 3, 4, 'Locazione C.so V. Emanuele 18 — Ferretti 2024-2026', 'locazione',    'signed', '2024-03-01', '2026-02-28', 1200.00,  2400.00, 10, 'Uso commerciale 6+6. Adeguamento ISTAT ogni anno a marzo.',                   1),
-(4, 3, NULL,2,'Mandato esclusiva vendita Villa dei Servi — Ricci',  'mandato',      'sent',   '2024-02-01', '2024-08-01', NULL,     NULL,    8,  'Mandato in esclusiva 6 mesi. Prezzo minimo €620.000. Provvigione 3%+IVA.',    2),
-(5, 5, NULL,3,'Mandato vendita Viale Parioli 22 — Mancini',         'mandato',      'draft',  '2024-04-01', NULL,         NULL,     NULL,    NULL,'Da formalizzare. Cliente vuole aspettare settembre per migliore offerta.',    1);
+-- NOTE: contracts has no `document_id` column (generated PDFs live in
+-- pdf_documents / documents, linked the other way). Column removed to match schema.
+INSERT INTO contracts (id, property_id, tenant_id, client_id, title, contract_type, status, start_date, end_date, monthly_rent, deposit, notes, created_by) VALUES
+(1, 1, 1, 1, 'Locazione Via Tortona 28 — Gatti 2024-2026',         'locazione',    'signed', '2024-01-01', '2026-12-31', 900.00,   1800.00, 'Contratto 4+4. Prima registrazione. Cedolare secca 21%. Deposito versato.',    1),
+(2, 4, 2, 3, 'Locazione Via Appia Nuova 334 — Moretti 2023-2025',  'locazione',    'signed', '2023-09-01', '2025-08-31', 750.00,   1500.00, 'Contratto transitorio 18 mesi. Rinnovo automatico salvo disdetta 60gg.',       2),
+(3, 6, 3, 4, 'Locazione C.so V. Emanuele 18 — Ferretti 2024-2026', 'locazione',    'signed', '2024-03-01', '2026-02-28', 1200.00,  2400.00, 'Uso commerciale 6+6. Adeguamento ISTAT ogni anno a marzo.',                   1),
+(4, 3, NULL,2,'Mandato esclusiva vendita Villa dei Servi — Ricci',  'mandato',      'sent',   '2024-02-01', '2024-08-01', NULL,     NULL,    'Mandato in esclusiva 6 mesi. Prezzo minimo €620.000. Provvigione 3%+IVA.',    2),
+(5, 5, NULL,3,'Mandato vendita Viale Parioli 22 — Mancini',         'mandato',      'draft',  '2024-04-01', NULL,         NULL,     NULL,    'Da formalizzare. Cliente vuole aspettare settembre per migliore offerta.',    1);
 
 -- ════════════════════════════════════════════════════════════
 -- 14. PDF DOCUMENTS (documenti generati)

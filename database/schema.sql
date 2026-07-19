@@ -1,5 +1,12 @@
 -- Gestionale Agenzia Immobiliare - Phase 1 Schema
--- Run this script to initialize the database.
+--
+-- ⚠️ OBSOLETE / DO NOT USE FOR INSTALLS. This is the original 8-table Phase-1
+-- schema and is kept only for historical reference. Installing from it produces
+-- a broken database (no admin_users, tenants, contracts, payments, leads, ...).
+-- For a real install use  database/schema_production.sql  followed by
+-- `php database/migrate.php`  (see that file's header).
+--
+-- Run this script to initialize the database.  [legacy — superseded]
 
 CREATE DATABASE IF NOT EXISTS gestione_immobiliare
     CHARACTER SET utf8mb4

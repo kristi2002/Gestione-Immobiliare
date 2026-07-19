@@ -1,3 +1,17 @@
+-- ############################################################################
+-- ##  NOT A COMPLETE SCHEMA — THIS IS A BASELINE THROUGH phase28 ONLY.       ##
+-- ##                                                                        ##
+-- ##  Loading this file alone gives you ~39 of ~55 tables. The GDPR, AML,   ##
+-- ##  fiscal, maintenance, automations, appointment-request, rate-limit,    ##
+-- ##  portal-listing and OMI tables — plus the agency_id / fiscal columns — ##
+-- ##  are added by database/migrations/phase29+.sql. Code in api/ depends   ##
+-- ##  on them, so a load that stops here will 500 on those features.        ##
+-- ##                                                                        ##
+-- ##  ALWAYS finish a fresh install by running the migration runner, which  ##
+-- ##  seeds phases <=28 as applied and then executes phase29+:              ##
+-- ##      php database/migrate.php                                          ##
+-- ############################################################################
+--
 -- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
 --
 -- Host: localhost    Database: gestione_immobiliare
@@ -164,6 +178,20 @@ CREATE TABLE `buildings` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `building_properties`
+-- (baseline-skipped phase15/phase22 previously left this out of the dump, so a
+--  fresh install never created it and the demo seed 500'd on it — audit C1.)
+--
+
+DROP TABLE IF EXISTS `building_properties`;
+CREATE TABLE `building_properties` (
+  `building_id` int unsigned NOT NULL,
+  `property_id` int unsigned NOT NULL,
+  PRIMARY KEY (`building_id`,`property_id`),
+  KEY `idx_bp_property` (`property_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Table structure for table `clients`
@@ -479,10 +507,12 @@ DROP TABLE IF EXISTS `login_attempts`;
 CREATE TABLE `login_attempts` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `username` varchar(190) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `success` tinyint(1) NOT NULL DEFAULT '0',
   `attempted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_login_ip_time` (`ip_address`,`attempted_at`)
+  KEY `idx_login_ip_time` (`ip_address`,`attempted_at`),
+  KEY `idx_login_user_time` (`username`,`attempted_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -563,7 +593,7 @@ CREATE TABLE `payments` (
   KEY `idx_payments_status` (`status`),
   CONSTRAINT `fk_payments_contract` FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_payments_property` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE RESTRICT,
-  CONSTRAINT `fk_payments_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
+  CONSTRAINT `fk_payments_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -961,7 +991,7 @@ CREATE TABLE `stripe_payments` (
   KEY `idx_sp_session` (`stripe_session_id`),
   KEY `idx_sp_tenant` (`tenant_id`),
   CONSTRAINT `fk_sp_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_sp_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `fk_sp_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

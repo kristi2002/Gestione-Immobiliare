@@ -18,24 +18,25 @@ if ($pendingId <= 0) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isLoginLocked()) {
+    $code = trim($_POST['code'] ?? '');
+
+    $stmt = getDB()->prepare(
+        'SELECT id, username, role, totp_secret, totp_backup_codes
+         FROM admin_users WHERE id = :id AND is_active = 1 LIMIT 1'
+    );
+    $stmt->execute(['id' => $pendingId]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        unset($_SESSION['_2fa_pending']);
+        header('Location: login.php');
+        exit;
+    }
+
+    // Throttle the 2FA stage per source IP AND per targeted account.
+    if (isLoginLocked(null, $user['username'])) {
         $error = loginLockoutMessage();
     } else {
-        $code = trim($_POST['code'] ?? '');
-
-        $stmt = getDB()->prepare(
-            'SELECT id, username, role, totp_secret, totp_backup_codes
-             FROM admin_users WHERE id = :id AND is_active = 1 LIMIT 1'
-        );
-        $stmt->execute(['id' => $pendingId]);
-        $user = $stmt->fetch();
-
-        if (!$user) {
-            unset($_SESSION['_2fa_pending']);
-            header('Location: login.php');
-            exit;
-        }
-
         $verified = false;
 
         if ($code !== '' && verifyTotpCode($user['totp_secret'] ?? '', $code)) {
@@ -55,13 +56,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($verified) {
-            recordLoginAttempt(true);
+            recordLoginAttempt(true, null, $user['username']);
             completeAdminLogin((int) $user['id'], $user['username'], $user['role'] ?? 'admin');
             header('Location: index.php');
             exit;
         }
 
-        recordLoginAttempt(false);
+        recordLoginAttempt(false, null, $user['username']);
         $error = 'Codice non valido.';
     }
 }

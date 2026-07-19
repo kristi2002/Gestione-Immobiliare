@@ -15,8 +15,12 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 apiHandleOptions();
 apiRequireMethod('GET');
+
+// Full-dataset export is heavy — cap it so it can't be hammered for scraping/DoS.
+checkRateLimit('property_export', 10, 60);
 
 try {
     $db     = getDB();

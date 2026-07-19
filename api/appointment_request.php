@@ -18,6 +18,7 @@ if (!ob_get_level()) {
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/api_helpers.php';
+require_once __DIR__ . '/../config/gdpr.php';
 
 apiHandleOptions();
 
@@ -139,6 +140,17 @@ try {
     $prefTime = in_array($time, APPT_TIMES, true) ? $time : null;
     if (mb_strlen($message) > 2000) apiError('Messaggio troppo lungo (max 2000 caratteri).');
 
+    // GDPR — the visitor must affirmatively accept the privacy informativa before
+    // we store any personal data. Server-side gate: proof of the acceptance is
+    // persisted after the lead is created (logConsent below).
+    $privacyConsent   = !empty($body['privacy_consent']);
+    $marketingConsent = !empty($body['marketing_consent']);
+    if (!$privacyConsent) {
+        apiError('Per inviare la richiesta è necessario accettare l\'informativa sulla privacy.');
+    }
+    $consentText = trim((string) ($body['consent_text'] ?? ''))
+        ?: 'Informativa privacy accettata tramite il modulo appuntamento del sito web.';
+
     $db->beginTransaction();
 
     // Mirror the request as a lead so it appears in the admin CRM pipeline.
@@ -166,6 +178,13 @@ try {
     $requestId = (int) $db->lastInsertId();
 
     $db->commit();
+
+    // Persist proof of the consent enforced above (best-effort — the gate already
+    // required acceptance). Attached to the lead created for this request.
+    logConsent($db, 'lead', $leadId, 'privacy', true, 'consent', $consentText, 'public_form');
+    if ($marketingConsent) {
+        logConsent($db, 'lead', $leadId, 'marketing', true, 'consent', $consentText, 'public_form');
+    }
 
     apiSuccess(['id' => $requestId, 'received' => true], 201);
 } catch (PDOException $e) {

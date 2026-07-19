@@ -10,29 +10,29 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isLoginLocked()) {
-        $error = loginLockoutMessage();
-    } else {
-        $username = trim($_POST['username'] ?? '');
-        $password = $_POST['password'] ?? '';
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-        if ($username === '' || $password === '') {
-            $error = 'Inserisci username e password.';
-            recordLoginAttempt(false);
+    if (isLoginLocked(null, $username)) {
+        $error = loginLockoutMessage();
+    } elseif ($username === '' || $password === '') {
+        $error = 'Inserisci username e password.';
+        recordLoginAttempt(false, null, $username);
+    } else {
+        $step = attemptLoginStep($username, $password);
+        if ($step === 'ok') {
+            recordLoginAttempt(true, null, $username);
+            header('Location: index.php');
+            exit;
+        } elseif ($step === '2fa') {
+            // Password correct but 2FA still required — do NOT record success (that
+            // would reset the throttle before the second factor is verified). The
+            // counter persists; login_2fa.php records the 2FA outcome.
+            header('Location: login_2fa.php');
+            exit;
         } else {
-            $step = attemptLoginStep($username, $password);
-            if ($step === 'ok') {
-                recordLoginAttempt(true);
-                header('Location: index.php');
-                exit;
-            } elseif ($step === '2fa') {
-                recordLoginAttempt(true);
-                header('Location: login_2fa.php');
-                exit;
-            } else {
-                recordLoginAttempt(false);
-                $error = 'Credenziali non valide.';
-            }
+            recordLoginAttempt(false, null, $username);
+            $error = 'Credenziali non valide.';
         }
     }
 }

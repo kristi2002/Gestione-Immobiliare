@@ -115,13 +115,48 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 .db-pagehead h1 { font-size: 22px; font-weight: 700; color: var(--color-text); }
 .db-pagehead p { font-size: 13px; color: var(--color-text-muted); margin-top: 3px; }
 .db-drop {
+    position: relative;
     display: inline-flex; align-items: center; gap: 8px;
     height: 40px; padding: 0 12px 0 14px;
     border: 1px solid var(--color-border); background: var(--color-surface);
     border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--color-text);
-    cursor: pointer;
+    cursor: pointer; user-select: none; outline: none;
 }
-.db-drop [data-lucide] { width: 15px; height: 15px; color: #8a97a8; }
+.db-drop:hover, .db-drop:focus-visible { border-color: var(--color-primary); }
+.db-drop [data-lucide] { width: 15px; height: 15px; color: #8a97a8; transition: transform .18s ease; }
+.db-drop.is-open [data-lucide] { transform: rotate(180deg); }
+
+/* Period selector menu (Settimanale / Mensile / Annuale) */
+.db-drop__menu {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+    min-width: 168px; padding: 6px;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 10px; box-shadow: 0 14px 34px rgba(15, 23, 42, .16);
+    display: none; flex-direction: column; gap: 2px;
+}
+.db-drop.is-open .db-drop__menu { display: flex; }
+.db-drop__opt {
+    display: block; width: 100%; text-align: left;
+    padding: 9px 11px; border: none; background: transparent;
+    border-radius: 7px; font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--color-text); cursor: pointer;
+}
+.db-drop__opt:hover { background: rgba(49, 134, 213, .08); }
+.db-drop__opt.is-active { background: var(--color-primary); color: #fff; }
+
+/* Period navigator (‹ current period ›) in the chart subtitle */
+.db-chartnav { display: inline-flex; align-items: center; gap: 6px; }
+.db-chartnav #chart-year { min-width: 96px; text-align: center; font-weight: 600; color: var(--color-text); }
+.db-navbtn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; padding: 0; flex-shrink: 0;
+    border: 1px solid var(--color-border); background: var(--color-surface);
+    border-radius: 6px; color: var(--color-text-muted); cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+}
+.db-navbtn:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+.db-navbtn:disabled { opacity: .35; cursor: default; }
+.db-navbtn [data-lucide] { width: 14px; height: 14px; }
 
 .db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 20px; }
 .db-stat {

@@ -214,8 +214,8 @@
             <textarea id="apptMessage" name="message" placeholder="Raccontaci brevemente di cosa hai bisogno..."></textarea>
           </div>
           <div class="privacy-check">
-            <input id="apptPrivacy" type="checkbox" required />
-            <label for="apptPrivacy">Ho letto l'informativa privacy e acconsento al trattamento dei miei dati per essere ricontattato. *</label>
+            <input id="apptPrivacy" name="privacy_consent" value="1" type="checkbox" required />
+            <label for="apptPrivacy">Ho letto l'<a href="../privacy.php" target="_blank" rel="noopener">informativa privacy</a> e acconsento al trattamento dei miei dati per essere ricontattato. *</label>
           </div>
           <button type="submit" class="form-submit" id="apptSubmit">📅 Richiedi appuntamento</button>
           <div class="form-feedback" id="apptFeedback" role="status"></div>
@@ -274,7 +274,7 @@
   <div class="footer__bottom">
     <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
     <span>
-      <a href="#">Privacy Policy</a> · <a href="#">Cookie Policy</a> · <a href="#">Note legali</a>
+      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php">Cookie Policy</a> · <a href="#">Note legali</a>
     </span>
   </div>
 </footer>

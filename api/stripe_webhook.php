@@ -118,6 +118,32 @@ try {
         $intentId  = $session['payment_intent'] ?? null;
 
         if ($sessionId) {
+            // Defense-in-depth: confirm the amount + currency Stripe reports match
+            // what we created the session for, before trusting it as payment. The
+            // signature is already verified (authenticity); this guards against a
+            // session that settled for a different amount/currency than expected.
+            $expStmt = $db->prepare(
+                "SELECT amount, currency FROM stripe_payments
+                  WHERE stripe_session_id = :sid AND status = 'pending' LIMIT 1"
+            );
+            $expStmt->execute([':sid' => $sessionId]);
+            $expected  = $expStmt->fetch();
+            $paidCents = isset($session['amount_total']) ? (int) $session['amount_total'] : null;
+
+            if ($expected && $paidCents !== null) {
+                $expectedCents = (int) round((float) $expected['amount'] * 100);
+                $paidCurrency  = strtolower((string) ($session['currency'] ?? ''));
+                $expCurrency   = strtolower((string) $expected['currency']);
+                if ($paidCents !== $expectedCents
+                    || ($paidCurrency !== '' && $paidCurrency !== $expCurrency)) {
+                    error_log("[stripe_webhook] amount/currency mismatch for session {$sessionId}: "
+                        . "expected {$expectedCents} {$expCurrency}, got {$paidCents} {$paidCurrency} — NOT marking paid.");
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Importo o valuta non corrispondenti.']);
+                    exit;
+                }
+            }
+
             // Update stripe_payments
             $upd = $db->prepare(
                 "UPDATE stripe_payments

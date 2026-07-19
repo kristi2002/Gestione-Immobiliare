@@ -5,10 +5,14 @@
  */
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/rate_limit.php';
 
 apiHandleOptions();
 apiRequireMethod('POST');
 requireRole('super_admin');
+
+// A full SQL dump is expensive — a handful per 5 minutes is plenty.
+checkRateLimit('backup_trigger', 5, 300);
 
 $backupDir = dirname(__DIR__) . '/backups';
 if (!is_dir($backupDir)) {
@@ -67,5 +71,7 @@ try {
         'message'  => "Backup completato: $filename",
     ]);
 } catch (Throwable $e) {
-    apiError('Errore durante il backup: ' . $e->getMessage(), 500);
+    // Don't leak file paths / SQL internals to the client. Detail goes to the log.
+    error_log('[backup_trigger] backup failed: ' . $e->getMessage());
+    apiError('Errore durante il backup. Controlla i log del server.', 500);
 }

@@ -29,10 +29,6 @@ if ($pendingId <= 0) {
     apiError('Nessuna verifica in sospeso. Accedi di nuovo.', 400);
 }
 
-if (isLoginLocked()) {
-    apiError(loginLockoutMessage(), 423);
-}
-
 $body = apiGetJsonBody();
 $code = trim((string) ($body['code'] ?? ''));
 
@@ -52,6 +48,11 @@ if (!$user) {
     apiError('Sessione scaduta. Accedi di nuovo.', 400);
 }
 
+// Throttle the 2FA stage per source IP AND per targeted account.
+if (isLoginLocked(null, $user['username'])) {
+    apiError(loginLockoutMessage(), 423);
+}
+
 $verified = verifyTotpCode($user['totp_secret'] ?? '', $code);
 
 if (!$verified) {
@@ -69,11 +70,11 @@ if (!$verified) {
 }
 
 if (!$verified) {
-    recordLoginAttempt(false);
+    recordLoginAttempt(false, null, $user['username']);
     apiError('Codice non valido.', 401);
 }
 
-recordLoginAttempt(true);
+recordLoginAttempt(true, null, $user['username']);
 completeAdminLogin((int) $user['id'], $user['username'], $user['role'] ?? 'admin');
 
 $role    = getCurrentRole();

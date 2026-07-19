@@ -23,13 +23,13 @@ require_once __DIR__ . '/../config/login_throttle.php';
 apiHandleOptions();
 apiRequireMethod('POST');
 
-if (isLoginLocked()) {
-    apiError(loginLockoutMessage(), 423);
-}
-
 $body     = apiGetJsonBody();
 $username = trim((string) ($body['username'] ?? ''));
 $password = (string) ($body['password'] ?? '');
+
+if (isLoginLocked(null, $username)) {
+    apiError(loginLockoutMessage(), 423);
+}
 
 if ($username === '' || $password === '') {
     apiError('Inserisci username e password.', 400);
@@ -38,7 +38,7 @@ if ($username === '' || $password === '') {
 $step = attemptLoginStep($username, $password);
 
 if ($step === 'ok') {
-    recordLoginAttempt(true);
+    recordLoginAttempt(true, null, $username);
     $role    = getCurrentRole();
     $allowed = ROLE_PERMISSIONS[$role] ?? [];
     apiSuccess([
@@ -54,9 +54,12 @@ if ($step === 'ok') {
 }
 
 if ($step === '2fa') {
-    recordLoginAttempt(true);
+    // Password correct but 2FA still required. Do NOT record success here — that
+    // would clear the throttle counter before the second factor is verified,
+    // giving an attacker who knows the password unlimited TOTP guesses. Leave the
+    // counter intact; api/login_2fa.php records the 2FA outcome.
     apiSuccess(['status' => 'requires_2fa']);
 }
 
-recordLoginAttempt(false);
+recordLoginAttempt(false, null, $username);
 apiError('Credenziali non valide.', 401);

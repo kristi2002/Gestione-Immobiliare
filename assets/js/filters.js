@@ -272,7 +272,16 @@
             bBtn.innerHTML = REF_ICONS.layers + '<span>Azioni</span><span class="fb-chev">' + REF_ICONS.chev + '</span>';
             const bMenu = document.createElement('div'); bMenu.className = 'fb-menu fb-menu--bulk';
             [...bulk.childNodes].forEach(n => bMenu.appendChild(n));
-            bulk.classList.add('bulk-moved'); bulk.hidden = false;
+            bulk.classList.add('bulk-moved');
+            // The page's bulk JS toggles the (now empty) toolbar's [hidden] on
+            // selection changes; mirror that state onto the moved buttons so
+            // they are disabled when nothing is selected.
+            const syncBulkButtons = () => {
+                bMenu.querySelectorAll('button').forEach(b => { b.disabled = bulk.hidden; });
+            };
+            new MutationObserver(syncBulkButtons)
+                .observe(bulk, { attributes: true, attributeFilter: ['hidden'] });
+            syncBulkButtons();
             bWrap.append(bBtn, bMenu);
             bBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(bBtn, bMenu, 'right'); });
             right.appendChild(bWrap);
@@ -524,6 +533,39 @@
         onScroll();
     }
 
+    // Unified page anatomy: merge the view's floating action row
+    // (.view-header__actions — "+ Nuovo X", view toggles, export/import…) into
+    // the main filter bar's right group, then hoist that bar to the top of the
+    // view. Every list page then reads the same way:
+    // topbar → control band (filters | actions) → stats → content.
+    function unifyPageBar(scope) {
+        const viewRoot = scope.firstElementChild;
+        if (!viewRoot) return;
+
+        const bar = [...viewRoot.querySelectorAll('.toolbar')].find(b =>
+            b.dataset.filterBarBound === '1' &&
+            !b.closest('.modal, .modal-overlay, .chat-sidebar, [data-no-sticky]'));
+        if (!bar) return;                       // no page-level filter bar → leave the view alone
+
+        const header  = viewRoot.querySelector(':scope > .view-header');
+        const actions = header && header.querySelector('.view-header__actions');
+        if (actions && actions.childElementCount) {
+            const host = bar.querySelector('.fb-group--right') ||
+                         bar.querySelector('.filter-bar__controls') || bar;
+            const cluster = document.createElement('div');
+            cluster.className = 'fb-actions';
+            [...actions.childNodes].forEach(n => cluster.appendChild(n));
+            host.appendChild(cluster);
+        }
+        if (header) header.classList.add('view-header--merged');
+
+        // Same position on every page: the band is the first block of the view
+        // (right after the now-hidden header), even if it was inside a card.
+        const target = header ? header.nextElementSibling : viewRoot.firstElementChild;
+        if (bar !== target) viewRoot.insertBefore(bar, target);
+        bar.classList.add('toolbar--pagebar');
+    }
+
     window.FilterBar = {
         setupIn(root) {
             const scope = root || document;
@@ -535,6 +577,7 @@
             if (topbar) topbar.classList.remove('topbar--has-filters');
 
             scope.querySelectorAll(BAR_SELECTORS).forEach(setupBar);
+            try { unifyPageBar(scope); } catch (_) { /* keep the view's own layout */ }
             scope.querySelectorAll('.toolbar').forEach(setupMergeToTopbar);
         },
     };

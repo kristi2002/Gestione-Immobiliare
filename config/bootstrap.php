@@ -24,11 +24,22 @@ if (!APP_DEBUG) {
     error_reporting(E_ALL);
 }
 
-if (FORCE_HTTPS && PHP_SAPI !== 'cli') {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+/**
+ * True when the current request reached us over HTTPS, accounting for the
+ * reverse proxies this app runs behind (Cloudflare / Traefik set
+ * X-Forwarded-Proto). Used both for the HTTPS redirect and to decide the
+ * `Secure` session-cookie flag, so cookies are Secure on any real HTTPS request
+ * even when FORCE_HTTPS was left unset.
+ */
+function requestIsHttps(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        || (($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '') === 'on');
+}
 
-    if (!$isHttps) {
+if (FORCE_HTTPS && PHP_SAPI !== 'cli') {
+    if (!requestIsHttps()) {
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $uri  = $_SERVER['REQUEST_URI'] ?? '/';
         header('Location: https://' . $host . $uri, true, 301);

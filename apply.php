@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/settings.php';
+require_once __DIR__ . '/config/gdpr.php';
 
 $db = getDB();
 
@@ -18,7 +19,7 @@ $success    = false;
 if ($propertyId > 0) {
     $stmt = $db->prepare(
         "SELECT p.id, p.address, p.city, p.property_type, p.status,
-                p.price, p.price_type, p.description,
+                p.price, p.price_type, p.description, p.energy_class,
                 pm.file_path AS cover_photo
            FROM properties p
            LEFT JOIN property_media pm ON pm.id = p.cover_media_id
@@ -64,10 +65,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $property) {
                            : 'affitto';
             $message = trim($_POST['message'] ?? '');
 
+            $privacyConsent = !empty($_POST['privacy_consent']);
+
             if ($name === '' || $email === '') {
                 $error = 'Nome e email sono obbligatori.';
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $error = 'Indirizzo email non valido.';
+            } elseif (!$privacyConsent) {
+                // GDPR — must accept the privacy informativa before we store PII.
+                $error = 'Per inviare la richiesta è necessario accettare l\'informativa sulla privacy.';
             } else {
                 $ins = $db->prepare(
                     "INSERT INTO property_applications
@@ -85,6 +91,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $property) {
                     ':msg'   => $message ?: null,
                     ':ip'    => $clientIp,
                 ]);
+
+                // Persist proof of the consent enforced above (best-effort).
+                $applicationId = (int) $db->lastInsertId();
+                logConsent(
+                    $db, 'application', $applicationId, 'privacy', true, 'consent',
+                    'Informativa privacy accettata tramite il modulo di candidatura immobile (apply.php).',
+                    'apply_form', $clientIp
+                );
+
                 $success = true;
             }
         }
@@ -170,6 +185,9 @@ $primaryColor = $branding['primary_color'] ?? '#2563eb';
             box-shadow: 0 0 0 3px <?= esc($primaryColor) ?>22;
         }
         .field { margin-bottom: 18px; }
+        .consent-label { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: .85rem; color: #475569; cursor: pointer; }
+        .consent-label input[type="checkbox"] { width: 18px; height: 18px; margin-top: 1px; flex: 0 0 auto; }
+        .consent-label a { color: <?= esc($primaryColor) ?>; }
         .honeypot { display: none !important; }
         .btn {
             background: <?= esc($primaryColor) ?>;
@@ -237,7 +255,8 @@ $primaryColor = $branding['primary_color'] ?? '#2563eb';
                     <img class="property-photo" src="<?= esc($property['cover_photo']) ?>" alt="Foto immobile">
                 <?php endif; ?>
                 <h3><?= esc($property['address']) ?><?= $property['city'] ? ', ' . esc($property['city']) : '' ?></h3>
-                <p class="meta"><?= esc(ucfirst(str_replace('_', ' ', $property['property_type'] ?? ''))) ?></p>
+                <p class="meta"><?= esc(ucfirst(str_replace('_', ' ', $property['property_type'] ?? ''))) ?>
+                    · Classe energetica: <?= !empty($property['energy_class']) ? esc($property['energy_class']) : 'n.d.' ?></p>
                 <?php if (!empty($property['price']) && $property['price_type'] === 'affitto'): ?>
                     <span class="price-badge">Affitto: € <?= number_format((float)$property['price'], 0, ',', '.') ?>/mese</span>
                 <?php elseif (!empty($property['price']) && $property['price_type'] === 'vendita'): ?>
@@ -290,6 +309,15 @@ $primaryColor = $branding['primary_color'] ?? '#2563eb';
                     <label for="message">Messaggio</label>
                     <textarea id="message" name="message" rows="4"
                               placeholder="Scrivi qui ulteriori informazioni o domande..."><?= esc($_POST['message'] ?? '') ?></textarea>
+                </div>
+
+                <div class="field consent">
+                    <label class="consent-label">
+                        <input type="checkbox" name="privacy_consent" value="1" required
+                               <?= !empty($_POST['privacy_consent']) ? 'checked' : '' ?>>
+                        <span>Ho letto e accetto l'<a href="privacy.php" target="_blank" rel="noopener">informativa sulla privacy</a>
+                        e acconsento al trattamento dei miei dati per gestire questa richiesta. <span style="color:#dc2626">*</span></span>
+                    </label>
                 </div>
 
                 <button type="submit" class="btn">Invia richiesta</button>

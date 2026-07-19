@@ -69,6 +69,60 @@ function logDataAccessAdmin(
     logDataAccess($action, $subjectType, $subjectId, 'admin', $aid, $label, $entityType, $entityId, $detail);
 }
 
+/**
+ * Persist a consent / legal-basis decision for a data subject (Art. 6/7 proof).
+ *
+ * Best-effort, mirroring logDataAccess(): a missing consent_records table (older
+ * schema) or any write error must never break the caller's flow. The affirmative
+ * acceptance itself is ENFORCED by the caller before this is invoked; this call
+ * only persists the evidence — timestamp, IP, exact wording shown, and source —
+ * so the agency can prove the legal basis for processing at collection time.
+ *
+ * @param string $subjectType 'client' | 'tenant' | 'lead' | 'application'
+ * @param string $purpose     e.g. 'privacy' (informativa acknowledged), 'marketing'
+ * @param string $source      'public_form' | 'apply_form' | 'admin_form' | ...
+ */
+function logConsent(
+    PDO     $db,
+    string  $subjectType,
+    int     $subjectId,
+    string  $purpose,
+    bool    $granted,
+    string  $legalBasis  = 'consent',
+    ?string $consentText = null,
+    string  $source      = 'public_form',
+    ?string $ip          = null
+): void {
+    try {
+        if ($ip === null) {
+            $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
+                ?? ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? null));
+            if ($ip !== null && str_contains($ip, ',')) {
+                $ip = trim(explode(',', $ip)[0]);
+            }
+        }
+        $db->prepare(
+            "INSERT INTO consent_records
+                (subject_type, subject_id, purpose, legal_basis, granted, consent_text, source, ip_address)
+             VALUES (:t, :id, :purpose, :basis, :granted, :text, :source, :ip)"
+        )->execute([
+            't'       => $subjectType,
+            'id'      => $subjectId,
+            'purpose' => $purpose,
+            'basis'   => $legalBasis,
+            'granted' => $granted ? 1 : 0,
+            'text'    => $consentText !== null ? mb_substr($consentText, 0, 2000) : null,
+            'source'  => $source,
+            'ip'      => $ip,
+        ]);
+    } catch (Throwable $e) {
+        // Consent capture is best-effort at the storage layer; the required
+        // acceptance was already enforced by the caller. Log loudly so a broken
+        // consent ledger is visible in ops, but never break the visitor's request.
+        error_log('[gdpr consent] failed to write consent_records: ' . $e->getMessage());
+    }
+}
+
 /** PII columns per data-subject type (used by export + anonymise). */
 function gdprPiiColumns(string $subjectType): array
 {
@@ -278,6 +332,52 @@ function gdprAnonymizeSubject(PDO $db, string $subjectType, int $subjectId): boo
             "UPDATE esign_requests
                 SET signer_name = 'Anonimizzato', signer_email = 'anonimizzato@invalid', ip_address = NULL
               WHERE signer_email = :email", ['email' => $subjectEmail]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Erase the subject's IDENTITY documents (ID scans) — the DB rows AND the
+    // physical files on disk. Scrubbing only the client/tenant row leaves the most
+    // sensitive PII we hold — copies of identity cards — fully intact and still
+    // downloadable. Unlike contracts/invoices (retained under fiscal law) and the
+    // separate aml_records copies (10-yr antiriciclaggio obligation, deliberately
+    // untouched), general identity scans have no standing retention basis once
+    // erasure is requested, so they are removed.
+    //
+    // Scope: a client's own client_id documents; a tenant's own contract documents
+    // only — never the landlord's client-level files.
+    // -----------------------------------------------------------------------
+    require_once __DIR__ . '/upload_guard.php';
+    try {
+        if ($subjectType === 'client') {
+            $docStmt = $db->prepare(
+                "SELECT id, file_path FROM documents
+                  WHERE client_id = :id AND doc_type IN ('id','id_front','id_back')"
+            );
+        } else {
+            $docStmt = $db->prepare(
+                "SELECT d.id, d.file_path FROM documents d
+                  WHERE d.doc_type IN ('id','id_front','id_back')
+                    AND d.contract_id IN (SELECT id FROM contracts WHERE tenant_id = :id)"
+            );
+        }
+        $docStmt->execute(['id' => $subjectId]);
+        $idDocs = $docStmt->fetchAll();
+
+        if ($idDocs) {
+            // Remove the rows first (inside the caller's transaction), then unlink
+            // the files. If the transaction rolls back the rows return but the file
+            // is gone — the download endpoints then 404, which is safe (no leak).
+            $ids = array_map(static fn($d) => (int) $d['id'], $idDocs);
+            $db->exec('DELETE FROM documents WHERE id IN (' . implode(',', $ids) . ')');
+            foreach ($idDocs as $doc) {
+                $full = safeUploadRealPath((string) ($doc['file_path'] ?? ''));
+                if ($full !== null) {
+                    @unlink($full);
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[gdpr anonymize] identity-document erasure skipped: ' . $e->getMessage());
     }
 
     return true;

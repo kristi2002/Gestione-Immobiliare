@@ -129,6 +129,29 @@
 }
 .view-cols-row .btn.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
+/* ---- Unified page control band ------------------------------------------
+   filters.js (unifyPageBar) merges each view's floating action row into the
+   main filter bar and hoists it to the top of the view, so every page shares
+   the same anatomy: topbar → control band → stats → content. */
+.view-header--merged { display: none !important; }
+.toolbar--pagebar { margin-top: 0; margin-bottom: 16px; }
+.fb-actions {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding-left: 12px; margin-left: 2px;
+    border-left: 1px solid var(--color-border);
+}
+.fb-actions .btn {
+    height: 40px; border-radius: 9px;
+    display: inline-flex; align-items: center;
+}
+.toolbar--merged .fb-actions { flex-wrap: nowrap; }
+@media (max-width: 720px) {
+    .fb-actions {
+        border-left: none; padding-left: 0; margin-left: 0;
+        justify-content: flex-start;
+    }
+}
+
 /* ---- Card alignment: one shared left edge, no wrapping headers ---- */
 .entity-card__prop-header { padding-left: 16px; padding-right: 16px; flex-wrap: nowrap; }
 .entity-card--property .entity-card__prop-header { padding-left: 16px; padding-right: 16px; }
