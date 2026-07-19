@@ -99,6 +99,42 @@ docker exec -i CONTAINER_NAME \
   < /root/schema_production.sql
 ```
 
+### Create the least-privilege app user (do NOT run the app as root)
+
+The `DB_USER=gestionale_app` referenced above must exist and own only the app
+schema. Create it once, as an admin MySQL user:
+
+```bash
+# 1. Copy the user script to the server
+scp database/create_app_user.sql root@91.99.137.240:/root/
+
+# 2. Edit it and set a strong password (generate one: openssl rand -base64 24)
+#    then run it as an admin user. It grants ALL on `default` (prod) +
+#    `gestione_immobiliare` (dev) and NOTHING global — no SUPER/FILE/other DBs.
+docker exec -i CONTAINER_NAME \
+  mysql -h k6ctgb6t5pco3p4qabrgl8h3 -u root -p<ADMIN_DB_PASS> \
+  < /root/create_app_user.sql
+
+# 3. Set DB_USER=gestionale_app + DB_PASS=<that password> in Coolify env, redeploy.
+
+# 4. Verify the app user is scoped (must show only DB-scoped grants, no *.*):
+docker exec -i CONTAINER_NAME \
+  mysql -h k6ctgb6t5pco3p4qabrgl8h3 -u root -p<ADMIN_DB_PASS> \
+  -e "SHOW GRANTS FOR 'gestionale_app'@'%';"
+```
+
+> Migrations run on every container start (`database/migrate.php`) using this
+> same user, so it intentionally has DDL (CREATE/ALTER/INDEX) — but only on the
+> app schema. That is the least privilege that keeps migrations working.
+>
+> **After switching the user, do one deploy and read the Coolify logs** to
+> confirm `[entrypoint] applying database migrations...` completes cleanly. The
+> migration helper procedures in `schema_production.sql` are declared
+> `DEFINER=root@localhost`; if a future migration `CALL`s them and the log shows
+> a *"definer does not exist"* error, re-import those two `CREATE PROCEDURE`
+> blocks without the explicit `DEFINER` clause (they'll then bind to the app
+> user). Existing prod is unaffected — its pending-migration set is already empty.
+
 ---
 
 ## Deployment workflow (via Coolify)
