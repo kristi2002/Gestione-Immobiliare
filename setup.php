@@ -13,9 +13,14 @@ if (file_exists($lockFile) || !SETUP_ENABLED) {
 }
 
 if (adminUserExists()) {
-    file_put_contents($lockFile, date('c'));
-    header('Location: login.php');
-    exit;
+    // An admin already exists → setup must NEVER run again, regardless of the
+    // SETUP_ENABLED flag or the (ephemeral, per-container) lock file. This DB
+    // check survives container recreation, so it closes the cold-start window
+    // where a fresh container with SETUP_ENABLED still truthy could re-expose
+    // the installer. Forbid outright (403) rather than redirect.
+    @file_put_contents($lockFile, date('c'));
+    http_response_code(403);
+    exit('Setup già completato.');
 }
 
 $error   = '';

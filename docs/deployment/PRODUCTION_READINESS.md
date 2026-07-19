@@ -133,7 +133,7 @@ L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni p
 - [ ] **Test restore backup** — ripristinare un `.sql` su DB di test almeno una volta
 - [ ] **Twilio webhook** — se usi WhatsApp, configurare URL webhook e **validare firma Twilio** (oggi `api/whatsapp_webhook.php` accetta qualsiasi POST)
 - [ ] **Meta** — App ID/Secret in Impostazioni, redirect OAuth `https://tuodominio.it/gestionale/meta_callback.php`, `META_PUBLIC_BASE_URL` per immagini Instagram
-- [ ] **File upload** — `uploads/` è pubblico (solo script PHP bloccati). Valutare proxy autenticato per documenti sensibili
+- [x] **File upload** — ~~`uploads/` è pubblico~~ **RISOLTO/verificato live 2026-07-19**: `uploads/documents/` (documenti sensibili: ID, contratti, PDF generati) restituisce **403** a qualsiasi URL diretto (anche file inesistenti), servito solo da `download_document.php`/`download_pdf.php` (401 senza sessione). Le immagini degli immobili in `uploads/properties/` restano pubbliche per progetto; i PDF/doc in quella cartella sono comunque negati (403). Vedi `docs/security/UPLOADS_SECURITY.md`.
 - [ ] **Logo SVG** — disabilitare o sanitizzare (rischio XSS se caricato SVG malevolo)
 
 ### P2 — Consigliato (miglioramento continuo)
@@ -160,7 +160,7 @@ L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni p
 | Nessun rate limit su login | Medio | Max tentativi per IP |
 | `APP_SECRET` non usato nel codice | Basso | Usarlo per firmare token/CSRF o rimuoverlo |
 | Webhook WhatsApp senza firma | Alto se esposto | Verifica `X-Twilio-Signature` |
-| Upload pubblici in `uploads/` | Medio | Servire file tramite `download_document.php` |
+| ~~Upload pubblici in `uploads/`~~ **RISOLTO** (verificato live 2026-07-19: documenti → 403) | — | Già servito da `download_document.php`; `.htaccess Require all denied` attivo |
 | Account `readonly` può scrivere via API | Medio | `requireWriteAccess()` su tutte le API POST/PUT/DELETE |
 | Nessun MFA | Medio | Opzionale per admin |
 
