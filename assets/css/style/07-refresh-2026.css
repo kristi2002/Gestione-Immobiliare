@@ -577,6 +577,25 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 /* The collapse toggle never belongs in the merged row. */
 .toolbar--merged .toolbar-toggle { display: none; }
 
+/* While the filters ride in the topbar, the page title steps aside so the
+   filter row owns the width and sits on ONE clean baseline. (You already know
+   which page you're on once you've scrolled — the title is redundant here, and
+   keeping it just squeezed the controls into a ragged two-line bar.) */
+.topbar--has-filters .topbar-title { display: none; }
+
+/* Reference filter groups (Ricerche salvate / Filtri / Più recenti…) default to
+   flex-wrap:wrap, which stacked the buttons onto a second row when space got
+   tight — the "ugly" merged bar. Force nowrap while merged; the controls row
+   already scrolls horizontally (.filter-bar__controls overflow-x:auto), so
+   nothing is lost — it stays a single tidy line instead. */
+.toolbar--merged .fb-ref { justify-content: flex-start; }
+.toolbar--merged .fb-group,
+.toolbar--merged .fb-group--left,
+.toolbar--merged .fb-group--right { flex-wrap: nowrap; }
+.toolbar--merged .fb-group--left  { flex: 1 1 auto; min-width: 0; }
+.toolbar--merged .fb-group--right { flex: 0 0 auto; }
+.toolbar--merged .fb-group--left .search-box { min-width: 160px; }
+
 @media (max-width: 900px) {
     /* Tight screens: the filters win the row, search folds away while merged.
        The filter row itself stays horizontally scrollable, so nothing is lost. */
