@@ -213,9 +213,13 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         const anchor = document.getElementById('pp-title-section') || document.getElementById('pp-gallery');
         const scroller = document.getElementById('app-content');
         const positionBar = () => {
-            const r = (scroller || topbar || document.body).getBoundingClientRect();
+            // The bar REPLACES the topbar: cover its exact rect (higher z-index
+            // paints it on top), so only one bar is visible while scrolled down.
+            const r = (topbar || scroller || document.body).getBoundingClientRect();
             bar.style.left = r.left + 'px';
             bar.style.width = r.width + 'px';
+            bar.style.top = Math.max(0, r.top) + 'px';
+            bar.style.height = r.height + 'px';
         };
         const onScroll = () => {
             const tbBottom = topbar ? topbar.getBoundingClientRect().bottom : 56;

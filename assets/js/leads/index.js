@@ -25,10 +25,6 @@ function init() {
     els.statusFilter  = document.getElementById('lead-status-filter');
     els.interestFilter = document.getElementById('lead-interest-filter');
     els.alert         = document.getElementById('leads-alert');
-    els.modal         = document.getElementById('lead-modal');
-    els.form          = document.getElementById('lead-form');
-    els.modalTitle    = document.getElementById('lead-modal-title');
-    els.assigned      = document.getElementById('lead-assigned');
     els.matchModal    = document.getElementById('lead-match-modal');
     els.matchList     = document.getElementById('lead-match-list');
     els.matchTitle    = document.getElementById('lead-match-title');
@@ -87,8 +83,6 @@ async function loadAgents() {
         const json = await res.json();
         if (json.success) {
             agents = json.data;
-            if (els.assigned) els.assigned.innerHTML = '<option value="">— Nessuno —</option>' +
-                agents.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
             els.bulkAssignAgent.innerHTML = '<option value="">— Agente —</option>' +
                 agents.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
         }
@@ -172,12 +166,60 @@ function renderKanban() {
         </div>`;
     }).join('');
 
-    els.kanban.querySelectorAll('.kcard').forEach(c => c.addEventListener('click', () => {
-        if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(c.dataset.id) });
-    }));
+    els.kanban.querySelectorAll('.kcard').forEach(c => {
+        c.addEventListener('click', (e) => {
+            if (e.target.closest('.kcard__status')) return; // dropdown, not navigation
+            if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(c.dataset.id) });
+        });
+        c.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', c.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+            c.classList.add('kcard--dragging');
+        });
+        c.addEventListener('dragend', () => c.classList.remove('kcard--dragging'));
+    });
+
+    // Per-card status dropdown → lightweight status-only update.
+    els.kanban.querySelectorAll('.kcard__status').forEach(sel => {
+        sel.addEventListener('click', (e) => e.stopPropagation());
+        sel.addEventListener('change', () => setLeadStatus(sel.dataset.id, sel.value));
+    });
+
+    // Columns accept dropped cards: drop = move to that column's status.
+    els.kanban.querySelectorAll('.kanban__col').forEach(col => {
+        const status = KANBAN_ORDER.find(s => col.classList.contains(`kanban__col--${s}`));
+        if (!status) return;
+        col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('kanban__col--over'); });
+        col.addEventListener('dragleave', () => col.classList.remove('kanban__col--over'));
+        col.addEventListener('drop', (e) => {
+            e.preventDefault();
+            col.classList.remove('kanban__col--over');
+            const id = e.dataTransfer.getData('text/plain');
+            if (id) setLeadStatus(id, status);
+        });
+    });
 
     renderStatsBar();
     if (window.lucide) window.lucide.createIcons();
+}
+
+async function setLeadStatus(id, status) {
+    const lead = leads.find(l => l.id == id);
+    if (!lead || lead.status === status) return;
+    try {
+        const res = await fetch(`${API}?action=set_status&id=${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        showAlert(`Lead spostato in "${STATUS_LABELS[status] || status}".`, 'success');
+        loadLeads();
+    } catch (err) {
+        showAlert(err.message, 'error');
+        loadLeads(); // restore the dropdown to the real status
+    }
 }
 
 function renderStatsBar() {
@@ -314,92 +356,9 @@ async function bulkAction(operation) {
     }
 }
 
-function openModal(lead = null) {
-    els.form.reset();
-    document.getElementById('lead-id').value = '';
-    clearLeadModalError();
-    if (lead) {
-        els.modalTitle.textContent = 'Modifica Lead';
-        document.getElementById('lead-id').value = lead.id;
-        document.getElementById('lead-name').value = lead.name;
-        document.getElementById('lead-surname').value = lead.surname;
-        document.getElementById('lead-cf').value = lead.codice_fiscale || '';
-        document.getElementById('lead-phone').value = lead.phone || '';
-        document.getElementById('lead-email').value = lead.email || '';
-        document.getElementById('lead-interest').value = lead.interest_type;
-        document.getElementById('lead-budget-min').value = lead.budget_min ?? '';
-        document.getElementById('lead-budget-max').value = lead.budget_max ?? '';
-        document.getElementById('lead-city').value = lead.preferred_city || '';
-        document.getElementById('lead-type').value = lead.preferred_type || '';
-        document.getElementById('lead-min-rooms').value = lead.min_rooms ?? '';
-        document.getElementById('lead-min-sqm').value = lead.min_sqm ?? '';
-        document.getElementById('lead-status').value = lead.status;
-        document.getElementById('lead-source').value = lead.source;
-        document.getElementById('lead-assigned').value = lead.assigned_to || '';
-        document.getElementById('lead-notes').value = lead.notes || '';
-    } else {
-        els.modalTitle.textContent = 'Nuovo Lead';
-    }
-    els.modal.hidden = false;
-    document.getElementById('lead-name').focus();
-}
+// (create/edit lives on the dedicated 'lead_edit' view — see lead_edit.js)
 
-function closeModal() { els.modal.hidden = true; }
 function closeMatchModal() { els.matchModal.hidden = true; }
-
-function showLeadModalError(message) {
-    const el = document.getElementById('lead-modal-error');
-    if (!el) return;
-    el.textContent = message;
-    el.style.display = 'block';
-}
-
-function clearLeadModalError() {
-    const el = document.getElementById('lead-modal-error');
-    if (el) el.style.display = 'none';
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    const id = document.getElementById('lead-id').value;
-    const data = {
-        name: document.getElementById('lead-name').value.trim(),
-        surname: document.getElementById('lead-surname').value.trim(),
-        codice_fiscale: document.getElementById('lead-cf').value.trim().toUpperCase() || null,
-        phone: document.getElementById('lead-phone').value.trim(),
-        email: document.getElementById('lead-email').value.trim(),
-        interest_type: document.getElementById('lead-interest').value,
-        budget_min: document.getElementById('lead-budget-min').value,
-        budget_max: document.getElementById('lead-budget-max').value,
-        preferred_city: document.getElementById('lead-city').value.trim(),
-        preferred_type: document.getElementById('lead-type').value,
-        min_rooms: document.getElementById('lead-min-rooms').value,
-        min_sqm: document.getElementById('lead-min-sqm').value,
-        status: document.getElementById('lead-status').value,
-        source: document.getElementById('lead-source').value,
-        assigned_to: document.getElementById('lead-assigned').value || null,
-        notes: document.getElementById('lead-notes').value.trim(),
-    };
-    const btn = document.getElementById('lead-modal-save');
-    btn.disabled = true; btn.textContent = 'Salvataggio...';
-    try {
-        const url = id ? `${API}?id=${id}` : API;
-        const res = await fetch(url, {
-            method: id ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        closeModal();
-        showAlert('Lead salvato.', 'success');
-        loadLeads();
-    } catch (err) {
-        showLeadModalError(err.message);
-    } finally {
-        btn.disabled = false; btn.textContent = 'Salva';
-    }
-}
 
 async function showMatches(id) {
     const lead = leads.find(x => x.id == id);

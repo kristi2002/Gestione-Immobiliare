@@ -96,6 +96,7 @@
             activity_log:   'Log Attività',
             settings:       'Impostazioni',
             client_profile:        'Scheda Cliente',
+            agent_profile:         'Scheda Agente',
             client_edit:           'Modifica Proprietario',
             property_edit:         'Modifica Immobile',
             contract_edit:         'Contratto',

@@ -236,33 +236,27 @@
         }
     }
 
-    async function geocode() {
-        const btn = $('pe-geocode');
-        const prop = {
-            address: $('pe-address').value.trim(),
-            city: $('pe-city').value.trim(),
-            cap: $('pe-cap').value.trim(),
-            province: $('pe-province').value.trim(),
-        };
-        btn.disabled = true; btn.textContent = '…';
-        try {
-            if (typeof Geocode === 'undefined') throw new Error('Modulo geocodifica non caricato.');
-            const hit = await Geocode.resolve(prop);
-            if (!hit) { showAlert('Indirizzo non trovato. Inserisci Lat/Lng manualmente.', 'error'); return; }
-            $('pe-latitude').value = hit.lat;
-            $('pe-longitude').value = hit.lng;
-            $('pe-geo-confidence-value').value = hit.confidence || '';
-            setMapPoint(hit.lat, hit.lng);
-            if (hit.suggested_province && !prop.province) {
-                $('pe-province').value = hit.suggested_province.replace(/^Provincia di\s+/i, '').slice(0, 10);
-            }
-            const conf = (Geocode.CONFIDENCE_LABELS && Geocode.CONFIDENCE_LABELS[hit.confidence]) || '';
-            showAlert(`${conf} (${hit.source}): ${hit.label}`, hit.confidence === 'exact' ? 'success' : 'info');
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.innerHTML = '<i data-lucide="map-pin"></i> Trova';
+    // Automatic geocoding: coordinates resolve themselves as the address is
+    // typed (Geocode.bindAuto) — no manual "Trova" button.
+    function applyGeocodeHit(hit) {
+        $('pe-latitude').value = hit.lat;
+        $('pe-longitude').value = hit.lng;
+        $('pe-geo-confidence-value').value = hit.confidence || '';
+        setMapPoint(hit.lat, hit.lng);
+        if (hit.suggested_province && !$('pe-province').value.trim()) {
+            $('pe-province').value = hit.suggested_province.replace(/^Provincia di\s+/i, '').slice(0, 10);
         }
+        const conf = (Geocode.CONFIDENCE_LABELS && Geocode.CONFIDENCE_LABELS[hit.confidence]) || '';
+        showAlert(`${conf} (${hit.source}): ${hit.label}`, hit.confidence === 'exact' ? 'success' : 'info');
+    }
+
+    function setupAutoGeocode() {
+        if (typeof Geocode === 'undefined' || !Geocode.bindAuto) return;
+        Geocode.bindAuto(
+            { address: 'pe-address', city: 'pe-city', cap: 'pe-cap', province: 'pe-province' },
+            applyGeocodeHit,
+            (state, msg) => { if (state === 'error') showAlert('Geocodifica: ' + msg, 'info'); }
+        );
     }
 
     async function generateMandato() {
@@ -338,6 +332,10 @@
                 setVal('pe-longitude', c.lng);
                 setVal('pe-geo-confidence-value', c.confidence || 'exact');
                 setMapPoint(c.lat, c.lng);
+            } else {
+                // No coords on the suggestion: nudge the auto-geocoder
+                // (programmatic .value writes don't fire input events).
+                input.dispatchEvent(new Event('change', { bubbles: true }));
             }
             close();
         };
@@ -350,7 +348,7 @@
                 items = json.data.candidates || [];
                 activeIdx = -1;
                 render();
-            } catch (e) { /* fail soft — the "Trova" button still works */ }
+            } catch (e) { /* fail soft — auto-geocode still runs on the typed fields */ }
         };
 
         input.addEventListener('input', () => {
@@ -373,7 +371,7 @@
         $('pe-back').addEventListener('click', goBack);
         $('pe-cancel').addEventListener('click', goBack);
         $('pe-form').addEventListener('submit', save);
-        $('pe-geocode').addEventListener('click', geocode);
+        setupAutoGeocode();
         $('pe-mandato').addEventListener('click', generateMandato);
         setupAddressAutocomplete();
         const aiBtn = $('pe-ai-describe');

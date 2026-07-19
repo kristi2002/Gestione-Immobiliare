@@ -43,11 +43,12 @@
 /* --------------------------------------------------------------------------
    Property profile — portal-style sections + sticky sub-nav (à la immobiliare.it)
    -------------------------------------------------------------------------- */
-/* Fixed bar that OVERLAYS the app top bar on scroll-down (JS sets left/width to
-   match the topbar exactly), so it reads as a replacement, not a second bar. */
+/* Fixed bar shown on scroll-down that REPLACES the topbar: JS pins it over the
+   topbar's exact rect (top/left/width/height) and the higher z-index paints it
+   on top, so only one bar is visible at a time. */
 .pp-subnav {
     position: fixed;
-    top: var(--topbar-height);  /* flush beneath the full-width topbar */
+    top: 0;  /* fallback only — JS overrides with the topbar's real rect */
     left: 0;
     z-index: 1000;             /* below topbar (1150), above content */
     display: flex;

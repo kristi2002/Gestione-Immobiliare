@@ -105,6 +105,10 @@ function listClients(PDO $db): void
         if ($frag) $where .= " AND $frag";
     }
 
+    if (isset($_GET['assigned_agent_id']) && (int) $_GET['assigned_agent_id'] > 0) {
+        $where .= ' AND c.assigned_agent_id = :assigned_agent_id';
+        $params['assigned_agent_id'] = (int) $_GET['assigned_agent_id'];
+    }
     if ($status !== '' && in_array($status, CLIENT_STATUSES, true)) {
         $where .= ' AND c.status = :status';
         $params['status'] = $status;

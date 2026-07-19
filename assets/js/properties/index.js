@@ -156,7 +156,7 @@ import { renderGalleryItem } from './templates.js';
             });
         }
 
-        bindClick('btn-property-geocode', geocodeFromForm);
+        setupAutoGeocode();
 
         els.form.addEventListener('submit', handleFormSubmit);
 
@@ -1006,39 +1006,21 @@ import { renderGalleryItem } from './templates.js';
     // CRUD actions
     // -------------------------------------------------------------------------
 
-    async function geocodeFromForm() {
-        const btn = document.getElementById('btn-property-geocode');
-        const property = {
-            address: document.getElementById('property-address').value.trim(),
-            city: document.getElementById('property-city').value.trim(),
-            cap: document.getElementById('property-cap').value.trim(),
-            province: document.getElementById('property-province').value.trim(),
-        };
-
-        btn.disabled = true;
-        btn.textContent = '…';
-
-        try {
-            if (typeof Geocode === 'undefined') throw new Error('Modulo geocodifica non caricato.');
-            const hit = await Geocode.resolve(property);
-            if (!hit) {
-                showAlert('Indirizzo ambiguo o non trovato. Controlla Via/CAP/Città o inserisci Lat/Lng da Google Maps.', 'error');
-                return;
+    // Automatic geocoding: coordinates fill in while the address is typed
+    // (Geocode.bindAuto in geocode.js) — the "Trova" button is gone.
+    function setupAutoGeocode() {
+        if (typeof Geocode === 'undefined' || !Geocode.bindAuto) return;
+        Geocode.bindAuto(
+            { address: 'property-address', city: 'property-city', cap: 'property-cap', province: 'property-province' },
+            (hit) => {
+                document.getElementById('property-latitude').value = hit.lat;
+                document.getElementById('property-longitude').value = hit.lng;
+                if (hit.suggested_province && !document.getElementById('property-province').value.trim()) {
+                    document.getElementById('property-province').value = hit.suggested_province.replace(/^Provincia di\s+/i, '').slice(0, 10);
+                }
+                showGeoConfidence(hit.confidence, hit.source);
             }
-            document.getElementById('property-latitude').value = hit.lat;
-            document.getElementById('property-longitude').value = hit.lng;
-            if (hit.suggested_province && !property.province) {
-                document.getElementById('property-province').value = hit.suggested_province.replace(/^Provincia di\s+/i, '').slice(0, 10);
-            }
-            showGeoConfidence(hit.confidence, hit.source);
-            const conf = Geocode.CONFIDENCE_LABELS[hit.confidence] || '';
-            showAlert(`${conf} (${hit.source}): ${hit.label}`, hit.confidence === 'exact' ? 'success' : 'info');
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="map-pin"></i> Trova';
-        }
+        );
     }
 
     function showGeoConfidence(confidence, source = '') {

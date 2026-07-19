@@ -11,8 +11,11 @@ export function kanbanCardHtml(l, status) {
     const initials = ((l.name && l.name[0]) || '') + ((l.surname && l.surname[0]) || '');
     const budget = formatBudget(l.budget_min, l.budget_max);
     const interest = INTEREST_LABELS[l.interest_type] || l.interest_type || '';
+    const statusOptions = Object.entries(STATUS_LABELS)
+        .map(([k, lab]) => `<option value="${k}"${k === status ? ' selected' : ''}>${lab}</option>`)
+        .join('');
     return `
-                <div class="kcard" data-id="${l.id}">
+                <div class="kcard" data-id="${l.id}" draggable="true">
                     <div class="kcard__top">
                         <div class="kcard__name">${escapeHtml(l.surname || '')} ${escapeHtml(l.name || '')}</div>
                         <span class="kcard__avatar">${escapeHtml(initials.toUpperCase())}</span>
@@ -20,7 +23,7 @@ export function kanbanCardHtml(l, status) {
                     ${interest ? `<div class="kcard__interest"><i data-lucide="tag"></i> ${escapeHtml(interest)}</div>` : ''}
                     ${budget ? `<div class="kcard__budget">${escapeHtml(budget)}</div>` : ''}
                     <div class="kcard__foot">
-                        <span class="badge badge--lead-${status}">${STATUS_LABELS[status] || status}</span>
+                        <select class="kcard__status kcard__status--${status}" data-id="${l.id}" title="Sposta in un'altra fase">${statusOptions}</select>
                         ${l.agent_name ? `<span class="kcard__agent">${escapeHtml(l.agent_name)}</span>` : ''}
                     </div>
                 </div>`;

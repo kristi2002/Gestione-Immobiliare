@@ -49,6 +49,13 @@
         }
 
         els.grid.innerHTML = agents.map(renderCard).join('');
+        els.grid.querySelectorAll('.agent-card[data-agent-id]').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('a')) return; // mailto link
+                if (window.App) window.App.navigateTo('agent_profile', { agentId: Number(card.dataset.agentId) });
+            });
+        });
+        if (window.lucide) window.lucide.createIcons();
     }
 
     function renderCard(a) {
@@ -65,7 +72,7 @@
             </div>`).join('');
 
         return `
-            <div class="entity-card agent-card agent-card--${escapeHtml(role)}">
+            <div class="entity-card agent-card agent-card--${escapeHtml(role)}" data-agent-id="${a.id}" style="cursor:pointer" title="Apri scheda agente">
                 <div class="agent-card__header">
                     <div class="entity-card__avatar">${escapeHtml(initials)}</div>
                     <div class="agent-card__identity">

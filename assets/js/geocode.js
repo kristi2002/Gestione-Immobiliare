@@ -46,8 +46,61 @@
         };
     }
 
+    /**
+     * Automatic geocoding: watch the address fields and resolve as soon as the
+     * user has typed a complete address (via + città + CAP) — no button needed.
+     * Debounced; skips duplicate lookups; silent when the address is incomplete.
+     *
+     * @param {Object} ids    {address, city, cap, province} — input element ids
+     * @param {Function} onHit    called with the resolved hit
+     * @param {Function} [onState] called with ('searching'|'error'|'idle', message)
+     */
+    function bindAuto(ids, onHit, onState) {
+        const el = k => document.getElementById(ids[k]);
+        if (!el('address') || !el('city') || !el('cap')) return;
+        let timer = null;
+        let lastKey = '';
+        let pending = 0;
+
+        const read = () => ({
+            address: el('address').value.trim(),
+            city: el('city').value.trim(),
+            cap: el('cap').value.trim(),
+            province: ids.province && el('province') ? el('province').value.trim() : '',
+        });
+
+        const run = async () => {
+            const p = read();
+            if (!p.address || !p.city || !p.cap) return;          // incomplete: stay silent
+            const key = [p.address, p.city, p.cap, p.province].join('|').toLowerCase();
+            if (key === lastKey) return;                           // nothing changed
+            lastKey = key;
+            const ticket = ++pending;
+            if (onState) onState('searching', 'Ricerca coordinate…');
+            try {
+                const hit = await resolve(p);
+                if (ticket !== pending) return;                    // superseded by newer input
+                if (hit) onHit(hit);
+                if (onState) onState('idle', '');
+            } catch (err) {
+                if (ticket !== pending) return;
+                if (onState) onState('error', err.message);
+            }
+        };
+
+        ['address', 'city', 'cap', 'province'].forEach(k => {
+            const f = ids[k] && el(k);
+            if (!f) return;
+            ['input', 'change'].forEach(ev => f.addEventListener(ev, () => {
+                clearTimeout(timer);
+                timer = setTimeout(run, 900);
+            }));
+        });
+    }
+
     window.Geocode = {
         resolve,
+        bindAuto,
         CONFIDENCE_LABELS,
     };
 })();

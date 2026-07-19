@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     'use strict';
 
     const BAR_SELECTORS = '.toolbar, .reports-toolbar, .chat-sidebar__search, .filter-bar';
@@ -123,7 +123,7 @@
         toggle.type = 'button';
         toggle.className = 'toolbar-toggle';
         toggle.setAttribute('aria-expanded', String(wasOpen));
-        toggle.innerHTML = '<span>Filtri</span><span class="toggle-icon">▼</span>';
+        toggle.innerHTML = '<span>Filtri</span><span class="toggle-icon">â–¼</span>';
         bar.parentNode.insertBefore(toggle, bar);
 
         if (wasOpen) bar.classList.add('is-open');
@@ -147,6 +147,53 @@
         sort:   svgIco('<path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4"/>'),
         layers: svgIco('<path d="m12 2 9 4.9-9 4.9-9-4.9L12 2z"/><path d="m3 12 9 4.9 9-4.9"/><path d="m3 17 9 4.9 9-4.9"/>'),
     };
+
+    // Styled replacement for the native prompt() used to name a saved search.
+    // One shared overlay, rebuilt lazily; reuses the app's modal classes.
+    function askSaveName(onConfirm) {
+        let ov = document.getElementById('fb-save-modal');
+        if (!ov) {
+            ov = document.createElement('div');
+            ov.id = 'fb-save-modal';
+            ov.className = 'modal-overlay';
+            ov.hidden = true;
+            ov.innerHTML =
+                '<div class="modal modal--sm" role="dialog" aria-labelledby="fb-save-title">' +
+                    '<div class="modal-header"><h3 id="fb-save-title">Salva ricerca</h3>' +
+                    '<button type="button" class="modal-close" aria-label="Chiudi">&times;</button></div>' +
+                    '<form class="modal-body" id="fb-save-form">' +
+                        '<div class="form-group"><label for="fb-save-name">Nome della ricerca</label>' +
+                        '<input type="text" id="fb-save-name" class="form-input" maxlength="40" ' +
+                        'placeholder="Es. Bilocali Civitanova" autocomplete="off" required></div>' +
+                    '</form>' +
+                    '<div class="modal-footer">' +
+                        '<button type="button" class="btn btn--ghost" data-act="cancel">Annulla</button>' +
+                        '<button type="submit" form="fb-save-form" class="btn btn--primary">Salva</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(ov);
+        }
+        const input = ov.querySelector('#fb-save-name');
+        const close = () => { ov.hidden = true; ov._confirm = null; };
+        if (!ov._bound) {
+            ov._bound = true;
+            ov.addEventListener('click', (e) => {
+                if (e.target === ov || e.target.closest('.modal-close, [data-act="cancel"]')) close();
+            });
+            ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+            ov.querySelector('#fb-save-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = input.value.trim();
+                if (!name) { input.focus(); return; }
+                const cb = ov._confirm; close();
+                if (cb) cb(name);
+            });
+        }
+        ov._confirm = onConfirm;
+        input.value = '';
+        ov.hidden = false;
+        input.focus();
+    }
 
     function findResultsContainer(bar) {
         let el = bar.nextElementSibling;
@@ -179,7 +226,7 @@
         const pageKey = 'fbSaved:' + (bar.id || (location.pathname + '|' + [...bar.classList].join('.')));
 
         // Panels are position:fixed and placed via JS so they escape the toolbar's
-        // overflow:hidden and any stacking context — never render behind the list.
+        // overflow:hidden and any stacking context â€” never render behind the list.
         function closeAllPanels() { bar.querySelectorAll('.fb-pop.open, .fb-menu.open').forEach(p => p.classList.remove('open')); }
         function placePanel(btn, panel, align) {
             const pw = panel.offsetWidth || 250;
@@ -216,7 +263,7 @@
         saveIcon.title = 'Salva la ricerca corrente'; saveIcon.innerHTML = REF_ICONS.save;
         left.append(saveWrap, saveIcon);
 
-        // Bulk Action dropdown — wraps the page's existing .bulk-toolbar (its
+        // Bulk Action dropdown â€” wraps the page's existing .bulk-toolbar (its
         // buttons/checkbox keep their ids, so the page's bulk JS keeps working).
         const bulk = bar.parentElement && bar.parentElement.querySelector('.bulk-toolbar');
         if (bulk) {
@@ -262,17 +309,15 @@
             fWrap.append(fBtn, pop);
             fBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(fBtn, pop, 'right'); });
             right.appendChild(fWrap);
-        } else if (clearBtn) {
-            right.appendChild(clearBtn);
         }
 
-        // Sort — client-side reorder of the current results
+        // Sort â€” client-side reorder of the current results
         const sortWrap = document.createElement('div'); sortWrap.className = 'fb-ctrl';
         const sortBtn = document.createElement('button'); sortBtn.type = 'button'; sortBtn.className = 'fb-btn';
-        sortBtn.innerHTML = REF_ICONS.sort + '<span class="fb-sort-label">Più recenti</span><span class="fb-chev">' + REF_ICONS.chev + '</span>';
+        sortBtn.innerHTML = REF_ICONS.sort + '<span class="fb-sort-label">PiÃ¹ recenti</span><span class="fb-chev">' + REF_ICONS.chev + '</span>';
         const sortLabel = sortBtn.querySelector('.fb-sort-label');
         const sortMenu = document.createElement('div'); sortMenu.className = 'fb-menu';
-        [['recent', 'Più recenti'], ['old', 'Meno recenti'], ['az', 'A → Z'], ['za', 'Z → A']].forEach(([k, lab], i) => {
+        [['recent', 'PiÃ¹ recenti'], ['old', 'Meno recenti'], ['az', 'A â†’ Z'], ['za', 'Z â†’ A']].forEach(([k, lab], i) => {
             const b = document.createElement('button'); b.type = 'button'; b.dataset.sort = k;
             b.innerHTML = '<span>' + lab + '</span>'; if (i === 0) b.classList.add('is-active');
             sortMenu.appendChild(b);
@@ -280,6 +325,9 @@
         sortWrap.append(sortBtn, sortMenu);
         sortBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(sortBtn, sortMenu, 'right'); });
         right.appendChild(sortWrap);
+
+        // No Filtri popover to host it â†’ "Azzera" closes the row, after Ordina.
+        if (!fields.length && clearBtn) right.appendChild(clearBtn);
 
         controls.classList.add('fb-ref');
         controls.append(left, right);
@@ -334,7 +382,7 @@
             list.forEach((it, idx) => {
                 const b = document.createElement('button'); b.type = 'button';
                 const name = document.createElement('span'); name.textContent = it.name;
-                const del = document.createElement('span'); del.textContent = '✕'; del.style.opacity = '.45';
+                const del = document.createElement('span'); del.textContent = 'âœ•'; del.style.opacity = '.45';
                 b.append(name, del);
                 b.addEventListener('click', () => { applySnapshot(it.values); saveMenu.classList.remove('open'); });
                 del.addEventListener('click', (e) => { e.stopPropagation(); const l = readSaved(); l.splice(idx, 1); writeSaved(l); renderSaveMenu(); });
@@ -343,8 +391,9 @@
         }
         saveBtn.addEventListener('click', (e) => { e.stopPropagation(); renderSaveMenu(); togglePanel(saveBtn, saveMenu, 'left'); });
         saveIcon.addEventListener('click', () => {
-            const name = prompt('Nome della ricerca salvata:'); if (!name) return;
-            const l = readSaved(); l.push({ name: name.slice(0, 40), values: snapshot() }); writeSaved(l);
+            askSaveName((name) => {
+                const l = readSaved(); l.push({ name: name.slice(0, 40), values: snapshot() }); writeSaved(l);
+            });
         });
 
         document.addEventListener('click', (e) => {
@@ -405,7 +454,7 @@
         bar.addEventListener('change', updateVisibility);
         bar.addEventListener('click', (e) => {
             if (e.target.closest('.comm-tab, .forecast-period')) {
-                // Tab classes update after their own handlers — defer.
+                // Tab classes update after their own handlers â€” defer.
                 setTimeout(updateVisibility, 0);
             }
         });
@@ -414,19 +463,19 @@
     }
 
     // On scroll-down, the filter bar becomes ONE with the top bar: it pins over
-    // the topbar (fixed) instead of sitting under it — matching the property-
+    // the topbar (fixed) instead of sitting under it â€” matching the property-
     // profile sub-nav. A spacer holds its place so content doesn't jump.
     /**
      * On scroll, merge the page's local filter toolbar UP into the global-search
      * topbar so search + filters read as one bar. Scrolling back drops it home.
      *
      * We portal the actual <div class="toolbar"> element (not a clone), so every
-     * input keeps its id and its bound listeners — the page modules keep working.
+     * input keeps its id and its bound listeners â€” the page modules keep working.
      */
     function setupMergeToTopbar(bar) {
         if (bar._mergeBound) return;
         // Skip toolbars nested in their own scroll context (modals, side panels)
-        // or inside a card — those are inline form rows, not page-level filter bars.
+        // or inside a card â€” those are inline form rows, not page-level filter bars.
         if (bar.closest('.modal, .modal-overlay, .chat-sidebar, .card, [data-no-sticky]')) return;
         const topbar   = document.querySelector('.topbar');
         const slot     = document.getElementById('topbar-filters');

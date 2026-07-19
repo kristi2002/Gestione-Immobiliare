@@ -11,6 +11,10 @@ require_once __DIR__ . '/../config/geocode.php';
 apiHandleOptions();
 apiRequireMethod('GET');
 
+// Read-only endpoint with slow upstream HTTP calls: release the session lock
+// immediately, or every other request from the same browser queues behind it.
+if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+
 try {
     $property = [
         'address'  => trim($_GET['address'] ?? ''),

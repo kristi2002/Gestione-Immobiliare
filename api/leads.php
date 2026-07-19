@@ -7,6 +7,7 @@
  * GET    /api/leads.php?action=match&lead_id= — matching property IDs
  * POST   /api/leads.php                       — create
  * POST   /api/leads.php?action=convert&id=    — convert to client
+ * POST   /api/leads.php?action=set_status&id= — status-only update (kanban)
  * PUT    /api/leads.php?id={id}               — update
  * DELETE /api/leads.php?id={id}               — archive (status = lost)
  */
@@ -49,6 +50,9 @@ try {
                 convertLeadToTenant($db, $id);
             } elseif ($action === 'bulk' || ($postBody['action'] ?? '') === 'bulk') {
                 bulkLeads($db);
+            } elseif ($action === 'set_status') {
+                if (!$id) apiError('ID lead mancante.');
+                setLeadStatus($db, $id, (string) ($postBody['status'] ?? ''));
             } else {
                 createLead($db);
             }
@@ -168,6 +172,20 @@ function updateLead(PDO $db, int $id): void
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
+    getLead($db, $id);
+}
+
+/** Status-only update — powers the kanban dropdown / drag&drop. */
+function setLeadStatus(PDO $db, int $id, string $status): void
+{
+    if (!leadExists($db, $id)) {
+        apiError('Lead non trovato.', 404);
+    }
+    if (!in_array($status, LEAD_STATUSES, true)) {
+        apiError('Stato non valido.');
+    }
+    $stmt = $db->prepare("UPDATE leads SET status = :status WHERE id = :id");
+    $stmt->execute(['status' => $status, 'id' => $id]);
     getLead($db, $id);
 }
 
@@ -351,6 +369,10 @@ function matchProperties(PDO $db, int $leadId): void
     if ($lead['preferred_city']) {
         $sql .= " AND p.city LIKE :city";
         $params['city'] = '%' . $lead['preferred_city'] . '%';
+    }
+    if (!empty($lead['preferred_type'])) {
+        $sql .= " AND p.property_type = :ptype";
+        $params['ptype'] = $lead['preferred_type'];
     }
     if ($lead['min_rooms'] !== null) {
         $sql .= " AND (p.rooms IS NULL OR p.rooms >= :mrooms)";

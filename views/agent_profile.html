@@ -1,0 +1,76 @@
+<div class="client-profile-view agent-profile-view">
+
+    <!-- Back nav -->
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="btn-back-to-agents">← Agenti</button>
+    </div>
+
+    <!-- Hero card: avatar + name + role + KPIs -->
+    <div class="profile-hero card">
+        <div class="profile-hero__avatar" id="ap-avatar">??</div>
+        <div class="profile-hero__info">
+            <div class="profile-hero__name">
+                <h2 id="ap-name">Caricamento...</h2>
+                <span id="ap-role-badge" class="badge"></span>
+            </div>
+            <div class="profile-hero__meta" id="ap-meta"></div>
+            <div class="ap-kpis" id="ap-kpis"></div>
+        </div>
+        <div class="profile-hero__actions">
+            <div class="agent-card__rate" title="Tasso di conversione lead">
+                <span class="agent-card__rate-value" id="ap-conv-rate">—</span>
+                <span class="agent-card__rate-label">Conversione lead</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="ap-alert" class="alert" style="display:none;"></div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs" role="tablist">
+        <button class="profile-tab profile-tab--active" role="tab" data-tab="leads"><i data-lucide="clipboard-list"></i>Lead assegnati</button>
+        <button class="profile-tab" role="tab" data-tab="appointments"><i data-lucide="calendar"></i>Appuntamenti</button>
+        <button class="profile-tab" role="tab" data-tab="clients"><i data-lucide="users"></i>Clienti assegnati</button>
+        <button class="profile-tab" role="tab" data-tab="commissions"><i data-lucide="euro"></i>Provvigioni</button>
+    </div>
+
+    <!-- Panel: Lead -->
+    <div class="profile-panel" id="ap-panel-leads">
+        <div class="profile-panel__header"><span class="text-muted" id="ap-leads-count"></span></div>
+        <div class="table-wrapper"><table class="data-table">
+            <thead><tr><th>Nome</th><th>Interesse</th><th>Budget</th><th>Stato</th><th>Fonte</th><th></th></tr></thead>
+            <tbody id="ap-leads-tbody"><tr><td colspan="6" class="entity-loading">Caricamento…</td></tr></tbody>
+        </table></div>
+    </div>
+
+    <!-- Panel: Appuntamenti -->
+    <div class="profile-panel" id="ap-panel-appointments" hidden>
+        <div class="profile-panel__header"><span class="text-muted" id="ap-appts-count"></span></div>
+        <div class="table-wrapper"><table class="data-table">
+            <thead><tr><th>Data</th><th>Immobile</th><th>Durata</th><th>Stato</th><th>Note</th></tr></thead>
+            <tbody id="ap-appts-tbody"><tr><td colspan="5" class="entity-loading">Caricamento…</td></tr></tbody>
+        </table></div>
+    </div>
+
+    <!-- Panel: Clienti -->
+    <div class="profile-panel" id="ap-panel-clients" hidden>
+        <div class="profile-panel__header"><span class="text-muted" id="ap-clients-count"></span></div>
+        <div id="ap-clients-grid" class="entity-grid">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Provvigioni -->
+    <div class="profile-panel" id="ap-panel-commissions" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="ap-comm-count"></span>
+            <span id="ap-comm-totals" class="ap-comm-totals"></span>
+        </div>
+        <div class="table-wrapper"><table class="data-table">
+            <thead><tr><th>Immobile</th><th>Tipo</th><th>Importo</th><th>Scadenza</th><th>Stato</th></tr></thead>
+            <tbody id="ap-comm-tbody"><tr><td colspan="5" class="entity-loading">Caricamento…</td></tr></tbody>
+        </table></div>
+    </div>
+</div>
+
+<script type="module" src="assets/js/agent_profile/index.js"></script>
