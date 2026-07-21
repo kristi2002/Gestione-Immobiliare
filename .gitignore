@@ -24,3 +24,4 @@ immobiliare design/
 # Local dev scratch (port-conflict workaround, not for CI/prod)
 docker-compose.dryrun.yml
 docker-compose.override.yml
+.devswarm-temp/
