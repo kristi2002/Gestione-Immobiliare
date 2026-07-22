@@ -249,9 +249,6 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                 </div>
                 <div class="topbar-filters" id="topbar-filters" aria-label="Filtri pagina"></div>
                 <div class="topbar-actions">
-                    <?php if (!isReadOnlyRole()): ?>
-                    <a href="view.php?name=property_edit" class="topbar-new" data-view="property_edit" title="Nuovo immobile"><i data-lucide="plus"></i><span>Nuovo</span></a>
-                    <?php endif; ?>
                     <a href="view.php?name=communications" class="topbar-link topbar-icon-btn" data-view="communications" title="Messaggi" aria-label="Messaggi"><i data-lucide="mail"></i></a>
                     <?php if (canAccessView('whatsapp_inbox')): ?>
                     <a href="view.php?name=whatsapp_inbox" class="topbar-link topbar-icon-btn" data-view="whatsapp_inbox" title="WhatsApp" aria-label="WhatsApp"><i data-lucide="message-circle"></i></a>
