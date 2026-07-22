@@ -268,6 +268,9 @@
                 failed.push(`${p.address}, ${p.city} (${err.message})`);
             }
             done++;
+            // Respect Nominatim's usage policy (max ~1 request/second) — the batch
+            // proxies through the geocode endpoint, so space the calls out.
+            if (done < pending.length) await sleep(1000);
         }
 
         els.geocodeBtn.disabled = false;
