@@ -4,9 +4,30 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/cache.php';
 
 apiHandleOptions();
 apiRequireMethod('GET');
+
+// Normalise the cache-affecting params before touching the DB so a cache hit
+// skips every query below.
+$period = $_GET['chart_period'] ?? 'annuale';
+if (!in_array($period, ['settimanale', 'mensile', 'annuale'], true)) {
+    $period = 'annuale';
+}
+$chartOnly = isset($_GET['chart_only']);
+
+// Dashboard stats are global (agency-wide counts, no per-user filtering), so one
+// key serves every admin. A short TTL collapses the ~29 queries per load into a
+// single run per window while keeping the numbers fresh. Degrades to a no-op
+// when APCu is unavailable (see config/cache.php).
+$cacheKey = 'dash_stats:' . $period . ':'
+    . (preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['chart_anchor'] ?? '') ? $_GET['chart_anchor'] : '')
+    . ':' . ($chartOnly ? 'chart' : 'full');
+$cachedPayload = cacheGet($cacheKey);
+if ($cachedPayload !== null) {
+    apiSuccess($cachedPayload);
+}
 
 try {
     $db = getDB();
@@ -14,10 +35,6 @@ try {
     // ---- Revenue trend chart (period-aware + navigable) ----
     // Computed first so the navigator can refetch just the chart (?chart_only=1)
     // without re-running every dashboard query below.
-    $period = $_GET['chart_period'] ?? 'annuale';
-    if (!in_array($period, ['settimanale', 'mensile', 'annuale'], true)) {
-        $period = 'annuale';
-    }
 
     // Navigation bounds: prev/next arrows are gated to the range that actually has
     // data (earliest → latest payment), extended to today so the current period is
@@ -36,8 +53,10 @@ try {
 
     $revenueChart = buildRevenueChart($db, $period, $anchorDate, $minNav, $maxNav);
 
-    if (isset($_GET['chart_only'])) {
-        apiSuccess(['revenue_chart' => $revenueChart]);
+    if ($chartOnly) {
+        $chartPayload = ['revenue_chart' => $revenueChart];
+        cacheSet($cacheKey, $chartPayload, 30);
+        apiSuccess($chartPayload);
     }
 
     $totalClients = (int) $db->query(
@@ -231,7 +250,7 @@ try {
            AND due_date BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-01') AND LAST_DAY(CURDATE())"
     )->fetchColumn();
 
-    apiSuccess([
+    $payload = [
         'total_clients'        => $totalClients,
         'total_properties'     => $totalProperties,
         'available_properties' => $availableProperties,
@@ -256,7 +275,9 @@ try {
         'appointments_today'   => $appointmentsToday,
         'property_spark'       => $propertySpark,
         'lead_spark'           => $leadSpark,
-    ]);
+    ];
+    cacheSet($cacheKey, $payload, 30);
+    apiSuccess($payload);
 } catch (PDOException $e) {
     apiError('Unable to fetch dashboard statistics.', 500);
 }

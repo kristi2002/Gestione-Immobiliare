@@ -18,6 +18,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite headers deflate \
     && rm -rf /var/lib/apt/lists/*
 
+# APCu — in-process cache used for the global dashboard stats (config/cache.php).
+# Built via PECL (needs the phpize toolchain), which is purged afterwards. The
+# app degrades gracefully if this is ever absent, so it's a pure perf add-on.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends $PHPIZE_DEPS; \
+    pecl install apcu; \
+    docker-php-ext-enable apcu; \
+    apt-get purge -y --auto-remove $PHPIZE_DEPS; \
+    rm -rf /var/lib/apt/lists/*
+
 # PHP config — upload limits
 RUN { \
         echo 'upload_max_filesize = 25M'; \
