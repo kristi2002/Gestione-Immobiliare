@@ -1,11 +1,13 @@
 <?php
 /**
- * Email templates CRUD — admin/super_admin only.
+ * Email templates CRUD.
+ *
+ * Reads are open to any logged-in staff member (agents pick a template when
+ * sending a message from Proprietari); writes stay admin/super_admin only.
  */
 require_once __DIR__ . '/../config/api_bootstrap.php';
 
 apiHandleOptions();
-requireRole('admin', 'super_admin');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $id     = isset($_GET['id']) ? (int) $_GET['id'] : null;
@@ -18,12 +20,15 @@ try {
     if ($method === 'GET') {
         $id ? getTemplate($db, $id) : listTemplates($db);
     } elseif ($method === 'POST') {
+        requireRole('admin', 'super_admin');
         requireWriteAccess();
         createTemplate($db, $VALID_CATEGORIES);
     } elseif ($method === 'PUT' && $id) {
+        requireRole('admin', 'super_admin');
         requireWriteAccess();
         updateTemplate($db, $id, $VALID_CATEGORIES);
     } elseif ($method === 'DELETE' && $id) {
+        requireRole('admin', 'super_admin');
         requireWriteAccess();
         deleteTemplate($db, $id);
     } else {

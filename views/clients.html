@@ -126,16 +126,48 @@
 <div class="modal-overlay" id="delete-modal" hidden>
     <div class="modal modal--sm" role="dialog">
         <div class="modal-header">
-            <h3>Archivia proprietario</h3>
+            <h3>Elimina proprietario</h3>
             <button class="modal-close" id="delete-modal-close" aria-label="Chiudi">&times;</button>
         </div>
         <div class="modal-body">
-            <p>Sei sicuro di voler archiviare <strong id="delete-client-name"></strong>?</p>
-            <p class="text-muted">Il proprietario non verrà eliminato definitivamente, ma non apparirà più nell'elenco principale.</p>
+            <p>Sei sicuro di voler eliminare <strong id="delete-client-name"></strong>?</p>
+            <p class="text-muted">Il proprietario non verrà eliminato definitivamente: verrà spostato in archivio e non apparirà più nell'elenco principale.</p>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="delete-cancel">Annulla</button>
-            <button type="button" class="btn btn--danger" id="delete-confirm">Archivia</button>
+            <button type="button" class="btn btn--danger" id="delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<!-- Invia messaggio modal -->
+<div class="modal-overlay" id="message-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="message-modal-title">
+        <div class="modal-header">
+            <h3 id="message-modal-title">Invia messaggio</h3>
+            <button class="modal-close" id="message-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" id="message-recipient" style="margin-top:0"></p>
+            <div id="message-modal-error" class="alert alert--error" style="display:none;"></div>
+            <div class="form-group" id="message-template-group">
+                <label for="message-template">Template</label>
+                <select id="message-template" class="form-input">
+                    <option value="">— Nessun template —</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="message-subject">Oggetto</label>
+                <input type="text" id="message-subject" class="form-input" placeholder="Oggetto del messaggio" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="message-body">Testo *</label>
+                <textarea id="message-body" class="form-textarea" rows="8" placeholder="Scrivi il messaggio…"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="message-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="message-send"><i data-lucide="send"></i> Invia email</button>
         </div>
     </div>
 </div>

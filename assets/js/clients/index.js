@@ -30,6 +30,8 @@ function init() {
 
     bindEvents();
     bindRail();
+    bindRowMenu();
+    bindMessageModal();
     loadClients();
     loadStats();
 }
@@ -296,7 +298,7 @@ function renderCards() {
             <td><span class="badge badge--${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
             <td>${agentCell}</td>
             <td class="lt-actions">
-                <button class="btn btn--sm btn--ghost btn-rail" data-id="${c.id}" title="Dettagli proprietario" aria-label="Apri dettaglio proprietario"><i data-lucide="more-vertical"></i></button>
+                <button class="btn btn--sm btn--ghost btn-rail" data-id="${c.id}" title="Azioni" aria-label="Azioni proprietario" aria-haspopup="menu"><i data-lucide="more-vertical"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -310,13 +312,13 @@ function renderCards() {
     });
 
 
-    // Row actions collapse to a single kebab (⋮) that opens the detail rail,
-    // matching the proprietari.png mockup. Edit / comunicazioni / archivia /
-    // stampa CI now live inside the rail's full profile ("Visualizza Completo").
+    // Row kebab (⋮) opens the actions menu (Invia messaggio / Archivia /
+    // Elimina); clicking anywhere else on the row opens the detail rail.
     els.grid.querySelectorAll('.btn-rail').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            openRail(Number(btn.dataset.id));
+            const c = clients.find(x => x.id === Number(btn.dataset.id));
+            if (c) openRowMenu(btn, c);
         });
     });
 
@@ -504,12 +506,234 @@ async function confirmDelete() {
     try {
         await archiveClient(deleteTargetId);
         closeDeleteModal();
-        showAlert('Proprietario archiviato.', 'success');
+        showAlert('Proprietario eliminato (spostato in archivio).', 'success');
         loadClients();
     } catch (err) {
         showAlert(err.message, 'error');
     } finally {
         btn.disabled = false;
+    }
+}
+
+// -------------------------------------------------------------------------
+// Row kebab menu (Invia messaggio / Archivia / Elimina)
+// -------------------------------------------------------------------------
+
+let rowMenuEl = null;
+
+function bindRowMenu() {
+    document.addEventListener('click', (e) => {
+        if (rowMenuEl && !rowMenuEl.contains(e.target)) closeRowMenu();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeRowMenu();
+    });
+    window.addEventListener('scroll', closeRowMenu, true);
+    window.addEventListener('resize', closeRowMenu);
+}
+
+function closeRowMenu() {
+    if (rowMenuEl) { rowMenuEl.remove(); rowMenuEl = null; }
+}
+
+function openRowMenu(btn, client) {
+    // Second click on the same kebab toggles the menu closed.
+    if (rowMenuEl && Number(rowMenuEl.dataset.id) === client.id) { closeRowMenu(); return; }
+    closeRowMenu();
+
+    const menu = document.createElement('div');
+    menu.className = 'lt-menu';
+    menu.dataset.id = client.id;
+    menu.setAttribute('role', 'menu');
+    menu.innerHTML = `
+        <button type="button" class="lt-menu__item" data-act="message" role="menuitem">
+            <i data-lucide="mail"></i> Invia messaggio
+        </button>
+        <button type="button" class="lt-menu__item" data-act="archive" role="menuitem" disabled title="Funzione in arrivo">
+            <i data-lucide="archive"></i> Archivia
+        </button>
+        <div class="lt-menu__sep"></div>
+        <button type="button" class="lt-menu__item lt-menu__item--danger" data-act="delete" role="menuitem">
+            <i data-lucide="trash-2"></i> Elimina
+        </button>`;
+    document.body.appendChild(menu);
+
+    // Fixed positioning: right-aligned to the kebab, flipped above when the
+    // menu would overflow the viewport bottom.
+    const r  = btn.getBoundingClientRect();
+    const mw = menu.offsetWidth;
+    const mh = menu.offsetHeight;
+    let left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+    let top  = r.bottom + 6;
+    if (top + mh > window.innerHeight - 8) top = r.top - mh - 6;
+    menu.style.left = Math.max(8, left) + 'px';
+    menu.style.top  = Math.max(8, top) + 'px';
+
+    menu.querySelector('[data-act="message"]').addEventListener('click', () => {
+        closeRowMenu();
+        openMessageModal(client);
+    });
+    menu.querySelector('[data-act="delete"]').addEventListener('click', () => {
+        closeRowMenu();
+        openDeleteModal(client.id, `${client.name} ${client.surname}`);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+    rowMenuEl = menu;
+}
+
+// -------------------------------------------------------------------------
+// Invia messaggio — real email via api/communications.php, with the email
+// templates registered in Impostazioni (placeholders pre-filled and left
+// editable so the agent can adjust before sending).
+// -------------------------------------------------------------------------
+
+let messageClient  = null;
+let emailTemplates = null; // lazy cache; null = not fetched yet
+
+function bindMessageModal() {
+    const modal = document.getElementById('message-modal');
+    document.getElementById('message-modal-close').addEventListener('click', closeMessageModal);
+    document.getElementById('message-cancel').addEventListener('click', closeMessageModal);
+    document.getElementById('message-send').addEventListener('click', sendMessage);
+    document.getElementById('message-template').addEventListener('change', applyMessageTemplate);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeMessageModal(); });
+}
+
+async function openMessageModal(client) {
+    messageClient = client;
+    const modal = document.getElementById('message-modal');
+
+    clearMessageError();
+    document.getElementById('message-subject').value  = '';
+    document.getElementById('message-body').value     = '';
+    document.getElementById('message-template').value = '';
+    document.getElementById('message-recipient').innerHTML =
+        `Destinatario: <strong>${escapeHtml(client.name)} ${escapeHtml(client.surname)}</strong>` +
+        (client.email ? ` — ${escapeHtml(client.email)}` : '');
+
+    const noEmail = !client.email;
+    document.getElementById('message-send').disabled = noEmail;
+    if (noEmail) showMessageError('Questo proprietario non ha un indirizzo email registrato.');
+
+    modal.hidden = false;
+    if (window.lucide) window.lucide.createIcons();
+    document.getElementById('message-subject').focus();
+
+    await ensureEmailTemplates();
+}
+
+function closeMessageModal() {
+    document.getElementById('message-modal').hidden = true;
+    messageClient = null;
+}
+
+async function ensureEmailTemplates() {
+    const group  = document.getElementById('message-template-group');
+    const select = document.getElementById('message-template');
+    if (emailTemplates !== null) {
+        group.hidden = emailTemplates.length === 0;
+        return;
+    }
+    try {
+        const res  = await fetch('api/email_templates.php?active=1&limit=200');
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        emailTemplates = json.data?.items || json.data || [];
+    } catch (_) {
+        emailTemplates = [];
+    }
+    if (!emailTemplates.length) { group.hidden = true; return; }
+
+    const CAT = {
+        benvenuto: 'Benvenuto', scadenza_affitto: 'Scad. affitto',
+        scadenza_contratto: 'Scad. contratto', promemoria: 'Promemoria',
+        richiesta_documento: 'Richiesta doc.', generico: 'Generico',
+    };
+    group.hidden = false;
+    select.innerHTML = '<option value="">— Nessun template —</option>' +
+        emailTemplates.map(t =>
+            `<option value="${t.id}">${escapeHtml(t.name)} (${escapeHtml(CAT[t.category] || t.category)})</option>`
+        ).join('');
+}
+
+function fillTemplateVars(text) {
+    const c   = messageClient || {};
+    const now = new Date();
+    const full = `${c.name || ''} ${c.surname || ''}`.trim();
+    const vars = {
+        nome:          c.name || '',
+        cognome:       c.surname || '',
+        nome_completo: full,
+        proprietario:  full,
+        email:         c.email || '',
+        telefono:      c.phone || '',
+        mese:          now.toLocaleDateString('it-IT', { month: 'long' }),
+        anno:          String(now.getFullYear()),
+        data:          now.toLocaleDateString('it-IT'),
+        data_oggi:     now.toLocaleDateString('it-IT'),
+    };
+    // Known placeholders are filled with the owner's data; unknown ones
+    // ({{indirizzo}}, {{canone}}, …) stay visible so the agent adjusts them.
+    return String(text || '').replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (m, k) => {
+        const key = k.toLowerCase();
+        return Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : m;
+    });
+}
+
+function applyMessageTemplate() {
+    const id  = Number(document.getElementById('message-template').value);
+    const tpl = id ? (emailTemplates || []).find(t => Number(t.id) === id) : null;
+    if (!tpl) return;
+    document.getElementById('message-subject').value = fillTemplateVars(tpl.subject);
+    document.getElementById('message-body').value    = fillTemplateVars(tpl.body);
+    clearMessageError();
+}
+
+function showMessageError(message) {
+    const el = document.getElementById('message-modal-error');
+    el.textContent = message;
+    el.style.display = 'block';
+}
+
+function clearMessageError() {
+    document.getElementById('message-modal-error').style.display = 'none';
+}
+
+async function sendMessage() {
+    if (!messageClient) return;
+    const subject = document.getElementById('message-subject').value.trim();
+    const body    = document.getElementById('message-body').value.trim();
+    if (!body) { showMessageError('Il testo del messaggio è obbligatorio.'); return; }
+
+    const btn  = document.getElementById('message-send');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Invio…';
+
+    try {
+        const res  = await fetch(COMM_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: messageClient.id,
+                channel:   'email',
+                direction: 'sent',
+                subject:   subject || null,
+                body,
+            }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Invio fallito.');
+        const name = `${messageClient.name} ${messageClient.surname}`;
+        closeMessageModal();
+        showAlert(`Messaggio inviato a ${name}.`, 'success');
+    } catch (err) {
+        showMessageError(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        if (window.lucide) window.lucide.createIcons();
     }
 }
 

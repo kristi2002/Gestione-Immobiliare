@@ -366,6 +366,27 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .lt-actions { text-align: right; white-space: nowrap; }
 .lt-actions .btn { padding: 6px 8px; }
 .lt-actions .btn svg, .lt-actions .btn [data-lucide] { width: 15px; height: 15px; }
+
+/* Row actions kebab menu (Invia messaggio / Archivia / Elimina) */
+.lt-menu {
+    position: fixed; z-index: 1300; /* above topbar (1150), below modals (1400) */
+    min-width: 195px; padding: 6px;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 10px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+    display: flex; flex-direction: column;
+}
+.lt-menu__item {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 8px 10px; border: none; background: none; border-radius: 7px;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--color-text);
+    cursor: pointer; text-align: left; transition: background 0.12s;
+}
+.lt-menu__item:hover:not(:disabled) { background: #f2f7fd; }
+.lt-menu__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.lt-menu__item svg, .lt-menu__item [data-lucide] { width: 15px; height: 15px; flex-shrink: 0; }
+.lt-menu__item--danger { color: #dc2626; }
+.lt-menu__item--danger:hover:not(:disabled) { background: #fdf0f0; }
+.lt-menu__sep { height: 1px; background: var(--color-border); margin: 4px 6px; }
 @media (max-width: 900px) { .lt-contacts, .lt thead th:nth-child(3) { display: none; } }
 
 /* status pills row + card grids hosted inside a list card */
