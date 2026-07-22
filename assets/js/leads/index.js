@@ -105,8 +105,11 @@ async function loadLeads() {
     const kanban = viewMode === 'kanban';
     const params = new URLSearchParams();
     if (els.search.value.trim()) params.set('search', els.search.value.trim());
-    // Kanban shows every stage as a column, so the single-status filter is ignored there.
-    if (!kanban && els.statusFilter.value) params.set('status', els.statusFilter.value);
+    // Kanban shows every stage as a column, so the single-status filter is ignored there;
+    // it requests exactly its column statuses (incl. 'converted', which the API
+    // default filter would otherwise exclude — that left the Convertito column always empty).
+    if (kanban) params.set('statuses', KANBAN_ORDER.join(','));
+    else if (els.statusFilter.value) params.set('status', els.statusFilter.value);
     if (els.interestFilter.value) params.set('interest_type', els.interestFilter.value);
     params.set('page', kanban ? 1 : currentPage);
     params.set('limit', kanban ? 500 : PAGE_LIMIT);
@@ -122,7 +125,7 @@ async function loadLeads() {
         const parsed = Pagination.parseResponse(json);
         leads = parsed.items;
         if (kanban) {
-            renderKanban();
+            renderKanban(parsed.total);
             els.pagination.innerHTML = '';
         } else {
             renderCards();
@@ -151,7 +154,7 @@ function setViewMode(mode) {
     loadLeads();
 }
 
-function renderKanban() {
+function renderKanban(total) {
     const groups = {};
     KANBAN_ORDER.forEach(s => { groups[s] = []; });
     leads.forEach(l => { (groups[l.status] || (groups[l.status] = [])).push(l); });
@@ -199,7 +202,7 @@ function renderKanban() {
         });
     });
 
-    renderStatsBar();
+    renderStatsBar(total);
     if (window.lucide) window.lucide.createIcons();
 }
 
@@ -222,11 +225,12 @@ async function setLeadStatus(id, status) {
     }
 }
 
-function renderStatsBar() {
-    const total = leads.length;
+function renderStatsBar(total) {
+    const shown = leads.length;
+    if (!Number.isFinite(total)) total = shown;
     const converted = leads.filter(l => l.status === 'converted').length;
     const active = leads.filter(l => l.status !== 'converted' && l.status !== 'lost').length;
-    const convRate = total ? Math.round((converted / total) * 100) : 0;
+    const convRate = shown ? Math.round((converted / shown) * 100) : 0;
     // Pipeline value = sum of the upper budget (fallback lower) of still-active leads.
     const pipeline = leads
         .filter(l => l.status !== 'converted' && l.status !== 'lost')
@@ -240,7 +244,7 @@ function renderStatsBar() {
         <div class="stat"><b>${convRate}%</b><span>Tasso di conversione</span><div class="bar"><i style="width:${convRate}%"></i></div></div>
         <div class="stat"><b>${active}</b><span>Lead attivi in pipeline</span></div>
         <div class="stat"><b>${fmtEur(pipeline)}</b><span>Valore stimato pipeline</span></div>
-        <div class="stat"><b>${total}</b><span>Lead totali (pagina)</span></div>`;
+        <div class="stat"><b>${total}</b><span>Lead totali${total > shown ? ` (mostrati ${shown})` : ''}</span></div>`;
 }
 
 function renderCards() {

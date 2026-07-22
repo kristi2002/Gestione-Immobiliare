@@ -2,7 +2,7 @@
 /**
  * Leads (Potenziali clienti) CRUD API.
  *
- * GET    /api/leads.php                       — list (status, interest_type, assigned_to, search)
+ * GET    /api/leads.php                       — list (status, statuses, interest_type, assigned_to, search)
  * GET    /api/leads.php?id={id}               — single lead
  * GET    /api/leads.php?action=match&lead_id= — matching property IDs
  * POST   /api/leads.php                       — create
@@ -81,9 +81,11 @@ try {
 
 function listLeads(PDO $db): void
 {
-    $pagination = apiGetPagination();
+    // maxLimit 500: the kanban board loads every pipeline lead in one request.
+    $pagination = apiGetPagination(25, 500);
     $search   = trim($_GET['search'] ?? '');
     $status   = trim($_GET['status'] ?? '');
+    $statuses = trim($_GET['statuses'] ?? ''); // comma-separated whitelist (kanban columns)
     $interest = trim($_GET['interest_type'] ?? '');
     $assigned = isset($_GET['assigned_to']) ? (int) $_GET['assigned_to'] : null;
 
@@ -94,7 +96,17 @@ function listLeads(PDO $db): void
         $frag = apiWordSearch($search, ['l.name', 'l.surname', 'l.phone', 'l.email', 'l.codice_fiscale', 'l.notes'], $params);
         if ($frag) $where .= " AND $frag";
     }
-    if ($status !== '' && in_array($status, LEAD_STATUSES, true)) {
+    $statusList = $statuses !== ''
+        ? array_values(array_intersect(array_map('trim', explode(',', $statuses)), LEAD_STATUSES))
+        : [];
+    if ($statusList) {
+        $ph = [];
+        foreach ($statusList as $i => $s) {
+            $ph[] = ":st$i";
+            $params["st$i"] = $s;
+        }
+        $where .= ' AND l.status IN (' . implode(',', $ph) . ')';
+    } elseif ($status !== '' && in_array($status, LEAD_STATUSES, true)) {
         $where .= ' AND l.status = :status';
         $params['status'] = $status;
     } else if ($status === '') {
