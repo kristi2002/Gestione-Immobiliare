@@ -334,4 +334,9 @@
 /* --------------------------------------------------------------------------
    Scheda Agente (agent_profile) — hero KPI row + commission totals
    -------------------------------------------------------------------------- */
+/* Full-width like property_profile: without this the inherited
+   .client-profile-view 1200px cap leaves the page hugging the left edge on
+   wide screens, reading like a floating modal instead of a page. */
+.agent-profile-view { max-width: 100%; }
+
 .ap-comm-totals { display: inline-flex; gap: 8px; }
