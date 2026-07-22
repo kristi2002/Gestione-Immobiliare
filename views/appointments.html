@@ -9,22 +9,26 @@
 
     <div id="appointments-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="calendar"></i></span>
-            <div class="stat-mini__txt"><small>Visite Oggi</small><b id="astat-today">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar"></i></div>
+            <div class="db-stat__label">Visite Oggi</div>
+            <div class="db-stat__value" id="astat-today">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="calendar-days"></i></span>
-            <div class="stat-mini__txt"><small>Questa Settimana</small><b id="astat-week">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar-days"></i></div>
+            <div class="db-stat__label">Questa Settimana</div>
+            <div class="db-stat__value" id="astat-week">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="clock"></i></span>
-            <div class="stat-mini__txt"><small>Programmate</small><b id="astat-scheduled">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="clock"></i></div>
+            <div class="db-stat__label">Programmate</div>
+            <div class="db-stat__value" id="astat-scheduled">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="check-circle-2"></i></span>
-            <div class="stat-mini__txt"><small>Completate (mese)</small><b id="astat-done">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="check-circle-2"></i></div>
+            <div class="db-stat__label">Completate (mese)</div>
+            <div class="db-stat__value" id="astat-done">—</div>
         </div>
     </div>
     <script>

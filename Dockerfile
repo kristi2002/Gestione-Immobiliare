@@ -3,7 +3,7 @@
 # JS in assets/js/*). The React SPA migration was abandoned and its source has
 # been removed from the repo, so index.php is what Apache serves at "/".
 # ─────────────────────────────────────────────────────────────────────────────
-FROM php:8.3-apache-bookworm
+FROM php:8.4-apache-bookworm
 
 # System dependencies + PHP extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \

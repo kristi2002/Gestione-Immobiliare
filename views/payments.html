@@ -33,22 +33,26 @@
 
     <div id="payments-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="banknote"></i></span>
-            <div class="stat-mini__txt"><small>Incassato questo mese</small><b id="pstat-paid">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="banknote"></i></div>
+            <div class="db-stat__label">Incassato questo mese</div>
+            <div class="db-stat__value" id="pstat-paid">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="hourglass"></i></span>
-            <div class="stat-mini__txt"><small>In attesa (mese)</small><b id="pstat-pending">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="hourglass"></i></div>
+            <div class="db-stat__label">In attesa (mese)</div>
+            <div class="db-stat__value" id="pstat-pending">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#dc2626"><i data-lucide="alert-triangle"></i></span>
-            <div class="stat-mini__txt"><small>In ritardo</small><b id="pstat-late">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="alert-triangle"></i></div>
+            <div class="db-stat__label">In ritardo</div>
+            <div class="db-stat__value" id="pstat-late">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="trending-up"></i></span>
-            <div class="stat-mini__txt"><small>Incassato anno</small><b id="pstat-year">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="trending-up"></i></div>
+            <div class="db-stat__label">Incassato anno</div>
+            <div class="db-stat__value" id="pstat-year">—</div>
         </div>
     </div>
     <script>

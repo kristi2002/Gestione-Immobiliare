@@ -11,22 +11,26 @@
 
     <div id="expenses-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#dc2626"><i data-lucide="wallet"></i></span>
-            <div class="stat-mini__txt"><small>Spese questo mese</small><b id="estat-month">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="wallet"></i></div>
+            <div class="db-stat__label">Spese questo mese</div>
+            <div class="db-stat__value" id="estat-month">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="calendar-range"></i></span>
-            <div class="stat-mini__txt"><small>Spese anno</small><b id="estat-year">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar-range"></i></div>
+            <div class="db-stat__label">Spese anno</div>
+            <div class="db-stat__value" id="estat-year">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="receipt"></i></span>
-            <div class="stat-mini__txt"><small>Registrate nel mese</small><b id="estat-count">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="receipt"></i></div>
+            <div class="db-stat__label">Registrate nel mese</div>
+            <div class="db-stat__value" id="estat-count">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="tag"></i></span>
-            <div class="stat-mini__txt"><small>Categoria principale</small><b id="estat-cat" style="font-size:15px;text-transform:capitalize">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="tag"></i></div>
+            <div class="db-stat__label">Categoria principale</div>
+            <div class="db-stat__value" id="estat-cat" style="font-size:15px;text-transform:capitalize">—</div>
         </div>
     </div>
     <script>

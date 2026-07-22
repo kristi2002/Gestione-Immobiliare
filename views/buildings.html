@@ -11,22 +11,26 @@
 
     <div id="buildings-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="building"></i></span>
-            <div class="stat-mini__txt"><small>Edifici Totali</small><b id="bstat-total">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="building"></i></div>
+            <div class="db-stat__label">Edifici Totali</div>
+            <div class="db-stat__value" id="bstat-total">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="door-open"></i></span>
-            <div class="stat-mini__txt"><small>Unità Totali</small><b id="bstat-units">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="door-open"></i></div>
+            <div class="db-stat__label">Unità Totali</div>
+            <div class="db-stat__value" id="bstat-units">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="map-pin"></i></span>
-            <div class="stat-mini__txt"><small>Città</small><b id="bstat-cities">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="map-pin"></i></div>
+            <div class="db-stat__label">Città</div>
+            <div class="db-stat__value" id="bstat-cities">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="plus-circle"></i></span>
-            <div class="stat-mini__txt"><small>Aggiunti quest'anno</small><b id="bstat-new">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="plus-circle"></i></div>
+            <div class="db-stat__label">Aggiunti quest'anno</div>
+            <div class="db-stat__value" id="bstat-new">—</div>
         </div>
     </div>
     <script>

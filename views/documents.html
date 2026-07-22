@@ -11,22 +11,26 @@
 
     <div id="documents-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="files"></i></span>
-            <div class="stat-mini__txt"><small>Documenti Totali</small><b id="dstat-total">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="files"></i></div>
+            <div class="db-stat__label">Documenti Totali</div>
+            <div class="db-stat__value" id="dstat-total">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="scroll-text"></i></span>
-            <div class="stat-mini__txt"><small>Contratti</small><b id="dstat-contracts">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="scroll-text"></i></div>
+            <div class="db-stat__label">Contratti</div>
+            <div class="db-stat__value" id="dstat-contracts">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="id-card"></i></span>
-            <div class="stat-mini__txt"><small>Documenti Identità</small><b id="dstat-ids">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="id-card"></i></div>
+            <div class="db-stat__label">Documenti Identità</div>
+            <div class="db-stat__value" id="dstat-ids">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="upload"></i></span>
-            <div class="stat-mini__txt"><small>Caricati questo mese</small><b id="dstat-new">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="upload"></i></div>
+            <div class="db-stat__label">Caricati questo mese</div>
+            <div class="db-stat__value" id="dstat-new">—</div>
         </div>
     </div>
     <script>

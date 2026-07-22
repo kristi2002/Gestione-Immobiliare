@@ -11,7 +11,7 @@ Real estate agency admin dashboard for managing owners (*proprietari*), properti
 
 | Layer | Technology | Status |
 |-------|------------|--------|
-| Runtime | PHP 8.3 (Apache + mod_rewrite) | ✅ |
+| Runtime | PHP 8.4 (Apache + mod_rewrite) | ✅ |
 | Database | MySQL 8 — Coolify container named `default` | ✅ |
 | Frontend | HTML partials, CSS, vanilla JS (no framework) | ✅ |
 | Auth | PHP sessions (separate cookies for admin vs tenant) | ✅ |

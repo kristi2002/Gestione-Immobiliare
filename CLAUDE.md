@@ -1,7 +1,7 @@
 # CLAUDE.md — Verification Protocol
 
 > Project: **Gestionale Immobiliare** (Orlandi Immobiliare, Civitanova Marche)
-> Stack: PHP 8.3 + MySQL 8 + Apache, vanilla-JS SPA, three login portals.
+> Stack: PHP 8.4 + MySQL 8 + Apache, vanilla-JS SPA, three login portals.
 > Purpose of this file: tell the agent **how to verify the app actually works**, with evidence, before anything is reported as done or shown to the client.
 
 ---

@@ -12,22 +12,26 @@
 
     <div id="reports-alert" class="alert" style="display:none;"></div>
 
-    <div id="reports-kpi" class="reports-kpi" aria-live="polite">
-        <div class="reports-kpi__card">
-            <span class="reports-kpi__label">Immobili attivi</span>
-            <span class="reports-kpi__value" id="kpi-properties">—</span>
+    <div id="reports-kpi" class="db-stats" aria-live="polite">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="building-2"></i></div>
+            <div class="db-stat__label">Immobili attivi</div>
+            <div class="db-stat__value" id="kpi-properties">—</div>
         </div>
-        <div class="reports-kpi__card">
-            <span class="reports-kpi__label">Incassi attesi</span>
-            <span class="reports-kpi__value" id="kpi-expected">—</span>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="trending-up"></i></div>
+            <div class="db-stat__label">Incassi attesi</div>
+            <div class="db-stat__value" id="kpi-expected">—</div>
         </div>
-        <div class="reports-kpi__card reports-kpi__card--success">
-            <span class="reports-kpi__label">Incassato</span>
-            <span class="reports-kpi__value" id="kpi-collected">—</span>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="banknote"></i></div>
+            <div class="db-stat__label">Incassato</div>
+            <div class="db-stat__value" id="kpi-collected">—</div>
         </div>
-        <div class="reports-kpi__card">
-            <span class="reports-kpi__label">Spese totali</span>
-            <span class="reports-kpi__value" id="kpi-expenses">—</span>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="wallet"></i></div>
+            <div class="db-stat__label">Spese totali</div>
+            <div class="db-stat__value" id="kpi-expenses">—</div>
         </div>
     </div>
 

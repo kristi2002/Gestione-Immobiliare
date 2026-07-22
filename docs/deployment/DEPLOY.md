@@ -16,7 +16,7 @@ Hetzner VPS (91.99.137.240)
    │
    ├─ Coolify (control panel, port 8000)
    │    ├─ coolify-proxy (Traefik, ports 80/443)
-   │    ├─ App container  (PHP 8.3 + Apache)
+   │    ├─ App container  (PHP 8.4 + Apache)
    │    └─ DB container   (MySQL 8, named "default")
    │
    └─ Cloudflare DNS (testdemo.it → 91.99.137.240)

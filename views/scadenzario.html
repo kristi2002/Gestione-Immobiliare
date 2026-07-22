@@ -16,22 +16,26 @@
 
     <div id="scad-alert" class="alert" style="display:none;"></div>
 
-    <div class="stats-grid" id="scad-stats">
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-scad-overdue" style="color:var(--color-danger,#dc2626)">—</div>
-            <div class="stat-card__label">Scadute</div>
+    <div class="db-stats" id="scad-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="alert-triangle"></i></div>
+            <div class="db-stat__label">Scadute</div>
+            <div class="db-stat__value" id="stat-scad-overdue">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-scad-soon" style="color:var(--color-warning,#d97706)">—</div>
-            <div class="stat-card__label">Entro 30 giorni</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="clock"></i></div>
+            <div class="db-stat__label">Entro 30 giorni</div>
+            <div class="db-stat__value" id="stat-scad-soon">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-scad-upcoming">—</div>
-            <div class="stat-card__label">In arrivo</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar-clock"></i></div>
+            <div class="db-stat__label">In arrivo</div>
+            <div class="db-stat__value" id="stat-scad-upcoming">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-scad-total">—</div>
-            <div class="stat-card__label">Totale</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar"></i></div>
+            <div class="db-stat__label">Totale</div>
+            <div class="db-stat__value" id="stat-scad-total">—</div>
         </div>
     </div>
 

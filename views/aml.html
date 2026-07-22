@@ -11,22 +11,26 @@
 
     <div id="aml-alert" class="alert" style="display:none;"></div>
 
-    <div class="stats-grid" id="aml-stats">
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-aml-total">—</div>
-            <div class="stat-card__label">Totale pratiche</div>
+    <div class="db-stats" id="aml-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="clipboard-list"></i></div>
+            <div class="db-stat__label">Totale pratiche</div>
+            <div class="db-stat__value" id="stat-aml-total">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-aml-pending">—</div>
-            <div class="stat-card__label">Da completare</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="clock"></i></div>
+            <div class="db-stat__label">Da completare</div>
+            <div class="db-stat__value" id="stat-aml-pending">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-aml-highrisk">—</div>
-            <div class="stat-card__label">Rischio alto</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="shield-alert"></i></div>
+            <div class="db-stat__label">Rischio alto</div>
+            <div class="db-stat__value" id="stat-aml-highrisk">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-aml-expiring">—</div>
-            <div class="stat-card__label">Conservazione in scadenza</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar-clock"></i></div>
+            <div class="db-stat__label">Conservazione in scadenza</div>
+            <div class="db-stat__value" id="stat-aml-expiring">—</div>
         </div>
     </div>
 

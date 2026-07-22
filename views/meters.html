@@ -11,22 +11,26 @@
 
     <div id="meters-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="gauge"></i></span>
-            <div class="stat-mini__txt"><small>Contatori Censiti</small><b id="mstat-meters">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="gauge"></i></div>
+            <div class="db-stat__label">Contatori Censiti</div>
+            <div class="db-stat__value" id="mstat-meters">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="list-checks"></i></span>
-            <div class="stat-mini__txt"><small>Letture Totali</small><b id="mstat-total">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="list-checks"></i></div>
+            <div class="db-stat__label">Letture Totali</div>
+            <div class="db-stat__value" id="mstat-total">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="calendar-check"></i></span>
-            <div class="stat-mini__txt"><small>Letture questo mese</small><b id="mstat-month">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar-check"></i></div>
+            <div class="db-stat__label">Letture questo mese</div>
+            <div class="db-stat__value" id="mstat-month">—</div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="clock"></i></span>
-            <div class="stat-mini__txt"><small>Ultima lettura</small><b id="mstat-last" style="font-size:15px">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="clock"></i></div>
+            <div class="db-stat__label">Ultima lettura</div>
+            <div class="db-stat__value" id="mstat-last" style="font-size:15px">—</div>
         </div>
     </div>
     <script>
