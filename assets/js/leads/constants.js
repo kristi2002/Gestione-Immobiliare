@@ -18,6 +18,7 @@ export const INTEREST_LABELS = { affitto: 'Affitto', acquisto: 'Acquisto', entra
 export const SOURCE_LABELS = {
     telefono: 'Telefono', email: 'Email', web: 'Web',
     passaparola: 'Passaparola', social: 'Social', altro: 'Altro',
+    immobiliare: 'Immobiliare.it', idealista: 'Idealista', casa: 'Casa.it', subito: 'Subito',
 };
 
 export const PAGE_LIMIT = 25;

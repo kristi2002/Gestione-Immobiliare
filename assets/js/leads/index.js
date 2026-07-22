@@ -35,6 +35,9 @@ function init() {
     els.bulkAssignAgent = document.getElementById('bulk-assign-agent');
     els.tenantModal    = document.getElementById('lead-tenant-modal');
     els.tenantPropSel  = document.getElementById('lead-tenant-property');
+    els.importModal    = document.getElementById('lead-import-modal');
+    els.importText     = document.getElementById('lead-import-text');
+    els.importError    = document.getElementById('lead-import-error');
 
     // Kanban is the default view: hide grid-only controls up front.
     if (viewMode === 'kanban') {
@@ -75,6 +78,12 @@ function bindEvents() {
     document.getElementById('lead-tenant-modal-cancel').addEventListener('click', closeTenantModal);
     document.getElementById('lead-tenant-modal-save').addEventListener('click', submitConvertToTenant);
     els.tenantModal.addEventListener('click', (e) => { if (e.target === els.tenantModal) closeTenantModal(); });
+
+    document.getElementById('btn-import-lead').addEventListener('click', openImportModal);
+    document.getElementById('lead-import-close').addEventListener('click', closeImportModal);
+    document.getElementById('lead-import-cancel').addEventListener('click', closeImportModal);
+    document.getElementById('lead-import-submit').addEventListener('click', submitImportLead);
+    els.importModal.addEventListener('click', (e) => { if (e.target === els.importModal) closeImportModal(); });
 }
 
 async function loadAgents() {
@@ -410,6 +419,55 @@ async function archiveLead(id) {
         showAlert('Lead archiviato.', 'success');
         loadLeads();
     } catch (err) { showAlert(err.message, 'error'); }
+}
+
+// ── Import from portal email ────────────────────────────────────────────────
+
+function openImportModal() {
+    els.importText.value = '';
+    els.importError.style.display = 'none';
+    els.importModal.hidden = false;
+    els.importText.focus();
+}
+
+function closeImportModal() { els.importModal.hidden = true; }
+
+async function submitImportLead() {
+    const text  = els.importText.value.trim();
+    const errEl = els.importError;
+    if (!text) {
+        errEl.textContent = 'Incolla il testo dell\'email.';
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+
+    const btn = document.getElementById('lead-import-submit');
+    btn.disabled = true; btn.textContent = 'Importazione…';
+    try {
+        const res = await fetch(`${API}?action=import_email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_text: text }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const d = json.data;
+        const prop = d.property ? ` — immobile: ${d.property.address}` : '';
+        showAlert(
+            d.created
+                ? `Lead creato da ${d.portal_label}: ${d.lead_name}${prop}`
+                : `Richiesta aggiunta al lead esistente ${d.lead_name} (${d.portal_label})${prop}`,
+            'success'
+        );
+        closeImportModal();
+        loadLeads();
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Importa lead';
+    }
 }
 
 function openTenantModal(lead) {

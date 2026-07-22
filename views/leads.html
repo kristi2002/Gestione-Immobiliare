@@ -5,6 +5,7 @@
             <p>Gestisci i potenziali clienti, abbina immobili e converti in proprietari.</p>
         </div>
         <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-import-lead"><i data-lucide="mail-plus"></i> Importa da email</button>
             <button class="btn btn--primary" id="btn-new-lead">+ Nuovo Lead</button>
             <div class="leads-viewtoggle" role="tablist" aria-label="Modalità visualizzazione">
                 <button type="button" id="lead-view-kanban" class="active" title="Pipeline" aria-label="Pipeline"><i data-lucide="columns-3"></i></button>
@@ -110,6 +111,35 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="lead-tenant-modal-cancel">Annulla</button>
             <button type="button" class="btn btn--primary" id="lead-tenant-modal-save">Converti in Inquilino</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import from portal email modal -->
+<div class="modal-overlay" id="lead-import-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-label="Importa lead da email">
+        <div class="modal-header">
+            <h3>Importa lead da email</h3>
+            <button class="modal-close" id="lead-import-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" style="margin-bottom:12px">
+                Incolla qui l'email di notifica ricevuta da <strong>Immobiliare.it</strong>,
+                <strong>Idealista</strong>, <strong>Casa.it</strong> o <strong>Subito</strong>
+                (funziona anche con una richiesta email generica). Nome, contatti, riferimento
+                annuncio e messaggio vengono estratti automaticamente; se il contatto esiste già
+                in pipeline la richiesta viene aggiunta alle sue note.
+            </p>
+            <div class="form-group">
+                <label for="lead-import-text">Testo dell'email <span class="required">*</span></label>
+                <textarea id="lead-import-text" class="form-textarea" rows="12"
+                          placeholder="Da: Immobiliare.it <noreply@immobiliare.it>&#10;Oggetto: Nuova richiesta per il tuo annuncio Rif. AB123&#10;&#10;Nome: Mario Rossi&#10;Email: mario.rossi@example.com&#10;Telefono: 333 1234567&#10;Messaggio: Buongiorno, vorrei visitare l'immobile…"></textarea>
+            </div>
+            <div id="lead-import-error" class="alert alert--error" style="display:none;margin:0 0 12px 0"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="lead-import-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="lead-import-submit">Importa lead</button>
         </div>
     </div>
 </div>

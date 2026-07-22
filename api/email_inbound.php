@@ -100,9 +100,29 @@ try {
 
     $commId = (int) $db->lastInsertId();
 
+    // Portal lead import — notification emails from the real-estate portals
+    // (Immobiliare.it, Idealista, Casa.it, Subito) become leads in the CRM
+    // pipeline automatically. $onlyPortals = true: an ordinary client email
+    // must NOT become a lead. Failure here never blocks the communication save.
+    $leadResult = null;
+    try {
+        require_once __DIR__ . '/../lib/portal_leads.php';
+        $leadResult = portalLeadImport($db, $fromRaw, $subject, $body, true);
+        if ($leadResult && !isset($leadResult['error'])) {
+            error_log('[email_inbound] portal lead ' . ($leadResult['created'] ? 'created' : 'appended')
+                . ' #' . $leadResult['lead_id'] . ' from ' . $leadResult['portal_label']);
+        }
+    } catch (Throwable $e) {
+        error_log('[email_inbound] portal lead import failed: ' . $e->getMessage());
+    }
+
     // Create in-app notification
     $senderLabel = $clientName ?: ($senderEmail ?: $fromRaw);
     $notifTitle  = 'Email ricevuta da ' . $senderLabel;
+    if ($leadResult && !isset($leadResult['error'])) {
+        $notifTitle = ($leadResult['created'] ? 'Nuovo lead da ' : 'Nuova richiesta lead da ')
+            . $leadResult['portal_label'] . ': ' . $leadResult['lead_name'];
+    }
     $notifBody   = $subject !== '(senza oggetto)' ? $subject : mb_substr($body, 0, 100);
 
     $notifStmt = $db->prepare(

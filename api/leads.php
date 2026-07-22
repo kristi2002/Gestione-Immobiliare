@@ -18,7 +18,7 @@ apiHandleOptions();
 
 const LEAD_STATUSES   = ['new', 'contacted', 'interested', 'negotiating', 'converted', 'lost'];
 const LEAD_INTERESTS  = ['affitto', 'acquisto', 'entrambi'];
-const LEAD_SOURCES    = ['telefono', 'email', 'web', 'passaparola', 'social', 'altro'];
+const LEAD_SOURCES    = ['telefono', 'email', 'web', 'passaparola', 'social', 'immobiliare', 'idealista', 'casa', 'subito', 'altro'];
 const LEAD_PROP_TYPES = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
 
 try {
@@ -53,6 +53,8 @@ try {
             } elseif ($action === 'set_status') {
                 if (!$id) apiError('ID lead mancante.');
                 setLeadStatus($db, $id, (string) ($postBody['status'] ?? ''));
+            } elseif ($action === 'import_email') {
+                importLeadFromEmail($db, $postBody);
             } else {
                 createLead($db);
             }
@@ -199,6 +201,47 @@ function setLeadStatus(PDO $db, int $id, string $status): void
     $stmt = $db->prepare("UPDATE leads SET status = :status WHERE id = :id");
     $stmt->execute(['status' => $status, 'id' => $id]);
     getLead($db, $id);
+}
+
+/**
+ * Import a lead from a pasted portal notification email
+ * (Immobiliare.it / Idealista / Casa.it / Subito — or any inquiry email).
+ * POST /api/leads.php?action=import_email  { source_text }
+ */
+function importLeadFromEmail(PDO $db, array $body): void
+{
+    require_once __DIR__ . '/../lib/portal_leads.php';
+
+    $text = trim((string) ($body['source_text'] ?? ''));
+    if ($text === '') {
+        apiError('Incolla il testo dell\'email ricevuta dal portale.');
+    }
+    if (mb_strlen($text) > 50000) {
+        apiError('Testo troppo lungo (max 50.000 caratteri).');
+    }
+
+    // Optional forwarded headers in the paste ("Da:"/"From:", "Oggetto:"/"Subject:").
+    $from = '';
+    $subject = '';
+    if (preg_match('/^[ \t]*(?:from|da)[ \t]*:[ \t]*(.+)$/mi', $text, $m)) {
+        $from = trim($m[1]);
+    }
+    if (preg_match('/^[ \t]*(?:subject|oggetto)[ \t]*:[ \t]*(.+)$/mi', $text, $m)) {
+        $subject = trim($m[1]);
+    }
+
+    $result = portalLeadImport($db, $from, $subject, $text);
+    if (!$result || isset($result['error'])) {
+        apiError('Impossibile estrarre un contatto (email o telefono) dal testo incollato. Crea il lead manualmente.');
+    }
+
+    logActivity(
+        $result['created'] ? 'create' : 'update',
+        'lead',
+        $result['lead_id'],
+        ($result['created'] ? 'Lead importato da ' : 'Richiesta aggiunta al lead da ') . $result['portal_label'] . ': ' . $result['lead_name']
+    );
+    apiSuccess($result);
 }
 
 function archiveLead(PDO $db, int $id): void
