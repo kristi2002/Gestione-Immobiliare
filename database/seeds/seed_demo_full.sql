@@ -28,7 +28,6 @@ TRUNCATE TABLE login_attempts;
 TRUNCATE TABLE activity_log;
 TRUNCATE TABLE esign_requests;
 TRUNCATE TABLE tenant_surveys;
-TRUNCATE TABLE building_properties;
 TRUNCATE TABLE buildings;
 TRUNCATE TABLE meter_readings;
 TRUNCATE TABLE property_insurance;
@@ -728,12 +727,10 @@ INSERT INTO buildings (id, name, address, city, total_units, notes) VALUES
  'Palazzo signorile anni 60. Portineria attiva 8-20. Amministratore: Studio Greco — 06 8765 4321. Ascensore revisionato 2023.');
 
 -- ════════════════════════════════════════════════════════════
--- 32. BUILDING-PROPERTY LINKS
+-- 32. BUILDING-PROPERTY LINKS (phase26: 1:N via properties.building_id)
 -- ════════════════════════════════════════════════════════════
-INSERT INTO building_properties (building_id, property_id) VALUES
-(1, 1),
-(1, 2),
-(2, 5);
+UPDATE properties SET building_id = 1 WHERE id IN (1, 2);
+UPDATE properties SET building_id = 2 WHERE id = 5;
 
 -- ════════════════════════════════════════════════════════════
 -- 33. TENANT SURVEYS (sondaggi soddisfazione)

@@ -69,7 +69,7 @@ function truncateBusinessData(PDO $db): void
     $tables = [
         'stripe_payments', 'payment_reminder_log', 'esign_requests',
         'whatsapp_messages', 'property_applications', 'agent_commissions',
-        'tenant_surveys', 'building_properties', 'property_inventory',
+        'tenant_surveys', 'property_inventory',
         'meter_readings', 'property_insurance', 'property_price_history',
         'property_keys', 'lead_property_matches', 'property_appraisals',
         'invoices', 'activity_log', 'expenses', 'payments', 'contracts',
@@ -572,12 +572,11 @@ if (tableExists($db, 'buildings')) {
         ]);
         $buildingIds[] = (int) $db->lastInsertId();
     }
-    if (tableExists($db, 'building_properties')) {
-        $insBp = $db->prepare('INSERT IGNORE INTO building_properties (building_id, property_id) VALUES (:b, :p)');
-        foreach ($buildingIds as $bid) {
-            for ($j = 0; $j < random_int(3, 8); $j++) {
-                $insBp->execute(['b' => $bid, 'p' => pick($propertyIds)]);
-            }
+    // phase26: unit->building is 1:N via properties.building_id (junction table dropped)
+    $updBld = $db->prepare('UPDATE properties SET building_id = :b WHERE id = :p AND building_id IS NULL');
+    foreach ($buildingIds as $bid) {
+        for ($j = 0; $j < random_int(3, 8); $j++) {
+            $updBld->execute(['b' => $bid, 'p' => pick($propertyIds)]);
         }
     }
 }

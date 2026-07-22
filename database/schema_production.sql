@@ -180,18 +180,12 @@ CREATE TABLE `buildings` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `building_properties`
--- (baseline-skipped phase15/phase22 previously left this out of the dump, so a
---  fresh install never created it and the demo seed 500'd on it — audit C1.)
+-- NOTE: `building_properties` (M:N junction) is intentionally ABSENT. phase26
+-- replaced it with `properties.building_id` (1:N) and dropped the table, but the
+-- migration runner seeds phases <=28 as applied on fresh installs, so the DROP
+-- never runs — keeping it in this baseline created a dead, FK-less zombie table
+-- that prod (migrated) doesn't have. All seeders now target properties.building_id.
 --
-
-DROP TABLE IF EXISTS `building_properties`;
-CREATE TABLE `building_properties` (
-  `building_id` int unsigned NOT NULL,
-  `property_id` int unsigned NOT NULL,
-  PRIMARY KEY (`building_id`,`property_id`),
-  KEY `idx_bp_property` (`property_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Table structure for table `clients`
