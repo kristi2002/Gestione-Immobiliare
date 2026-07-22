@@ -5,9 +5,6 @@
     'use strict';
 
     const API        = 'api/appointments.php';
-    const PROPS_API  = 'api/properties.php';
-    const LEADS_API  = 'api/leads.php';
-    const CLIENTS_API = 'api/clients.php';
 
     const STATUS_LABELS = {
         scheduled: 'Programmata', completed: 'Completata',
@@ -26,18 +23,10 @@
         els.from         = document.getElementById('appt-from');
         els.to           = document.getElementById('appt-to');
         els.alert        = document.getElementById('appointments-alert');
-        els.modal        = document.getElementById('appointment-modal');
-        els.form         = document.getElementById('appointment-form');
-        els.modalTitle   = document.getElementById('appointment-modal-title');
-        els.propSelect   = document.getElementById('appt-property');
-        els.leadSelect   = document.getElementById('appt-lead');
-        els.clientSelect = document.getElementById('appt-client');
-        els.agentSelect  = document.getElementById('appt-agent');
         els.pagination   = document.getElementById('appointments-pagination');
 
         bindEvents();
-        Promise.all([loadProperties(), loadLeads(), loadClients(), loadAgents()])
-            .then(loadAppointments);
+        loadAppointments();
     }
 
     function bindEvents() {
@@ -66,38 +55,6 @@
             closeSchedaModal();
             quickStatus(id, 'cancelled');
         });
-    }
-
-    async function loadProperties() {
-        const res = await fetch(`${PROPS_API}?limit=500&page=1`);
-        const json = await res.json();
-        if (json.success) {
-            const items = Pagination.parseResponse(json).items;
-            if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
-                items.map(p => `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`).join('');
-        }
-    }
-    async function loadLeads() {
-        const res = await fetch(`${LEADS_API}?limit=500&page=1`);
-        const json = await res.json();
-        if (json.success) {
-            const items = Pagination.parseResponse(json).items;
-            if (els.leadSelect) els.leadSelect.innerHTML = '<option value="">— Nessuno —</option>' +
-                items.map(l => `<option value="${l.id}">${escapeHtml(l.surname)} ${escapeHtml(l.name)}</option>`).join('');
-        }
-    }
-    async function loadClients() {
-        const items = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
-        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
-            items.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
-    }
-    async function loadAgents() {
-        const res = await fetch(`${LEADS_API}?action=agents`);
-        const json = await res.json();
-        if (json.success) {
-            if (els.agentSelect) els.agentSelect.innerHTML = '<option value="">— Nessuno —</option>' +
-                json.data.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
-        }
     }
 
     async function loadAppointments() {
@@ -204,64 +161,6 @@
         document.getElementById('appointment-scheda-modal').hidden = true;
     }
 
-    function openModal(appt = null) {
-        els.form.reset();
-        document.getElementById('appointment-id').value = '';
-        document.getElementById('appt-duration').value = 60;
-        if (appt) {
-            els.modalTitle.textContent = 'Modifica Visita';
-            document.getElementById('appointment-id').value = appt.id;
-            els.propSelect.value = appt.property_id;
-            els.leadSelect.value = appt.lead_id || '';
-            els.clientSelect.value = appt.client_id || '';
-            els.agentSelect.value = appt.agent_id || '';
-            document.getElementById('appt-date').value = toDatetimeLocal(appt.appointment_date);
-            document.getElementById('appt-duration').value = appt.duration_minutes;
-            document.getElementById('appt-status').value = appt.status;
-            document.getElementById('appt-notes').value = appt.notes || '';
-        } else {
-            els.modalTitle.textContent = 'Nuova Visita';
-            const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0);
-            document.getElementById('appt-date').value = toDatetimeLocal(d.toISOString());
-        }
-        els.modal.hidden = false;
-    }
-    function closeModal() { els.modal.hidden = true; }
-
-    async function handleFormSubmit(e) {
-        e.preventDefault();
-        const id = document.getElementById('appointment-id').value;
-        const data = {
-            property_id: els.propSelect.value,
-            lead_id: els.leadSelect.value || null,
-            client_id: els.clientSelect.value || null,
-            agent_id: els.agentSelect.value || null,
-            appointment_date: document.getElementById('appt-date').value,
-            duration_minutes: document.getElementById('appt-duration').value,
-            status: document.getElementById('appt-status').value,
-            notes: document.getElementById('appt-notes').value.trim(),
-        };
-        const btn = document.getElementById('appointment-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio...';
-        try {
-            const url = id ? `${API}?id=${id}` : API;
-            const res = await fetch(url, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Visita salvata.', 'success');
-            loadAppointments();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
-    }
-
     async function quickStatus(id, status) {
         const a = appointments.find(x => x.id == id);
         if (!a) return;
@@ -293,11 +192,6 @@
         } catch (err) { showAlert(err.message, 'error'); }
     }
 
-    function toDatetimeLocal(dateStr) {
-        const d = new Date(dateStr);
-        const pad = n => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
     function formatDateTime(dateStr) {
         return new Date(dateStr).toLocaleString('it-IT', {
             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',

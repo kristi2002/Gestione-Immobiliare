@@ -2,10 +2,7 @@
     'use strict';
 
     const API = 'api/tenants.php';
-    const PROP_API = 'api/properties.php';
-    const PDF_API = 'api/generate_pdf.php';
     let tenants = [];
-    let properties = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     const els = {};
@@ -15,7 +12,6 @@
 
     async function init() {
         els.pagination = document.getElementById('tenants-pagination');
-        await loadProperties();
         await loadTenants();
         document.getElementById('btn-new-tenant').addEventListener('click', () => {
             if (window.App) window.App.navigateTo('tenant_edit');
@@ -34,17 +30,6 @@
         document.getElementById('wa-send-modal-close').addEventListener('click', closeWaModal);
         document.getElementById('wa-send-modal-cancel').addEventListener('click', closeWaModal);
         document.getElementById('wa-send-form').addEventListener('submit', sendWhatsApp);
-    }
-
-    async function loadProperties() {
-        const res = await fetch(`${PROP_API}?limit=500&page=1`);
-        const json = await res.json();
-        if (json.success) {
-            properties = Pagination.parseResponse(json).items.filter(p => p.status !== 'archived');
-            const sel = document.getElementById('tenant-property');
-            if (sel) sel.innerHTML = '<option value="">— Seleziona —</option>' +
-                properties.map(p => `<option value="${p.id}">${esc(p.address)}, ${esc(p.city)}</option>`).join('');
-        }
     }
 
     async function loadTenants() {
@@ -140,85 +125,6 @@
         const a = document.createElement('a');
         a.href = url; a.download = 'inquilini.csv'; a.click();
         URL.revokeObjectURL(url);
-    }
-
-    function openModal(tenant = null) {
-        document.getElementById('tenant-modal').hidden = false;
-        document.getElementById('tenant-id').value = tenant?.id || '';
-        document.getElementById('tenant-name').value = tenant?.name || '';
-        document.getElementById('tenant-surname').value = tenant?.surname || '';
-        document.getElementById('tenant-email').value = tenant?.email || '';
-        document.getElementById('tenant-phone').value = tenant?.phone || '';
-        document.getElementById('tenant-property').value = tenant?.property_id || '';
-        document.getElementById('tenant-lease-start').value = tenant?.lease_start || '';
-        document.getElementById('tenant-lease-end').value = tenant?.lease_end || '';
-        document.getElementById('tenant-rent').value = tenant?.monthly_rent || '';
-        document.getElementById('tenant-notes').value = tenant?.notes || '';
-        document.getElementById('tenant-portal-pass').value = '';
-        document.getElementById('tenant-modal-title').textContent = tenant ? 'Modifica inquilino' : 'Nuovo inquilino';
-    }
-
-    function closeModal() {
-        document.getElementById('tenant-modal').hidden = true;
-    }
-
-    async function saveTenant(e) {
-        e.preventDefault();
-        const id = document.getElementById('tenant-id').value;
-        const payload = {
-            name: document.getElementById('tenant-name').value,
-            surname: document.getElementById('tenant-surname').value,
-            email: document.getElementById('tenant-email').value,
-            phone: document.getElementById('tenant-phone').value,
-            property_id: document.getElementById('tenant-property').value,
-            lease_start: document.getElementById('tenant-lease-start').value || null,
-            lease_end: document.getElementById('tenant-lease-end').value || null,
-            monthly_rent: document.getElementById('tenant-rent').value || null,
-            notes: document.getElementById('tenant-notes').value,
-            portal_password: document.getElementById('tenant-portal-pass').value,
-        };
-        const url = id ? `${API}?id=${id}` : API;
-        const res = await fetch(url, {
-            method: id ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (json.success) {
-            closeModal();
-            await loadTenants();
-            showAlert('Inquilino salvato.', 'success');
-        } else {
-            showAlert(json.error, 'error');
-        }
-    }
-
-    async function generateContract() {
-        const propertyId = document.getElementById('tenant-property').value;
-        const prop = properties.find(p => p.id == propertyId);
-        const payload = {
-            type: 'contract',
-            property_id: parseInt(propertyId, 10),
-            client_id: prop?.client_id,
-            tenant_id: document.getElementById('tenant-id').value || null,
-            tenant_name: document.getElementById('tenant-name').value + ' ' + document.getElementById('tenant-surname').value,
-            tenant_email: document.getElementById('tenant-email').value,
-            monthly_rent: document.getElementById('tenant-rent').value,
-            lease_start: document.getElementById('tenant-lease-start').value,
-            lease_end: document.getElementById('tenant-lease-end').value,
-        };
-        const res = await fetch(PDF_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (json.success) {
-            window.open(json.data.download, '_blank');
-            showAlert('Contratto PDF generato.', 'success');
-        } else {
-            showAlert(json.error, 'error');
-        }
     }
 
     function openWaModal(tenant) {
