@@ -462,79 +462,9 @@ async function generateEsignLink(e) {
 // Modal
 // -------------------------------------------------------------------------
 
-function openModal(contract = null) {
-    els.form.reset();
-    document.getElementById('contract-id').value = '';
-
-    if (contract) {
-        els.modalTitle.textContent = 'Modifica Contratto';
-        document.getElementById('contract-id').value       = contract.id;
-        document.getElementById('contract-title').value     = contract.title;
-        document.getElementById('contract-type').value      = contract.contract_type;
-        document.getElementById('contract-status').value    = contract.status;
-        document.getElementById('contract-property').value  = contract.property_id;
-        document.getElementById('contract-tenant').value    = contract.tenant_id || '';
-        document.getElementById('contract-client').value    = contract.client_id || '';
-        document.getElementById('contract-start').value     = contract.start_date || '';
-        document.getElementById('contract-end').value       = contract.end_date || '';
-        document.getElementById('contract-rent').value      = contract.monthly_rent ?? '';
-        document.getElementById('contract-deposit').value   = contract.deposit ?? '';
-        document.getElementById('contract-notes').value     = contract.notes || '';
-    } else {
-        els.modalTitle.textContent = 'Nuovo Contratto';
-        document.getElementById('contract-type').value = 'locazione';
-        document.getElementById('contract-status').value = 'draft';
-    }
-
-    els.modal.hidden = false;
-    document.getElementById('contract-title').focus();
-}
-
-function closeModal() {
-    els.modal.hidden = true;
-}
-
 // -------------------------------------------------------------------------
 // CRUD
 // -------------------------------------------------------------------------
-
-function collectFormData() {
-    return {
-        title:         document.getElementById('contract-title').value.trim(),
-        contract_type: document.getElementById('contract-type').value,
-        status:        document.getElementById('contract-status').value,
-        property_id:   document.getElementById('contract-property').value,
-        tenant_id:     document.getElementById('contract-tenant').value || null,
-        client_id:     document.getElementById('contract-client').value || null,
-        start_date:    document.getElementById('contract-start').value || null,
-        end_date:      document.getElementById('contract-end').value || null,
-        monthly_rent:  document.getElementById('contract-rent').value,
-        deposit:       document.getElementById('contract-deposit').value,
-        notes:         document.getElementById('contract-notes').value.trim(),
-    };
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    const id   = document.getElementById('contract-id').value;
-    const data = collectFormData();
-
-    const btn = document.getElementById('contract-modal-save');
-    btn.disabled = true;
-    btn.textContent = 'Salvataggio...';
-
-    try {
-        await saveContract(data, id || null);
-        closeModal();
-        showAlert('Contratto salvato.', 'success');
-        loadContracts();
-    } catch (err) {
-        showAlert(err.message, 'error');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Salva';
-    }
-}
 
 async function saveContract(data, id) {
     const url    = id ? `${API}?id=${id}` : API;
