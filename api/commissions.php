@@ -183,18 +183,27 @@ function createCommission(PDO $db): void
 
 function updateCommission(PDO $db, int $id): void
 {
-    $stmt = $db->prepare("SELECT id FROM agent_commissions WHERE id = :id");
+    $stmt = $db->prepare("SELECT status, paid_at FROM agent_commissions WHERE id = :id");
     $stmt->execute(['id' => $id]);
-    if (!$stmt->fetch()) {
+    $existing = $stmt->fetch();
+    if (!$existing) {
         apiError('Commissione non trovata.', 404);
     }
 
     $data      = apiGetJsonBody();
     $validated = validateCommissionInput($data);
 
-    // Auto-set paid_at when marking as paid
-    if ($validated['status'] === 'paid' && $validated['paid_at'] === null) {
-        $validated['paid_at'] = date('Y-m-d H:i:s');
+    // Preserve the existing payment state when the client doesn't explicitly
+    // send a status. The edit form has no status field, so without this an edit
+    // to a *paid* commission would silently revert it to 'pending' and wipe
+    // paid_at — corrupting the paid/pending totals and the agent payout record.
+    if (!array_key_exists('status', $data)) {
+        $validated['status']  = $existing['status'];
+        $validated['paid_at'] = $existing['paid_at'];
+    } elseif ($validated['status'] === 'paid' && $validated['paid_at'] === null) {
+        // Marking as paid: keep the original payment date if already paid,
+        // otherwise stamp now.
+        $validated['paid_at'] = $existing['paid_at'] ?: date('Y-m-d H:i:s');
     }
 
     $stmt = $db->prepare(

@@ -290,11 +290,25 @@ function fetchClientById(PDO $db, int $id): ?array
 
 function exportClientsCsv(PDO $db): void
 {
-    $rows = $db->query(
-        "SELECT name, surname, phone, email, status
-         FROM clients WHERE status != 'archived'
-         ORDER BY surname ASC, name ASC"
-    )->fetchAll();
+    $sql    = "SELECT name, surname, phone, email, status
+               FROM clients WHERE status != 'archived'";
+    $params = [];
+
+    // Optional selection: ?ids=1,2,3 exports only those rows (bulk "Esporta
+    // selezionati"). Without it, export the full non-archived owner list.
+    $idsRaw = trim($_GET['ids'] ?? '');
+    if ($idsRaw !== '') {
+        $ids = array_values(array_filter(array_map('intval', explode(',', $idsRaw)), fn($i) => $i > 0));
+        if (!empty($ids)) {
+            $sql   .= ' AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            $params = $ids;
+        }
+    }
+
+    $sql .= ' ORDER BY surname ASC, name ASC';
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
 
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="proprietari_' . date('Ymd') . '.csv"');

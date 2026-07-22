@@ -22,9 +22,6 @@
         els.statusFilter = document.getElementById('invoice-status-filter');
         els.yearFilter   = document.getElementById('invoice-year-filter');
         els.alert        = document.getElementById('invoices-alert');
-        els.modal        = document.getElementById('invoice-modal');
-        els.form         = document.getElementById('invoice-form');
-        els.modalTitle   = document.getElementById('invoice-modal-title');
         els.clientSelect = document.getElementById('invoice-client');
         els.leadSelect   = document.getElementById('invoice-lead');
         els.pagination   = document.getElementById('invoices-pagination');
@@ -143,7 +140,7 @@
         }).join('');
 
         els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
-            const i = invoices.find(x => x.id == b.dataset.id); if (i) openModal(i);
+            if (window.App) window.App.navigateTo('invoice_edit', { invoiceId: b.dataset.id });
         }));
         els.grid.querySelectorAll('.btn-pdf').forEach(b => b.addEventListener('click', () => generatePdf(b.dataset.id)));
         els.grid.querySelectorAll('.btn-xml').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); downloadFatturaXml(b.dataset.id); }));
@@ -192,67 +189,6 @@
     function closeSchedaModal() {
         schedaInvoiceId = null;
         document.getElementById('invoice-scheda-modal').hidden = true;
-    }
-
-    function openModal(inv = null) {
-        els.form.reset();
-        document.getElementById('invoice-id').value = '';
-        document.getElementById('invoice-vat').value = 22;
-        if (inv) {
-            els.modalTitle.textContent = 'Modifica Fattura ' + inv.invoice_number;
-            document.getElementById('invoice-id').value = inv.id;
-            els.clientSelect.value = inv.client_id || '';
-            els.leadSelect.value = inv.lead_id || '';
-            document.getElementById('invoice-description').value = inv.description;
-            document.getElementById('invoice-amount').value = inv.amount;
-            document.getElementById('invoice-vat').value = inv.vat_rate;
-            document.getElementById('invoice-status').value = inv.status;
-            document.getElementById('invoice-issue').value = inv.issue_date;
-            document.getElementById('invoice-due').value = inv.due_date || '';
-            document.getElementById('invoice-paid').value = inv.paid_date || '';
-            document.getElementById('invoice-notes').value = inv.notes || '';
-        } else {
-            els.modalTitle.textContent = 'Nuova Fattura';
-            document.getElementById('invoice-issue').value = new Date().toISOString().slice(0, 10);
-        }
-        els.modal.hidden = false;
-    }
-    function closeModal() { els.modal.hidden = true; }
-
-    async function handleFormSubmit(e) {
-        e.preventDefault();
-        const id = document.getElementById('invoice-id').value;
-        const data = {
-            client_id: els.clientSelect.value || null,
-            lead_id: els.leadSelect.value || null,
-            description: document.getElementById('invoice-description').value.trim(),
-            amount: document.getElementById('invoice-amount').value,
-            vat_rate: document.getElementById('invoice-vat').value,
-            status: document.getElementById('invoice-status').value,
-            issue_date: document.getElementById('invoice-issue').value,
-            due_date: document.getElementById('invoice-due').value,
-            paid_date: document.getElementById('invoice-paid').value,
-            notes: document.getElementById('invoice-notes').value.trim(),
-        };
-        const btn = document.getElementById('invoice-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio...';
-        try {
-            const url = id ? `${API}?id=${id}` : API;
-            const res = await fetch(url, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Fattura salvata.', 'success');
-            loadInvoices();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
     }
 
     async function quickStatus(id, status) {

@@ -64,14 +64,18 @@ $propertyId = $contract['property_id'] ?? null;
 $clientId   = $contract['property_client_id'] ?? null;
 
 $db->prepare(
-    'INSERT INTO reminders (client_id, property_id, tenant_id, title, description, reminder_date, frequency, status, created_at)
-     VALUES (:cid, :pid, :tid, :title, :desc, CURDATE(), :freq, :status, NOW())'
+    'INSERT INTO reminders (client_id, property_id, tenant_id, title, description, request_type, tenant_name, reminder_date, frequency, status, created_at)
+     VALUES (:cid, :pid, :tid, :title, :desc, :rtype, :tname, CURDATE(), :freq, :status, NOW())'
 )->execute([
     'cid'    => $clientId,
     'pid'    => $propertyId,
     'tid'    => $tenantId,
     'title'  => $fullTitle,
     'desc'   => $fullDesc,
+    // Tag the request subtype so the admin maintenance board can filter to
+    // genuine maintenance work-orders (and tenant_name populates its display).
+    'rtype'  => $type,
+    'tname'  => $tenantName,
     'freq'   => 'once',
     'status' => 'pending',
 ]);

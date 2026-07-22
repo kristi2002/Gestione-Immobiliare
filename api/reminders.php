@@ -116,7 +116,14 @@ function listReminders(PDO $db): void
         $where .= ' AND r.notify_client = :notify_client';
         $params['notify_client'] = $notifyClient;
     }
-    // $maintenanceOnly: reserved for future use when maintenance reminders get a dedicated flag
+    // Maintenance board: show only genuine maintenance work-orders, not every
+    // reminder. New tenant requests are tagged request_type='maintenance';
+    // older untagged rows are matched by their "[Richiesta maintenance]" title.
+    if ($maintenanceOnly) {
+        $where .= " AND (r.request_type = 'maintenance'
+                      OR (r.request_type IS NULL AND r.title LIKE :maint_marker))";
+        $params['maint_marker'] = '[Richiesta maintenance]%';
+    }
     if ($filterPriority !== '') {
         $where .= ' AND r.priority = :priority';
         $params['priority'] = $filterPriority;
