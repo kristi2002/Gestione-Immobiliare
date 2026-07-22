@@ -2,29 +2,17 @@
    UI polish — sharper sections, zebra lists, clearer separation
    ========================================================================== */
 
-.stats-grid,
 .dashboard-charts,
-.reports-kpi,
 .reports-grid {
     margin-bottom: var(--section-gap);
 }
 
-.stat-card {
-    border-radius: var(--radius);
-    border-color: var(--color-border);
-}
-
-.stat-card:hover {
-    transform: none;
-    border-color: var(--color-border-strong);
-}
 
 .card,
 .settings-panel .card,
 .table-wrapper,
 .cal-main,
 .reports-toolbar,
-.reports-kpi__card,
 .report-card {
     border-color: var(--color-border);
     box-shadow: var(--shadow);
@@ -346,13 +334,4 @@
 /* --------------------------------------------------------------------------
    Scheda Agente (agent_profile) — hero KPI row + commission totals
    -------------------------------------------------------------------------- */
-.agent-profile-view .ap-kpis {
-    display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 14px;
-}
-.agent-profile-view .ap-kpis .agent-stat {
-    display: flex; align-items: center; gap: 8px;
-}
-.agent-profile-view .ap-kpis .agent-stat__value { font-weight: 800; font-size: 16px; }
-.agent-profile-view .ap-kpis .agent-stat__label { font-size: 12px; color: var(--color-text-muted); }
-.agent-profile-view .ap-kpis .agent-stat__icon svg { width: 16px; height: 16px; color: var(--color-primary); }
 .ap-comm-totals { display: inline-flex; gap: 8px; }

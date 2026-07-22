@@ -307,10 +307,6 @@ body.nav-open {
         font-size: 17px;
     }
 
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
     .form-row,
     .form-row--2,
     .form-row--3,
@@ -569,10 +565,6 @@ body.nav-open {
     gap: 8px;
     flex-wrap: wrap;
     flex-shrink: 0;
-}
-
-.stats-grid--6 {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .dashboard-bottom {
@@ -1065,17 +1057,9 @@ body.nav-open {
     .quick-actions {
         grid-template-columns: repeat(3, 1fr);
     }
-
-    .stats-grid--6 {
-        grid-template-columns: 1fr 1fr;
-    }
 }
 
 @media (max-width: 480px) {
-    .stats-grid--6 {
-        grid-template-columns: 1fr;
-    }
-
     .quick-actions {
         grid-template-columns: repeat(2, 1fr);
     }

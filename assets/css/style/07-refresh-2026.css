@@ -159,7 +159,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 
 /* Cards — softer, premium elevation; clickable cards lift on hover. No ghost
    cards (never a heavy border paired with a wide shadow). */
-.card, .entity-card, .stat-card, .chart-card, .pp-section {
+.card, .entity-card, .chart-card, .pp-section {
     box-shadow: var(--shadow-xs);
     transition: box-shadow var(--motion) var(--ease-out),
                 border-color var(--motion) var(--ease-out),
@@ -186,8 +186,6 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .badge--info    { background: var(--color-primary-light); color: var(--color-primary-dark); }
 
 /* Stat cards — clearer number hierarchy + subtle hover. */
-.stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-.stat-card__value, .stat-value { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
 /* Modals — smoother, consistent entrance. */
 .modal { box-shadow: var(--shadow-lg); }
@@ -203,7 +201,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 /* Honor reduced-motion. */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
-    .btn:hover, .entity-card--clickable:hover, .stat-card:hover { transform: none; }
+    .btn:hover, .entity-card--clickable:hover { transform: none; }
 }
 
 /* ==========================================================================
