@@ -92,10 +92,10 @@ async function loadHero() {
             ? `<a href="mailto:${esc(a.email)}"><i data-lucide="mail"></i> ${esc(a.email)}</a>` : '';
         document.getElementById('ap-conv-rate').textContent = (Number(d.conversion_rate) || 0) + '%';
         document.getElementById('ap-kpis').innerHTML = KPI_ITEMS.map(k => `
-            <div class="agent-stat">
-                <span class="agent-stat__icon" aria-hidden="true"><i data-lucide="${k.icon}"></i></span>
-                <span class="agent-stat__value">${d[k.key] ?? 0}</span>
-                <span class="agent-stat__label">${k.label}</span>
+            <div class="db-stat">
+                <div class="db-stat__chip"><i data-lucide="${k.icon}"></i></div>
+                <div class="db-stat__label">${k.label}</div>
+                <div class="db-stat__value">${d[k.key] ?? 0}</div>
             </div>`).join('');
         if (window.lucide) window.lucide.createIcons();
     } catch (err) {

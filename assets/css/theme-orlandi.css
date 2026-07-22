@@ -151,13 +151,22 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .db-stats .db-stat:nth-child(2) { --accent: #16a34a; }
 .db-stats .db-stat:nth-child(3) { --accent: #7c5cd0; }
 .db-stats .db-stat:nth-child(4) { --accent: #f0a83c; }
+.db-stats .db-stat:nth-child(5) { --accent: #3186d5; }
+.db-stats .db-stat:nth-child(6) { --accent: #16a34a; }
 
-/* 3-up variant — list pages that show three summary tiles (e.g. Provvigioni).
-   Overrides the base repeat(4) from 08-shell-dashboard on wide screens; the
-   two breakpoints mirror the base .db-stats behaviour below it in the cascade. */
+/* 3-up variant — list pages with three summary tiles (e.g. Provvigioni) and
+   6-tile rows (agent_profile KPIs) rendered as 2x3. Overrides the base
+   repeat(4) from 08-shell-dashboard on wide screens; breakpoints mirror it. */
 .db-stats--3 { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 1100px) { .db-stats--3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .db-stats--3 { grid-template-columns: 1fr; } }
+
+/* Semantic accent overrides — a tile in a problem/urgent state recolours its
+   stripe + chip so it reads at a glance, beating the positional :nth-child
+   accent (matched specificity 0-3-0, placed later in source order). */
+.db-stats .db-stat.db-stat--ok     { --accent: #16a34a; }
+.db-stats .db-stat.db-stat--warn   { --accent: #e08a1e; }
+.db-stats .db-stat.db-stat--danger { --accent: #dc2626; }
 
 .db-stat__chip {
     position: absolute;
