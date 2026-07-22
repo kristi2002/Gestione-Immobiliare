@@ -92,7 +92,7 @@
             return `
             <div class="entity-card appointment-card appointment-card--${a.status} entity-card--clickable" data-id="${a.id}">
                 <div class="appointment-card__header">
-                    <strong>${escapeHtml(a.property_address)}, ${escapeHtml(a.property_city)}</strong>
+                    <strong>${a.property_address ? `${escapeHtml(a.property_address)}, ${escapeHtml(a.property_city)}` : 'Immobile eliminato'}</strong>
                     <span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
                 </div>
                 <div class="entity-card__body">
@@ -136,7 +136,7 @@
             : (a.client_id ? `${a.client_surname} ${a.client_name}` : '—');
 
         document.getElementById('scheda-appt-property').textContent =
-            `${a.property_address}, ${a.property_city}`;
+            a.property_address ? `${a.property_address}, ${a.property_city}` : 'Immobile eliminato';
         document.getElementById('scheda-appt-badge').innerHTML =
             `<span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>`;
 

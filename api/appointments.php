@@ -77,7 +77,7 @@ function listAppointments(PDO $db): void
                    c.name AS client_name, c.surname AS client_surname,
                    u.username AS agent_name
             FROM appointments a
-            INNER JOIN properties p ON p.id = a.property_id
+            LEFT JOIN properties p ON p.id = a.property_id
             LEFT JOIN leads l ON l.id = a.lead_id
             LEFT JOIN clients c ON c.id = a.client_id
             LEFT JOIN admin_users u ON u.id = a.agent_id
@@ -96,7 +96,7 @@ function getAppointment(PDO $db, int $id): void
                 c.name AS client_name, c.surname AS client_surname,
                 u.username AS agent_name
          FROM appointments a
-         INNER JOIN properties p ON p.id = a.property_id
+         LEFT JOIN properties p ON p.id = a.property_id
          LEFT JOIN leads l ON l.id = a.lead_id
          LEFT JOIN clients c ON c.id = a.client_id
          LEFT JOIN admin_users u ON u.id = a.agent_id
