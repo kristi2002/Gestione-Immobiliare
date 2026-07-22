@@ -339,4 +339,64 @@
    wide screens, reading like a floating modal instead of a page. */
 .agent-profile-view { max-width: 100%; }
 
-.ap-comm-totals { display: inline-flex; gap: 8px; }
+/* Card-wrapped tabs + panel, mirroring .property-profile-view (06-buttons-
+   responsive.css): without a surface behind them the panel tables/cards sit
+   directly on the grey page background and the area under the tab bar reads
+   as empty. Kept overflow-x:auto (property uses hidden) so the four tabs
+   stay reachable on narrow screens instead of being clipped. */
+.agent-profile-view .profile-tabs {
+    border-bottom: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px 12px 0 0;
+    padding: 0 8px;
+    gap: 4px;
+    margin-bottom: 0;
+}
+
+.agent-profile-view .profile-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 3px solid transparent;
+    padding: 13px 20px;
+    font-size: 13px;
+    margin-bottom: 0;
+}
+
+.agent-profile-view .profile-tab--active {
+    background: var(--color-bg);
+    border-bottom-color: var(--color-primary);
+}
+
+.agent-profile-view .profile-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 20px 24px 24px;
+    /* Stable height so the loading->data swap doesn't collapse the page */
+    min-height: 320px;
+}
+
+.agent-profile-view .profile-panel__header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.agent-profile-view .profile-panel__header .text-muted {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+/* Clienti assegnati grid inside the panel: tighter cards than list pages */
+.agent-profile-view .entity-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin-bottom: 0;
+}
+
+.ap-comm-totals { display: inline-flex; gap: 8px; flex-wrap: wrap; }

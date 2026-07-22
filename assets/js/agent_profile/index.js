@@ -160,12 +160,23 @@ async function loadClients() {
         const items = (json.data && json.data.items) || json.data || [];
         document.getElementById('ap-clients-count').textContent = `${items.length} clienti`;
         if (!items.length) { grid.innerHTML = '<div class="entity-empty">Nessun cliente assegnato.</div>'; return; }
-        grid.innerHTML = items.map(c => `
-            <div class="entity-card" data-id="${c.id}" style="cursor:pointer">
-                <div class="entity-card__name"><strong>${esc(c.surname)} ${esc(c.name)}</strong></div>
-                ${c.email ? `<div class="entity-card__info"><i data-lucide="mail"></i> ${esc(c.email)}</div>` : ''}
-                ${c.phone ? `<div class="entity-card__info"><i data-lucide="phone"></i> ${esc(c.phone)}</div>` : ''}
-            </div>`).join('');
+        grid.innerHTML = items.map(c => {
+            const initials = (((c.name || '').charAt(0)) + ((c.surname || '').charAt(0))).toUpperCase() || '?';
+            return `
+            <div class="entity-card entity-card--clickable" data-id="${c.id}" style="cursor:pointer">
+                <div class="entity-card__header">
+                    <div class="entity-card__avatar">${esc(initials)}</div>
+                    <div class="entity-card__title-group">
+                        <div class="entity-card__name">${esc(c.surname)} ${esc(c.name)}</div>
+                    </div>
+                </div>
+                <div class="entity-card__body">
+                    ${c.email ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="mail"></i></span> ${esc(c.email)}</div>` : ''}
+                    ${c.phone ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="phone"></i></span> ${esc(c.phone)}</div>` : ''}
+                    ${!c.email && !c.phone ? '<div class="entity-card__info text-muted">Nessun contatto registrato</div>' : ''}
+                </div>
+            </div>`;
+        }).join('');
         grid.querySelectorAll('.entity-card').forEach(card => card.addEventListener('click', () => {
             window.App?.navigateTo('client_profile', { clientId: Number(card.dataset.id) });
         }));
