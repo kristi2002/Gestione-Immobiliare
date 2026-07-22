@@ -155,20 +155,36 @@ function convertToLead(PDO $db, int $id): void
         apiError('Richiesta già convertita in lead (ID ' . $app['converted_to_lead_id'] . ').', 409);
     }
 
-    // Insert into leads table
+    // leads has separate NOT NULL name/surname and no property_id column:
+    // split the single applicant_name field and carry the property in the notes.
+    $parts   = preg_split('/\s+/', trim($app['applicant_name']), 2);
+    $name    = $parts[0] ?? '';
+    $surname = $parts[1] ?? '';
+
+    $prop = $db->prepare('SELECT address, city FROM properties WHERE id = :id');
+    $prop->execute([':id' => $app['property_id']]);
+    $property = $prop->fetch();
+
+    $notes = 'Candidatura immobile'
+        . ($property ? ": {$property['address']}, {$property['city']}" : '')
+        . " (ID {$app['property_id']})"
+        . ($app['message'] ? "\n\n{$app['message']}" : '');
+
+    $db->beginTransaction();
+
     $ins = $db->prepare(
         "INSERT INTO leads
-            (name, email, phone, interest_type, property_id, source, status, notes)
+            (name, surname, email, phone, interest_type, source, status, notes)
          VALUES
-            (:name, :email, :phone, :interest, :property_id, 'web', 'new', :notes)"
+            (:name, :surname, :email, :phone, :interest, 'web', 'new', :notes)"
     );
     $ins->execute([
-        ':name'        => $app['applicant_name'],
-        ':email'       => $app['applicant_email'],
-        ':phone'       => $app['applicant_phone'],
-        ':interest'    => $app['application_type'],
-        ':property_id' => $app['property_id'],
-        ':notes'       => $app['message'],
+        ':name'     => $name,
+        ':surname'  => $surname,
+        ':email'    => $app['applicant_email'],
+        ':phone'    => $app['applicant_phone'],
+        ':interest' => $app['application_type'],
+        ':notes'    => $notes,
     ]);
     $leadId = (int) $db->lastInsertId();
 
@@ -178,6 +194,8 @@ function convertToLead(PDO $db, int $id): void
             SET converted_to_lead_id = :lead_id, status = 'contacted'
           WHERE id = :id"
     )->execute([':lead_id' => $leadId, ':id' => $id]);
+
+    $db->commit();
 
     apiSuccess(['lead_id' => $leadId, 'application_id' => $id]);
 }

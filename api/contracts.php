@@ -161,6 +161,7 @@ function createContract(PDO $db): void
 {
     $data      = apiGetJsonBody();
     $validated = validateContractInput($data);
+    assertNoOverlappingLease($db, $validated);
     $validated['created_by'] = getCurrentAdminId() ?: null;
 
     $stmt = $db->prepare(
@@ -192,6 +193,7 @@ function updateContract(PDO $db, int $id): void
 
     $data      = apiGetJsonBody();
     $validated = validateContractInput($data);
+    assertNoOverlappingLease($db, $validated, $id);
 
     $stmt = $db->prepare(
         "UPDATE contracts
@@ -315,6 +317,53 @@ function validateContractInput(array $data): array
         'istat_baseline_month'      => $istatBaselineMonth,
         'last_istat_update'         => $lastIstatUpdate,
     ];
+}
+
+/**
+ * Double-booking guard: refuse to save an in-force lease (locazione, status
+ * Automatico/NULL or signed) whose date range overlaps another in-force lease
+ * on the same property. Draft/sent/cancelled contracts never block and are
+ * never blocked — only contracts that actually occupy the property count.
+ */
+function assertNoOverlappingLease(PDO $db, array $v, ?int $excludeId = null): void
+{
+    $inForce = $v['status'] === null || $v['status'] === 'signed';
+    if ($v['contract_type'] !== 'locazione' || !$inForce || $v['start_date'] === null) {
+        return;
+    }
+
+    // Inclusive range overlap; a NULL end_date means open-ended (occupied forever).
+    $sql = "SELECT id, title, start_date, end_date
+              FROM contracts
+             WHERE property_id = :property_id
+               AND contract_type = 'locazione'
+               AND (status IS NULL OR status = 'signed')
+               AND start_date IS NOT NULL
+               AND (:new_end IS NULL OR start_date <= :new_end2)
+               AND (end_date IS NULL OR end_date >= :new_start)";
+    $params = [
+        'property_id' => $v['property_id'],
+        'new_end'     => $v['end_date'],
+        'new_end2'    => $v['end_date'],
+        'new_start'   => $v['start_date'],
+    ];
+    if ($excludeId !== null) {
+        $sql .= ' AND id <> :exclude_id';
+        $params['exclude_id'] = $excludeId;
+    }
+
+    $stmt = $db->prepare($sql . ' LIMIT 1');
+    $stmt->execute($params);
+    $conflict = $stmt->fetch();
+
+    if ($conflict) {
+        $range = $conflict['start_date'] . ' → ' . ($conflict['end_date'] ?: 'aperto');
+        apiError(
+            "Doppia prenotazione: l'immobile ha già un contratto di locazione in vigore che si sovrappone alle date indicate "
+            . "(#{$conflict['id']} «{$conflict['title']}», {$range}). Modifica le date oppure annulla l'altro contratto.",
+            409
+        );
+    }
 }
 
 /**
