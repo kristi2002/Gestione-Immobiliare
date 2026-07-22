@@ -15,6 +15,9 @@ if (!defined('DB_HOST')) {
     define('DB_CHARSET', (string) env('DB_CHARSET', 'utf8mb4'));
 }
 
+// Guarded so tests/bootstrap.php can pre-define a stub getDB() (in-memory
+// SQLite) without a fatal redeclare when this file is transitively included.
+if (!function_exists('getDB')) {
 function getDB(): PDO
 {
     static $pdo = null;
@@ -78,6 +81,7 @@ function getDB(): PDO
 
     return $pdo;
 }
+} // if (!function_exists('getDB'))
 
 /**
  * A tenant is a person, not a fixed property assignment — the CONTRACTS table

@@ -3,6 +3,9 @@
  * Load environment variables from .env file.
  */
 
+// Guarded so tests/bootstrap.php can pre-define a no-op loadEnv() stub without
+// a fatal redeclare when this file is transitively included.
+if (!function_exists('loadEnv')) {
 function loadEnv(string $path): void
 {
     if (!is_readable($path)) {
@@ -40,6 +43,7 @@ function loadEnv(string $path): void
         putenv("{$key}={$value}");
     }
 }
+} // if (!function_exists('loadEnv'))
 
 function env(string $key, mixed $default = null): mixed
 {

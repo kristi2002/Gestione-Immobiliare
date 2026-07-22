@@ -47,6 +47,10 @@ const SETTINGS_DEFAULTS = [
     'agency_sepa_creditor_id' => '',
 ];
 
+// Guarded so a test harness that pre-defines a stub getSetting() (see
+// tests/bootstrap.php) isn't fatally redeclared when this file is transitively
+// included. In production the stub never exists, so the real one below wins.
+if (!function_exists('getSetting')) {
 function getSetting(string $key, ?string $default = null): ?string
 {
     static $cache = null;
@@ -103,6 +107,7 @@ function getSetting(string $key, ?string $default = null): ?string
 
     return SETTINGS_DEFAULTS[$key] ?? null;
 }
+} // if (!function_exists('getSetting'))
 
 function setSetting(string $key, ?string $value): void
 {
@@ -134,6 +139,9 @@ function getPublicBranding(): array
     ];
 }
 
+// Guarded for the same reason as getSetting() above — tests/bootstrap.php
+// pre-defines a stub getMailConfig() before this file is included.
+if (!function_exists('getMailConfig')) {
 function getMailConfig(): array
 {
     return [
@@ -147,6 +155,7 @@ function getMailConfig(): array
         'smtp_secure'  => getSetting('smtp_secure', 'tls'),
     ];
 }
+} // if (!function_exists('getMailConfig'))
 
 function getWhatsAppConfig(): array
 {

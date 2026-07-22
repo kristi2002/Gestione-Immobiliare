@@ -25,7 +25,7 @@ class MailTest extends TestCase
         $this->assertTrue($result['success']);
         $this->assertSame('sent', $result['status']);
         $this->assertNull($result['error']);
-        $this->assertStringStartsWith('local-', $result['external_id']);
+        $this->assertStringStartsWith('SIMULATED-', $result['external_id']);
     }
 
     public function testSendClientEmailRejectsInvalidEmail(): void
