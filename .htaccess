@@ -48,6 +48,32 @@ DirectoryIndex index.php
     RewriteRule ^uploads/.*\.(pdf|docx?|xlsx?|pptx?|txt|csv|zip|rar|7z|odt|ods|odp|rtf)$ - [F,L]
 </IfModule>
 
+# ── Compression ──────────────────────────────────────────────────────────────
+# gzip text responses (HTML, CSS, JS, JSON, SVG). Cuts transfer size ~70%.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml \
+        application/javascript application/x-javascript application/json \
+        application/xml image/svg+xml application/rss+xml
+</IfModule>
+
+# ── Client caching ───────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    # Versioned CSS/JS (loaded with ?v=<filemtime> or a per-view token) — safe to
+    # cache for a year; any change bumps the URL so it can't go stale.
+    <FilesMatch "\.(css|js|mjs)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # Images and fonts — cache a week (property photos use stable filenames).
+    <FilesMatch "\.(png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+    # Dynamic PHP (SPA shell, API JSON, view partials, and the personal-data file
+    # streamers) — always revalidate and never let a proxy store the response.
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
 <Files ".env">
     Require all denied
 </Files>

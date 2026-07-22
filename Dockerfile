@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         git \
     && docker-php-ext-install pdo pdo_mysql zip intl mbstring \
-    && a2enmod rewrite headers \
+    && a2enmod rewrite headers deflate \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP config — upload limits
@@ -24,6 +24,20 @@ RUN { \
         echo 'post_max_size = 26M'; \
         echo 'max_execution_time = 120'; \
     } > /usr/local/etc/php/conf.d/uploads.ini
+
+# PHP config — opcache (compiled bytecode cache). Off by default on the base
+# image; enabling it is the single biggest server-side throughput win. Each
+# deploy starts a fresh container (opcache resets), and revalidate_freq=2 picks
+# up any in-place file change within 2s, so this is safe.
+RUN { \
+        echo 'opcache.enable=1'; \
+        echo 'opcache.enable_cli=0'; \
+        echo 'opcache.memory_consumption=128'; \
+        echo 'opcache.interned_strings_buffer=16'; \
+        echo 'opcache.max_accelerated_files=20000'; \
+        echo 'opcache.validate_timestamps=1'; \
+        echo 'opcache.revalidate_freq=2'; \
+    } > /usr/local/etc/php/conf.d/opcache.ini
 
 # PHP config — production hardening (errors to stderr, never to the response).
 # The app still re-enables display_errors at runtime when APP_DEBUG=true.
