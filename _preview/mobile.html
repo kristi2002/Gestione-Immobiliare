@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mobile test</title>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/theme-orlandi.css">
+<style>[data-lucide]{display:inline-block;width:1em;height:1em}</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><a class="sb-brand" href="#"><span class="sb-brand__word"><span class="sb-brand__eyebrow">IMMOBILIARE</span><b class="sb-brand__name">ORLANDI</b></span></a></div>
+    <nav class="sidebar-nav"><ul><li><a href="#" class="nav-link active"><span class="nav-label">Dashboard</span></a></li></ul></nav>
+  </aside>
+  <div class="main-wrapper">
+    <header class="topbar">
+      <button class="sidebar-toggle" id="sidebar-toggle"><span></span><span></span><span></span></button>
+      <div class="topbar-title"><h1 id="page-title">Proprietari</h1><p class="topbar-sub">Benvenuto, admin</p></div>
+      <div class="global-search"><i class="global-search__icon" data-lucide="search"></i><input type="search" class="global-search__input" placeholder="Cerca proprietari, immobili…"></div>
+      <div class="topbar-filters" id="topbar-filters"></div>
+      <div class="topbar-actions"><a href="#" class="topbar-link topbar-icon-btn"><i data-lucide="mail"></i></a><button class="notif-bell">🔔</button></div>
+    </header>
+    <main id="app-content" class="app-content"></main>
+  </div>
+</div>
+<script>
+const view = new URLSearchParams(location.search).get('view')||'clients';
+fetch('/views/'+view+'.html').then(r=>r.text()).then(async h=>{
+  document.getElementById('app-content').innerHTML = h;
+  // give tables/cards mock rows so overflow is realistic
+  document.querySelectorAll('.db-stat__value,[id^="cstat"],[id^="tstat"]').forEach(e=>{if((e.textContent||'').trim()==='—')e.textContent='42';});
+  document.querySelectorAll('table').forEach(t=>{const tb=t.querySelector('tbody');if(tb&&!tb.querySelector('tr')){const n=t.querySelectorAll('thead th').length||6;for(let r=0;r<3;r++){const tr=document.createElement('tr');for(let c=0;c<n;c++){const td=document.createElement('td');td.textContent=c===0?'Elena Colombo Rossi':'elena.colombo@hotmail.it';tr.appendChild(td);}tb.appendChild(tr);}}});
+  const t=await fetch('/assets/css/theme-orlandi.css?b='+Math.random(),{cache:'no-store'}).then(r=>r.text());
+  const s=document.createElement('style');s.textContent=t;document.head.appendChild(s);
+  window.__ready=true;
+}).catch(e=>{document.getElementById('app-content').textContent=String(e);window.__ready=true;});
+</script>
+</body></html>
