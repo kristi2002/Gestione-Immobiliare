@@ -46,9 +46,13 @@ function bindRail() {
     if (!rail) return;
     document.getElementById('rail-close')?.addEventListener('click', closeRail);
     document.getElementById('rail-open-full')?.addEventListener('click', () => {
-        if (railClientId && window.App) {
+        // Capture the id BEFORE closeRail() — it resets railClientId to null,
+        // and reading it after produced clientId:null ("ID proprietario non
+        // specificato" on the profile view).
+        const id = railClientId;
+        if (id && window.App) {
             closeRail();
-            window.App.navigateTo('client_profile', { clientId: railClientId });
+            window.App.navigateTo('client_profile', { clientId: id });
         }
     });
     document.addEventListener('keydown', function onEsc(e) {
