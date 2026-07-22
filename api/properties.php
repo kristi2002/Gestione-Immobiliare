@@ -322,6 +322,7 @@ function createProperty(PDO $db): void
     $stmt->execute($validated);
 
     $newId = (int) $db->lastInsertId();
+    logActivity('create', 'property', $newId, 'Immobile creato: ' . ($validated['address'] ?? ('#' . $newId)));
     getProperty($db, $newId);
 }
 
@@ -391,6 +392,7 @@ function updateProperty(PDO $db, int $id): void
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
 
+    logActivity('update', 'property', $id, 'Immobile aggiornato #' . $id);
     getProperty($db, $id);
 }
 
@@ -403,6 +405,7 @@ function deleteProperty(PDO $db, int $id): void
     $stmt = $db->prepare("UPDATE properties SET status = 'archived' WHERE id = :id");
     $stmt->execute(['id' => $id]);
 
+    logActivity('delete', 'property', $id, 'Immobile archiviato #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Immobile archiviato.']);
 }
 

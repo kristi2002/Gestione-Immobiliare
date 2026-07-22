@@ -295,6 +295,7 @@ function uploadDocument(PDO $db): void
     ]);
 
     $newId = (int) $db->lastInsertId();
+    logActivity('create', 'document', $newId, 'Documento caricato: ' . ($file['name'] ?? ('#' . $newId)));
     getDocument($db, $newId);
 }
 
@@ -316,6 +317,7 @@ function deleteDocument(PDO $db, int $id): void
     $del = $db->prepare("DELETE FROM documents WHERE id = :id");
     $del->execute(['id' => $id]);
 
+    logActivity('delete', 'document', $id, 'Documento eliminato: ' . ($doc['original_name'] ?? ('#' . $id)));
     apiSuccess(['id' => $id, 'message' => 'Documento eliminato.']);
 }
 

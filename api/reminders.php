@@ -189,7 +189,9 @@ function createReminder(PDO $db): void
     );
     $stmt->execute($validated);
 
-    getReminder($db, (int) $db->lastInsertId());
+    $newId = (int) $db->lastInsertId();
+    logActivity('create', 'reminder', $newId, 'Promemoria creato: ' . ($validated['title'] ?? ('#' . $newId)));
+    getReminder($db, $newId);
 }
 
 function updateReminder(PDO $db, int $id): void
@@ -212,6 +214,7 @@ function updateReminder(PDO $db, int $id): void
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
 
+    logActivity('update', 'reminder', $id, 'Promemoria aggiornato #' . $id);
     getReminder($db, $id);
 }
 
@@ -268,6 +271,7 @@ function cancelReminder(PDO $db, int $id): void
     $stmt = $db->prepare("UPDATE reminders SET status = 'cancelled' WHERE id = :id");
     $stmt->execute(['id' => $id]);
 
+    logActivity('delete', 'reminder', $id, 'Promemoria annullato #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Promemoria annullato.']);
 }
 

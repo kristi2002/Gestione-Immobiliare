@@ -162,6 +162,10 @@ function completeAdminLogin(int $id, string $username, string $role): void
     $_SESSION['admin_id']       = $id;
     $_SESSION['admin_username'] = $username;
     $_SESSION['admin_role']     = $role;
+
+    // Audit the auth event (both the direct-password and 2FA paths reach here).
+    require_once __DIR__ . '/activity_log.php';
+    logActivity('login', 'admin_user', $id, 'Accesso effettuato: ' . $username);
 }
 
 function attemptTenantLogin(string $email, string $password): bool
@@ -197,6 +201,12 @@ function attemptTenantLogin(string $email, string $password): bool
 
 function logoutUser(): void
 {
+    // Audit before the session is torn down (logActivity reads the actor from it).
+    if (!empty($_SESSION['admin_id'])) {
+        require_once __DIR__ . '/activity_log.php';
+        logActivity('logout', 'admin_user', (int) $_SESSION['admin_id'], 'Logout: ' . ($_SESSION['admin_username'] ?? ''));
+    }
+
     $_SESSION = [];
 
     if (ini_get('session.use_cookies')) {

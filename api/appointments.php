@@ -120,7 +120,9 @@ function createAppointment(PDO $db): void
              :duration_minutes, :status, :notes)"
     );
     $stmt->execute($validated);
-    getAppointment($db, (int) $db->lastInsertId());
+    $newId = (int) $db->lastInsertId();
+    logActivity('create', 'appointment', $newId, 'Appuntamento creato per il ' . ($validated['appointment_date'] ?? ''));
+    getAppointment($db, $newId);
 }
 
 function updateAppointment(PDO $db, int $id): void
@@ -135,6 +137,7 @@ function updateAppointment(PDO $db, int $id): void
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
+    logActivity('update', 'appointment', $id, 'Appuntamento aggiornato #' . $id);
     getAppointment($db, $id);
 }
 
@@ -142,6 +145,7 @@ function deleteAppointment(PDO $db, int $id): void
 {
     if (!appointmentExists($db, $id)) apiError('Appuntamento non trovato.', 404);
     $db->prepare("DELETE FROM appointments WHERE id = :id")->execute(['id' => $id]);
+    logActivity('delete', 'appointment', $id, 'Appuntamento eliminato #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Appuntamento eliminato.']);
 }
 

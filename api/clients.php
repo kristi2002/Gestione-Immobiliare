@@ -164,6 +164,7 @@ function createClient(PDO $db): void
     $stmt->execute($validated);
 
     $newId = (int) $db->lastInsertId();
+    logActivity('create', 'client', $newId, 'Proprietario creato: ' . trim(($validated['name'] ?? '') . ' ' . ($validated['surname'] ?? '')));
     getClient($db, $newId);
 }
 
@@ -186,6 +187,7 @@ function updateClient(PDO $db, int $id): void
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
 
+    logActivity('update', 'client', $id, 'Proprietario aggiornato #' . $id);
     getClient($db, $id);
 }
 
@@ -200,6 +202,7 @@ function deleteClient(PDO $db, int $id): void
     $stmt = $db->prepare("UPDATE clients SET status = 'archived' WHERE id = :id");
     $stmt->execute(['id' => $id]);
 
+    logActivity('delete', 'client', $id, 'Proprietario archiviato #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Proprietario archiviato.']);
 }
 

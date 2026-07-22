@@ -216,6 +216,7 @@ function createMessage(PDO $db): void
     ]);
 
     $newId = (int) $db->lastInsertId();
+    logActivity('create', 'communication', $newId, "Comunicazione {$channel} ({$direction}) — proprietario #{$clientId}");
     getMessage($db, $newId);
 }
 
