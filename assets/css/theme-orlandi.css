@@ -106,6 +106,12 @@ details.nav-group > summary { padding: 13px 10px 5px; }
     border-radius: 16px;
     box-shadow: var(--shadow-md);
     top: 0;
+    /* Single source of truth for the topbar layer — was conflicting across era
+       files (15 in 08-shell, 1150 in 01-base, 1200 in 03-clients mobile), and the
+       stray 15 left its own dropdowns behind 1000-level content (.pp-subnav,
+       .toolbar--pinned). 1050 sits ABOVE that content but BELOW the mobile sidebar
+       overlay (1100), the media lightbox (1200) and modals (1400+). */
+    z-index: 1050;
 }
 .topbar-title { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; margin-right: 6px; }
 .topbar-title h1 {
@@ -452,12 +458,12 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .badge--neutral, .badge--muted, .pill--gray, .pill--neutral { background: #e2e8f0; color: #475569; }
 
 /* Primary button — azure */
-.btn--primary, .topbar-new, .settings-tab--active {
+.btn--primary, .settings-tab--active {
     background: var(--color-primary);
     border-color: var(--color-primary);
     box-shadow: 0 8px 18px rgba(49,134,213,.28);
 }
-.btn--primary:hover, .topbar-new:hover { background: var(--color-primary-dark); }
+.btn--primary:hover { background: var(--color-primary-dark); }
 
 /* Topbar search — pill with soft ring like the mockup */
 .global-search__input {

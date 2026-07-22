@@ -302,7 +302,6 @@ details.nav-group[open] > summary .nav-group-arrow {
     left: 0;
     right: 0;
     width: 100%;
-    z-index: 1150;              /* above sidebar (1100), below modals/lightbox */
     box-shadow: var(--shadow);
 }
 

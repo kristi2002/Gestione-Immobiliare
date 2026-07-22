@@ -300,7 +300,6 @@ body.nav-open {
     .topbar {
         padding: 0 16px;
         height: 56px;
-        z-index: 1200;
     }
 
     .page-title {
