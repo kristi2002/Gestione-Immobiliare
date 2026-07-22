@@ -267,7 +267,6 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 .sidebar-close-btn { color: rgba(255, 255, 255, 0.7); }
 .sidebar-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
 .nav-link { color: rgba(255, 255, 255, 0.7); }
-.nav-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 .nav-link.active { background: #0B3D91; color: #fff; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
 .nav-link.active [data-lucide] { color: #fff; }
 .nav-link .nav-icon { color: rgba(255, 255, 255, 0.55); }
@@ -280,6 +279,5 @@ details.nav-group > summary {
     letter-spacing: 0.05em;
 }
 details.nav-group > summary:hover { color: rgba(255, 255, 255, 0.75); }
-.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .sidebar-footer .btn { background: transparent; color: rgba(255, 255, 255, 0.7); border-color: transparent; }
 .sidebar-footer .btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: transparent; }

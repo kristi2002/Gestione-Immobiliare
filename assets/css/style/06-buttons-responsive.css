@@ -14,7 +14,6 @@
         transform    .12s ease;
     letter-spacing: .01em;
 }
-.btn:not(:disabled):hover  { transform: translateY(-1px); }
 .btn:not(:disabled):active { transform: translateY(0) scale(.98); }
 .btn:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
 

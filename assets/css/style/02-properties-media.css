@@ -750,9 +750,6 @@
 }
 
 /* Property card cover photo */
-.entity-card--clickable {
-    cursor: pointer;
-}
 
 .entity-card--clickable:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -1139,12 +1136,6 @@
     line-height: 1.5;
 }
 
-.chat-bubble--sent {
-    align-self: flex-end;
-    background: var(--color-primary);
-    color: #fff;
-    border-bottom-right-radius: 4px;
-}
 
 .chat-bubble--received {
     align-self: flex-start;

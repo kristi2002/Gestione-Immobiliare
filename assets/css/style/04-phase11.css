@@ -493,9 +493,6 @@
 .leaflet-map .leaflet-bottom { z-index: 1; }
 .map-legend { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; font-size: 14px; }
 .map-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
-.map-dot--available { background: #16a34a; }
-.map-dot--rented    { background: #2563eb; }
-.map-dot--sold      { background: #7c3aed; }
 .map-popup { font-size: 13px; line-height: 1.5; }
 
 /* Templates */
