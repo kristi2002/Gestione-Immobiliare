@@ -295,5 +295,3 @@ details.nav-group > summary:hover { color: rgba(255, 255, 255, 0.75); }
 .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .sidebar-footer .btn { background: transparent; color: rgba(255, 255, 255, 0.7); border-color: transparent; }
 .sidebar-footer .btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: transparent; }
-
-/* ============================================================================

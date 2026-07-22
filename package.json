@@ -1,0 +1,12 @@
+{
+  "name": "gestionale-immobiliare-assets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build-time asset pipeline (CSS bundle+minify) for the PHP app. NOT a frontend framework — the app is a vanilla-JS SPA served by PHP; this only produces assets/dist/.",
+  "scripts": {
+    "build:assets": "node scripts/build-assets.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}

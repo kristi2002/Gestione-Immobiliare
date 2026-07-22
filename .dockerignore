@@ -13,6 +13,7 @@ backups/*
 *.md
 !README.md
 node_modules
+assets/dist
 immobiliare design/
 Dockerfile
 docker-compose*.yml

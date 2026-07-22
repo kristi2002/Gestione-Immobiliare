@@ -83,6 +83,16 @@ find . -name '*.php' -not -path './vendor/*' \
 For anything touching auth, money, documents, or DB, also run the relevant
 checks in `CLAUDE.md` (the verification protocol). "It lints" is not "it works."
 
+### CSS build (frontend)
+
+Global styles live in `assets/css/style/*.css` (edit the partials, not the
+generated bundle). The Docker build bundles + minifies them into
+`assets/dist/app.min.css` (one request instead of the 9-file `@import`
+waterfall); `index.php` uses that bundle when present and falls back to the raw
+`style.css` chain otherwise — so **you don't need Node to develop**. To preview
+the bundled output locally: `npm ci && npm run build:assets`. `node_modules/`
+and `assets/dist/` are gitignored; `package-lock.json` is committed.
+
 ## 5. Database changes are append-only
 
 Never edit an existing `database/migrations/phaseNN_*.sql` that has already been

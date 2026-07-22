@@ -3,6 +3,20 @@
 # JS in assets/js/*). The React SPA migration was abandoned and its source has
 # been removed from the repo, so index.php is what Apache serves at "/".
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ── Asset build stage ────────────────────────────────────────────────────────
+# Bundle + minify the style.css partial chain into assets/dist/app.min.css,
+# collapsing its 9-request @import waterfall into one file. Pure static output;
+# index.php falls back to the unbundled CSS if this is ever absent.
+FROM node:22-slim AS assets
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY scripts/build-assets.mjs ./scripts/build-assets.mjs
+COPY assets/css ./assets/css
+RUN npm run build:assets
+
+# ── Runtime stage ────────────────────────────────────────────────────────────
 FROM php:8.4-apache-bookworm
 
 # System dependencies + PHP extensions
@@ -141,6 +155,10 @@ EOF
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 COPY . /var/www/html/
+
+# Overlay the built, minified CSS bundle from the asset stage. Done after the
+# full COPY so it always wins over any stale assets/dist/ in the build context.
+COPY --from=assets /build/assets/dist /var/www/html/assets/dist
 
 # Install PHP dependencies (production only — no dev tools in image)
 # Using `composer update` so Docker regenerates composer.lock from composer.json

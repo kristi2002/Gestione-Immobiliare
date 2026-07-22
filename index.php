@@ -30,7 +30,12 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <?php $__distCss = __DIR__ . '/assets/dist/app.min.css'; ?>
+    <?php if (is_file($__distCss)): ?>
+    <link rel="stylesheet" href="assets/dist/app.min.css?v=<?= filemtime($__distCss) ?>">
+    <?php else: ?>
     <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
+    <?php endif; ?>
     <link rel="stylesheet" href="branding.css.php">
     <link rel="stylesheet" href="assets/css/theme-orlandi.css?v=<?= @filemtime(__DIR__ . '/assets/css/theme-orlandi.css') ?: time() ?>">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">

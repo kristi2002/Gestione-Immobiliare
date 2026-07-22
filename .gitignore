@@ -24,4 +24,9 @@ immobiliare design/
 # Local dev scratch (port-conflict workaround, not for CI/prod)
 docker-compose.dryrun.yml
 docker-compose.override.yml
+
+# Node asset-build toolchain (esbuild). package-lock.json IS committed for a
+# reproducible `npm ci`; node_modules and the generated bundle are not.
+/node_modules/
+/assets/dist/
 .devswarm-temp/

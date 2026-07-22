@@ -1,0 +1,21 @@
+/* esbuild entry — bundled + minified into assets/dist/app.min.css by
+   `npm run build:assets`. This is exactly the style.css partial chain, so the
+   bundle is a drop-in replacement for the <link href="assets/css/style.css">
+   in index.php — collapsing that file's 9-request @import waterfall into one.
+
+   It deliberately does NOT include branding.css.php or theme-orlandi.css: those
+   load AFTER style.css in index.php and must keep their cascade position.
+
+   Edit the partials under style/ — NOT this list (it only declares the
+   concatenation order). index.php falls back to the unbundled style.css when
+   assets/dist/app.min.css is absent, so the source path still works with no
+   build step. */
+@import "style/01-base.css";
+@import "style/02-properties-media.css";
+@import "style/03-clients-cards.css";
+@import "style/04-phase11.css";
+@import "style/05-ui-polish.css";
+@import "style/06-buttons-responsive.css";
+@import "style/07-refresh-2026.css";
+@import "style/08-shell-dashboard.css";
+@import "style/09-filter-toolbar.css";
