@@ -7,22 +7,30 @@
 
     <div id="tenants-alert" class="alert" style="display:none;"></div>
 
-    <div class="list-stats">
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#3186d5"><i data-lucide="users"></i></span>
-            <div class="stat-mini__txt"><small>Inquilini Totali</small><b id="tstat-total">—</b></div>
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="users"></i></div>
+            <div class="db-stat__label">Inquilini Totali</div>
+            <div class="db-stat__value" id="tstat-total">—</div>
+            <div class="db-delta flat"><span>in anagrafica</span></div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#16a34a"><i data-lucide="badge-check"></i></span>
-            <div class="stat-mini__txt"><small>Attivi</small><b id="tstat-active">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="badge-check"></i></div>
+            <div class="db-stat__label">Attivi</div>
+            <div class="db-stat__value" id="tstat-active">—</div>
+            <div class="db-delta flat"><span>locazione in corso</span></div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#7c5cd0"><i data-lucide="scroll-text"></i></span>
-            <div class="stat-mini__txt"><small>Con Contratto</small><b id="tstat-contract">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="scroll-text"></i></div>
+            <div class="db-stat__label">Con Contratto</div>
+            <div class="db-stat__value" id="tstat-contract">—</div>
+            <div class="db-delta flat"><span>contratti registrati</span></div>
         </div>
-        <div class="stat-mini">
-            <span class="stat-mini__ico" style="--mi:#e08a1e"><i data-lucide="calendar-clock"></i></span>
-            <div class="stat-mini__txt"><small>In Scadenza (90gg)</small><b id="tstat-expiring">—</b></div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="calendar-clock"></i></div>
+            <div class="db-stat__label">In Scadenza</div>
+            <div class="db-stat__value" id="tstat-expiring">—</div>
+            <div class="db-delta flat"><span>prossimi 90 giorni</span></div>
         </div>
     </div>
 

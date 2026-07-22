@@ -11,18 +11,24 @@
 
     <div id="commissions-alert" class="alert" style="display:none;"></div>
 
-    <div class="stats-grid" style="margin-bottom:1.5rem;">
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-pending-amount">—</div>
-            <div class="stat-card__label">Totale in sospeso</div>
+    <div class="db-stats db-stats--3">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="hourglass"></i></div>
+            <div class="db-stat__label">Totale in sospeso</div>
+            <div class="db-stat__value" id="stat-pending-amount">—</div>
+            <div class="db-delta flat"><span>da liquidare</span></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-paid-amount">—</div>
-            <div class="stat-card__label">Totale pagato</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="banknote"></i></div>
+            <div class="db-stat__label">Totale pagato</div>
+            <div class="db-stat__value" id="stat-paid-amount">—</div>
+            <div class="db-delta flat"><span>liquidato</span></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card__value" id="stat-total-count">—</div>
-            <div class="stat-card__label">Totale provvigioni</div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="briefcase"></i></div>
+            <div class="db-stat__label">Totale provvigioni</div>
+            <div class="db-stat__value" id="stat-total-count">—</div>
+            <div class="db-delta flat"><span>registrate</span></div>
         </div>
     </div>
 
