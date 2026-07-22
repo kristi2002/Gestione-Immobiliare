@@ -146,6 +146,19 @@
     display: inline-flex; align-items: center;
 }
 .toolbar--merged .fb-actions { flex-wrap: nowrap; }
+
+/* --- Docked filter bar (scrolled up into the topbar) → keep it COMPACT ---
+   When filters.js merges the bar into the topbar on scroll, the row used to cram
+   search + saved-searches + Azioni + Filtri + sort + export + import + "+ Nuovo"
+   next to the topbar's own title/search/icons. While merged we hide the page
+   search + saved-search controls (the topbar already has a global search) and the
+   secondary export/import buttons — Azioni / Filtri / sort and the primary
+   "+ Nuovo <entity>" stay. The full bar returns when scrolled back to the top. */
+.toolbar--merged .fb-group--left { display: none; }
+.toolbar--merged .fb-actions .btn--export,
+.toolbar--merged .fb-actions .btn--import { display: none; }
+.toolbar--merged .fb-actions { border-left: none; padding-left: 0; margin-left: 0; }
+.toolbar--merged .filter-bar__controls.fb-ref { justify-content: flex-end; }
 @media (max-width: 720px) {
     .fb-actions {
         border-left: none; padding-left: 0; margin-left: 0;
