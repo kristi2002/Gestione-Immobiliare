@@ -182,6 +182,7 @@
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-pa-view" data-id="${a.id}" title="Visualizza"><i data-lucide="eye"></i> Dettagli</button>
                     <button class="btn btn--sm btn--ghost btn-pa-lead" data-id="${a.id}" title="Converti in lead" style="color:var(--color-primary,#3b82f6);">→ Lead</button>
+                    <button class="btn btn--sm btn--ghost btn-pa-del" data-id="${a.id}" title="Elimina" style="color:var(--color-danger,#dc2626);"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -204,6 +205,23 @@
                 btn.disabled = true; btn.textContent = '…';
                 await convertToLead();
                 btn.disabled = false; btn.textContent = '→ Lead';
+            });
+        });
+
+        els.tbody.querySelectorAll('.btn-pa-del').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
+                const who  = item ? (item.applicant_name || item.name || ('#' + item.id)) : ('#' + btn.dataset.id);
+                if (!await confirmDialog(`Eliminare la richiesta di ${who}? L'operazione è irreversibile.`, { title: 'Elimina richiesta', confirmText: 'Elimina' })) return;
+                try {
+                    const res  = await fetch(`${API}?id=${btn.dataset.id}`, { method: 'DELETE' });
+                    const json = await res.json();
+                    if (!json.success) throw new Error(json.error || 'Errore');
+                    showAlert('Richiesta eliminata.', 'success');
+                    loadApplications();
+                } catch (err) {
+                    showAlert('Errore eliminazione: ' + err.message, 'error');
+                }
             });
         });
     }

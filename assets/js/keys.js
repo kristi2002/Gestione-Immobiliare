@@ -103,6 +103,7 @@
                 </div>
                 <div class="entity-card__footer">
                     <button class="btn btn--sm btn--ghost btn-edit-key" data-id="${k.id}">Modifica</button>
+                    <button class="btn btn--sm btn--ghost btn-del-key" data-id="${k.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>`).join('');
 
@@ -112,6 +113,24 @@
                 if (item) openModal(item);
             });
         });
+        els.grid.querySelectorAll('.btn-del-key').forEach(btn => {
+            btn.addEventListener('click', () => deleteKey(btn.dataset.id));
+        });
+    }
+
+    async function deleteKey(id) {
+        const item  = keys.find(x => x.id == id);
+        const label = item ? `${item.address || ''} (${item.holder_username || item.holder_name || '—'})` : ('#' + id);
+        if (!await confirmDialog(`Eliminare il registro chiavi per ${label}?`, { title: 'Elimina chiavi', confirmText: 'Elimina' })) return;
+        try {
+            const res  = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert('Registro chiavi eliminato.', 'success');
+            loadKeys();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
     }
 
     function openModal(item = null) {
