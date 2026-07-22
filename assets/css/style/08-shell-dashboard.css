@@ -170,10 +170,8 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 
 .db-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
 .db-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-.db-card {
-    background: var(--color-surface); border: 1px solid var(--color-border);
-    border-radius: var(--radius); box-shadow: var(--shadow);
-}
+/* .db-card panel chrome lives in theme-orlandi.css (.db-card, .card combined
+   rule — identical, deduped) */
 .db-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 20px 0; }
 .db-card__head h3 { font-size: 15.5px; font-weight: 700; color: var(--color-text); }
 .db-card__head p { font-size: 12.5px; color: var(--color-text-muted); margin-top: 3px; }
@@ -268,9 +266,9 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
 .sidebar-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
 .nav-link { color: rgba(255, 255, 255, 0.7); }
 .nav-link.active { background: #0B3D91; color: #fff; font-weight: 600; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-.nav-link.active [data-lucide] { color: #fff; }
 .nav-link .nav-icon { color: rgba(255, 255, 255, 0.55); }
-.nav-link:hover .nav-icon, .nav-link.active .nav-icon { color: #fff; }
+/* hover/active icon recolour lives in theme-orlandi.css (superset rule
+   covering .nav-icon + [data-lucide] — deduped) */
 details.nav-group > summary {
     color: rgba(255, 255, 255, 0.4);
     font-size: 10px;

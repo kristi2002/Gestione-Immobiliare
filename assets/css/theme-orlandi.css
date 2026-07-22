@@ -1,10 +1,13 @@
 /* =====================================================================
    theme-orlandi.css — "immobiliare design" mockup design system
-   The authoritative look for the admin app: floating dark-navy sidebar
-   (wordmark + profile card), floating white topbar with the page title,
-   accent-topped stat cards, azure primary. Loads AFTER style.css and
-   branding.css.php so it wins the cascade.
-   BUILD-STAMP: orlandi-shell-20260714b
+   The authoritative look for the admin app: flush dark-navy sidebar
+   (DS port: icon-box + Playfair wordmark, royal-blue active pill),
+   floating white topbar with the page title, accent-topped stat cards,
+   azure primary. Loads AFTER style.css and branding.css.php so it wins
+   the cascade.
+   BUILD-STAMP: orlandi-shell-20260722 (sidebar DS block consolidated —
+   was appended at EOF, which put it after the ≤768px media rules and
+   broke the mobile margin reset)
    ===================================================================== */
 
 :root {
@@ -28,8 +31,12 @@
     --radius-sm:            10px;
     --shadow:               0 1px 2px rgba(30,42,58,.04), 0 1px 3px rgba(30,42,58,.05);
     --shadow-md:            0 8px 24px rgba(30,42,58,.07), 0 2px 6px rgba(30,42,58,.05);
-    --sidebar-width:        252px;
+    --sidebar-width:        240px;     /* React w-60 (design-system AppShell) */
     --shell-gap:            14px;      /* breathing room around the floating panels */
+    /* --- Immobiliare Orlandi Design System (ui_kits/app/AppShell.jsx) --- */
+    --font-brand: "Playfair Display", Georgia, "Times New Roman", serif;
+    --ds-navy:  #06224F;   /* --color-sidebar in the design system */
+    --ds-royal: #0B3D91;   /* --color-primary in the design system */
 }
 
 /* =====================================================================
@@ -37,36 +44,47 @@
    ===================================================================== */
 body { background: var(--color-bg); }
 
-/* --- Sidebar: full-height floating navy panel --- */
+/* --- Sidebar: flush full-height navy rail (DS AppShell port) ---
+   Matches the React AppShell sidebar (fixed inset-y-0 left-0, no
+   radius/gap/shadow). Deep-navy rail + royal-blue active pill,
+   icon-box + Playfair wordmark lockup, 12px nav pills. */
 .sidebar {
-    top: var(--shell-gap);
-    left: var(--shell-gap);
-    height: calc(100vh - (var(--shell-gap) * 2));
-    border-radius: 18px;
-    box-shadow: 0 14px 34px rgba(15, 25, 40, 0.18);
+    background: var(--ds-navy);
+    top: 0;
+    left: 0;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
 }
-.main-wrapper { margin-left: calc(var(--sidebar-width) + var(--shell-gap)); }
+.main-wrapper { margin-left: var(--sidebar-width); }
 
-/* Brand — centered house mark + IMMOBILIARE / ORLANDI wordmark */
-.sidebar-brand { padding: 22px 14px 14px; position: relative; }
+/* Brand lockup — 40px icon box + stacked IMMOBILIARE / ORLANDI wordmark */
+.sidebar-brand { padding: 20px 18px 12px; position: relative; }
 .sb-brand {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    width: 100%; text-decoration: none; color: #fff; text-align: center; min-width: 0;
+    display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 12px; width: 100%; text-decoration: none; color: #fff; text-align: left; min-width: 0;
 }
 .sb-brand__logo { max-height: 54px; max-width: 82%; object-fit: contain; border-radius: 8px; }
-.sb-brand__ico { width: 34px; height: 34px; color: #fff; margin-bottom: 4px; }
-.sb-brand__ico svg, .sb-brand__ico [data-lucide] { width: 34px; height: 34px; }
+.sb-brand__ico {
+    width: 40px; height: 40px; color: #fff; margin: 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; background: rgba(255, 255, 255, 0.1);
+}
+.sb-brand__ico svg, .sb-brand__ico [data-lucide] { width: 22px; height: 22px; }
+.sb-brand__word {
+    display: flex; flex-direction: column; min-width: 0;
+    font-family: var(--font-brand); line-height: 1.05;
+}
 .sb-brand__eyebrow {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.34em;
-    color: rgba(255, 255, 255, 0.85); white-space: nowrap; overflow: hidden;
-    max-width: 100%; text-overflow: ellipsis; padding-left: 0.34em; /* optically recenter tracked text */
+    font-size: 12px; font-weight: 600; letter-spacing: 0.12em; padding-left: 0;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 .sb-brand__name {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 27px; font-weight: 600; letter-spacing: 0.06em;
-    color: #fff; line-height: 1.15; white-space: nowrap; overflow: hidden;
-    max-width: 100%; text-overflow: ellipsis;
+    font-family: var(--font-brand);
+    font-size: 18px; font-weight: 800; letter-spacing: 0; line-height: 1.05; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 .sidebar-brand .sidebar-close-btn { position: absolute; top: 10px; right: 10px; }
 
@@ -81,7 +99,7 @@ body { background: var(--color-bg); }
 }
 a.sb-profile:hover { background: rgba(255, 255, 255, 0.1); }
 .sb-profile__avatar {
-    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; /* DS 40px avatar */
     background: linear-gradient(135deg, #3186d5, #7c5cd0);
     color: #fff; font-weight: 700; font-size: 15px;
     display: flex; align-items: center; justify-content: center;
@@ -92,10 +110,33 @@ a.sb-profile:hover { background: rgba(255, 255, 255, 0.1); }
 .sb-profile__chev { color: rgba(255, 255, 255, 0.4); flex-shrink: 0; }
 .sb-profile__chev svg, .sb-profile__chev [data-lucide] { width: 16px; height: 16px; }
 
-/* Nav — flat icon menu with section labels */
-.sidebar-nav { padding: 6px 12px 12px; }
-details.nav-group > summary { padding: 13px 10px 5px; }
-.nav-link { font-size: 14px; border-radius: 12px; }
+/* Nav — 12px pills with section labels (DS) */
+.sidebar-nav { padding: 12px 12px 12px; }
+.sidebar-nav ul { gap: 4px; }
+.nav-link {
+    border-radius: 12px; padding: 10px 12px; gap: 12px;
+    font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.7);
+}
+.nav-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.nav-link.active {
+    background: var(--ds-royal); color: #fff; font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+.nav-link .nav-icon, .nav-link [data-lucide] { width: 18px; height: 18px; color: rgba(255, 255, 255, 0.7); }
+.nav-link:hover .nav-icon, .nav-link:hover [data-lucide],
+.nav-link.active .nav-icon, .nav-link.active [data-lucide] { color: #fff; }
+
+/* Section labels */
+details.nav-group > summary { padding: 14px 12px 6px; }
+.nav-group-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.4);
+}
+details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 0.6); }
+.nav-group-arrow { color: rgba(255, 255, 255, 0.3); }
+
+/* Footer */
+.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
 /* --- Topbar: floating white card carrying the page title --- */
 .topbar {
@@ -125,7 +166,9 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 
 /* Mobile: the sidebar becomes a full-height overlay again, panels lose margins */
 @media (max-width: 768px) {
-    .sidebar { top: 0; left: 0; height: 100vh; border-radius: 0; }
+    /* Off-canvas drawer: restore the elevation the top-level `box-shadow:
+       none` (flush desktop rail) would otherwise strip from the overlay. */
+    .sidebar { top: 0; left: 0; height: 100vh; border-radius: 0; box-shadow: var(--shadow-md); }
     .main-wrapper { margin-left: 0; }
     .topbar { margin: 10px 10px 4px; min-height: 60px; padding: 8px 12px; }
     .topbar-title h1 { max-width: 40vw; }
@@ -614,90 +657,3 @@ details.nav-group > summary { padding: 13px 10px 5px; }
 .map-popup__row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .map-popup__price { font-weight: 800; color: #1f2a3a; font-size: 15px; }
 
-/* =====================================================================
-   Sidebar — Immobiliare Orlandi Design System port
-   Source: design-system project ui_kits/app/AppShell.jsx (Sidebar).
-   Deep-navy rail (#06224F) + royal-blue active pill (#0B3D91),
-   icon-box + Playfair wordmark lockup, 12px nav pills, section labels.
-   Appended last so it wins the cascade. Scoped to the sidebar only —
-   the topbar, cards and app primary colour are intentionally untouched.
-   BUILD-STAMP: orlandi-sidebar-ds-20260716
-   ===================================================================== */
-:root {
-    --font-brand: "Playfair Display", Georgia, "Times New Roman", serif;
-    --ds-navy:  #06224F;   /* --color-sidebar in the design system */
-    --ds-royal: #0B3D91;   /* --color-primary in the design system */
-    --sidebar-width: 240px; /* React w-60 — overrides the floating-panel 252px */
-}
-
-/* Flush full-height navy rail — matches the React AppShell sidebar
-   (fixed inset-y-0 left-0, no radius/gap/shadow). Overrides the earlier
-   floating-panel geometry in this file so the admin sidebar reads exactly
-   like the React design. The ≤768px overlay rules below still apply. */
-.sidebar {
-    background: var(--ds-navy);
-    top: 0;
-    left: 0;
-    height: 100vh;
-    border-radius: 0;
-    box-shadow: none;
-}
-.main-wrapper { margin-left: var(--sidebar-width); }
-
-/* Brand lockup — 40px icon box + stacked IMMOBILIARE / ORLANDI wordmark */
-.sidebar-brand { padding: 20px 18px 12px; }
-.sb-brand {
-    flex-direction: row; align-items: center; justify-content: flex-start;
-    gap: 12px; text-align: left;
-}
-.sb-brand__ico {
-    width: 40px; height: 40px; margin: 0; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 12px; background: rgba(255, 255, 255, 0.1);
-}
-.sb-brand__ico svg, .sb-brand__ico [data-lucide] { width: 22px; height: 22px; }
-.sb-brand__word {
-    display: flex; flex-direction: column; min-width: 0;
-    font-family: var(--font-brand); line-height: 1.05;
-}
-.sb-brand__eyebrow {
-    font-size: 12px; font-weight: 600; letter-spacing: 0.12em; padding-left: 0;
-    color: rgba(255, 255, 255, 0.7);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-}
-.sb-brand__name {
-    font-family: var(--font-brand);
-    font-size: 18px; font-weight: 800; letter-spacing: 0; line-height: 1.05; color: #fff;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-}
-
-/* Profile card — match the DS 40px avatar */
-.sb-profile__avatar { width: 40px; height: 40px; }
-
-/* Nav pills */
-.sidebar-nav { padding: 12px 12px 12px; }
-.sidebar-nav ul { gap: 4px; }
-.nav-link {
-    border-radius: 12px; padding: 10px 12px; gap: 12px;
-    font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.7);
-}
-.nav-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
-.nav-link.active {
-    background: var(--ds-royal); color: #fff; font-weight: 500;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
-}
-.nav-link .nav-icon, .nav-link [data-lucide] { width: 18px; height: 18px; color: rgba(255, 255, 255, 0.7); }
-.nav-link:hover .nav-icon, .nav-link:hover [data-lucide],
-.nav-link.active .nav-icon, .nav-link.active [data-lucide] { color: #fff; }
-
-/* Section labels */
-details.nav-group > summary { padding: 14px 12px 6px; }
-.nav-group-label {
-    font-size: 10px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.4);
-}
-details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 0.6); }
-.nav-group-arrow { color: rgba(255, 255, 255, 0.3); }
-
-/* Footer */
-.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }

@@ -188,9 +188,8 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(37,99,235,.14);
 }
-.settings-tab--active {
-    box-shadow: 0 2px 8px rgba(37,99,235,.28);
-}
+/* .settings-tab--active elevation lives in theme-orlandi.css (.btn--primary
+   group rule — the copy here always lost the cascade to it) */
 
 /* ── Profile / client-profile tabs ─────────────────────────────────────── */
 .profile-tab {

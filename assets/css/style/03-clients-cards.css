@@ -276,14 +276,8 @@ body.nav-open {
         height: auto;
     }
 
-    .sidebar {
-        transform: translateX(-100%);
-        box-shadow: var(--shadow-md);
-    }
-
-    .sidebar.open {
-        transform: translateX(0);
-    }
+    /* mobile off-canvas .sidebar / .sidebar.open rules live in
+       08-shell-dashboard.css (identical — deduped) */
 
     .sidebar-toggle {
         display: flex;

@@ -734,13 +734,8 @@ details.nav-group[open] > summary .nav-group-arrow {
     transition: border-color var(--transition), box-shadow var(--transition);
 }
 
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-light);
-}
+/* focus ring for .form-input/.form-select/.form-textarea lives in
+   07-refresh-2026.css (identical rule — deduped) */
 
 /* --------------------------------------------------------------------------
    Immobili — map + cards split view (portal-style, à la immobiliare.it)

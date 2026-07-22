@@ -244,9 +244,8 @@
     background: var(--color-zebra);
 }
 
-.data-table tbody tr:last-child td {
-    border-bottom: none;
-}
+/* tr:last-child td border removal lives in theme-orlandi.css (.lt/.data-table
+   combined rule — deduped) */
 
 .data-table tbody tr:hover {
     background: #eef4ff;
@@ -307,25 +306,9 @@
     color: #64748b;
 }
 
-.badge--success {
-    background: #dcfce7;
-    color: #15803d;
-}
-
-.badge--danger {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.badge--muted {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-.badge--warning {
-    background: #fef3c7;
-    color: #b45309;
-}
+/* .badge--success / --danger / --warning / --muted live in theme-orlandi.css
+   ("canonical semantic palette" — the copies here were duplicates, and this
+   file's --muted was dead: fully overridden by the theme's values) */
 
 .badge--log-create {
     background: #dcfce7;
