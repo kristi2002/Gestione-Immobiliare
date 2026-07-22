@@ -30,3 +30,4 @@ docker-compose.override.yml
 /node_modules/
 /assets/dist/
 .devswarm-temp/
+cookies.txt

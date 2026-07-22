@@ -316,11 +316,14 @@ async function loadUsers() {
 
 function openUserModal(user = null) {
     document.getElementById('user-modal').hidden = false;
+    document.getElementById('user-modal-alert').style.display = 'none';
     document.getElementById('user-id').value = user?.id || '';
     document.getElementById('user-username').value = user?.username || '';
     document.getElementById('user-username').disabled = !!user;
     document.getElementById('user-email').value = user?.email || '';
     document.getElementById('user-password').value = '';
+    // Password obbligatoria solo in creazione; in modifica vuota = invariata.
+    document.getElementById('user-password').required = !user;
     document.getElementById('user-role').value = user?.role || 'agent';
     document.getElementById('user-modal-title').textContent = user ? 'Modifica utente' : 'Nuovo utente';
 }
@@ -329,25 +332,42 @@ function closeUserModal() {
     document.getElementById('user-modal').hidden = true;
 }
 
+// Errore mostrato DENTRO la modale: #settings-alert sta dietro l'overlay e non si vede.
+function showUserModalAlert(msg) {
+    const el = document.getElementById('user-modal-alert');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
 async function saveUser(e) {
     e.preventDefault();
     const id = document.getElementById('user-id').value;
     const payload = {
-        username: document.getElementById('user-username').value,
+        username: document.getElementById('user-username').value.trim(),
         email: document.getElementById('user-email').value,
         password: document.getElementById('user-password').value,
         role: document.getElementById('user-role').value,
     };
+    if (!payload.username) {
+        return showUserModalAlert('Inserisci uno username.');
+    }
+    if ((!id || payload.password) && payload.password.length < 8) {
+        return showUserModalAlert('La password deve avere almeno 8 caratteri.');
+    }
     const url = id ? `${USERS_API}?id=${id}` : USERS_API;
     const method = id ? 'PUT' : 'POST';
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const json = await res.json();
-    if (json.success) {
-        closeUserModal();
-        await loadUsers();
-        showAlert('Utente salvato.', 'success');
-    } else {
-        showAlert(json.error, 'error');
+    try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const json = await res.json();
+        if (json.success) {
+            closeUserModal();
+            await loadUsers();
+            showAlert('Utente salvato.', 'success');
+        } else {
+            showUserModalAlert(json.error || 'Errore durante il salvataggio.');
+        }
+    } catch (err) {
+        showUserModalAlert('Errore di rete: ' + err.message);
     }
 }
 
