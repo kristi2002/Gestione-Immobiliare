@@ -25,28 +25,41 @@ function isLoginLocked(?string $ip = null, ?string $username = null): bool
 {
     require_once __DIR__ . '/db.php';
     $ip = $ip ?? getClientIp();
-    $db = getDB();
 
-    $ipStmt = $db->prepare(
-        'SELECT COUNT(*) FROM login_attempts
-         WHERE ip_address = :ip AND success = 0
-           AND attempted_at > DATE_SUB(NOW(), INTERVAL :mins MINUTE)'
-    );
-    $ipStmt->execute(['ip' => $ip, 'mins' => LOGIN_LOCKOUT_MINUTES]);
-    if ((int) $ipStmt->fetchColumn() >= LOGIN_MAX_ATTEMPTS) {
-        return true;
-    }
+    // A brute-force COUNTER must never be able to take down authentication. If
+    // the login_attempts table/columns are missing or otherwise unqueryable
+    // (schema drift, an un-applied migration on a given deploy), fail OPEN —
+    // report "not locked" and log loudly — rather than fataling the login page
+    // for every user across every portal. A temporarily-disabled throttle is a
+    // far smaller problem than a 100% login outage; the error_log entry is the
+    // signal to fix the schema.
+    try {
+        $db = getDB();
 
-    if ($username !== null && $username !== '') {
-        $uStmt = $db->prepare(
+        $ipStmt = $db->prepare(
             'SELECT COUNT(*) FROM login_attempts
-             WHERE username = :u AND success = 0
+             WHERE ip_address = :ip AND success = 0
                AND attempted_at > DATE_SUB(NOW(), INTERVAL :mins MINUTE)'
         );
-        $uStmt->execute(['u' => $username, 'mins' => LOGIN_LOCKOUT_MINUTES]);
-        if ((int) $uStmt->fetchColumn() >= LOGIN_MAX_ATTEMPTS) {
+        $ipStmt->execute(['ip' => $ip, 'mins' => LOGIN_LOCKOUT_MINUTES]);
+        if ((int) $ipStmt->fetchColumn() >= LOGIN_MAX_ATTEMPTS) {
             return true;
         }
+
+        if ($username !== null && $username !== '') {
+            $uStmt = $db->prepare(
+                'SELECT COUNT(*) FROM login_attempts
+                 WHERE username = :u AND success = 0
+                   AND attempted_at > DATE_SUB(NOW(), INTERVAL :mins MINUTE)'
+            );
+            $uStmt->execute(['u' => $username, 'mins' => LOGIN_LOCKOUT_MINUTES]);
+            if ((int) $uStmt->fetchColumn() >= LOGIN_MAX_ATTEMPTS) {
+                return true;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[login_throttle] isLoginLocked degraded (failing open): ' . $e->getMessage());
+        return false;
     }
 
     return false;
@@ -65,19 +78,27 @@ function recordLoginAttempt(bool $success, ?string $ip = null, ?string $username
     $ip = $ip ?? getClientIp();
     $u  = ($username !== null && $username !== '') ? $username : null;
 
-    getDB()->prepare(
-        'INSERT INTO login_attempts (ip_address, username, success) VALUES (:ip, :u, :success)'
-    )->execute(['ip' => $ip, 'u' => $u, 'success' => $success ? 1 : 0]);
+    // Best-effort: recording an attempt must never break the login flow. If the
+    // table/columns are unavailable, log and move on — the same fail-open posture
+    // as isLoginLocked(). Losing a throttle data point is acceptable; blocking a
+    // legitimate login (or leaking a stack trace) is not.
+    try {
+        getDB()->prepare(
+            'INSERT INTO login_attempts (ip_address, username, success) VALUES (:ip, :u, :success)'
+        )->execute(['ip' => $ip, 'u' => $u, 'success' => $success ? 1 : 0]);
 
-    if ($success) {
-        // Clear the counter on both axes so neither retains stale failures.
-        if ($u !== null) {
-            getDB()->prepare('DELETE FROM login_attempts WHERE ip_address = :ip OR username = :u')
-                ->execute(['ip' => $ip, 'u' => $u]);
-        } else {
-            getDB()->prepare('DELETE FROM login_attempts WHERE ip_address = :ip')
-                ->execute(['ip' => $ip]);
+        if ($success) {
+            // Clear the counter on both axes so neither retains stale failures.
+            if ($u !== null) {
+                getDB()->prepare('DELETE FROM login_attempts WHERE ip_address = :ip OR username = :u')
+                    ->execute(['ip' => $ip, 'u' => $u]);
+            } else {
+                getDB()->prepare('DELETE FROM login_attempts WHERE ip_address = :ip')
+                    ->execute(['ip' => $ip]);
+            }
         }
+    } catch (Throwable $e) {
+        error_log('[login_throttle] recordLoginAttempt skipped (degraded): ' . $e->getMessage());
     }
 }
 
