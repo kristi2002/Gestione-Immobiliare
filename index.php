@@ -225,7 +225,6 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                         <?php if (canAccessView('settings')): ?>
                         <li><a href="view.php?name=settings" class="nav-link" data-view="settings"><i class="nav-icon" data-lucide="settings"></i><span class="nav-label">Impostazioni</span></a></li>
                         <?php endif; ?>
-                        <li><a href="ecommerce/index.html" class="nav-link" target="_blank"><i class="nav-icon" data-lucide="globe"></i><span class="nav-label">Sito Web Demo</span></a></li>
                     </ul>
                 </details>
             </nav>
