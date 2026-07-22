@@ -10,13 +10,14 @@
     const CONTRACTS_API  = 'api/contracts.php';
 
     const DOC_TYPE_LABELS = {
-        invoice:   'Fattura',
-        contract:  'File contratto',
-        contratto: 'Contratto',
-        id:        'Doc. identità',
-        id_front:  'CI Fronte',
-        id_back:   'CI Retro',
-        other:     'Altro',
+        invoice:    'Fattura',
+        contract:   'File contratto',
+        contratto:  'Contratto',
+        preventivo: 'Preventivo',
+        id:         'Doc. identità',
+        id_front:   'CI Fronte',
+        id_back:    'CI Retro',
+        other:      'Altro',
     };
 
     let documents      = [];

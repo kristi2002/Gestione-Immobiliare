@@ -17,6 +17,10 @@ apiHandleOptions();
 const COMM_CHANNELS   = ['email', 'whatsapp'];
 const COMM_DIRECTIONS = ['sent', 'received'];
 
+// Limite complessivo degli allegati per singola email.
+const COMM_MAX_ATTACH_BYTES = 20 * 1024 * 1024; // 20 MB
+const COMM_MAX_ATTACH_COUNT = 20;
+
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];
@@ -156,6 +160,73 @@ function createMessage(PDO $db): void
         apiError('Proprietario non trovato o archiviato.');
     }
 
+    // ── Allegati (documenti già caricati nel gestionale) ─────────────────────
+    // Il frontend manda solo gli id: qui si rivalida TUTTO — ownership del
+    // documento rispetto al proprietario destinatario, esistenza del file su
+    // disco (path-containment guard) e peso complessivo.
+    $attachmentIds = array_values(array_filter(
+        array_unique(array_map('intval', (array) ($data['attachments'] ?? []))),
+        static fn ($v) => $v > 0
+    ));
+    $mailAttachments = []; // per il mailer: [{path, name, mime}]
+    $attachmentMeta  = null; // JSON storicizzato in communications.attachments
+
+    if ($attachmentIds) {
+        if ($direction !== 'sent' || $channel !== 'email') {
+            apiError('Gli allegati sono supportati solo per le email in uscita.');
+        }
+        if (count($attachmentIds) > COMM_MAX_ATTACH_COUNT) {
+            apiError('Massimo ' . COMM_MAX_ATTACH_COUNT . ' allegati per messaggio.');
+        }
+
+        require_once __DIR__ . '/../config/upload_guard.php';
+
+        // Un documento è allegabile se appartiene al proprietario: collegato a
+        // lui direttamente, oppure a un suo immobile, oppure a un suo contratto.
+        $in   = implode(',', array_fill(0, count($attachmentIds), '?'));
+        $stmt = $db->prepare(
+            "SELECT d.id, d.title, d.original_name, d.file_path, d.mime_type, d.file_size
+               FROM documents d
+               LEFT JOIN properties p  ON p.id  = d.property_id
+               LEFT JOIN contracts  ct ON ct.id = d.contract_id
+              WHERE d.id IN ({$in})
+                AND ( (d.client_id  IS NOT NULL AND d.client_id  = ?)
+                   OR (p.client_id  IS NOT NULL AND p.client_id  = ?)
+                   OR (ct.client_id IS NOT NULL AND ct.client_id = ?) )"
+        );
+        $stmt->execute(array_merge($attachmentIds, [$clientId, $clientId, $clientId]));
+
+        $byId = [];
+        foreach ($stmt->fetchAll() as $doc) {
+            $byId[(int) $doc['id']] = $doc;
+        }
+
+        $totalSize = 0;
+        $meta      = [];
+        foreach ($attachmentIds as $docId) {
+            $doc = $byId[$docId] ?? null;
+            if (!$doc) {
+                apiError("Documento #{$docId} non trovato o non collegato a questo proprietario.", 403);
+            }
+            $fullPath = safeUploadRealPath((string) $doc['file_path']);
+            if ($fullPath === null) {
+                $label = $doc['title'] ?: $doc['original_name'];
+                apiError("Il file \"{$label}\" non esiste più sul server: rimuovilo dagli allegati e riprova.", 410);
+            }
+            $size       = filesize($fullPath) ?: (int) $doc['file_size'];
+            $totalSize += $size;
+            $mailAttachments[] = ['path' => $fullPath, 'name' => $doc['original_name'], 'mime' => $doc['mime_type']];
+            $meta[]            = ['id' => $docId, 'name' => $doc['original_name'], 'size' => $size];
+        }
+
+        if ($totalSize > COMM_MAX_ATTACH_BYTES) {
+            $mb = number_format($totalSize / 1048576, 1, ',', '');
+            apiError("Allegati troppo pesanti: totale {$mb} MB, il massimo consentito è 20 MB. Rimuovi qualche documento.", 413);
+        }
+
+        $attachmentMeta = json_encode($meta, JSON_UNESCAPED_UNICODE);
+    }
+
     $fromEmail = getMailConfig()['agency_email'];
     $toEmail   = $client['email'];
     $status    = $direction === 'received' ? 'received' : 'sent';
@@ -167,7 +238,7 @@ function createMessage(PDO $db): void
                 apiError('Il proprietario non ha un indirizzo email configurato.');
             }
 
-            $result = sendHtmlEmail($client['email'], $subject ?? '(nessun oggetto)', $body);
+            $result = sendHtmlEmail($client['email'], $subject ?? '(nessun oggetto)', $body, $mailAttachments);
 
             if (!$result['success']) {
                 apiError($result['error'] ?? 'Invio fallito.');
@@ -197,10 +268,10 @@ function createMessage(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO communications
-            (client_id, direction, channel, subject, body,
+            (client_id, direction, channel, subject, body, attachments,
              from_email, to_email, status, external_id)
          VALUES
-            (:client_id, :direction, :channel, :subject, :body,
+            (:client_id, :direction, :channel, :subject, :body, :attachments,
              :from_email, :to_email, :status, :external_id)"
     );
     $stmt->execute([
@@ -209,14 +280,16 @@ function createMessage(PDO $db): void
         'channel'     => $channel,
         'subject'     => $subject,
         'body'        => $body,
+        'attachments' => $attachmentMeta,
         'from_email'  => $fromEmail,
         'to_email'    => $toEmail,
         'status'      => $status,
         'external_id' => $externalId,
     ]);
 
-    $newId = (int) $db->lastInsertId();
-    logActivity('create', 'communication', $newId, "Comunicazione {$channel} ({$direction}) — proprietario #{$clientId}");
+    $newId    = (int) $db->lastInsertId();
+    $attInfo  = $mailAttachments ? ' — ' . count($mailAttachments) . ' allegati' : '';
+    logActivity('create', 'communication', $newId, "Comunicazione {$channel} ({$direction}) — proprietario #{$clientId}{$attInfo}");
     getMessage($db, $newId);
 }
 

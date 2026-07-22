@@ -5,7 +5,7 @@
 
 require_once __DIR__ . '/settings.php';
 
-function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null): array
+function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null, array $attachments = []): array
 {
     $cfg = getMailConfig();
 
@@ -13,22 +13,35 @@ function sendClientEmail(string $to, string $subject, string $body, ?string $htm
         return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'Email destinatario non valida.'];
     }
 
+    // Gli allegati devono esistere PRIMA di aprire la connessione: un'email
+    // spedita con meno allegati di quelli promessi è peggio di un errore chiaro.
+    foreach ($attachments as $att) {
+        if (empty($att['path']) || !is_readable($att['path'])) {
+            $name = $att['name'] ?? basename((string) ($att['path'] ?? ''));
+            return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => "Allegato non trovato sul server: {$name}."];
+        }
+    }
+
     if (!$cfg['mail_enabled']) {
         // Mail is DISABLED — nothing is actually sent. We return success so dev
         // flows aren't blocked, but flag it as a simulation and stamp the id so the
         // caller/UI can be honest instead of claiming the message was delivered.
-        error_log('[mail] SIMULATED send (mail_enabled=false) to ' . $to . ' — subject: ' . $subject);
+        error_log('[mail] SIMULATED send (mail_enabled=false) to ' . $to . ' — subject: ' . $subject
+            . ($attachments ? ' — allegati: ' . count($attachments) : ''));
         return ['success' => true, 'status' => 'sent', 'external_id' => 'SIMULATED-' . uniqid(), 'simulated' => true, 'error' => null];
     }
 
     if ($cfg['smtp_host'] !== '') {
-        return sendViaSmtp($to, $subject, $body, $cfg, $htmlBody);
+        return sendViaSmtp($to, $subject, $body, $cfg, $htmlBody, $attachments);
     }
 
     $from = $cfg['agency_name'] . ' <' . $cfg['agency_email'] . '>';
     $headers = ['From: ' . $from, 'Reply-To: ' . $cfg['agency_email'], 'MIME-Version: 1.0'];
 
-    if ($htmlBody !== null) {
+    if ($attachments) {
+        [$contentType, $message] = buildMixedMimeBody($body, $htmlBody, $attachments);
+        $headers[] = 'Content-Type: ' . $contentType;
+    } elseif ($htmlBody !== null) {
         $boundary = 'b_' . uniqid();
         $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
         $message = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{$body}\r\n"
@@ -51,7 +64,42 @@ function sendAdminEmail(string $subject, string $body, ?string $htmlBody = null)
     return sendClientEmail($cfg['agency_email'], $subject, $body, $htmlBody);
 }
 
-function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null): array
+/**
+ * Corpo MIME multipart/mixed: testo (o alternative testo+HTML) + allegati base64.
+ * Restituisce [valore header Content-Type, corpo del messaggio].
+ * I path degli allegati sono già stati verificati dal chiamante.
+ */
+function buildMixedMimeBody(string $body, ?string $htmlBody, array $attachments): array
+{
+    $mixed = 'mix_' . uniqid();
+    $out   = '';
+
+    if ($htmlBody !== null) {
+        $alt  = 'alt_' . uniqid();
+        $out .= "--{$mixed}\r\nContent-Type: multipart/alternative; boundary=\"{$alt}\"\r\n\r\n";
+        $out .= "--{$alt}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{$body}\r\n";
+        $out .= "--{$alt}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{$htmlBody}\r\n";
+        $out .= "--{$alt}--\r\n";
+    } else {
+        $out .= "--{$mixed}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{$body}\r\n";
+    }
+
+    foreach ($attachments as $att) {
+        $content = (string) @file_get_contents($att['path']);
+        $name    = str_replace(['"', "\r", "\n"], '', $att['name'] ?? basename($att['path']));
+        $mime    = !empty($att['mime']) ? $att['mime'] : 'application/octet-stream';
+        $out .= "--{$mixed}\r\n";
+        $out .= "Content-Type: {$mime}; name=\"{$name}\"\r\n";
+        $out .= "Content-Transfer-Encoding: base64\r\n";
+        $out .= "Content-Disposition: attachment; filename=\"{$name}\"; filename*=UTF-8''" . rawurlencode($name) . "\r\n\r\n";
+        $out .= chunk_split(base64_encode($content), 76, "\r\n");
+    }
+    $out .= "--{$mixed}--";
+
+    return ['multipart/mixed; boundary="' . $mixed . '"', $out];
+}
+
+function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null, array $attachments = []): array
 {
     $cfg ??= getMailConfig();
 
@@ -128,7 +176,12 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
     $message .= "Subject: {$subject}\r\n";
     $message .= "MIME-Version: 1.0\r\n";
 
-    if ($htmlBody !== null) {
+    if ($attachments) {
+        [$contentType, $mimeBody] = buildMixedMimeBody($body, $htmlBody, $attachments);
+        $message .= "Content-Type: {$contentType}\r\n\r\n";
+        // Dot-stuffing sull'intero corpo (le righe base64 non iniziano mai con '.').
+        $message .= str_replace(["\r\n.", "\n."], ["\r\n..", "\n.."], $mimeBody) . "\r\n.\r\n";
+    } elseif ($htmlBody !== null) {
         $boundary = 'b_' . uniqid();
         $message .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n\r\n";
         $message .= "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n";

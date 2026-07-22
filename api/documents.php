@@ -12,7 +12,7 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 
 apiHandleOptions();
 
-const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'other'];
+const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'preventivo', 'other'];
 
 const ALLOWED_MIMES = [
     'application/pdf',

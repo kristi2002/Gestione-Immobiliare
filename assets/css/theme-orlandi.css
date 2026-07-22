@@ -389,6 +389,57 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .lt-menu__sep { height: 1px; background: var(--color-border); margin: 4px 6px; }
 @media (max-width: 900px) { .lt-contacts, .lt thead th:nth-child(3) { display: none; } }
 
+/* ── Modal Invia messaggio: sezione "Allega documenti" ─────────────────────
+   Toggle circolari per categoria (D blu, F verde, C ambra, P viola) e chips
+   degli allegati selezionati. */
+.attach-filters { display: flex; gap: 8px; margin-bottom: 4px; }
+.attach-toggle {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid #cbd5e1; background: none; color: #64748b;
+    font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.attach-toggle.is-active { color: #fff; }
+.attach-toggle--d.is-active { background: #2563eb; border-color: #2563eb; }
+.attach-toggle--f.is-active { background: #16a34a; border-color: #16a34a; }
+.attach-toggle--c.is-active { background: #d97706; border-color: #d97706; }
+.attach-toggle--p.is-active { background: #7c3aed; border-color: #7c3aed; }
+.attach-legend { margin: 0 0 10px; font-size: 12px; }
+.attach-row { display: flex; gap: 8px; align-items: center; }
+.attach-row .form-select { flex: 1; min-width: 0; }
+.attach-chips-box { margin-top: 12px; }
+.attach-chips-title {
+    display: block; font-size: 12.5px; font-weight: 600;
+    color: var(--color-text); margin-bottom: 6px;
+}
+.attach-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.attach-chip {
+    display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+    padding: 3px 6px 3px 4px; border: 1px solid var(--color-border);
+    border-radius: 999px; background: var(--color-surface); font-size: 12.5px;
+}
+.attach-chip__dot {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 700;
+}
+.attach-chip__dot--d { background: #2563eb; }
+.attach-chip__dot--f { background: #16a34a; }
+.attach-chip__dot--c { background: #d97706; }
+.attach-chip__dot--p { background: #7c3aed; }
+.attach-chip__name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attach-chip__x {
+    border: none; background: none; cursor: pointer; color: #94a3b8;
+    font-size: 15px; line-height: 1; padding: 0 2px;
+}
+.attach-chip__x:hover { color: #dc2626; }
+.attach-chip--flash { animation: attach-chip-flash 0.9s ease; }
+@keyframes attach-chip-flash {
+    0%, 60% { background: #fef3c7; border-color: #f59e0b; }
+    100%    { background: var(--color-surface); border-color: var(--color-border); }
+}
+
 /* status pills row + card grids hosted inside a list card */
 .filter-pills--inset { padding: 0 20px 12px; }
 .entity-grid--inset { padding: 4px 20px 18px; }

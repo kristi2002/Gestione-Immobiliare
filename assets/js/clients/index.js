@@ -618,6 +618,17 @@ function bindMessageModal() {
     document.getElementById('message-send').addEventListener('click', sendMessage);
     document.getElementById('message-template').addEventListener('change', applyMessageTemplate);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeMessageModal(); });
+
+    // Sezione "Allega documenti"
+    document.getElementById('attach-property').addEventListener('change', loadAttachableDocs);
+    document.getElementById('attach-document').addEventListener('change', updateAttachAddState);
+    document.getElementById('attach-add').addEventListener('click', addAttachment);
+    document.querySelectorAll('#attach-section .attach-toggle').forEach(t =>
+        t.addEventListener('click', () => {
+            t.classList.toggle('is-active');
+            t.setAttribute('aria-pressed', String(t.classList.contains('is-active')));
+            loadAttachableDocs();
+        }));
 }
 
 async function openMessageModal(client) {
@@ -636,16 +647,19 @@ async function openMessageModal(client) {
     document.getElementById('message-send').disabled = noEmail;
     if (noEmail) showMessageError('Questo proprietario non ha un indirizzo email registrato.');
 
+    resetAttachments();
+
     modal.hidden = false;
     if (window.lucide) window.lucide.createIcons();
     document.getElementById('message-subject').focus();
 
-    await ensureEmailTemplates();
+    await Promise.all([ensureEmailTemplates(), loadAttachProperties(client)]);
 }
 
 function closeMessageModal() {
     document.getElementById('message-modal').hidden = true;
     messageClient = null;
+    resetAttachments();
 }
 
 async function ensureEmailTemplates() {
@@ -720,11 +734,171 @@ function clearMessageError() {
     document.getElementById('message-modal-error').style.display = 'none';
 }
 
+// -------------------------------------------------------------------------
+// Allega documenti — filtri D/F/C/P, select immobile→documento, chips.
+// I file vivono tutti nella tabella `documents`, quindi il valore inviato
+// è il solo id (input hidden name="allegati[]" dentro ogni chip).
+// -------------------------------------------------------------------------
+
+const ATTACH_MAX_BYTES = 20 * 1024 * 1024; // deve combaciare col limite server (20 MB)
+const ATTACH_CAT_NAMES = { D: 'Documenti', F: 'Fatture', C: 'Contratti', P: 'Preventivi' };
+
+let attachSelected = new Map(); // docId → {id, tipo, nome_file, dimensione}
+let attachDocs     = [];        // documenti attualmente proposti nella select
+
+function resetAttachments() {
+    attachSelected.clear();
+    attachDocs = [];
+    document.querySelectorAll('#attach-section .attach-toggle').forEach(t => {
+        t.classList.add('is-active');
+        t.setAttribute('aria-pressed', 'true');
+    });
+    document.getElementById('attach-property').innerHTML = '<option value="">— Immobile —</option>';
+    const docSel = document.getElementById('attach-document');
+    docSel.innerHTML = '<option value="">— Prima scegli l\'immobile —</option>';
+    docSel.disabled = true;
+    document.getElementById('attach-add').disabled = true;
+    renderAttachChips();
+}
+
+// La select Immobile propone SOLO gli immobili del destinatario, più la voce
+// "senza immobile" per i documenti collegati direttamente al proprietario.
+async function loadAttachProperties(client) {
+    const sel = document.getElementById('attach-property');
+    const baseOptions = '<option value="">— Immobile —</option>' +
+        '<option value="0">Documenti del proprietario (senza immobile)</option>';
+    sel.innerHTML = baseOptions;
+    try {
+        const res  = await fetch(`api/properties.php?client_id=${client.id}&limit=200`);
+        const json = await res.json();
+        if (!messageClient || messageClient.id !== client.id) return; // modal cambiata nel frattempo
+        const items = json.success ? (json.data.items || json.data || []) : [];
+        sel.innerHTML = baseOptions + items.map(p =>
+            `<option value="${p.id}">${escapeHtml(p.address || '')}${p.city ? ', ' + escapeHtml(p.city) : ''}</option>`
+        ).join('');
+    } catch (_) { /* restano le voci base */ }
+}
+
+async function loadAttachableDocs() {
+    const propSel = document.getElementById('attach-property');
+    const docSel  = document.getElementById('attach-document');
+    const propVal = propSel.value;
+
+    const setPlaceholder = (text) => {
+        attachDocs = [];
+        docSel.innerHTML = `<option value="">${escapeHtml(text)}</option>`;
+        docSel.disabled = true;
+        updateAttachAddState();
+    };
+
+    if (!messageClient || propVal === '') { setPlaceholder('— Prima scegli l\'immobile —'); return; }
+
+    const cats = [...document.querySelectorAll('#attach-section .attach-toggle.is-active')]
+        .map(t => t.dataset.cat);
+    if (!cats.length) { setPlaceholder('Nessuna categoria selezionata'); return; }
+
+    docSel.disabled = true;
+    docSel.innerHTML = '<option value="">Caricamento…</option>';
+    try {
+        const res  = await fetch(`api/get_attachable_documents.php?client_id=${messageClient.id}` +
+            `&property_id=${propVal}&categories=${cats.join(',')}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        if (propSel.value !== propVal) return; // risposta ormai vecchia
+        attachDocs = json.data.items || [];
+        if (!attachDocs.length) { setPlaceholder('Nessun documento per i filtri selezionati'); return; }
+        docSel.innerHTML = '<option value="">— Documento —</option>' + attachDocs.map(d =>
+            `<option value="${d.id}">[${d.tipo}] ${escapeHtml(d.nome_file)}</option>`).join('');
+        docSel.disabled = false;
+    } catch (err) {
+        setPlaceholder(err.message || 'Errore di caricamento');
+        return;
+    }
+    updateAttachAddState();
+}
+
+// "Aggiungi" abilitato solo con immobile E documento selezionati.
+function updateAttachAddState() {
+    const propOk = document.getElementById('attach-property').value !== '';
+    const docOk  = document.getElementById('attach-document').value !== '';
+    document.getElementById('attach-add').disabled = !(propOk && docOk);
+}
+
+function addAttachment() {
+    const docSel = document.getElementById('attach-document');
+    const id = Number(docSel.value);
+    if (!id) return;
+
+    // Niente duplicati: evidenzia la chip esistente invece di aggiungerla.
+    if (attachSelected.has(id)) { flashChip(id); return; }
+
+    const doc = attachDocs.find(d => d.id === id);
+    if (!doc) return;
+
+    const total = [...attachSelected.values()].reduce((s, d) => s + (d.dimensione || 0), 0)
+        + (doc.dimensione || 0);
+    if (total > ATTACH_MAX_BYTES) {
+        showMessageError(`Limite allegati superato: il totale (${formatAttachSize(total)}) eccede i 20 MB. Rimuovi qualche documento.`);
+        return;
+    }
+
+    if (messageClient?.email) clearMessageError(); // non coprire l'avviso "nessuna email"
+    attachSelected.set(id, doc);
+    renderAttachChips();
+    // La riga resta com'è: si può cambiare immobile e continuare ad aggiungere.
+}
+
+function renderAttachChips() {
+    const box  = document.getElementById('attach-chips-box');
+    const wrap = document.getElementById('attach-chips');
+    const n = attachSelected.size;
+    document.getElementById('attach-count').textContent = n;
+    box.hidden = n === 0;
+    wrap.innerHTML = [...attachSelected.values()].map(d => `
+        <span class="attach-chip" data-id="${d.id}">
+            <span class="attach-chip__dot attach-chip__dot--${d.tipo.toLowerCase()}" title="${ATTACH_CAT_NAMES[d.tipo] || d.tipo}">${d.tipo}</span>
+            <span class="attach-chip__name" title="${escapeHtml(d.nome_file)}">${escapeHtml(d.nome_file)}</span>
+            <button type="button" class="attach-chip__x" data-remove="${d.id}" aria-label="Rimuovi allegato">&times;</button>
+            <input type="hidden" name="allegati[]" value="${d.id}">
+        </span>`).join('');
+    wrap.querySelectorAll('[data-remove]').forEach(b =>
+        b.addEventListener('click', () => {
+            attachSelected.delete(Number(b.dataset.remove));
+            renderAttachChips();
+        }));
+    updateSendButtonLabel();
+}
+
+function flashChip(id) {
+    const chip = document.querySelector(`#attach-chips .attach-chip[data-id="${id}"]`);
+    if (!chip) return;
+    chip.classList.remove('attach-chip--flash');
+    void chip.offsetWidth; // forza il reflow per riavviare l'animazione
+    chip.classList.add('attach-chip--flash');
+}
+
+function updateSendButtonLabel() {
+    const label = document.getElementById('message-send-label');
+    if (!label) return;
+    const n = attachSelected.size;
+    label.textContent = n ? `Invia (${n} allegat${n === 1 ? 'o' : 'i'})` : 'Invia email';
+}
+
+function formatAttachSize(bytes) {
+    return bytes >= 1048576
+        ? (bytes / 1048576).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' MB'
+        : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+}
+
 async function sendMessage() {
     if (!messageClient) return;
     const subject = document.getElementById('message-subject').value.trim();
     const body    = document.getElementById('message-body').value.trim();
     if (!body) { showMessageError('Il testo del messaggio è obbligatorio.'); return; }
+
+    // Gli id degli allegati vengono letti dagli input hidden delle chips.
+    const attachments = [...document.querySelectorAll('#attach-chips input[name="allegati[]"]')]
+        .map(i => Number(i.value)).filter(Boolean);
 
     const btn  = document.getElementById('message-send');
     const orig = btn.innerHTML;
@@ -741,13 +915,17 @@ async function sendMessage() {
                 direction: 'sent',
                 subject:   subject || null,
                 body,
+                attachments,
             }),
         });
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'Invio fallito.');
         const name = `${messageClient.name} ${messageClient.surname}`;
+        const attInfo = attachments.length
+            ? ` con ${attachments.length} allegat${attachments.length === 1 ? 'o' : 'i'}`
+            : '';
         closeMessageModal();
-        showAlert(`Messaggio inviato a ${name}.`, 'success');
+        showAlert(`Messaggio inviato a ${name}${attInfo}.`, 'success');
     } catch (err) {
         showMessageError(err.message);
     } finally {

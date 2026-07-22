@@ -160,6 +160,32 @@
                 <label for="message-subject">Oggetto</label>
                 <input type="text" id="message-subject" class="form-input" placeholder="Oggetto del messaggio" autocomplete="off">
             </div>
+
+            <!-- Allega documenti: filtri categoria + riga di selezione + chips -->
+            <div class="form-group attach-section" id="attach-section">
+                <label>Allega documenti</label>
+                <div class="attach-filters" role="group" aria-label="Filtra documenti per categoria">
+                    <button type="button" class="attach-toggle attach-toggle--d is-active" data-cat="D" title="Documenti (identità, altro)" aria-pressed="true">D</button>
+                    <button type="button" class="attach-toggle attach-toggle--f is-active" data-cat="F" title="Fatture" aria-pressed="true">F</button>
+                    <button type="button" class="attach-toggle attach-toggle--c is-active" data-cat="C" title="Contratti" aria-pressed="true">C</button>
+                    <button type="button" class="attach-toggle attach-toggle--p is-active" data-cat="P" title="Preventivi" aria-pressed="true">P</button>
+                </div>
+                <p class="attach-legend text-muted">D = Documenti · F = Fatture · C = Contratti · P = Preventivi</p>
+                <div class="attach-row">
+                    <select id="attach-property" class="form-select" aria-label="Immobile">
+                        <option value="">— Immobile —</option>
+                    </select>
+                    <select id="attach-document" class="form-select" aria-label="Documento" disabled>
+                        <option value="">— Prima scegli l'immobile —</option>
+                    </select>
+                    <button type="button" class="btn btn--sm btn--primary" id="attach-add" disabled>Aggiungi</button>
+                </div>
+                <div class="attach-chips-box" id="attach-chips-box" hidden>
+                    <span class="attach-chips-title">Allegati (<span id="attach-count">0</span>)</span>
+                    <div class="attach-chips" id="attach-chips"></div>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="message-body">Testo *</label>
                 <textarea id="message-body" class="form-textarea" rows="8" placeholder="Scrivi il messaggio…"></textarea>
@@ -167,7 +193,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="message-cancel">Annulla</button>
-            <button type="button" class="btn btn--primary" id="message-send"><i data-lucide="send"></i> Invia email</button>
+            <button type="button" class="btn btn--primary" id="message-send"><i data-lucide="send"></i> <span id="message-send-label">Invia email</span></button>
         </div>
     </div>
 </div>

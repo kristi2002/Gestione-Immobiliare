@@ -154,7 +154,15 @@ function runSqlFile(PDO $db, string $file): void
         if (preg_match('/^USE\s+[`\w]+\s*$/i', $statement)) {
             continue;
         }
-        $db->exec($statement);
+        // query() + closeCursor() invece di exec(): i guard idempotenti delle
+        // migrazioni (IF(<esiste>, 'SELECT 1', '<DDL>') + PREPARE/EXECUTE)
+        // producono un result set quando prendono il ramo 'SELECT 1'; exec()
+        // non lo consuma e la statement successiva fallisce con l'errore 2014
+        // "Cannot execute queries while other unbuffered queries are active".
+        $stmt = $db->query($statement);
+        if ($stmt instanceof PDOStatement) {
+            $stmt->closeCursor();
+        }
     }
 }
 

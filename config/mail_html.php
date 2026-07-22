@@ -53,8 +53,8 @@ Messaggio automatico da {$agency}. Non rispondere a questa email se non necessar
 HTML;
 }
 
-function sendHtmlEmail(string $to, string $subject, string $bodyText): array
+function sendHtmlEmail(string $to, string $subject, string $bodyText, array $attachments = []): array
 {
     $html = wrapHtmlEmail($subject, $bodyText);
-    return sendClientEmail($to, $subject, $bodyText, $html);
+    return sendClientEmail($to, $subject, $bodyText, $html, $attachments);
 }
