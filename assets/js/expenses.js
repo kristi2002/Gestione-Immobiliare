@@ -235,85 +235,9 @@
     // Modal
     // -------------------------------------------------------------------------
 
-    function openModal(expense = null) {
-        els.form.reset();
-        document.getElementById('expense-id').value = '';
-
-        if (expense) {
-            els.modalTitle.textContent = 'Modifica Spesa';
-            document.getElementById('expense-id').value          = expense.id;
-            document.getElementById('expense-category').value     = expense.category;
-            document.getElementById('expense-amount').value       = expense.amount;
-            document.getElementById('expense-description').value  = expense.description;
-            document.getElementById('expense-date').value         = expense.expense_date;
-            document.getElementById('expense-property').value     = expense.property_id || '';
-            document.getElementById('expense-client').value       = expense.client_id || '';
-            document.getElementById('expense-supplier').value     = expense.supplier_id || '';
-            document.getElementById('expense-receipt').value      = expense.receipt_url || '';
-            document.getElementById('expense-notes').value        = expense.notes || '';
-        } else {
-            els.modalTitle.textContent = 'Nuova Spesa';
-            document.getElementById('expense-category').value = 'altro';
-            document.getElementById('expense-date').value = new Date().toISOString().slice(0, 10);
-        }
-
-        els.modal.hidden = false;
-        document.getElementById('expense-description').focus();
-    }
-
-    function closeModal() {
-        els.modal.hidden = true;
-    }
-
     // -------------------------------------------------------------------------
     // CRUD
     // -------------------------------------------------------------------------
-
-    async function handleFormSubmit(e) {
-        e.preventDefault();
-
-        const id   = document.getElementById('expense-id').value;
-        const data = {
-            category:     document.getElementById('expense-category').value,
-            amount:       document.getElementById('expense-amount').value,
-            description:  document.getElementById('expense-description').value.trim(),
-            expense_date: document.getElementById('expense-date').value,
-            property_id:  document.getElementById('expense-property').value || null,
-            client_id:    document.getElementById('expense-client').value || null,
-            supplier_id:  document.getElementById('expense-supplier').value || null,
-            receipt_url:  document.getElementById('expense-receipt').value.trim(),
-            notes:        document.getElementById('expense-notes').value.trim(),
-        };
-
-        const btn = document.getElementById('expense-modal-save');
-        btn.disabled = true;
-        btn.textContent = 'Salvataggio...';
-
-        try {
-            await saveExpense(data, id || null);
-            closeModal();
-            showAlert('Spesa salvata.', 'success');
-            loadExpenses();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Salva';
-        }
-    }
-
-    async function saveExpense(data, id) {
-        const url    = id ? `${API}?id=${id}` : API;
-        const method = id ? 'PUT' : 'POST';
-        const res  = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        return json.data;
-    }
 
     async function deleteExpense(id) {
         try {

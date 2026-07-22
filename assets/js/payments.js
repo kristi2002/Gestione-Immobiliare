@@ -225,81 +225,9 @@
     // Modal
     // -------------------------------------------------------------------------
 
-    function openModal(payment = null) {
-        els.form.reset();
-        document.getElementById('payment-id').value = '';
-
-        if (payment) {
-            els.modalTitle.textContent = 'Modifica Pagamento';
-            document.getElementById('payment-id').value        = payment.id;
-            document.getElementById('payment-tenant').value     = payment.tenant_id;
-            document.getElementById('payment-property').value   = payment.property_id;
-            const contractInput = document.getElementById('payment-contract-id');
-            if (contractInput) contractInput.value = payment.contract_id || '';
-            document.getElementById('payment-amount').value     = payment.amount;
-            document.getElementById('payment-due-date').value   = payment.due_date;
-            document.getElementById('payment-paid-date').value  = payment.paid_date || '';
-            document.getElementById('payment-status').value     = payment.status;
-            document.getElementById('payment-notes').value      = payment.notes || '';
-        } else {
-            els.modalTitle.textContent = 'Nuovo Pagamento';
-            document.getElementById('payment-status').value = 'pending';
-        }
-
-        els.modal.hidden = false;
-        document.getElementById('payment-tenant').focus();
-    }
-
-    function closeModal() {
-        els.modal.hidden = true;
-    }
-
-    function onTenantChange() {
-        const opt = els.tenantSelect.selectedOptions[0];
-        if (opt && opt.dataset.property) {
-            els.propSelect.value = opt.dataset.property;
-        }
-        const contractInput = document.getElementById('payment-contract-id');
-        if (contractInput && opt) {
-            contractInput.value = opt.dataset.contract || '';
-        }
-    }
-
     // -------------------------------------------------------------------------
     // CRUD
     // -------------------------------------------------------------------------
-
-    async function handleFormSubmit(e) {
-        e.preventDefault();
-
-        const id   = document.getElementById('payment-id').value;
-        const data = {
-            tenant_id:   document.getElementById('payment-tenant').value,
-            property_id: document.getElementById('payment-property').value,
-            contract_id: document.getElementById('payment-contract-id')?.value || null,
-            amount:      document.getElementById('payment-amount').value,
-            due_date:    document.getElementById('payment-due-date').value,
-            paid_date:   document.getElementById('payment-paid-date').value,
-            status:      document.getElementById('payment-status').value,
-            notes:       document.getElementById('payment-notes').value.trim(),
-        };
-
-        const btn = document.getElementById('payment-modal-save');
-        btn.disabled = true;
-        btn.textContent = 'Salvataggio...';
-
-        try {
-            await savePayment(data, id || null);
-            closeModal();
-            showAlert('Pagamento salvato.', 'success');
-            loadPayments();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Salva';
-        }
-    }
 
     async function savePayment(data, id) {
         const url    = id ? `${API}?id=${id}` : API;
@@ -433,5 +361,4 @@
     }
 
     init();
-    document.getElementById('payment-tenant')?.addEventListener('change', onTenantChange);
 })();
