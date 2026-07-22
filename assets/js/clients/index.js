@@ -522,14 +522,34 @@ async function confirmDelete() {
 let rowMenuEl = null;
 
 function bindRowMenu() {
-    document.addEventListener('click', (e) => {
+    // The entry module re-runs on every visit to this view, so these
+    // document/window listeners must self-remove once the view is gone
+    // (same pattern as bindRail's Escape handler).
+    const grid = els.grid;
+    const gone = () => !document.body.contains(grid);
+    function cleanup() {
+        closeRowMenu();
+        document.removeEventListener('click', onDocClick);
+        document.removeEventListener('keydown', onKey);
+        window.removeEventListener('scroll', onAnyMove, true);
+        window.removeEventListener('resize', onAnyMove);
+    }
+    function onDocClick(e) {
+        if (gone()) { cleanup(); return; }
         if (rowMenuEl && !rowMenuEl.contains(e.target)) closeRowMenu();
-    });
-    document.addEventListener('keydown', (e) => {
+    }
+    function onKey(e) {
+        if (gone()) { cleanup(); return; }
         if (e.key === 'Escape') closeRowMenu();
-    });
-    window.addEventListener('scroll', closeRowMenu, true);
-    window.addEventListener('resize', closeRowMenu);
+    }
+    function onAnyMove() {
+        if (gone()) { cleanup(); return; }
+        closeRowMenu();
+    }
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onAnyMove, true);
+    window.addEventListener('resize', onAnyMove);
 }
 
 function closeRowMenu() {
