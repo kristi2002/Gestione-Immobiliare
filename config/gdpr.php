@@ -319,6 +319,12 @@ function gdprAnonymizeSubject(PDO $db, string $subjectType, int $subjectId): boo
               WHERE client_id = :id", ['id' => $subjectId]);
         $scrub($db,
             "UPDATE appointments SET notes = NULL WHERE client_id = :id", ['id' => $subjectId]);
+        // Owner-private free text on the owner's properties (scheda "Note — non
+        // visibile in pubblicità"). Same category as appointments.notes above.
+        // The property row and its public listing fields are retained as asset
+        // data; only the private note tied to the erased owner is cleared.
+        $scrub($db,
+            "UPDATE properties SET internal_notes = NULL WHERE client_id = :id", ['id' => $subjectId]);
     } else { // tenant
         $scrub($db,
             "UPDATE whatsapp_messages
