@@ -376,7 +376,7 @@ function createProperty(PDO $db): void
 
 function updateProperty(PDO $db, int $id): void
 {
-    $stmt = $db->prepare('SELECT price, price_type FROM properties WHERE id = :id');
+    $stmt = $db->prepare('SELECT price, price_type, building_id FROM properties WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
@@ -385,6 +385,14 @@ function updateProperty(PDO $db, int $id): void
 
     $data      = apiGetJsonBody();
     $validated = validatePropertyInput($db, $data);
+
+    // The edificio↔immobile link is owned by buildings.php (assign/unlink from
+    // the edificio page); the immobili scheda form has no building field and
+    // never sends building_id. Without this guard, saving the scheda would
+    // null building_id and silently detach the property from its building.
+    if (!array_key_exists('building_id', $data)) {
+        $validated['building_id'] = $existing['building_id'] !== null ? (int) $existing['building_id'] : null;
+    }
 
     // Compare numerically — the DB stores DECIMAL (e.g. "1413.00") while the
     // submitted value is a float, so a string compare would always differ.
