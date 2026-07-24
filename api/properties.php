@@ -376,7 +376,7 @@ function createProperty(PDO $db): void
 
 function updateProperty(PDO $db, int $id): void
 {
-    $stmt = $db->prepare('SELECT price, price_type, building_id FROM properties WHERE id = :id');
+    $stmt = $db->prepare('SELECT * FROM properties WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
@@ -386,12 +386,15 @@ function updateProperty(PDO $db, int $id): void
     $data      = apiGetJsonBody();
     $validated = validatePropertyInput($db, $data);
 
-    // The edificio↔immobile link is owned by buildings.php (assign/unlink from
-    // the edificio page); the immobili scheda form has no building field and
-    // never sends building_id. Without this guard, saving the scheda would
-    // null building_id and silently detach the property from its building.
-    if (!array_key_exists('building_id', $data)) {
-        $validated['building_id'] = $existing['building_id'] !== null ? (int) $existing['building_id'] : null;
+    // Merge semantics for updates: any column whose key is absent from the
+    // request body keeps its stored value. Partial callers must never blank the
+    // fields they don't send — e.g. the Mappa batch geocode (coordinates only,
+    // and it runs over every property) or the edificio↔immobile link, which is
+    // owned by buildings.php and never travels through the scheda form.
+    foreach ($validated as $col => $_) {
+        if (!array_key_exists($col, $data) && array_key_exists($col, $existing)) {
+            $validated[$col] = $existing[$col];
+        }
     }
 
     // Compare numerically — the DB stores DECIMAL (e.g. "1413.00") while the

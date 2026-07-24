@@ -286,13 +286,12 @@
     }
 
     async function savePropertyCoords(p, lat, lng, geoConfidence = null) {
+        // Coordinates-only update. Send the minimum the API requires to validate
+        // (proprietario + indirizzo) plus the coords; every other column is
+        // omitted so updateProperty preserves it. Sending the full record here
+        // would blank the scheda fields the map list doesn't carry.
         const body = {
-            client_id: p.client_id, address: p.address, city: p.city, cap: p.cap || '',
-            province: p.province || '',
-            sqm: p.sqm ?? '', rooms: p.rooms ?? '', bathrooms: p.bathrooms ?? '',
-            floor: p.floor || '', description: p.description || '',
-            additional_features: p.additional_features || '', internal_notes: p.internal_notes || '',
-            status: p.status, price: p.price ?? '', price_type: p.price_type || 'affitto',
+            client_id: p.client_id, address: p.address, city: p.city,
             latitude: lat, longitude: lng,
             geo_confidence: geoConfidence || p.geo_confidence || null,
         };
