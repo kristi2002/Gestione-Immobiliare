@@ -479,6 +479,8 @@ CREATE TABLE `leads` (
   `min_rooms` int DEFAULT NULL,
   `min_sqm` decimal(8,2) DEFAULT NULL,
   `status` enum('new','contacted','interested','negotiating','converted','lost') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'new',
+  `next_action_at` date DEFAULT NULL,
+  `next_action` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `source` enum('telefono','email','web','passaparola','social','altro') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'altro',
   `assigned_to` int unsigned DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
@@ -489,6 +491,7 @@ CREATE TABLE `leads` (
   KEY `idx_leads_status` (`status`),
   KEY `idx_leads_interest` (`interest_type`),
   KEY `idx_leads_preferred_property` (`preferred_property_id`),
+  KEY `idx_leads_next_action` (`next_action_at`),
   CONSTRAINT `fk_leads_assigned` FOREIGN KEY (`assigned_to`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_leads_preferred_property` FOREIGN KEY (`preferred_property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

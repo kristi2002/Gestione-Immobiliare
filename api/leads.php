@@ -159,11 +159,13 @@ function createLead(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO leads
             (name, surname, codice_fiscale, phone, email, interest_type, budget_min, budget_max,
-             preferred_city, preferred_type, preferred_property_id, min_rooms, min_sqm, status, source,
+             preferred_city, preferred_type, preferred_property_id, min_rooms, min_sqm, status,
+             next_action_at, next_action, source,
              assigned_to, notes)
          VALUES
             (:name, :surname, :codice_fiscale, :phone, :email, :interest_type, :budget_min, :budget_max,
-             :preferred_city, :preferred_type, :preferred_property_id, :min_rooms, :min_sqm, :status, :source,
+             :preferred_city, :preferred_type, :preferred_property_id, :min_rooms, :min_sqm, :status,
+             :next_action_at, :next_action, :source,
              :assigned_to, :notes)"
     );
     $stmt->execute($validated);
@@ -184,7 +186,8 @@ function updateLead(PDO $db, int $id): void
             interest_type = :interest_type, budget_min = :budget_min, budget_max = :budget_max,
             preferred_city = :preferred_city, preferred_type = :preferred_type,
             preferred_property_id = :preferred_property_id,
-            min_rooms = :min_rooms, min_sqm = :min_sqm, status = :status, source = :source,
+            min_rooms = :min_rooms, min_sqm = :min_sqm, status = :status,
+            next_action_at = :next_action_at, next_action = :next_action, source = :source,
             assigned_to = :assigned_to, notes = :notes
          WHERE id = :id"
     );
@@ -482,6 +485,8 @@ function validateLeadInput(array $data): array
     $minRooms = isset($data['min_rooms']) && $data['min_rooms'] !== '' ? (int) $data['min_rooms'] : null;
     $minSqm   = isset($data['min_sqm']) && $data['min_sqm'] !== '' ? (float) $data['min_sqm'] : null;
     $status   = trim($data['status'] ?? 'new');
+    $nextAt   = trim($data['next_action_at'] ?? '') ?: null;
+    $nextNote = trim($data['next_action'] ?? '') ?: null;
     $source   = trim($data['source'] ?? 'altro');
     $assigned = !empty($data['assigned_to']) ? (int) $data['assigned_to'] : null;
     $notes    = trim($data['notes'] ?? '') ?: null;
@@ -492,6 +497,11 @@ function validateLeadInput(array $data): array
     if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) apiError('Email non valida.');
     if (!in_array($interest, LEAD_INTERESTS, true)) apiError('Tipo interesse non valido.');
     if (!in_array($status, LEAD_STATUSES, true)) apiError('Stato non valido.');
+    if ($nextAt !== null) {
+        $d = DateTime::createFromFormat('Y-m-d', $nextAt);
+        if (!$d || $d->format('Y-m-d') !== $nextAt) apiError('Data prossima azione non valida (usa AAAA-MM-GG).');
+    }
+    if ($nextNote !== null && mb_strlen($nextNote) > 255) apiError('Nota azione troppo lunga (max 255 caratteri).');
     if (!in_array($source, LEAD_SOURCES, true)) apiError('Fonte non valida.');
     if ($ptype !== null && !in_array($ptype, LEAD_PROP_TYPES, true)) apiError('Tipo immobile non valido.');
 
@@ -510,6 +520,8 @@ function validateLeadInput(array $data): array
         'min_rooms'      => $minRooms,
         'min_sqm'        => $minSqm,
         'status'         => $status,
+        'next_action_at' => $nextAt,
+        'next_action'    => $nextNote,
         'source'         => $source,
         'assigned_to'    => $assigned,
         'notes'          => $notes,

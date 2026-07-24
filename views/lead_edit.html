@@ -108,6 +108,10 @@
                         <select id="lde-assigned" class="form-select"><option value="">— Nessuno —</option></select>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="lde-next-date">Prossima azione <span class="form-hint-inline">— quando ricontattare</span></label><input type="date" id="lde-next-date" class="form-input"></div>
+                    <div class="form-group"><label for="lde-next-note">Cosa fare</label><input type="text" id="lde-next-note" class="form-input" maxlength="255" placeholder="es. Richiamare per proposta"></div>
+                </div>
                 <div class="form-group"><label for="lde-notes">Note</label><textarea id="lde-notes" class="form-textarea" rows="3"></textarea></div>
             </fieldset>
 
@@ -153,4 +157,4 @@
 @media (max-width: 640px) { .lead-edit-view .lde-kbd-hint { display: none; } }
 </style>
 
-<script src="assets/js/lead_edit.js?v=2"></script>
+<script src="assets/js/lead_edit.js?v=3"></script>

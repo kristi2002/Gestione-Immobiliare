@@ -37,20 +37,20 @@
 
     <!-- Panel: Lead -->
     <div class="profile-panel" id="ap-panel-leads">
-        <div class="profile-panel__header"><span class="text-muted" id="ap-leads-count"></span></div>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="ap-leads-count"></span>
+            <span id="ap-leads-filter" class="ap-filter-chip" hidden></span>
+        </div>
         <div class="table-wrapper"><table class="data-table">
-            <thead><tr><th>Nome</th><th>Interesse</th><th>Budget</th><th>Stato</th><th>Fonte</th><th></th></tr></thead>
-            <tbody id="ap-leads-tbody"><tr><td colspan="6" class="entity-loading">Caricamento…</td></tr></tbody>
+            <thead><tr><th>Nome</th><th>Interesse</th><th>Budget</th><th>Stato</th><th>Prossima azione</th><th>Fonte</th><th></th></tr></thead>
+            <tbody id="ap-leads-tbody"><tr><td colspan="7" class="entity-loading">Caricamento…</td></tr></tbody>
         </table></div>
     </div>
 
     <!-- Panel: Appuntamenti -->
     <div class="profile-panel" id="ap-panel-appointments" hidden>
         <div class="profile-panel__header"><span class="text-muted" id="ap-appts-count"></span></div>
-        <div class="table-wrapper"><table class="data-table">
-            <thead><tr><th>Data</th><th>Immobile</th><th>Durata</th><th>Stato</th><th>Note</th></tr></thead>
-            <tbody id="ap-appts-tbody"><tr><td colspan="5" class="entity-loading">Caricamento…</td></tr></tbody>
-        </table></div>
+        <div id="ap-appts-body"><div class="entity-loading">Caricamento…</div></div>
     </div>
 
     <!-- Panel: Clienti -->
@@ -74,4 +74,41 @@
     </div>
 </div>
 
-<script type="module" src="assets/js/agent_profile/index.js"></script>
+<style>
+/* KPI cards that drive the table filter / tab switch */
+.agent-profile-view .db-stat--clickable { cursor: pointer; transition: box-shadow .12s, transform .12s; }
+.agent-profile-view .db-stat--clickable:hover { box-shadow: 0 4px 14px rgba(11,61,145,.14); transform: translateY(-1px); }
+.agent-profile-view .db-stat--active { outline: 2px solid var(--color-primary, #3186d5); outline-offset: -2px; }
+/* Active lead-filter chip */
+.agent-profile-view .ap-filter-chip {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--color-primary-light, #e3eefb); color: var(--color-primary-dark, #276fb4);
+}
+.agent-profile-view .ap-filter-chip::after { content: "\00d7"; font-size: 14px; line-height: 1; }
+/* Prossima azione cell */
+.agent-profile-view .ap-na { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.agent-profile-view .ap-na--overdue { color: var(--color-danger, #dc2626); font-weight: 700; }
+.agent-profile-view .ap-na--today   { color: var(--color-warning, #d97706); font-weight: 700; }
+.agent-profile-view .ap-na__note { font-size: 11px; color: var(--color-text-muted, #6b7688); margin-top: 2px; }
+.agent-profile-view .ap-na__tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-left: 4px; }
+/* Appointments grouping */
+.agent-profile-view .ap-appt-group { margin-bottom: 18px; }
+.agent-profile-view .ap-appt-group__title {
+    display: flex; align-items: center; gap: 8px; margin: 0 0 8px;
+    font-size: 13px; font-weight: 700; color: var(--color-text, #1f2a3a);
+}
+.agent-profile-view .ap-appt-group__count { font-weight: 500; color: var(--color-text-muted, #6b7688); }
+.agent-profile-view .ap-appt-group--today .ap-appt-group__title { color: var(--color-primary-dark, #276fb4); }
+.agent-profile-view tr.ap-appt-row--today > td { background: var(--color-primary-light, #eef5ff); }
+.agent-profile-view .ap-appt-empty { color: var(--color-text-muted, #6b7688); font-size: 13px; padding: 6px 0 2px; }
+.agent-profile-view details.ap-appt-past > summary {
+    cursor: pointer; list-style: none; font-size: 13px; font-weight: 700;
+    color: var(--color-text-muted, #6b7688); padding: 4px 0; user-select: none;
+}
+.agent-profile-view details.ap-appt-past > summary::-webkit-details-marker { display: none; }
+.agent-profile-view details.ap-appt-past > summary::before { content: "\25B8\00a0"; }
+.agent-profile-view details.ap-appt-past[open] > summary::before { content: "\25BE\00a0"; }
+</style>
+
+<script type="module" src="assets/js/agent_profile/index.js?v=2"></script>

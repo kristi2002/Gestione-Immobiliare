@@ -88,6 +88,8 @@
         $('lde-min-rooms').value = l.min_rooms ?? '';
         $('lde-min-sqm').value = l.min_sqm ?? '';
         $('lde-status').value = l.status || 'new';
+        $('lde-next-date').value = l.next_action_at || '';
+        $('lde-next-note').value = l.next_action || '';
         $('lde-source').value = l.source || 'telefono';
         $('lde-assigned').value = l.assigned_to || '';
         $('lde-notes').value = l.notes || '';
@@ -120,6 +122,8 @@
             min_rooms:      $('lde-min-rooms').value,
             min_sqm:        $('lde-min-sqm').value,
             status:         $('lde-status').value,
+            next_action_at: $('lde-next-date').value || null,
+            next_action:    $('lde-next-note').value.trim() || null,
             source:         $('lde-source').value,
             assigned_to:    $('lde-assigned').value || null,
             notes:          $('lde-notes').value.trim(),
