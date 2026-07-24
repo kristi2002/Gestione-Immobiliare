@@ -146,7 +146,16 @@ function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): arra
     $blocks[] = ['type' => 'spacer', 'height' => 2];
 
     // ---- Price highlight --------------------------------------------------
-    if (!empty($property['price']) && (float) $property['price'] > 0) {
+    // "Prezzo su richiesta" mirrors the public listing: the figure is withheld
+    // even on the scheda handout, so it can't contradict what's advertised.
+    if (!empty($property['price_on_request'])) {
+        $blocks[] = [
+            'type'  => 'price',
+            'label' => $isRent ? 'Canone' : 'Prezzo',
+            'value' => 'Prezzo su richiesta',
+            'note'  => $listingWord,
+        ];
+    } elseif (!empty($property['price']) && (float) $property['price'] > 0) {
         $priceFmt = '€ ' . number_format((float) $property['price'], 0, ',', '.') . ($isRent ? ' / mese' : '');
         $blocks[] = [
             'type'  => 'price',
@@ -162,11 +171,17 @@ function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): arra
         . ($property['cap'] ? ' ' . $property['cap'] : '')
         . (!empty($property['province']) ? ' (' . $property['province'] . ')' : '');
 
+    // immobiliare.it "Tipologia" (typology) is finer than the legacy group;
+    // prefer it, fall back to the group label.
+    $typologyLabel = !empty($property['typology'])
+        ? $property['typology']
+        : ($typeLabels[$property['property_type'] ?? ''] ?? '—');
+
     $blocks[] = ['type' => 'h2', 'text' => 'Dati immobile'];
     $blocks[] = ['type' => 'kv', 'pairs' => [
         ['Indirizzo',  $property['address'] ?: '—'],
         ['Località',   trim($property['city'] . ' ' . ($property['cap'] ?? '')) ?: '—'],
-        ['Tipologia',  $typeLabels[$property['property_type'] ?? ''] ?? '—'],
+        ['Tipologia',  $typologyLabel],
         ['Stato',      $statusLabels[$property['status'] ?? ''] ?? ($property['status'] ?? '—')],
         ['Superficie', !empty($property['sqm']) ? rtrim(rtrim(number_format((float) $property['sqm'], 2, ',', '.'), '0'), ',') . ' mq' : '—'],
         ['Classe energetica', !empty($property['energy_class']) ? $property['energy_class'] : 'n.d.'],
@@ -190,16 +205,52 @@ function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): arra
         $blocks[] = ['type' => 'paragraph', 'text' => $property['description']];
     }
 
-    // ---- Features ---------------------------------------------------------
-    if (!empty(trim((string) ($property['additional_features'] ?? '')))) {
-        $blocks[] = ['type' => 'h2', 'text' => 'Caratteristiche'];
-        $features = preg_split('/\r\n|\r|\n|,|;|•/', (string) $property['additional_features']);
-        $features = array_values(array_filter(array_map('trim', $features), fn($f) => $f !== ''));
-        if (count($features) > 1) {
-            $blocks[] = ['type' => 'bullets', 'items' => $features];
-        } else {
-            $blocks[] = ['type' => 'paragraph', 'text' => $property['additional_features']];
+    // ---- Composizione e dotazioni (scheda immobiliare.it) -----------------
+    // Single source of truth: the structured fields, not the retired
+    // additional_features free-text. Selects render as key/value; the Sì/No
+    // amenity flags become a checklist of what the property has.
+    $pretty = static function ($v): ?string {
+        $v = trim((string) $v);
+        return $v === '' ? null : ucfirst(str_replace('_', ' ', $v));
+    };
+
+    $detailPairs = [];
+    foreach ([
+        ['kitchen_type', 'Cucina'], ['furnished', 'Arredamento'], ['garden', 'Giardino'],
+        ['garage_type', 'Box auto'], ['window_frames', 'Infissi esterni'],
+        ['tv_system', 'Impianto TV'], ['concierge', 'Portineria'],
+        ['property_class', 'Classe immobile'], ['condition_state', 'Stato'],
+        ['overlooking', 'Affaccio'], ['heating', 'Riscaldamento'],
+        ['heating_system', 'Tipo impianto'], ['heating_fuel', 'Alimentazione'],
+        ['air_conditioning', 'Climatizzazione'], ['air_conditioning_type', 'Tipo clima'],
+    ] as [$col, $label]) {
+        $val = $pretty($property[$col] ?? null);
+        if ($val !== null) {
+            $detailPairs[] = [$label, $val];
         }
+    }
+    if ($detailPairs) {
+        $blocks[] = ['type' => 'h2', 'text' => 'Composizione e impianti'];
+        $blocks[] = ['type' => 'kv', 'pairs' => $detailPairs];
+    }
+
+    $amenities = [];
+    foreach ([
+        ['elevator', 'Ascensore'], ['disabled_access', 'Accesso disabili'],
+        ['wardrobes', 'Armadi a muro'], ['cellar', 'Cantina'], ['attic_room', 'Mansarda'],
+        ['tavern', 'Taverna'], ['armored_door', 'Porta blindata'],
+        ['alarm_system', "Impianto d'allarme"], ['electric_gate', 'Cancello elettrico'],
+        ['video_intercom', 'Videocitofono'], ['optical_fiber', 'Fibra ottica'],
+        ['fireplace', 'Camino'], ['jacuzzi', 'Idromassaggio'], ['pool', 'Piscina'],
+        ['tennis_court', 'Campo da tennis'],
+    ] as [$col, $label]) {
+        if ((int) ($property[$col] ?? 0) === 1) {
+            $amenities[] = $label;
+        }
+    }
+    if ($amenities) {
+        $blocks[] = ['type' => 'h2', 'text' => 'Dotazioni'];
+        $blocks[] = ['type' => 'bullets', 'items' => $amenities];
     }
 
     $pdf = SimplePdf::fromBlocks('Scheda immobile #' . $propertyId, $blocks, $opts);

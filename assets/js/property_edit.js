@@ -441,7 +441,6 @@
         ynSet('pe-jacuzzi', p.jacuzzi);
         ynSet('pe-pool', p.pool);
         ynSet('pe-tennis', p.tennis_court);
-        setVal('pe-features', p.additional_features);
 
         // Caratteristiche
         setVal('pe-year-built', p.year_built);
@@ -556,7 +555,6 @@
             jacuzzi:             ynGet('pe-jacuzzi'),
             pool:                ynGet('pe-pool'),
             tennis_court:        ynGet('pe-tennis'),
-            additional_features: $('pe-features').value.trim(),
 
             // Caratteristiche
             year_built:          $('pe-year-built').value,

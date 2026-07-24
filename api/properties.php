@@ -324,7 +324,7 @@ function createProperty(PDO $db): void
         $stmt = $db->prepare(
             "INSERT INTO properties
                 (client_id, building_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
-                 year_built, property_type, description, additional_features, internal_notes, status,
+                 year_built, property_type, description, internal_notes, status,
                  price, price_type, latitude, longitude, geo_confidence,
                  locali, total_floors, energy_class, heating, elevator, furnished, balconies, terraces,
                  garden, parking_spaces, condition_state, exposure, condo_fees, reference_code,
@@ -342,7 +342,7 @@ function createProperty(PDO $db): void
                  listing_title, agent_id, collaboration, mandate_type)
              VALUES
                 (:client_id, :building_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
-                 :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
+                 :year_built, :property_type, :description, :internal_notes, :status,
                  :price, :price_type, :latitude, :longitude, :geo_confidence,
                  :locali, :total_floors, :energy_class, :heating, :elevator, :furnished, :balconies, :terraces,
                  :garden, :parking_spaces, :condition_state, :exposure, :condo_fees, :reference_code,
@@ -423,7 +423,7 @@ function updateProperty(PDO $db, int $id): void
              SET client_id = :client_id, building_id = :building_id, address = :address, city = :city, cap = :cap,
                  province = :province, sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
                  year_built = :year_built, property_type = :property_type,
-                 description = :description, additional_features = :additional_features,
+                 description = :description,
                  internal_notes = :internal_notes, status = :status,
                  price = :price, price_type = :price_type,
                  latitude = :latitude, longitude = :longitude, geo_confidence = :geo_confidence,
@@ -644,7 +644,6 @@ function validatePropertyInput(PDO $db, array $data): array
     $yearBuilt    = isset($data['year_built']) && $data['year_built'] !== '' ? (int) $data['year_built'] : null;
     $propertyType = trim($data['property_type'] ?? 'appartamento');
     $desc         = trim($data['description'] ?? '') ?: null;
-    $features  = trim($data['additional_features'] ?? '') ?: null;
     $notes     = trim($data['internal_notes'] ?? '') ?: null;
     $status    = trim($data['status'] ?? 'available');
     $price     = isset($data['price']) && $data['price'] !== '' ? (float) $data['price'] : null;
@@ -833,7 +832,6 @@ function validatePropertyInput(PDO $db, array $data): array
         'year_built'          => $yearBuilt,
         'property_type'       => $propertyType,
         'description'         => $desc,
-        'additional_features' => $features,
         'internal_notes'      => $notes,
         'status'              => $status,
         'price'               => $price,
