@@ -40,6 +40,18 @@
     --shadow-xs:           0 1px 2px rgba(13, 33, 64, 0.06);
     --shadow-hover:        0 8px 22px rgba(13, 33, 64, 0.10), 0 2px 6px rgba(13, 33, 64, 0.06);
     --ring:                0 0 0 3px var(--color-primary-light);
+    /* z-index ladder — single source of truth (see assets/css/README.md).
+       Reference these tokens in new code instead of raw z-index numbers. */
+    --z-content:      1;
+    --z-sticky:       300;
+    --z-map-overlay:  500;
+    --z-topbar:       1050;
+    --z-sidebar:      1100;
+    --z-dropdown:     1200;
+    --z-filterbar:    1300;
+    --z-modal:        1400;
+    --z-modal-nested: 1600;
+    --z-toast:        1700;
 }
 
 *, *::before, *::after {
