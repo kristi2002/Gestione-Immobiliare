@@ -155,14 +155,15 @@ function getLead(PDO $db, int $id): void
 function createLead(PDO $db): void
 {
     $validated = validateLeadInput(apiGetJsonBody());
+    assertPropertyExists($db, $validated['preferred_property_id']);
     $stmt = $db->prepare(
         "INSERT INTO leads
             (name, surname, codice_fiscale, phone, email, interest_type, budget_min, budget_max,
-             preferred_city, preferred_type, min_rooms, min_sqm, status, source,
+             preferred_city, preferred_type, preferred_property_id, min_rooms, min_sqm, status, source,
              assigned_to, notes)
          VALUES
             (:name, :surname, :codice_fiscale, :phone, :email, :interest_type, :budget_min, :budget_max,
-             :preferred_city, :preferred_type, :min_rooms, :min_sqm, :status, :source,
+             :preferred_city, :preferred_type, :preferred_property_id, :min_rooms, :min_sqm, :status, :source,
              :assigned_to, :notes)"
     );
     $stmt->execute($validated);
@@ -175,12 +176,14 @@ function updateLead(PDO $db, int $id): void
         apiError('Lead non trovato.', 404);
     }
     $validated = validateLeadInput(apiGetJsonBody());
+    assertPropertyExists($db, $validated['preferred_property_id']);
     $stmt = $db->prepare(
         "UPDATE leads SET
             name = :name, surname = :surname, codice_fiscale = :codice_fiscale,
             phone = :phone, email = :email,
             interest_type = :interest_type, budget_min = :budget_min, budget_max = :budget_max,
             preferred_city = :preferred_city, preferred_type = :preferred_type,
+            preferred_property_id = :preferred_property_id,
             min_rooms = :min_rooms, min_sqm = :min_sqm, status = :status, source = :source,
             assigned_to = :assigned_to, notes = :notes
          WHERE id = :id"
@@ -475,6 +478,7 @@ function validateLeadInput(array $data): array
     $bmax     = isset($data['budget_max']) && $data['budget_max'] !== '' ? (float) $data['budget_max'] : null;
     $city     = trim($data['preferred_city'] ?? '') ?: null;
     $ptype    = trim($data['preferred_type'] ?? '') ?: null;
+    $prefProp = !empty($data['preferred_property_id']) ? (int) $data['preferred_property_id'] : null;
     $minRooms = isset($data['min_rooms']) && $data['min_rooms'] !== '' ? (int) $data['min_rooms'] : null;
     $minSqm   = isset($data['min_sqm']) && $data['min_sqm'] !== '' ? (float) $data['min_sqm'] : null;
     $status   = trim($data['status'] ?? 'new');
@@ -502,6 +506,7 @@ function validateLeadInput(array $data): array
         'budget_max'     => $bmax,
         'preferred_city' => $city,
         'preferred_type' => $ptype,
+        'preferred_property_id' => $prefProp,
         'min_rooms'      => $minRooms,
         'min_sqm'        => $minSqm,
         'status'         => $status,
@@ -516,4 +521,17 @@ function leadExists(PDO $db, int $id): bool
     $stmt = $db->prepare("SELECT id FROM leads WHERE id = :id");
     $stmt->execute(['id' => $id]);
     return (bool) $stmt->fetch();
+}
+
+/** "Immobile richiesto": if set, the linked property must exist and not be archived. */
+function assertPropertyExists(PDO $db, ?int $propertyId): void
+{
+    if ($propertyId === null) {
+        return;
+    }
+    $stmt = $db->prepare("SELECT id FROM properties WHERE id = :id AND status != 'archived'");
+    $stmt->execute(['id' => $propertyId]);
+    if (!$stmt->fetch()) {
+        apiError('Immobile richiesto non trovato o archiviato.');
+    }
 }

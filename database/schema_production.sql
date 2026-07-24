@@ -475,6 +475,7 @@ CREATE TABLE `leads` (
   `budget_max` decimal(10,2) DEFAULT NULL,
   `preferred_city` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `preferred_type` enum('appartamento','villa','ufficio','negozio','box','terreno','altro') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `preferred_property_id` int unsigned DEFAULT NULL,
   `min_rooms` int DEFAULT NULL,
   `min_sqm` decimal(8,2) DEFAULT NULL,
   `status` enum('new','contacted','interested','negotiating','converted','lost') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'new',
@@ -487,7 +488,9 @@ CREATE TABLE `leads` (
   KEY `fk_leads_assigned` (`assigned_to`),
   KEY `idx_leads_status` (`status`),
   KEY `idx_leads_interest` (`interest_type`),
-  CONSTRAINT `fk_leads_assigned` FOREIGN KEY (`assigned_to`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL
+  KEY `idx_leads_preferred_property` (`preferred_property_id`),
+  CONSTRAINT `fk_leads_assigned` FOREIGN KEY (`assigned_to`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_leads_preferred_property` FOREIGN KEY (`preferred_property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1073,6 +1076,7 @@ CREATE TABLE `tenants` (
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `surname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `codice_fiscale` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `phone` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `status` enum('active','inactive','archived') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
@@ -1080,7 +1084,8 @@ CREATE TABLE `tenants` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_tenant_email` (`email`),
-  KEY `idx_tenants_status` (`status`)
+  KEY `idx_tenants_status` (`status`),
+  KEY `idx_tenants_cf` (`codice_fiscale`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

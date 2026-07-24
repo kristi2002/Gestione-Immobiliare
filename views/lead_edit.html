@@ -19,18 +19,29 @@
             <fieldset class="form-section">
                 <legend>Anagrafica</legend>
                 <div class="form-row">
-                    <div class="form-group"><label for="lde-name">Nome <span class="required">*</span></label><input type="text" id="lde-name" class="form-input" required maxlength="100"></div>
-                    <div class="form-group"><label for="lde-surname">Cognome <span class="required">*</span></label><input type="text" id="lde-surname" class="form-input" required maxlength="100"></div>
+                    <div class="form-group"><label for="lde-name">Nome <span class="required">*</span></label><input type="text" id="lde-name" class="form-input" required maxlength="100" autocomplete="off"></div>
+                    <div class="form-group"><label for="lde-surname">Cognome <span class="required">*</span></label><input type="text" id="lde-surname" class="form-input" required maxlength="100" autocomplete="off"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label for="lde-cf">Codice Fiscale</label><input type="text" id="lde-cf" class="form-input" maxlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase"></div>
-                    <div class="form-group"><label for="lde-phone">Telefono</label><input type="text" id="lde-phone" class="form-input" maxlength="30"></div>
-                    <div class="form-group"><label for="lde-email">Email</label><input type="email" id="lde-email" class="form-input" maxlength="255"></div>
+                    <div class="form-group"><label for="lde-phone">Telefono</label><input type="tel" id="lde-phone" class="form-input" maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 333 1234567"></div>
+                    <div class="form-group"><label for="lde-email">Email</label><input type="email" id="lde-email" class="form-input" maxlength="255" autocomplete="off" placeholder="nome@esempio.it"></div>
                 </div>
+                <details class="form-advanced" id="lde-more">
+                    <summary>Dati aggiuntivi — Codice Fiscale (serve per convertire in proprietario/contratto)</summary>
+                    <div class="form-row">
+                        <div class="form-group" style="max-width:320px"><label for="lde-cf">Codice Fiscale</label><input type="text" id="lde-cf" class="form-input" maxlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase"></div>
+                    </div>
+                </details>
             </fieldset>
 
             <fieldset class="form-section">
                 <legend>Preferenze immobile</legend>
+                <div class="form-group">
+                    <label for="lde-property-search">Immobile richiesto <span class="form-hint-inline">— l'immobile specifico per cui chiama (cerca per RIF o indirizzo)</span></label>
+                    <input type="text" id="lde-property-search" class="form-input" list="lde-property-list" autocomplete="off" placeholder="Cerca per riferimento (es. RIF-001) o indirizzo…">
+                    <datalist id="lde-property-list"></datalist>
+                    <input type="hidden" id="lde-property-id">
+                </div>
                 <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="lde-interest">Interesse</label>
@@ -58,7 +69,7 @@
                             <option value="altro">Altro</option>
                         </select>
                     </div>
-                    <div class="form-group"><label for="lde-min-rooms">Stanze min</label><input type="number" id="lde-min-rooms" class="form-input" min="0" step="1"></div>
+                    <div class="form-group"><label for="lde-min-rooms">Camere da letto (min)</label><input type="number" id="lde-min-rooms" class="form-input" min="0" step="1"></div>
                 </div>
                 <div class="form-group" style="max-width:320px"><label for="lde-min-sqm">Metri quadri minimi</label><input type="number" id="lde-min-sqm" class="form-input" min="0" step="0.01"></div>
             </fieldset>
@@ -102,12 +113,44 @@
 
             <div id="lde-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
 
-            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
-                <button type="button" class="btn btn--ghost" id="lde-cancel">Annulla</button>
-                <button type="submit" class="btn btn--primary" id="lde-save">Salva</button>
+            <div class="form-actions lde-actions">
+                <span class="lde-kbd-hint"><kbd>Invio</kbd> per salvare · <kbd>Esc</kbd> per annullare</span>
+                <div class="lde-actions__btns">
+                    <button type="button" class="btn btn--ghost" id="lde-cancel">Annulla</button>
+                    <button type="submit" class="btn btn--primary" id="lde-save">Salva</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<script src="assets/js/lead_edit.js?v=1"></script>
+<style>
+.lead-edit-view .form-advanced { margin-top: 2px; }
+.lead-edit-view .form-advanced > summary {
+    cursor: pointer; list-style: none; user-select: none;
+    color: var(--color-text-muted, #6b7688); font-size: 13px; padding: 6px 0;
+}
+.lead-edit-view .form-advanced > summary::-webkit-details-marker { display: none; }
+.lead-edit-view .form-advanced > summary::before { content: "\25B8\00a0"; }
+.lead-edit-view .form-advanced[open] > summary::before { content: "\25BE\00a0"; }
+.lead-edit-view .form-advanced[open] > summary { margin-bottom: 6px; }
+.lead-edit-view .form-hint-inline { font-weight: 400; font-size: 12px; color: var(--color-text-muted, #94a3b8); }
+.lead-edit-view .lde-actions {
+    position: sticky; bottom: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 20px -28px -24px; padding: 14px 28px;
+    background: var(--color-surface, #fff);
+    border-top: 1px solid var(--color-border, #e6ebf1);
+}
+.lead-edit-view .lde-actions__btns { display: flex; gap: 8px; }
+.lead-edit-view .lde-kbd-hint { font-size: 12px; color: var(--color-text-muted, #6b7688); }
+.lead-edit-view .lde-kbd-hint kbd {
+    font-family: inherit; font-size: 11px; line-height: 1;
+    background: var(--color-surface-muted, #f1f5f9);
+    border: 1px solid var(--color-border-strong, #cbd5e1); border-bottom-width: 2px;
+    border-radius: 4px; padding: 2px 5px; color: var(--color-text, #334155);
+}
+@media (max-width: 640px) { .lead-edit-view .lde-kbd-hint { display: none; } }
+</style>
+
+<script src="assets/js/lead_edit.js?v=2"></script>

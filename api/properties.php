@@ -134,6 +134,7 @@ function listProperties(PDO $db): void
             $where";
 
     $dataSql = "SELECT p.id, p.client_id, p.address, p.city, p.cap, p.province, p.sqm,
+                   p.reference_code,
                    p.rooms, p.bathrooms, p.floor, p.year_built, p.property_type, p.description,
                    p.additional_features, p.internal_notes, p.status,
                    p.price, p.price_type, p.latitude, p.longitude, p.geo_confidence,
