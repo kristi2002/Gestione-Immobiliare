@@ -1279,7 +1279,29 @@
 
 .pp-section-title { margin: 0 0 10px; font-size: 1.05rem; }
 .pp-section-subtitle { margin: 16px 0 8px; font-size: 0.9rem; color: var(--color-text-muted, #64748b); }
-.pp-feature-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Feature checklist — white pill + green check, reads as a real listing's
+   "dotazioni". The extra `.pp-section` ancestor lifts specificity above
+   theme-orlandi's neutral `.chip:not([class*="--"])` so these win the cascade. */
+.pp-feature-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.pp-section .pp-feature-tags .chip {
+    align-items: center;
+    gap: 6px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: normal;
+}
+.pp-section .pp-feature-tags .chip::before {
+    content: "✓";
+    color: var(--color-success);
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+}
 .pp-info-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 18px 20px; }
 .pp-info-description { margin: 0; white-space: pre-line; line-height: 1.6; }
 .pp-info-notes { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 0.85rem; color: var(--color-text-muted, #64748b); }

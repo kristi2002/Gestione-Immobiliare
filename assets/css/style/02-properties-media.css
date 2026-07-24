@@ -85,16 +85,44 @@
     margin-bottom: 14px;
     scroll-margin-top: 70px; /* land below the sticky sub-nav on anchor jump */
 }
-.pp-section .pp-section-title { margin: 0 0 12px; font-size: 16px; }
+.pp-section .pp-section-title { margin: 0 0 14px; font-size: 16px; font-weight: 700; }
+/* Spec grid — each pair is a self-contained tile (label on top, value below).
+   Stacking keeps long values (es. "Centralizzato · A radiatori · Metano") from
+   colliding with the label the way the old space-between row did. */
 .pp-kv-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px 24px;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
     margin: 0;
 }
-.pp-kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--color-border); }
-.pp-kv dt { color: var(--color-text-muted, #64748b); font-size: 13px; margin: 0; }
-.pp-kv dd { margin: 0; font-weight: 600; font-size: 13px; text-align: right; }
+.pp-kv {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg) 45%, #fff);
+}
+.pp-kv dt {
+    margin: 0;
+    color: var(--color-text-muted, #64748b);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    line-height: 1.2;
+}
+.pp-kv dd {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: 600;
+    font-size: 13.5px;
+    line-height: 1.35;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
 .pp-map { height: 300px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); }
 
 @media (max-width: 640px) {

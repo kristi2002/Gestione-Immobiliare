@@ -117,6 +117,8 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             fuel: { metano:'Metano', gpl:'GPL', gasolio:'Gasolio', elettrico:'Elettrico', pompa_di_calore:'Pompa di calore', teleriscaldamento:'Teleriscaldamento', pellet:'Pellet', legna:'Legna', solare:'Solare' },
             aircon: { autonomo:'Autonomo', centralizzato:'Centralizzato', predisposizione:'Predisposizione', assente:'Assente' },
             airconType: { freddo:'Freddo', caldo_freddo:'Caldo / Freddo' },
+            heating: { autonomo:'Autonomo', centralizzato:'Centralizzato', assente:'Assente' },
+            condition: { nuovo:'Nuovo / In costruzione', ottimo:'Ottimo / Ristrutturato', buono:'Buono / Abitabile', da_ristrutturare:'Da ristrutturare' },
             ownership: { intera_proprieta:'Intera proprietà', nuda_proprieta:'Nuda proprietà', parziale_proprieta:'Parziale proprietà', multiproprieta:'Multiproprietà', usufrutto:'Usufrutto', diritto_superficie:'Diritto di superficie' },
             collab: { nessuna_preferenza:'Nessuna preferenza', si:'Sì, collaboro', no:'No' },
             mandate: { esclusiva:'In esclusiva', non_esclusiva:'Non in esclusiva' },
@@ -125,6 +127,9 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         const eur = (n) => '€ ' + Number(n).toLocaleString('it-IT');
         const yesno = (v) => v == null || v === '' ? null : (Number(v) ? 'Sì' : 'No');
         const fmt1 = (n) => Number(n).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        // Classe energetica: i valori speciali "in_attesa"/"esente" non sono lettere → etichetta leggibile.
+        const energyLabel = (v) => v == null || v === '' ? null
+            : (v === 'in_attesa' ? 'In attesa di certificazione' : v === 'esente' ? 'Esente' : String(v).toUpperCase());
 
         // key/value rows — only render pairs that have a value
         const kv = (pairs) => pairs.filter(([, v]) => v != null && v !== '')
@@ -132,7 +137,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
 
         // ── Caratteristiche ──────────────────────────────────────────────────
         const riscaldamento = p.heating
-            ? [p.heating, L.heatsys[p.heating_system], L.fuel[p.heating_fuel]].filter(Boolean).join(' · ')
+            ? [L.heating[p.heating] || p.heating, L.heatsys[p.heating_system], L.fuel[p.heating_fuel]].filter(Boolean).join(' · ')
             : null;
         const clima = p.air_conditioning
             ? [L.aircon[p.air_conditioning], L.airconType[p.air_conditioning_type]].filter(Boolean).join(' · ')
@@ -149,10 +154,12 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             ['Piano',            p.floor ? p.floor + (Number(p.multi_level) ? ' · su più livelli' : '') : (Number(p.multi_level) ? 'Su più livelli' : null)],
             ['Piani edificio',   p.total_floors || null],
             ['Anno costruzione', p.year_built || null],
-            ['Stato',            p.condition_state || null],
+            ['Stato',            L.condition[p.condition_state] || p.condition_state || null],
             ['Lati liberi',      p.free_sides || null],
             ['Affaccio',         L.overlook[p.overlooking] || null],
-            ['Classe energetica',p.energy_class || null],
+            ['Classe energetica',energyLabel(p.energy_class)],
+            ['Indice energetico',p.ipe_value != null && p.ipe_value !== '' && Number(p.ipe_value) > 0
+                                    ? Number(p.ipe_value).toLocaleString('it-IT') + ' kWh/m² anno' : null],
             ['Riscaldamento',    riscaldamento],
             ['Climatizzazione',  clima],
             ['Ascensore',        yesno(p.elevator)],
@@ -196,24 +203,28 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         }
 
         // ── Altre caratteristiche (chips) ────────────────────────────────────
+        // Dedup case/accent-insensitive: il testo libero `additional_features`
+        // spesso ripete gli amenity strutturati (es. "cantina" ↔ "Cantina").
         const chips = [];
-        if (Number(p.elevator)) chips.push('Ascensore');
-        if (p.furnished && p.furnished !== 'no') chips.push('Arredato: ' + p.furnished);
-        if (p.garden && p.garden !== 'no') chips.push('Giardino ' + p.garden);
-        if (p.balconies) chips.push(p.balconies + ' balcon' + (p.balconies == 1 ? 'e' : 'i'));
-        if (p.terraces) chips.push(p.terraces + ' terrazz' + (p.terraces == 1 ? 'o' : 'i'));
-        if (p.parking_spaces) chips.push(p.parking_spaces + ' posto/i auto');
-        if (L.garage[p.garage_type] && p.garage_type !== 'nessuno') chips.push(L.garage[p.garage_type]);
-        if (p.exposure) chips.push('Esposizione ' + p.exposure);
+        const seenChip = new Set();
+        const normChip = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+        const addChip = (label) => { const k = normChip(label); if (!k || seenChip.has(k)) return; seenChip.add(k); chips.push(label); };
+        // Ascensore e Arredamento hanno già una riga dedicata in "Caratteristiche".
+        if (p.garden && p.garden !== 'no') addChip('Giardino ' + p.garden);
+        if (p.balconies) addChip(p.balconies + ' balcon' + (p.balconies == 1 ? 'e' : 'i'));
+        if (p.terraces) addChip(p.terraces + ' terrazz' + (p.terraces == 1 ? 'o' : 'i'));
+        if (p.parking_spaces) addChip(p.parking_spaces + ' posto/i auto');
+        if (L.garage[p.garage_type] && p.garage_type !== 'nessuno') addChip(L.garage[p.garage_type]);
+        if (p.exposure) addChip('Esposizione ' + p.exposure);
         [['wardrobes','Armadi a muro'], ['cellar','Cantina'], ['attic_room','Mansarda'], ['tavern','Taverna'],
          ['armored_door','Porta blindata'], ['alarm_system',"Impianto d'allarme"], ['electric_gate','Cancello elettrico'],
          ['video_intercom','Videocitofono'], ['optical_fiber','Fibra ottica'], ['fireplace','Camino'],
          ['jacuzzi','Idromassaggio'], ['pool','Piscina'], ['tennis_court','Campo da tennis'],
-        ].forEach(([k, label]) => { if (Number(p[k])) chips.push(label); });
-        if (L.windows[p.window_frames]) chips.push('Infissi: ' + L.windows[p.window_frames]);
-        if (L.tv[p.tv_system]) chips.push('TV ' + L.tv[p.tv_system].toLowerCase());
-        if (p.concierge && p.concierge !== 'no') chips.push('Portineria');
-        (p.additional_features || '').split(',').map(f => f.trim()).filter(Boolean).forEach(f => chips.push(f));
+        ].forEach(([k, label]) => { if (Number(p[k])) addChip(label); });
+        if (L.windows[p.window_frames]) addChip('Infissi: ' + L.windows[p.window_frames]);
+        if (L.tv[p.tv_system]) addChip('TV ' + L.tv[p.tv_system].toLowerCase());
+        if (p.concierge && p.concierge !== 'no') addChip('Portineria');
+        (p.additional_features || '').split(',').map(f => f.trim()).filter(Boolean).forEach(f => addChip(f));
         const altreHtml = chips.length
             ? `<div class="pp-feature-tags">${chips.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>`
             : '<p class="text-muted" style="margin:0;">Nessuna caratteristica aggiuntiva.</p>';
@@ -533,7 +544,8 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         add(num(p.parking_spaces), 'car', p.parking_spaces, 'Posti auto');
         add(!!p.floor, 'building', p.floor + (num(p.total_floors) ? '/' + p.total_floors : ''), 'Piano');
         add(p.elevator !== null && p.elevator !== undefined && p.elevator !== '', 'move-vertical', Number(p.elevator) ? 'Sì' : 'No', 'Ascensore');
-        add(!!p.energy_class, 'zap', String(p.energy_class || '').toUpperCase(), 'Classe en.');
+        const enHl = p.energy_class === 'in_attesa' ? 'In attesa' : p.energy_class === 'esente' ? 'Esente' : String(p.energy_class || '').toUpperCase();
+        add(!!p.energy_class, 'zap', enHl, 'Classe en.');
         add(!!p.heating, 'flame', HEAT[p.heating] || p.heating, 'Riscaldamento');
         add(!!p.furnished, 'sofa', FURN[p.furnished] || p.furnished, 'Arredamento');
         add(!!p.garden && p.garden !== 'no', 'trees', GARD[p.garden] || p.garden, 'Giardino');
