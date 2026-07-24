@@ -61,11 +61,7 @@ function generateContractPdf(PDO $db, array $params, int $adminId): array
 
     $blocks = [
         ['type' => 'h2', 'text' => 'Locatore / Proprietario'],
-        ['type' => 'kv', 'pairs' => [
-            ['Nominativo', $client ? trim($client['name'] . ' ' . $client['surname']) : '—'],
-            ['Email',      $client['email'] ?? '—'],
-            ['Telefono',   $client['phone'] ?? '—'],
-        ]],
+        ['type' => 'kv', 'pairs' => $client ? mandantePairs($client) : [['Nominativo', '—']]],
         ['type' => 'h2', 'text' => 'Immobile'],
         ['type' => 'kv', 'pairs' => [
             ['Indirizzo',  $property ? trim($property['address'] . ', ' . $property['city'] . ' ' . ($property['cap'] ?? '')) : '—'],
@@ -74,9 +70,9 @@ function generateContractPdf(PDO $db, array $params, int $adminId): array
             ['Classe energetica', $property && !empty($property['energy_class']) ? $property['energy_class'] : 'n.d.'],
         ]],
         ['type' => 'h2', 'text' => 'Conduttore / Inquilino'],
-        ['type' => 'kv', 'pairs' => [
-            ['Nominativo', $tenant ? trim($tenant['name'] . ' ' . $tenant['surname']) : ($params['tenant_name'] ?? '—')],
-            ['Email',      $tenant['email'] ?? ($params['tenant_email'] ?? '—')],
+        ['type' => 'kv', 'pairs' => $tenant ? mandantePairs($tenant) : [
+            ['Nominativo', $params['tenant_name'] ?? '—'],
+            ['Email',      $params['tenant_email'] ?? '—'],
         ]],
         ['type' => 'h2', 'text' => 'Condizioni economiche'],
         ['type' => 'price', 'label' => 'Canone mensile', 'value' => $rentText, 'note' => 'Locazione'],

@@ -27,6 +27,20 @@
 
     function goBack() { if (window.App) window.App.navigateTo('tenants'); }
 
+    // Persona fisica vs giuridica: reveal company fields, relabel the anagrafica
+    // block as the legale rappresentante, hide the birth fields. Mirrors client_edit.
+    function applyPersonType() {
+        const isCompany = $('tne-person-type').value === 'giuridica';
+        $('tne-company-row').hidden = !isCompany;
+        $('tne-company-name').required = isCompany;
+        $('tne-birth-place-group').style.display = isCompany ? 'none' : '';
+        $('tne-birth-date-group').style.display  = isCompany ? 'none' : '';
+        $('tne-name-label').textContent    = isCompany ? 'Nome legale rappr.' : 'Nome';
+        $('tne-surname-label').textContent = isCompany ? 'Cognome legale rappr.' : 'Cognome';
+        $('tne-anag-legend').textContent      = isCompany ? 'Legale rappresentante' : 'Dati anagrafici';
+        $('tne-residence-legend').textContent = isCompany ? 'Sede legale' : 'Residenza';
+    }
+
     async function loadProperties() {
         const j = await fetch(`${PROP_API}?limit=500&page=1`).then(r => r.json());
         if (j.success) {
@@ -42,11 +56,22 @@
         if (!j.success) throw new Error(j.error);
         const t = j.data;
         $('tne-id').value = t.id;
+        $('tne-person-type').value = t.person_type || 'fisica';
+        $('tne-company-name').value = t.company_name || '';
+        $('tne-vat').value = t.vat_number || '';
         $('tne-name').value = t.name || '';
         $('tne-surname').value = t.surname || '';
         $('tne-cf').value = t.codice_fiscale || '';
+        $('tne-birth-place').value = t.birth_place || '';
+        $('tne-birth-date').value = t.birth_date || '';
         $('tne-email').value = t.email || '';
         $('tne-phone').value = t.phone || '';
+        $('tne-pec').value = t.pec_email || '';
+        $('tne-address').value = t.address || '';
+        $('tne-city').value = t.city || '';
+        $('tne-cap').value = t.cap || '';
+        $('tne-province').value = t.province || '';
+        applyPersonType();
         $('tne-property').value = t.property_id || '';
         $('tne-lease-start').value = t.lease_start || '';
         $('tne-lease-end').value = t.lease_end || '';
@@ -62,11 +87,21 @@
         clearError();
         const id = $('tne-id').value;
         const payload = {
+            person_type:     $('tne-person-type').value,
+            company_name:    $('tne-company-name').value.trim() || null,
+            vat_number:      $('tne-vat').value.trim().toUpperCase() || null,
             name:            $('tne-name').value,
             surname:         $('tne-surname').value,
             codice_fiscale:  $('tne-cf').value.trim().toUpperCase(),
+            birth_place:     $('tne-birth-place').value.trim() || null,
+            birth_date:      $('tne-birth-date').value || null,
             email:           $('tne-email').value,
             phone:           $('tne-phone').value,
+            pec_email:       $('tne-pec').value.trim() || null,
+            address:         $('tne-address').value.trim() || null,
+            city:            $('tne-city').value.trim() || null,
+            cap:             $('tne-cap').value.trim() || null,
+            province:        $('tne-province').value.trim().toUpperCase() || null,
             property_id:     $('tne-property').value,
             lease_start:     $('tne-lease-start').value || null,
             lease_end:       $('tne-lease-end').value || null,
@@ -121,6 +156,7 @@
         $('tne-cancel').addEventListener('click', goBack);
         $('tne-form').addEventListener('submit', save);
         $('tne-pdf').addEventListener('click', generatePdf);
+        $('tne-person-type').addEventListener('change', applyPersonType);
 
         try { await loadProperties(); }
         catch (err) { showAlert('Errore caricamento immobili: ' + err.message, 'error'); }
@@ -131,6 +167,7 @@
             catch (err) { showAlert('Impossibile caricare l\'inquilino: ' + err.message, 'error'); }
         } else {
             $('tne-title').textContent = 'Nuovo inquilino';
+            applyPersonType();
             $('tne-name').focus();
         }
     }

@@ -169,11 +169,7 @@ function createTenant(PDO $db): void
         apiError('Immobile non trovato.');
     }
 
-    $stmt = $db->prepare(
-        'INSERT INTO tenants (name, surname, email, codice_fiscale, phone, notes, iban, sdd_mandate_ref, sdd_mandate_date)
-         VALUES (:name, :surname, :email, :codice_fiscale, :phone, :notes, :iban, :sdd_mandate_ref, :sdd_mandate_date)'
-    );
-    $stmt->execute([
+    $cols = [
         'name'    => $name,
         'surname' => $surname,
         'email'   => $email,
@@ -183,7 +179,16 @@ function createTenant(PDO $db): void
         'iban'            => trim($data['iban'] ?? '') ?: null,
         'sdd_mandate_ref' => trim($data['sdd_mandate_ref'] ?? '') ?: null,
         'sdd_mandate_date'=> (trim($data['sdd_mandate_date'] ?? '') ?: null),
-    ]);
+    ];
+    // Extended anagrafica (phase60): person_type, nascita, residenza, giuridica.
+    $cols = array_merge($cols, tenantAnagraficaFields($data));
+
+    $names = array_keys($cols);
+    $stmt = $db->prepare(
+        'INSERT INTO tenants (' . implode(', ', $names) . ')
+         VALUES (:' . implode(', :', $names) . ')'
+    );
+    $stmt->execute($cols);
 
     $tenantId = (int) $db->lastInsertId();
 
@@ -227,6 +232,11 @@ function updateTenant(PDO $db, int $id): void
             $fields[] = "{$f} = :{$f}";
             $params[$f] = ($data[$f] === '' ? null : $data[$f]);
         }
+    }
+    // Extended anagrafica (phase60), normalized/validated for any key present.
+    foreach (tenantAnagraficaFields($data) as $col => $val) {
+        $fields[] = "{$col} = :{$col}";
+        $params[$col] = $val;
     }
     if ($fields) {
         $db->prepare('UPDATE tenants SET ' . implode(', ', $fields) . ' WHERE id = :id')->execute($params);
@@ -300,6 +310,65 @@ function createOrUpdateLeaseContract(PDO $db, int $tenantId, int $propertyId, in
         'monthly_rent' => $rent,
         'created_by'   => getCurrentAdminId() ?: null,
     ]);
+}
+
+/**
+ * Parse + validate the extended anagrafica fields (phase60), shared by create
+ * and update. Returns normalized column=>value for every key PRESENT in $data
+ * (empty strings become NULL). Throws apiError on invalid input. Mirrors the
+ * proprietario rules in api/clients.php.
+ */
+function tenantAnagraficaFields(array $data): array
+{
+    $out = [];
+
+    $isCompany = null;
+    if (array_key_exists('person_type', $data)) {
+        $pt = trim((string) $data['person_type']);
+        $out['person_type'] = in_array($pt, ['fisica', 'giuridica'], true) ? $pt : 'fisica';
+        $isCompany = $out['person_type'] === 'giuridica';
+    }
+    if (array_key_exists('company_name', $data)) {
+        $out['company_name'] = trim((string) $data['company_name']) ?: null;
+    }
+    if (array_key_exists('vat_number', $data)) {
+        $v = strtoupper(trim((string) $data['vat_number'])) ?: null;
+        if ($v !== null && !preg_match('/^[A-Z0-9]{8,16}$/', $v)) {
+            apiError('Partita IVA non valida (8-16 caratteri alfanumerici).');
+        }
+        $out['vat_number'] = $v;
+    }
+    if (array_key_exists('birth_place', $data)) {
+        $out['birth_place'] = trim((string) $data['birth_place']) ?: null;
+    }
+    if (array_key_exists('birth_date', $data)) {
+        $bd = trim((string) $data['birth_date']) ?: null;
+        if ($bd !== null) {
+            $d = DateTime::createFromFormat('Y-m-d', $bd);
+            if (!$d || $d->format('Y-m-d') !== $bd) {
+                apiError('Data di nascita non valida.');
+            }
+        }
+        $out['birth_date'] = $bd;
+    }
+    if (array_key_exists('pec_email', $data)) {
+        $pec = trim((string) $data['pec_email']) ?: null;
+        if ($pec !== null && !filter_var($pec, FILTER_VALIDATE_EMAIL)) {
+            apiError('Indirizzo PEC non valido.');
+        }
+        $out['pec_email'] = $pec;
+    }
+    if (array_key_exists('address', $data))  $out['address']  = trim((string) $data['address']) ?: null;
+    if (array_key_exists('city', $data))     $out['city']     = trim((string) $data['city']) ?: null;
+    if (array_key_exists('cap', $data))      $out['cap']      = trim((string) $data['cap']) ?: null;
+    if (array_key_exists('province', $data)) $out['province'] = strtoupper(trim((string) $data['province'])) ?: null;
+
+    // Ragione sociale obbligatoria quando il conduttore è una persona giuridica.
+    if ($isCompany === true && ($out['company_name'] ?? null) === null) {
+        apiError('La ragione sociale è obbligatoria per le persone giuridiche.');
+    }
+
+    return $out;
 }
 
 function archiveTenant(PDO $db, int $id): void

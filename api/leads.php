@@ -372,22 +372,45 @@ function convertLeadToTenant(PDO $db, int $id): void
         apiError('Esiste già un inquilino attivo con questa email.');
     }
 
+    // Owner of the property — needed for the lease contract's client_id.
+    $ownerStmt = $db->prepare("SELECT client_id, address, city FROM properties WHERE id = :id");
+    $ownerStmt->execute(['id' => $propertyId]);
+    $prop     = $ownerStmt->fetch();
+    $clientId = (int) ($prop['client_id'] ?? 0);
+
+    // A tenant is a PERSON: property + lease terms live in CONTRACTS, not on the
+    // tenant row (those columns were dropped in phase26). Insert the tenant, then
+    // create the lease as a contract — mirroring createTenant/createOrUpdateLeaseContract.
     $insert = $db->prepare(
-        "INSERT INTO tenants (property_id, name, surname, email, phone, lease_start, lease_end, monthly_rent, notes, status)
-         VALUES (:property_id, :name, :surname, :email, :phone, :lease_start, :lease_end, :monthly_rent, :notes, 'active')"
+        "INSERT INTO tenants (name, surname, email, phone, codice_fiscale, notes, status)
+         VALUES (:name, :surname, :email, :phone, :codice_fiscale, :notes, 'active')"
     );
     $insert->execute([
-        'property_id'  => $propertyId,
-        'name'         => $lead['name'],
-        'surname'      => $lead['surname'],
-        'email'        => $email,
-        'phone'        => $lead['phone'],
-        'lease_start'  => $leaseStart,
-        'lease_end'    => $leaseEnd,
-        'monthly_rent' => $monthlyRent,
-        'notes'        => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
+        'name'           => $lead['name'],
+        'surname'        => $lead['surname'],
+        'email'          => $email,
+        'phone'          => $lead['phone'],
+        'codice_fiscale' => $lead['codice_fiscale'] ?? null,
+        'notes'          => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
     ]);
     $tenantId = (int) $db->lastInsertId();
+
+    $title = 'Locazione ' . ($prop ? $prop['address'] . ', ' . $prop['city'] : "immobile #$propertyId");
+    $db->prepare(
+        "INSERT INTO contracts
+            (property_id, tenant_id, client_id, title, contract_type, status, start_date, end_date, monthly_rent, created_by)
+         VALUES
+            (:property_id, :tenant_id, :client_id, :title, 'locazione', 'signed', :start_date, :end_date, :monthly_rent, :created_by)"
+    )->execute([
+        'property_id'  => $propertyId,
+        'tenant_id'    => $tenantId,
+        'client_id'    => $clientId,
+        'title'        => $title,
+        'start_date'   => $leaseStart,
+        'end_date'     => $leaseEnd,
+        'monthly_rent' => $monthlyRent,
+        'created_by'   => getCurrentAdminId() ?: null,
+    ]);
 
     $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
     logActivity('create', 'tenant', $tenantId, 'Inquilino creato da lead #' . $id);

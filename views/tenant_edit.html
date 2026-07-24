@@ -17,18 +17,69 @@
             <input type="hidden" id="tne-id">
 
             <fieldset class="form-section">
-                <legend>Anagrafica</legend>
+                <legend>Tipo soggetto</legend>
                 <div class="form-row form-row--2">
-                    <div class="form-group"><label for="tne-name">Nome <span class="required">*</span></label><input type="text" id="tne-name" class="form-input" required maxlength="100" autocomplete="off"></div>
-                    <div class="form-group"><label for="tne-surname">Cognome <span class="required">*</span></label><input type="text" id="tne-surname" class="form-input" required maxlength="100" autocomplete="off"></div>
+                    <div class="form-group">
+                        <label for="tne-person-type">Natura</label>
+                        <select id="tne-person-type" class="form-select">
+                            <option value="fisica">Persona fisica</option>
+                            <option value="giuridica">Persona giuridica / Azienda</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group" style="max-width:320px">
-                    <label for="tne-cf">Codice Fiscale <span class="required">*</span> <span class="form-hint-inline">— serve per registrare il contratto (RLI)</span></label>
-                    <input type="text" id="tne-cf" class="form-input" required maxlength="16" minlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase" autocomplete="off">
+                <div class="form-row form-row--2" id="tne-company-row" hidden>
+                    <div class="form-group">
+                        <label for="tne-company-name">Ragione sociale <span class="required">*</span></label>
+                        <input type="text" id="tne-company-name" class="form-input" maxlength="200" placeholder="es. Rossi S.r.l.">
+                    </div>
+                    <div class="form-group">
+                        <label for="tne-vat">Partita IVA</label>
+                        <input type="text" id="tne-vat" class="form-input" maxlength="16" placeholder="es. 01234567890" style="text-transform:uppercase">
+                    </div>
                 </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend id="tne-anag-legend">Dati anagrafici</legend>
                 <div class="form-row form-row--2">
+                    <div class="form-group"><label for="tne-name"><span id="tne-name-label">Nome</span> <span class="required">*</span></label><input type="text" id="tne-name" class="form-input" required maxlength="100" autocomplete="off"></div>
+                    <div class="form-group"><label for="tne-surname"><span id="tne-surname-label">Cognome</span> <span class="required">*</span></label><input type="text" id="tne-surname" class="form-input" required maxlength="100" autocomplete="off"></div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="tne-cf">Codice Fiscale <span class="required">*</span> <span class="form-hint-inline">— serve per l'RLI</span></label>
+                        <input type="text" id="tne-cf" class="form-input" required maxlength="16" minlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase" autocomplete="off">
+                    </div>
+                    <div class="form-group" id="tne-birth-place-group">
+                        <label for="tne-birth-place">Luogo di nascita</label>
+                        <input type="text" id="tne-birth-place" class="form-input" maxlength="120" placeholder="es. Civitanova Marche (MC)">
+                    </div>
+                    <div class="form-group" id="tne-birth-date-group">
+                        <label for="tne-birth-date">Data di nascita</label>
+                        <input type="date" id="tne-birth-date" class="form-input">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Contatti</legend>
+                <div class="form-row form-row--3">
                     <div class="form-group"><label for="tne-email">Email <span class="required">*</span></label><input type="email" id="tne-email" class="form-input" required maxlength="255" autocomplete="off" placeholder="nome@esempio.it"></div>
                     <div class="form-group"><label for="tne-phone">Telefono <span class="required">*</span></label><input type="tel" id="tne-phone" class="form-input" required maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 333 1234567"></div>
+                    <div class="form-group"><label for="tne-pec">PEC</label><input type="email" id="tne-pec" class="form-input" maxlength="255" placeholder="posta certificata"></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend id="tne-residence-legend">Residenza</legend>
+                <div class="form-group">
+                    <label for="tne-address">Indirizzo</label>
+                    <input type="text" id="tne-address" class="form-input" maxlength="255" placeholder="es. Via Roma 12">
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group"><label for="tne-city">Città</label><input type="text" id="tne-city" class="form-input" maxlength="100"></div>
+                    <div class="form-group"><label for="tne-cap">CAP</label><input type="text" id="tne-cap" class="form-input" maxlength="10" placeholder="62012"></div>
+                    <div class="form-group"><label for="tne-province">Provincia</label><input type="text" id="tne-province" class="form-input" maxlength="10" placeholder="MC" style="text-transform:uppercase"></div>
                 </div>
             </fieldset>
 
@@ -71,4 +122,4 @@
     </div>
 </div>
 
-<script src="assets/js/tenant_edit.js?v=1"></script>
+<script src="assets/js/tenant_edit.js?v=2"></script>
