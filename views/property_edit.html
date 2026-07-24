@@ -6,7 +6,7 @@
     <div class="view-header">
         <div class="view-header__text">
             <h2 id="pe-title">Nuovo Immobile</h2>
-            <p>Compila i dati dell'immobile. I campi compatibili con immobiliare.it consentono la futura pubblicazione sui portali.</p>
+            <p>Scheda immobile compatibile con immobiliare.it: stessi campi e stesse sezioni della scheda di inserimento dei portali.</p>
         </div>
     </div>
 
@@ -26,7 +26,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="pe-status">Stato</label>
+                        <label for="pe-status">Stato annuncio</label>
                         <select id="pe-status" class="form-select">
                             <option value="available">Disponibile</option>
                             <option value="rented">Affittato</option>
@@ -43,7 +43,7 @@
                     </div>
                     <p class="text-muted" style="font-size:12px;margin:4px 0 0;">Scegli l'indirizzo dai suggerimenti: città, CAP, provincia e mappa si compilano da soli.</p>
                 </div>
-                <div class="form-row form-row--4">
+                <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="pe-city">Città <span class="required">*</span></label>
                         <input type="text" id="pe-city" class="form-input" required maxlength="100">
@@ -55,159 +55,6 @@
                     <div class="form-group">
                         <label for="pe-province">Provincia</label>
                         <input type="text" id="pe-province" class="form-input" maxlength="10" placeholder="MC">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-reference">Riferimento</label>
-                        <input type="text" id="pe-reference" class="form-input" maxlength="50" placeholder="es. RIF-001">
-                    </div>
-                </div>
-                <div class="form-row form-row--3">
-                    <div class="form-group">
-                        <label for="pe-floor">Piano</label>
-                        <input type="text" id="pe-floor" class="form-input" maxlength="20" placeholder="es. 2, T, R">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-total-floors">Piani edificio</label>
-                        <input type="number" id="pe-total-floors" class="form-input" min="0" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-exposure">Esposizione</label>
-                        <input type="text" id="pe-exposure" class="form-input" maxlength="60" placeholder="es. Sud, Est/Ovest">
-                    </div>
-                </div>
-            </fieldset>
-
-            <fieldset class="form-section">
-                <legend>Caratteristiche</legend>
-                <div class="form-row form-row--3">
-                    <div class="form-group">
-                        <label for="pe-type">Tipologia</label>
-                        <select id="pe-type" class="form-select">
-                            <option value="appartamento">Appartamento</option>
-                            <option value="villa">Villa</option>
-                            <option value="ufficio">Ufficio</option>
-                            <option value="negozio">Negozio</option>
-                            <option value="box">Box / Garage</option>
-                            <option value="terreno">Terreno</option>
-                            <option value="altro">Altro</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-condition">Stato immobile</label>
-                        <select id="pe-condition" class="form-select">
-                            <option value="">—</option>
-                            <option value="nuovo">Nuovo / In costruzione</option>
-                            <option value="ottimo">Ottimo / Ristrutturato</option>
-                            <option value="buono">Buono / Abitabile</option>
-                            <option value="da_ristrutturare">Da ristrutturare</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-year-built">Anno costruzione</label>
-                        <input type="number" id="pe-year-built" class="form-input" min="1800" max="2099" step="1" placeholder="es. 1985">
-                    </div>
-                </div>
-                <div class="form-row form-row--4">
-                    <div class="form-group">
-                        <label for="pe-sqm">Superficie (m²)</label>
-                        <input type="number" id="pe-sqm" class="form-input" min="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-locali">Locali</label>
-                        <input type="number" id="pe-locali" class="form-input" min="0" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-rooms">Camere</label>
-                        <input type="number" id="pe-rooms" class="form-input" min="0" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-bathrooms">Bagni</label>
-                        <input type="number" id="pe-bathrooms" class="form-input" min="0" step="1">
-                    </div>
-                </div>
-                <div class="form-row form-row--4">
-                    <div class="form-group">
-                        <label for="pe-balconies">Balconi</label>
-                        <input type="number" id="pe-balconies" class="form-input" min="0" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-terraces">Terrazzi</label>
-                        <input type="number" id="pe-terraces" class="form-input" min="0" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-parking">Posti auto / Box</label>
-                        <input type="number" id="pe-parking" class="form-input" min="0" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-garden">Giardino</label>
-                        <select id="pe-garden" class="form-select">
-                            <option value="">—</option>
-                            <option value="no">No</option>
-                            <option value="privato">Privato</option>
-                            <option value="comune">Comune</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row form-row--4">
-                    <div class="form-group">
-                        <label for="pe-energy">Classe energetica</label>
-                        <select id="pe-energy" class="form-select">
-                            <option value="">—</option>
-                            <option value="A4">A4</option><option value="A3">A3</option>
-                            <option value="A2">A2</option><option value="A1">A1</option>
-                            <option value="B">B</option><option value="C">C</option>
-                            <option value="D">D</option><option value="E">E</option>
-                            <option value="F">F</option><option value="G">G</option>
-                            <option value="esente">Esente</option>
-                            <option value="in_attesa">In attesa</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-heating">Riscaldamento</label>
-                        <select id="pe-heating" class="form-select">
-                            <option value="">—</option>
-                            <option value="autonomo">Autonomo</option>
-                            <option value="centralizzato">Centralizzato</option>
-                            <option value="assente">Assente</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-furnished">Arredato</label>
-                        <select id="pe-furnished" class="form-select">
-                            <option value="">—</option>
-                            <option value="no">No</option>
-                            <option value="si">Sì</option>
-                            <option value="parziale">Parzialmente</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-elevator">Ascensore</label>
-                        <select id="pe-elevator" class="form-select">
-                            <option value="">—</option>
-                            <option value="1">Sì</option>
-                            <option value="0">No</option>
-                        </select>
-                    </div>
-                </div>
-            </fieldset>
-
-            <fieldset class="form-section">
-                <legend>Prezzo e posizione</legend>
-                <div class="form-row form-row--3">
-                    <div class="form-group">
-                        <label for="pe-price">Prezzo (€)</label>
-                        <input type="number" id="pe-price" class="form-input" min="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-price-type">Tipo prezzo</label>
-                        <select id="pe-price-type" class="form-select">
-                            <option value="affitto">Affitto</option>
-                            <option value="vendita">Vendita</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-condo-fees">Spese condominiali (€/mese)</label>
-                        <input type="number" id="pe-condo-fees" class="form-input" min="0" step="0.01">
                     </div>
                 </div>
                 <div class="form-group">
@@ -221,6 +68,95 @@
                     <div id="pe-map" class="pe-map" hidden></div>
                     <p class="text-muted" style="font-size:12px;margin:6px 0 0;">Puoi anche trascinare il punto sulla mappa per correggere la posizione.</p>
                 </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Tipologia</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-category">Categoria</label>
+                        <select id="pe-category" class="form-select">
+                            <option value="residenziale">Residenziale</option>
+                            <option value="commerciale">Commerciale</option>
+                            <option value="terreni">Terreni</option>
+                            <option value="garage_posti_auto">Garage e posti auto</option>
+                            <option value="stanze">Stanze / Camere</option>
+                            <option value="nuove_costruzioni">Nuove costruzioni</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-type">Gruppo</label>
+                        <select id="pe-type" class="form-select">
+                            <option value="appartamento">Appartamento</option>
+                            <option value="villa">Villa</option>
+                            <option value="ufficio">Ufficio</option>
+                            <option value="negozio">Negozio</option>
+                            <option value="box">Box / Garage</option>
+                            <option value="terreno">Terreno</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-typology">Tipologia</label>
+                        <select id="pe-typology" class="form-select"></select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Contratto, prezzo e costi di gestione</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-price-type">Contratto</label>
+                        <select id="pe-price-type" class="form-select">
+                            <option value="vendita">Vendita</option>
+                            <option value="affitto">Affitto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-ownership">Tipo proprietà</label>
+                        <select id="pe-ownership" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="intera_proprieta">Intera proprietà</option>
+                            <option value="nuda_proprieta">Nuda proprietà</option>
+                            <option value="parziale_proprieta">Parziale proprietà</option>
+                            <option value="multiproprieta">Multiproprietà</option>
+                            <option value="usufrutto">Usufrutto</option>
+                            <option value="diritto_superficie">Diritto di superficie</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-price"><span id="pe-price-label">Prezzo vendita</span> (€)</label>
+                        <input type="number" id="pe-price" class="form-input" min="0" step="0.01">
+                        <label class="pe-check"><input type="checkbox" id="pe-price-request"> Mostra come "Prezzo su richiesta"</label>
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-condo-fees">Spese condominiali (€/mese)</label>
+                        <input type="number" id="pe-condo-fees" class="form-input" min="0" step="0.01">
+                        <label class="pe-check"><input type="checkbox" id="pe-condo-none"> Nessuna spesa condominiale</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-heating-costs">Spese riscaldamento (€/anno)</label>
+                        <input type="number" id="pe-heating-costs" class="form-input" min="0" step="0.01">
+                        <label class="pe-check"><input type="checkbox" id="pe-heating-costs-none"> Nessuna spesa di riscaldamento</label>
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label>Libero</label>
+                        <div class="yn" id="pe-libero"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Affitto con riscatto</label>
+                        <div class="yn" id="pe-riscatto"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Immobile a reddito</label>
+                        <div class="yn" id="pe-reddito"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div>
+                    </div>
+                </div>
                 <div id="pe-price-history-section" class="form-group" hidden>
                     <label>Storico prezzi</label>
                     <div id="pe-price-history" class="price-history-list text-muted">Nessuna variazione registrata.</div>
@@ -228,44 +164,311 @@
             </fieldset>
 
             <fieldset class="form-section">
-                <legend>Dati catastali e APE</legend>
+                <legend>Superficie</legend>
+                <div class="surface-head">
+                    <span>Consistenza</span><span>Piano</span><span>Superficie m²</span><span>Conteggio %</span><span>Commerciale</span><span>Accessoria</span><span></span>
+                </div>
+                <div id="pe-surfaces"></div>
+                <button type="button" class="btn btn--primary btn--sm" id="pe-surface-add">+ Aggiungi</button>
+                <div class="surface-totals">
+                    <div>Totale principale <strong id="pe-surface-total-main">0,0</strong> m²</div>
+                    <div>Totale principale e accessoria <strong id="pe-surface-total-all">0,0</strong> m²</div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Composizione</legend>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-rooms">Camere da letto</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-rooms" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-other-rooms">Altre stanze</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-other-rooms" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-locali">Totale locali</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="number" id="pe-locali" class="form-input" readonly style="max-width:90px">
+                            <span class="text-muted" id="pe-locali-label" style="font-size:13px"></span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-bathrooms">Bagni</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-bathrooms" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                </div>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-kitchen">Cucina</label>
+                        <select id="pe-kitchen" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="abitabile">Abitabile</option>
+                            <option value="semi_abitabile">Semi abitabile</option>
+                            <option value="angolo_cottura">Angolo cottura</option>
+                            <option value="cucinotto">Cucinotto</option>
+                            <option value="a_vista">A vista</option>
+                            <option value="nessuna">Nessuna</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-furnished">Arredamento</label>
+                        <select id="pe-furnished" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="si">Arredato</option>
+                            <option value="parziale">Parzialmente arredato</option>
+                            <option value="no">Non arredato</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-garden">Giardino</label>
+                        <select id="pe-garden" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="no">Nessuno</option>
+                            <option value="privato">Privato</option>
+                            <option value="comune">Comune</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-garage-type">Box auto</label>
+                        <select id="pe-garage-type" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="box_singolo">Box singolo</option>
+                            <option value="box_doppio">Box doppio</option>
+                            <option value="box_triplo_o_piu">Box triplo o più</option>
+                            <option value="posto_auto_coperto">Posto auto coperto</option>
+                            <option value="nessuno">Nessuno</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-parking">Posti auto</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-parking" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-balconies">Balconi (n.)</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-balconies" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-terraces">Terrazzi (n.)</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-terraces" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                </div>
                 <div class="form-row form-row--3">
                     <div class="form-group">
-                        <label for="pe-cat-comune">Comune catastale</label>
-                        <input type="text" id="pe-cat-comune" class="form-input" maxlength="100" placeholder="es. Civitanova Marche">
+                        <label for="pe-window-frames">Infissi esterni</label>
+                        <select id="pe-window-frames" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="vetro_legno">Vetro / Legno</option>
+                            <option value="doppio_vetro_legno">Doppio vetro / Legno</option>
+                            <option value="triplo_vetro_legno">Triplo vetro / Legno</option>
+                            <option value="vetro_metallo">Vetro / Metallo</option>
+                            <option value="doppio_vetro_metallo">Doppio vetro / Metallo</option>
+                            <option value="triplo_vetro_metallo">Triplo vetro / Metallo</option>
+                            <option value="vetro_pvc">Vetro / PVC</option>
+                            <option value="doppio_vetro_pvc">Doppio vetro / PVC</option>
+                            <option value="triplo_vetro_pvc">Triplo vetro / PVC</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label for="pe-cat-category">Categoria</label>
-                        <input type="text" id="pe-cat-category" class="form-input" maxlength="10" placeholder="es. A/2">
+                        <label for="pe-tv-system">Impianto TV</label>
+                        <select id="pe-tv-system" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="centralizzato">Centralizzato</option>
+                            <option value="singolo">Singolo</option>
+                            <option value="satellitare">Satellitare</option>
+                            <option value="predisposizione">Predisposizione</option>
+                            <option value="assente">Assente</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label for="pe-cat-class">Classe</label>
-                        <input type="text" id="pe-cat-class" class="form-input" maxlength="10" placeholder="es. 3">
+                        <label for="pe-concierge">Servizio portineria</label>
+                        <select id="pe-concierge" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="no">No</option>
+                            <option value="mezza_giornata">Sì, mezza giornata</option>
+                            <option value="giornata_intera">Sì, giornata intera</option>
+                        </select>
                     </div>
                 </div>
-                <div class="form-row form-row--4">
+                <div class="yn-grid">
+                    <div class="yn-item"><span>Armadi a muro</span><div class="yn" id="pe-wardrobes"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Cantina</span><div class="yn" id="pe-cellar"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Mansarda</span><div class="yn" id="pe-attic"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Taverna</span><div class="yn" id="pe-tavern"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Porta blindata</span><div class="yn" id="pe-armored-door"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Impianto d'allarme</span><div class="yn" id="pe-alarm"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Cancello elettrico</span><div class="yn" id="pe-electric-gate"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Videocitofono</span><div class="yn" id="pe-video-intercom"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Fibra ottica</span><div class="yn" id="pe-fiber"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Camino / caminetto</span><div class="yn" id="pe-fireplace"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Idromassaggio</span><div class="yn" id="pe-jacuzzi"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Piscina</span><div class="yn" id="pe-pool"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Campo da tennis</span><div class="yn" id="pe-tennis"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                </div>
+                <div class="form-group" style="margin-top:12px">
+                    <label for="pe-features">Caratteristiche aggiuntive</label>
+                    <textarea id="pe-features" class="form-textarea" rows="2" placeholder="Es. infissi nuovi, zanzariere, tende da sole…"></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Caratteristiche</legend>
+                <div class="form-row form-row--3">
                     <div class="form-group">
-                        <label for="pe-cat-foglio">Foglio</label>
-                        <input type="text" id="pe-cat-foglio" class="form-input" maxlength="20">
+                        <label for="pe-year-built">Anno costruzione</label>
+                        <input type="number" id="pe-year-built" class="form-input" min="1800" max="2099" step="1" placeholder="es. 1985">
                     </div>
                     <div class="form-group">
-                        <label for="pe-cat-particella">Particella</label>
-                        <input type="text" id="pe-cat-particella" class="form-input" maxlength="20">
+                        <label for="pe-property-class">Classe immobile</label>
+                        <select id="pe-property-class" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="lusso">Immobile di lusso</option>
+                            <option value="signorile">Signorile</option>
+                            <option value="media">Media</option>
+                            <option value="economica">Economica</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label for="pe-cat-subalterno">Subalterno</label>
-                        <input type="text" id="pe-cat-subalterno" class="form-input" maxlength="20">
-                    </div>
-                    <div class="form-group">
-                        <label for="pe-cat-zone">Zona OMI</label>
-                        <input type="text" id="pe-cat-zone" class="form-input" maxlength="20" placeholder="es. B1">
+                        <label for="pe-condition">Stato</label>
+                        <select id="pe-condition" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="nuovo">Nuovo / In costruzione</option>
+                            <option value="ottimo">Ottimo / Ristrutturato</option>
+                            <option value="buono">Buono / Abitabile</option>
+                            <option value="da_ristrutturare">Da ristrutturare</option>
+                        </select>
                     </div>
                 </div>
-                <div class="form-row form-row--4">
+                <div class="form-row form-row--3">
                     <div class="form-group">
-                        <label for="pe-cat-rendita">Rendita catastale (€)</label>
-                        <input type="number" id="pe-cat-rendita" class="form-input" min="0" step="0.01">
+                        <label for="pe-floor">Piano</label>
+                        <input type="text" id="pe-floor" class="form-input" maxlength="20" placeholder="es. 2, terra, rialzato">
+                        <label class="pe-check"><input type="checkbox" id="pe-multi-level"> Su più livelli</label>
                     </div>
+                    <div class="form-group">
+                        <label for="pe-total-floors">Totale piani edificio</label>
+                        <div class="stepper"><button type="button" class="stepper__btn" data-d="-1">−</button><input type="number" id="pe-total-floors" class="form-input stepper__input" min="0" step="1"><button type="button" class="stepper__btn" data-d="1">+</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-free-sides">Lati liberi</label>
+                        <select id="pe-free-sides" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="1">1</option><option value="2">2</option>
+                            <option value="3">3</option><option value="4">4</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label>Ascensore</label>
+                        <div class="yn" id="pe-elevator"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Accesso per disabili</label>
+                        <div class="yn" id="pe-disabled-access"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-overlooking">Affaccio</label>
+                        <select id="pe-overlooking" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="esterno">Esterno</option>
+                            <option value="interno">Interno</option>
+                            <option value="doppio">Doppio affaccio</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-exposure">Esposizione</label>
+                        <input type="text" id="pe-exposure" class="form-input" maxlength="60" placeholder="es. Sud, Est/Ovest">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-heating">Riscaldamento</label>
+                        <select id="pe-heating" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="autonomo">Autonomo</option>
+                            <option value="centralizzato">Centralizzato</option>
+                            <option value="assente">Assente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-heating-system">Tipo impianto riscaldamento</label>
+                        <select id="pe-heating-system" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="a_radiatori">A radiatori</option>
+                            <option value="a_pavimento">A pavimento</option>
+                            <option value="ad_aria">Ad aria</option>
+                            <option value="a_stufa">A stufa</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-heating-fuel">Alimentazione riscaldamento</label>
+                        <select id="pe-heating-fuel" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="metano">Metano</option>
+                            <option value="gpl">GPL</option>
+                            <option value="gasolio">Gasolio</option>
+                            <option value="elettrico">Elettrico</option>
+                            <option value="pompa_di_calore">Pompa di calore</option>
+                            <option value="teleriscaldamento">Teleriscaldamento</option>
+                            <option value="pellet">Pellet</option>
+                            <option value="legna">Legna</option>
+                            <option value="solare">Solare</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-aircon">Impianto climatizzazione</label>
+                        <select id="pe-aircon" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="autonomo">Autonomo</option>
+                            <option value="centralizzato">Centralizzato</option>
+                            <option value="predisposizione">Predisposizione</option>
+                            <option value="assente">Assente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-aircon-type">Tipo impianto climatizzazione</label>
+                        <select id="pe-aircon-type" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="freddo">Freddo</option>
+                            <option value="caldo_freddo">Caldo / Freddo</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Certificazione Energetica</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-energy">Classe Energetica</label>
+                        <select id="pe-energy" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="A4">A4</option><option value="A3">A3</option>
+                            <option value="A2">A2</option><option value="A1">A1</option>
+                            <option value="B">B</option><option value="C">C</option>
+                            <option value="D">D</option><option value="E">E</option>
+                            <option value="F">F</option><option value="G">G</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-ipe">Indice di prestazione energetica</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="number" id="pe-ipe" class="form-input" min="0" step="0.01" style="max-width:140px">
+                            <span class="text-muted" style="font-size:13px;white-space:nowrap">kWh/m² anno</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="pe-check"><input type="checkbox" id="pe-energy-pending"> Indice di prestazione energetica in attesa di certificazione</label>
+                    <label class="pe-check"><input type="checkbox" id="pe-energy-exempt"> Immobile esente da certificazione energetica</label>
+                </div>
+                <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="pe-ape-number">N. attestato APE</label>
                         <input type="text" id="pe-ape-number" class="form-input" maxlength="50">
@@ -279,32 +482,106 @@
                         <input type="date" id="pe-ape-expiry" class="form-input">
                     </div>
                 </div>
-                <div class="form-row form-row--3">
-                    <div class="form-group">
-                        <label for="pe-ipe">IPE (kWh/m²·a)</label>
-                        <input type="number" id="pe-ipe" class="form-input" min="0" step="0.01">
-                    </div>
-                </div>
                 <p class="text-muted" style="font-size:12px;margin:4px 0 0 0">La scadenza APE si compila da sola a 10 anni dal rilascio se lasciata vuota.</p>
             </fieldset>
 
             <fieldset class="form-section">
-                <legend>Descrizione</legend>
-                <div class="form-group">
-                    <label for="pe-description" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-                        <span>Descrizione</span>
-                        <button type="button" class="btn btn--ghost btn--sm" id="pe-ai-describe" title="Genera una descrizione annuncio con l'AI dai dati dell'immobile"><i data-lucide="sparkles"></i> Genera con AI</button>
-                    </label>
-                    <textarea id="pe-description" class="form-textarea" rows="3"></textarea>
-                    <p id="pe-ai-hint" class="text-muted" style="font-size:12px;margin-top:4px;display:none"></p>
+                <legend>Dati catastali <span class="section-flag">Non visibile in pubblicità</span></legend>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-cat-sezione">Sezione</label>
+                        <input type="text" id="pe-cat-sezione" class="form-input" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-foglio">Foglio</label>
+                        <input type="text" id="pe-cat-foglio" class="form-input" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-particella">Particella</label>
+                        <input type="text" id="pe-cat-particella" class="form-input" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-subalterno">Subalterno</label>
+                        <input type="text" id="pe-cat-subalterno" class="form-input" maxlength="20">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="pe-features">Caratteristiche aggiuntive</label>
-                    <textarea id="pe-features" class="form-textarea" rows="2" placeholder="Es. cantina, climatizzazione, infissi nuovi…"></textarea>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-cat-category">Categoria Catastale</label>
+                        <input type="text" id="pe-cat-category" class="form-input" maxlength="10" placeholder="es. A/2">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-rendita">Rendita catastale (€)</label>
+                        <input type="number" id="pe-cat-rendita" class="form-input" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-ownership-share">Quota proprietà</label>
+                        <input type="text" id="pe-ownership-share" class="form-input" maxlength="50" placeholder="es. 1/1">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-class">Classe</label>
+                        <input type="text" id="pe-cat-class" class="form-input" maxlength="10" placeholder="es. 3">
+                    </div>
                 </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="pe-cat-comune">Comune catastale</label>
+                        <input type="text" id="pe-cat-comune" class="form-input" maxlength="100" placeholder="es. Civitanova Marche">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-zone">Zona OMI</label>
+                        <input type="text" id="pe-cat-zone" class="form-input" maxlength="20" placeholder="es. B1">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-cat-other">Altri dati catastali</label>
+                        <input type="text" id="pe-cat-other" class="form-input" maxlength="500">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Descrizione per i portali web</legend>
+                <div class="lang-tabs" id="pe-lang-tabs"></div>
+                <div id="pe-lang-panels"></div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Dati intermediazione</legend>
+                <div class="form-row form-row--4">
+                    <div class="form-group">
+                        <label for="pe-reference">Riferimento annuncio</label>
+                        <input type="text" id="pe-reference" class="form-input" maxlength="50" placeholder="es. RIF-001">
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-agent">Agente</label>
+                        <select id="pe-agent" class="form-select">
+                            <option value="">Scegli</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-collaboration">Collaborazione</label>
+                        <select id="pe-collaboration" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="nessuna_preferenza">Nessuna preferenza</option>
+                            <option value="si">Sì, collaboro</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pe-mandate-type">Tipo Mandato</label>
+                        <select id="pe-mandate-type" class="form-select">
+                            <option value="">Scegli</option>
+                            <option value="esclusiva">In esclusiva</option>
+                            <option value="non_esclusiva">Non in esclusiva</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Note <span class="section-flag">Non visibile in pubblicità</span></legend>
                 <div class="form-group">
-                    <label for="pe-notes">Note interne</label>
-                    <textarea id="pe-notes" class="form-textarea" rows="2"></textarea>
+                    <textarea id="pe-notes" class="form-textarea" rows="3" placeholder="Inserisci una nota"></textarea>
                 </div>
             </fieldset>
 
@@ -319,4 +596,4 @@
     </div>
 </div>
 
-<script src="assets/js/property_edit.js?v=1"></script>
+<script src="assets/js/property_edit.js?v=2"></script>

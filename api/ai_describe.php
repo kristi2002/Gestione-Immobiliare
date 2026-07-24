@@ -80,26 +80,54 @@ function buildPropertyFacts(array $p): string
         if ($val !== null && $val !== '' && $val !== '0') $lines[] = "- $label: $val";
     };
 
-    $add('Tipologia', $typeLabels[$p['property_type'] ?? ''] ?? ($p['property_type'] ?? null));
+    $add('Tipologia', ($p['typology'] ?? null) ?: ($typeLabels[$p['property_type'] ?? ''] ?? ($p['property_type'] ?? null)));
+    $add('Classe immobile', $p['property_class'] ?? null);
     $add('Contratto', ($p['price_type'] ?? '') === 'vendita' ? 'Vendita' : 'Affitto');
     $add('Città', $p['city'] ?? null);
     $add('Indirizzo/zona', $p['address'] ?? null);
     $add('Superficie (m²)', $p['sqm'] ?? null);
     $add('Locali', $p['locali'] ?? ($p['rooms'] ?? null));
+    $add('Camere da letto', $p['rooms'] ?? null);
     $add('Bagni', $p['bathrooms'] ?? null);
+    $add('Cucina', $p['kitchen_type'] ?? null);
     $add('Piano', $p['floor'] ?? null);
+    $add('Su più livelli', !empty($p['multi_level']) ? 'Sì' : null);
     $add('Ascensore', isset($p['elevator']) && $p['elevator'] !== '' ? ((int) $p['elevator'] ? 'Sì' : 'No') : null);
-    $add('Riscaldamento', $p['heating'] ?? null);
+    $add('Riscaldamento', trim(($p['heating'] ?? '') . ' ' . ($p['heating_system'] ?? '') . ' ' . ($p['heating_fuel'] ?? '')) ?: null);
+    $add('Climatizzazione', $p['air_conditioning'] ?? null);
     $add('Arredamento', $p['furnished'] ?? null);
     $add('Stato', $p['condition_state'] ?? null);
+    $add('Anno costruzione', $p['year_built'] ?? null);
     $add('Classe energetica', $p['energy_class'] ?? null);
     $add('Esposizione', $p['exposure'] ?? null);
+    $add('Affaccio', $p['overlooking'] ?? null);
+    $add('Lati liberi', $p['free_sides'] ?? null);
     $add('Balconi', $p['balconies'] ?? null);
     $add('Terrazzi', $p['terraces'] ?? null);
     $add('Giardino', $p['garden'] ?? null);
+    $add('Box auto', $p['garage_type'] ?? null);
     $add('Posti auto', $p['parking_spaces'] ?? null);
+
+    // Dotazioni (solo quelle presenti)
+    $amenityLabels = [
+        'wardrobes' => 'armadi a muro', 'cellar' => 'cantina', 'attic_room' => 'mansarda',
+        'tavern' => 'taverna', 'armored_door' => 'porta blindata', 'alarm_system' => "impianto d'allarme",
+        'electric_gate' => 'cancello elettrico', 'video_intercom' => 'videocitofono',
+        'optical_fiber' => 'fibra ottica', 'fireplace' => 'camino', 'jacuzzi' => 'idromassaggio',
+        'pool' => 'piscina', 'tennis_court' => 'campo da tennis',
+    ];
+    $dotazioni = [];
+    foreach ($amenityLabels as $key => $label) {
+        if (!empty($p[$key])) $dotazioni[] = $label;
+    }
+    $add('Dotazioni', $dotazioni ? implode(', ', $dotazioni) : null);
+
     $add('Spese condominiali (€/mese)', $p['condo_fees'] ?? null);
-    $add('Prezzo (€)', $p['price'] ?? null);
+    if (!empty($p['price_on_request'])) {
+        $add('Prezzo', 'su richiesta (non citare cifre)');
+    } else {
+        $add('Prezzo (€)', $p['price'] ?? null);
+    }
     $add('Caratteristiche aggiuntive', $p['additional_features'] ?? null);
 
     return implode("\n", $lines);

@@ -172,6 +172,7 @@ function getProperty(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
         "SELECT p.*, c.name AS client_name, c.surname AS client_surname,
+                (SELECT u.username FROM admin_users u WHERE u.id = p.agent_id) AS agent_username,
                 COUNT(m.id) AS media_count,
                 SUM(CASE WHEN m.media_type = 'photo' THEN 1 ELSE 0 END) AS photo_count,
                 COALESCE(
@@ -206,6 +207,24 @@ function getProperty(PDO $db, int $id): void
     );
     $histStmt->execute(['id' => $id]);
     $property['price_history'] = $histStmt->fetchAll();
+
+    $surfStmt = $db->prepare(
+        'SELECT surface_type, floor_label, sqm, weight_percent, commercial_sqm, is_accessory
+         FROM property_surfaces WHERE property_id = :id ORDER BY sort_order ASC, id ASC'
+    );
+    $surfStmt->execute(['id' => $id]);
+    $property['surfaces'] = $surfStmt->fetchAll();
+
+    $descStmt = $db->prepare(
+        'SELECT lang, title, description FROM property_descriptions
+         WHERE property_id = :id ORDER BY lang ASC'
+    );
+    $descStmt->execute(['id' => $id]);
+    $descriptions = [];
+    foreach ($descStmt->fetchAll() as $d) {
+        $descriptions[$d['lang']] = ['title' => $d['title'], 'description' => $d['description']];
+    }
+    $property['descriptions'] = $descriptions ?: new stdClass();
 
     apiSuccess($property);
 }
@@ -300,29 +319,57 @@ function createProperty(PDO $db): void
     $data      = apiGetJsonBody();
     $validated = validatePropertyInput($db, $data);
 
-    $stmt = $db->prepare(
-        "INSERT INTO properties
-            (client_id, building_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
-             year_built, property_type, description, additional_features, internal_notes, status,
-             price, price_type, latitude, longitude, geo_confidence,
-             locali, total_floors, energy_class, heating, elevator, furnished, balconies, terraces,
-             garden, parking_spaces, condition_state, exposure, condo_fees, reference_code,
-             cadastral_comune, cadastral_foglio, cadastral_particella, cadastral_subalterno,
-             cadastral_category, cadastral_class, cadastral_rendita, cadastral_zone,
-             ape_number, ape_issue_date, ape_expiry_date, ipe_value)
-         VALUES
-            (:client_id, :building_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
-             :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
-             :price, :price_type, :latitude, :longitude, :geo_confidence,
-             :locali, :total_floors, :energy_class, :heating, :elevator, :furnished, :balconies, :terraces,
-             :garden, :parking_spaces, :condition_state, :exposure, :condo_fees, :reference_code,
-             :cadastral_comune, :cadastral_foglio, :cadastral_particella, :cadastral_subalterno,
-             :cadastral_category, :cadastral_class, :cadastral_rendita, :cadastral_zone,
-             :ape_number, :ape_issue_date, :ape_expiry_date, :ipe_value)"
-    );
-    $stmt->execute($validated);
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO properties
+                (client_id, building_id, address, city, cap, province, sqm, rooms, bathrooms, floor,
+                 year_built, property_type, description, additional_features, internal_notes, status,
+                 price, price_type, latitude, longitude, geo_confidence,
+                 locali, total_floors, energy_class, heating, elevator, furnished, balconies, terraces,
+                 garden, parking_spaces, condition_state, exposure, condo_fees, reference_code,
+                 cadastral_comune, cadastral_foglio, cadastral_particella, cadastral_subalterno,
+                 cadastral_category, cadastral_class, cadastral_rendita, cadastral_zone,
+                 ape_number, ape_issue_date, ape_expiry_date, ipe_value,
+                 category, typology, ownership_type, price_on_request, heating_costs,
+                 is_vacant, rent_to_own, investment_property,
+                 other_rooms, kitchen_type, garage_type, wardrobes, cellar, attic_room, tavern,
+                 armored_door, alarm_system, electric_gate, video_intercom, optical_fiber,
+                 fireplace, jacuzzi, pool, tennis_court, window_frames, tv_system, concierge,
+                 property_class, multi_level, disabled_access, free_sides, overlooking,
+                 heating_system, heating_fuel, air_conditioning, air_conditioning_type,
+                 cadastral_sezione, ownership_share, cadastral_other,
+                 listing_title, agent_id, collaboration, mandate_type)
+             VALUES
+                (:client_id, :building_id, :address, :city, :cap, :province, :sqm, :rooms, :bathrooms, :floor,
+                 :year_built, :property_type, :description, :additional_features, :internal_notes, :status,
+                 :price, :price_type, :latitude, :longitude, :geo_confidence,
+                 :locali, :total_floors, :energy_class, :heating, :elevator, :furnished, :balconies, :terraces,
+                 :garden, :parking_spaces, :condition_state, :exposure, :condo_fees, :reference_code,
+                 :cadastral_comune, :cadastral_foglio, :cadastral_particella, :cadastral_subalterno,
+                 :cadastral_category, :cadastral_class, :cadastral_rendita, :cadastral_zone,
+                 :ape_number, :ape_issue_date, :ape_expiry_date, :ipe_value,
+                 :category, :typology, :ownership_type, :price_on_request, :heating_costs,
+                 :is_vacant, :rent_to_own, :investment_property,
+                 :other_rooms, :kitchen_type, :garage_type, :wardrobes, :cellar, :attic_room, :tavern,
+                 :armored_door, :alarm_system, :electric_gate, :video_intercom, :optical_fiber,
+                 :fireplace, :jacuzzi, :pool, :tennis_court, :window_frames, :tv_system, :concierge,
+                 :property_class, :multi_level, :disabled_access, :free_sides, :overlooking,
+                 :heating_system, :heating_fuel, :air_conditioning, :air_conditioning_type,
+                 :cadastral_sezione, :ownership_share, :cadastral_other,
+                 :listing_title, :agent_id, :collaboration, :mandate_type)"
+        );
+        $stmt->execute($validated);
 
-    $newId = (int) $db->lastInsertId();
+        $newId = (int) $db->lastInsertId();
+        savePropertySurfaces($db, $newId, $data);
+        savePropertyDescriptions($db, $newId, $data);
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+
     logActivity('create', 'property', $newId, 'Immobile creato: ' . ($validated['address'] ?? ('#' . $newId)));
     getProperty($db, $newId);
 }
@@ -369,32 +416,155 @@ function updateProperty(PDO $db, int $id): void
         ]);
     }
 
-    $stmt = $db->prepare(
-        "UPDATE properties
-         SET client_id = :client_id, building_id = :building_id, address = :address, city = :city, cap = :cap,
-             province = :province, sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
-             year_built = :year_built, property_type = :property_type,
-             description = :description, additional_features = :additional_features,
-             internal_notes = :internal_notes, status = :status,
-             price = :price, price_type = :price_type,
-             latitude = :latitude, longitude = :longitude, geo_confidence = :geo_confidence,
-             locali = :locali, total_floors = :total_floors, energy_class = :energy_class,
-             heating = :heating, elevator = :elevator, furnished = :furnished,
-             balconies = :balconies, terraces = :terraces, garden = :garden,
-             parking_spaces = :parking_spaces, condition_state = :condition_state,
-             exposure = :exposure, condo_fees = :condo_fees, reference_code = :reference_code,
-             cadastral_comune = :cadastral_comune, cadastral_foglio = :cadastral_foglio,
-             cadastral_particella = :cadastral_particella, cadastral_subalterno = :cadastral_subalterno,
-             cadastral_category = :cadastral_category, cadastral_class = :cadastral_class,
-             cadastral_rendita = :cadastral_rendita, cadastral_zone = :cadastral_zone,
-             ape_number = :ape_number, ape_issue_date = :ape_issue_date,
-             ape_expiry_date = :ape_expiry_date, ipe_value = :ipe_value
-         WHERE id = :id"
-    );
-    $stmt->execute(array_merge($validated, ['id' => $id]));
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare(
+            "UPDATE properties
+             SET client_id = :client_id, building_id = :building_id, address = :address, city = :city, cap = :cap,
+                 province = :province, sqm = :sqm, rooms = :rooms, bathrooms = :bathrooms, floor = :floor,
+                 year_built = :year_built, property_type = :property_type,
+                 description = :description, additional_features = :additional_features,
+                 internal_notes = :internal_notes, status = :status,
+                 price = :price, price_type = :price_type,
+                 latitude = :latitude, longitude = :longitude, geo_confidence = :geo_confidence,
+                 locali = :locali, total_floors = :total_floors, energy_class = :energy_class,
+                 heating = :heating, elevator = :elevator, furnished = :furnished,
+                 balconies = :balconies, terraces = :terraces, garden = :garden,
+                 parking_spaces = :parking_spaces, condition_state = :condition_state,
+                 exposure = :exposure, condo_fees = :condo_fees, reference_code = :reference_code,
+                 cadastral_comune = :cadastral_comune, cadastral_foglio = :cadastral_foglio,
+                 cadastral_particella = :cadastral_particella, cadastral_subalterno = :cadastral_subalterno,
+                 cadastral_category = :cadastral_category, cadastral_class = :cadastral_class,
+                 cadastral_rendita = :cadastral_rendita, cadastral_zone = :cadastral_zone,
+                 ape_number = :ape_number, ape_issue_date = :ape_issue_date,
+                 ape_expiry_date = :ape_expiry_date, ipe_value = :ipe_value,
+                 category = :category, typology = :typology, ownership_type = :ownership_type,
+                 price_on_request = :price_on_request, heating_costs = :heating_costs,
+                 is_vacant = :is_vacant, rent_to_own = :rent_to_own,
+                 investment_property = :investment_property,
+                 other_rooms = :other_rooms, kitchen_type = :kitchen_type, garage_type = :garage_type,
+                 wardrobes = :wardrobes, cellar = :cellar, attic_room = :attic_room, tavern = :tavern,
+                 armored_door = :armored_door, alarm_system = :alarm_system,
+                 electric_gate = :electric_gate, video_intercom = :video_intercom,
+                 optical_fiber = :optical_fiber, fireplace = :fireplace, jacuzzi = :jacuzzi,
+                 pool = :pool, tennis_court = :tennis_court, window_frames = :window_frames,
+                 tv_system = :tv_system, concierge = :concierge,
+                 property_class = :property_class, multi_level = :multi_level,
+                 disabled_access = :disabled_access, free_sides = :free_sides,
+                 overlooking = :overlooking, heating_system = :heating_system,
+                 heating_fuel = :heating_fuel, air_conditioning = :air_conditioning,
+                 air_conditioning_type = :air_conditioning_type,
+                 cadastral_sezione = :cadastral_sezione, ownership_share = :ownership_share,
+                 cadastral_other = :cadastral_other,
+                 listing_title = :listing_title, agent_id = :agent_id,
+                 collaboration = :collaboration, mandate_type = :mandate_type
+             WHERE id = :id"
+        );
+        $stmt->execute(array_merge($validated, ['id' => $id]));
+
+        savePropertySurfaces($db, $id, $data);
+        savePropertyDescriptions($db, $id, $data);
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
 
     logActivity('update', 'property', $id, 'Immobile aggiornato #' . $id);
     getProperty($db, $id);
+}
+
+/**
+ * Superficie a righe (scheda immobiliare.it): sostituisce l'intero set di
+ * righe quando il payload contiene `surfaces`. Con almeno una riga valida,
+ * properties.sqm viene riallineato al totale commerciale (principale +
+ * accessoria) così liste, filtri e matching restano coerenti.
+ * Payload assente ⇒ righe esistenti intatte (client legacy / import).
+ */
+function savePropertySurfaces(PDO $db, int $propertyId, array $data): void
+{
+    if (!array_key_exists('surfaces', $data) || !is_array($data['surfaces'])) {
+        return;
+    }
+
+    $db->prepare('DELETE FROM property_surfaces WHERE property_id = :id')
+       ->execute(['id' => $propertyId]);
+
+    $validTypes = ['abitazione', 'balcone', 'terrazzo', 'giardino', 'box', 'posto_auto',
+                   'cantina', 'mansarda', 'taverna', 'soffitta', 'seminterrato', 'altro'];
+
+    $stmt = $db->prepare(
+        'INSERT INTO property_surfaces
+            (property_id, surface_type, floor_label, sqm, weight_percent, commercial_sqm, is_accessory, sort_order)
+         VALUES (:property_id, :surface_type, :floor_label, :sqm, :weight_percent, :commercial_sqm, :is_accessory, :sort_order)'
+    );
+
+    $sort = 0;
+    $totalCommercial = 0.0;
+    foreach ($data['surfaces'] as $row) {
+        if (!is_array($row)) continue;
+        $sqm = isset($row['sqm']) && $row['sqm'] !== '' ? (float) $row['sqm'] : 0.0;
+        if ($sqm <= 0) continue; // riga vuota / placeholder del form
+
+        $type = trim((string) ($row['surface_type'] ?? 'abitazione'));
+        if (!in_array($type, $validTypes, true)) $type = 'altro';
+
+        $pct = isset($row['weight_percent']) && $row['weight_percent'] !== '' ? (float) $row['weight_percent'] : 100.0;
+        $pct = max(0.0, min(100.0, $pct));
+        $commercial = round($sqm * $pct / 100, 1);
+
+        $stmt->execute([
+            'property_id'    => $propertyId,
+            'surface_type'   => $type,
+            'floor_label'    => trim((string) ($row['floor_label'] ?? '')) ?: null,
+            'sqm'            => $sqm,
+            'weight_percent' => $pct,
+            'commercial_sqm' => $commercial,
+            'is_accessory'   => (int) (bool) ($row['is_accessory'] ?? false),
+            'sort_order'     => $sort++,
+        ]);
+        $totalCommercial += $commercial;
+    }
+
+    if ($sort > 0) {
+        $db->prepare('UPDATE properties SET sqm = :sqm WHERE id = :id')
+           ->execute(['sqm' => round($totalCommercial, 1), 'id' => $propertyId]);
+    }
+}
+
+/**
+ * Descrizioni multilingua per i portali. L'italiano resta su
+ * properties.listing_title/description; qui solo le altre lingue della scheda.
+ * Come per le superfici: chiave assente ⇒ nessun tocco.
+ */
+function savePropertyDescriptions(PDO $db, int $propertyId, array $data): void
+{
+    if (!array_key_exists('descriptions', $data) || !is_array($data['descriptions'])) {
+        return;
+    }
+
+    $db->prepare('DELETE FROM property_descriptions WHERE property_id = :id')
+       ->execute(['id' => $propertyId]);
+
+    $allowedLangs = ['en', 'de', 'fr', 'es', 'pt', 'ru', 'el'];
+    $stmt = $db->prepare(
+        'INSERT INTO property_descriptions (property_id, lang, title, description)
+         VALUES (:property_id, :lang, :title, :description)'
+    );
+
+    foreach ($data['descriptions'] as $lang => $d) {
+        $lang = strtolower(trim((string) $lang));
+        if (!in_array($lang, $allowedLangs, true) || !is_array($d)) continue;
+        $title = trim((string) ($d['title'] ?? '')) ?: null;
+        $desc  = trim((string) ($d['description'] ?? '')) ?: null;
+        if ($title === null && $desc === null) continue;
+        $stmt->execute([
+            'property_id' => $propertyId,
+            'lang'        => $lang,
+            'title'       => $title !== null ? mb_substr($title, 0, 255) : null,
+            'description' => $desc !== null ? mb_substr($desc, 0, 5000) : null,
+        ]);
+    }
 }
 
 function deleteProperty(PDO $db, int $id): void
@@ -527,6 +697,71 @@ function validatePropertyInput(PDO $db, array $data): array
         $apeExpiryDate = (new DateTime($apeIssueDate))->modify('+10 years')->format('Y-m-d');
     }
 
+    // ── Scheda immobiliare.it — tutti opzionali, enum non validi ⇒ null ──────
+    $enumOrNull = static function ($v, array $allowed) {
+        $v = isset($v) ? trim((string) $v) : '';
+        return in_array($v, $allowed, true) ? $v : null;
+    };
+    $boolOrNull = static fn($v) => isset($v) && $v !== '' && $v !== null ? (int) (bool) $v : null;
+
+    $category = $enumOrNull($data['category'] ?? null,
+        ['residenziale', 'commerciale', 'terreni', 'garage_posti_auto', 'stanze', 'nuove_costruzioni']);
+    $typology = $strOrNull($data['typology'] ?? null);
+    if ($typology !== null) $typology = mb_substr($typology, 0, 60);
+
+    $ownershipType = $enumOrNull($data['ownership_type'] ?? null,
+        ['intera_proprieta', 'nuda_proprieta', 'parziale_proprieta', 'multiproprieta', 'usufrutto', 'diritto_superficie']);
+    $priceOnRequest = (int) (bool) ($data['price_on_request'] ?? 0);
+    $heatingCosts   = isset($data['heating_costs']) && $data['heating_costs'] !== '' ? (float) $data['heating_costs'] : null;
+    $isVacant       = $boolOrNull($data['is_vacant'] ?? null);
+    $rentToOwn      = $boolOrNull($data['rent_to_own'] ?? null);
+    $investmentProp = $boolOrNull($data['investment_property'] ?? null);
+
+    $otherRooms  = $intOrNull($data['other_rooms'] ?? null);
+    $kitchenType = $enumOrNull($data['kitchen_type'] ?? null,
+        ['abitabile', 'semi_abitabile', 'angolo_cottura', 'cucinotto', 'a_vista', 'nessuna']);
+    $garageType  = $enumOrNull($data['garage_type'] ?? null,
+        ['box_singolo', 'box_doppio', 'box_triplo_o_piu', 'posto_auto_coperto', 'nessuno']);
+    $windowFrames = $enumOrNull($data['window_frames'] ?? null,
+        ['vetro_legno', 'doppio_vetro_legno', 'triplo_vetro_legno',
+         'vetro_metallo', 'doppio_vetro_metallo', 'triplo_vetro_metallo',
+         'vetro_pvc', 'doppio_vetro_pvc', 'triplo_vetro_pvc']);
+    $tvSystem  = $enumOrNull($data['tv_system'] ?? null,
+        ['centralizzato', 'singolo', 'satellitare', 'predisposizione', 'assente']);
+    $concierge = $enumOrNull($data['concierge'] ?? null, ['no', 'mezza_giornata', 'giornata_intera']);
+
+    $amenities = [];
+    foreach (['wardrobes', 'cellar', 'attic_room', 'tavern', 'armored_door', 'alarm_system',
+              'electric_gate', 'video_intercom', 'optical_fiber', 'fireplace', 'jacuzzi',
+              'pool', 'tennis_court'] as $amenity) {
+        $amenities[$amenity] = $boolOrNull($data[$amenity] ?? null);
+    }
+
+    $propertyClass = $enumOrNull($data['property_class'] ?? null, ['lusso', 'signorile', 'media', 'economica']);
+    $multiLevel     = $boolOrNull($data['multi_level'] ?? null);
+    $disabledAccess = $boolOrNull($data['disabled_access'] ?? null);
+    $freeSides      = $intOrNull($data['free_sides'] ?? null);
+    if ($freeSides !== null && ($freeSides < 1 || $freeSides > 4)) $freeSides = null;
+    $overlooking = $enumOrNull($data['overlooking'] ?? null, ['esterno', 'interno', 'doppio']);
+    $heatingSystem = $enumOrNull($data['heating_system'] ?? null,
+        ['a_radiatori', 'a_pavimento', 'ad_aria', 'a_stufa']);
+    $heatingFuel = $enumOrNull($data['heating_fuel'] ?? null,
+        ['metano', 'gpl', 'gasolio', 'elettrico', 'pompa_di_calore', 'teleriscaldamento', 'pellet', 'legna', 'solare']);
+    $airConditioning = $enumOrNull($data['air_conditioning'] ?? null,
+        ['autonomo', 'centralizzato', 'predisposizione', 'assente']);
+    $airConditioningType = $enumOrNull($data['air_conditioning_type'] ?? null, ['freddo', 'caldo_freddo']);
+
+    $catSezione     = $strOrNull($data['cadastral_sezione'] ?? null);
+    $ownershipShare = $strOrNull($data['ownership_share'] ?? null);
+    $cadastralOther = $strOrNull($data['cadastral_other'] ?? null);
+
+    $listingTitle = $strOrNull($data['listing_title'] ?? null);
+    if ($listingTitle !== null) $listingTitle = mb_substr($listingTitle, 0, 255);
+
+    $agentId = !empty($data['agent_id']) ? (int) $data['agent_id'] : null;
+    $collaboration = $enumOrNull($data['collaboration'] ?? null, ['nessuna_preferenza', 'si', 'no']);
+    $mandateType   = $enumOrNull($data['mandate_type'] ?? null, ['esclusiva', 'non_esclusiva']);
+
     if ($clientId <= 0) {
         apiError('Seleziona un proprietario.');
     }
@@ -570,6 +805,17 @@ function validatePropertyInput(PDO $db, array $data): array
         $buildingStmt->execute(['id' => $buildingId]);
         if (!$buildingStmt->fetch()) {
             apiError('Edificio non trovato.');
+        }
+    }
+
+    if ($agentId !== null) {
+        $agentStmt = $db->prepare(
+            "SELECT id FROM admin_users
+             WHERE id = :id AND is_active = 1 AND role IN ('super_admin','admin','agent')"
+        );
+        $agentStmt->execute(['id' => $agentId]);
+        if (!$agentStmt->fetch()) {
+            apiError('Agente non trovato o non attivo.');
         }
     }
 
@@ -621,6 +867,49 @@ function validatePropertyInput(PDO $db, array $data): array
         'ape_issue_date'       => $apeIssueDate,
         'ape_expiry_date'      => $apeExpiryDate,
         'ipe_value'            => $ipeValue,
+        'category'              => $category,
+        'typology'              => $typology,
+        'ownership_type'        => $ownershipType,
+        'price_on_request'      => $priceOnRequest,
+        'heating_costs'         => $heatingCosts,
+        'is_vacant'             => $isVacant,
+        'rent_to_own'           => $rentToOwn,
+        'investment_property'   => $investmentProp,
+        'other_rooms'           => $otherRooms,
+        'kitchen_type'          => $kitchenType,
+        'garage_type'           => $garageType,
+        'wardrobes'             => $amenities['wardrobes'],
+        'cellar'                => $amenities['cellar'],
+        'attic_room'            => $amenities['attic_room'],
+        'tavern'                => $amenities['tavern'],
+        'armored_door'          => $amenities['armored_door'],
+        'alarm_system'          => $amenities['alarm_system'],
+        'electric_gate'         => $amenities['electric_gate'],
+        'video_intercom'        => $amenities['video_intercom'],
+        'optical_fiber'         => $amenities['optical_fiber'],
+        'fireplace'             => $amenities['fireplace'],
+        'jacuzzi'               => $amenities['jacuzzi'],
+        'pool'                  => $amenities['pool'],
+        'tennis_court'          => $amenities['tennis_court'],
+        'window_frames'         => $windowFrames,
+        'tv_system'             => $tvSystem,
+        'concierge'             => $concierge,
+        'property_class'        => $propertyClass,
+        'multi_level'           => $multiLevel,
+        'disabled_access'       => $disabledAccess,
+        'free_sides'            => $freeSides,
+        'overlooking'           => $overlooking,
+        'heating_system'        => $heatingSystem,
+        'heating_fuel'          => $heatingFuel,
+        'air_conditioning'      => $airConditioning,
+        'air_conditioning_type' => $airConditioningType,
+        'cadastral_sezione'     => $catSezione,
+        'ownership_share'       => $ownershipShare,
+        'cadastral_other'       => $cadastralOther,
+        'listing_title'         => $listingTitle,
+        'agent_id'              => $agentId,
+        'collaboration'         => $collaboration,
+        'mandate_type'          => $mandateType,
     ];
 }
 
@@ -641,6 +930,7 @@ function exportPropertiesCsv(PDO $db): void
     $rows = $db->query(
         "SELECT p.address, p.city, p.cap, p.sqm, p.rooms, p.bathrooms,
                 p.price, p.price_type, p.status,
+                p.reference_code, p.listing_title, p.typology, p.locali, p.energy_class,
                 c.name AS client_name, c.surname AS client_surname
          FROM properties p
          INNER JOIN clients c ON c.id = p.client_id
@@ -653,11 +943,13 @@ function exportPropertiesCsv(PDO $db): void
 
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['indirizzo', 'citta', 'cap', 'mq', 'stanze', 'bagni', 'prezzo', 'tipo_prezzo', 'stato', 'proprietario']);
+    fputcsv($out, ['indirizzo', 'citta', 'cap', 'mq', 'stanze', 'bagni', 'prezzo', 'tipo_prezzo', 'stato',
+                   'riferimento', 'titolo_annuncio', 'tipologia', 'locali', 'classe_energetica', 'proprietario']);
     foreach ($rows as $r) {
         fputcsv($out, [
             $r['address'], $r['city'], $r['cap'], $r['sqm'], $r['rooms'], $r['bathrooms'],
             $r['price'], $r['price_type'], $r['status'],
+            $r['reference_code'], $r['listing_title'], $r['typology'], $r['locali'], $r['energy_class'],
             trim($r['client_surname'] . ' ' . $r['client_name']),
         ]);
     }

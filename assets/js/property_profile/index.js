@@ -104,39 +104,96 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         const sec = document.getElementById('pp-info-section');
         const TYPE = { appartamento:'Appartamento', villa:'Villa', ufficio:'Ufficio', negozio:'Negozio', box:'Box / Garage', terreno:'Terreno', altro:'Altro' };
         const STATUS = { available:'Disponibile', rented:'Affittato', sold:'Venduto', archived:'Archiviato' };
+        // Etichette dei valori della scheda immobiliare.it (value → label)
+        const L = {
+            kitchen: { abitabile:'Abitabile', semi_abitabile:'Semi abitabile', angolo_cottura:'Angolo cottura', cucinotto:'Cucinotto', a_vista:'A vista', nessuna:'Nessuna' },
+            garage: { box_singolo:'Box singolo', box_doppio:'Box doppio', box_triplo_o_piu:'Box triplo o più', posto_auto_coperto:'Posto auto coperto', nessuno:'Nessuno' },
+            windows: { vetro_legno:'Vetro / Legno', doppio_vetro_legno:'Doppio vetro / Legno', triplo_vetro_legno:'Triplo vetro / Legno', vetro_metallo:'Vetro / Metallo', doppio_vetro_metallo:'Doppio vetro / Metallo', triplo_vetro_metallo:'Triplo vetro / Metallo', vetro_pvc:'Vetro / PVC', doppio_vetro_pvc:'Doppio vetro / PVC', triplo_vetro_pvc:'Triplo vetro / PVC' },
+            tv: { centralizzato:'Centralizzato', singolo:'Singolo', satellitare:'Satellitare', predisposizione:'Predisposizione', assente:'Assente' },
+            concierge: { no:'No', mezza_giornata:'Sì, mezza giornata', giornata_intera:'Sì, giornata intera' },
+            pclass: { lusso:'Immobile di lusso', signorile:'Signorile', media:'Media', economica:'Economica' },
+            overlook: { esterno:'Esterno', interno:'Interno', doppio:'Doppio affaccio' },
+            heatsys: { a_radiatori:'A radiatori', a_pavimento:'A pavimento', ad_aria:'Ad aria', a_stufa:'A stufa' },
+            fuel: { metano:'Metano', gpl:'GPL', gasolio:'Gasolio', elettrico:'Elettrico', pompa_di_calore:'Pompa di calore', teleriscaldamento:'Teleriscaldamento', pellet:'Pellet', legna:'Legna', solare:'Solare' },
+            aircon: { autonomo:'Autonomo', centralizzato:'Centralizzato', predisposizione:'Predisposizione', assente:'Assente' },
+            airconType: { freddo:'Freddo', caldo_freddo:'Caldo / Freddo' },
+            ownership: { intera_proprieta:'Intera proprietà', nuda_proprieta:'Nuda proprietà', parziale_proprieta:'Parziale proprietà', multiproprieta:'Multiproprietà', usufrutto:'Usufrutto', diritto_superficie:'Diritto di superficie' },
+            collab: { nessuna_preferenza:'Nessuna preferenza', si:'Sì, collaboro', no:'No' },
+            mandate: { esclusiva:'In esclusiva', non_esclusiva:'Non in esclusiva' },
+            surface: { abitazione:'Abitazione', balcone:'Balcone', terrazzo:'Terrazzo', giardino:'Giardino', box:'Box', posto_auto:'Posto auto', cantina:'Cantina', mansarda:'Mansarda', taverna:'Taverna', soffitta:'Soffitta', seminterrato:'Seminterrato', altro:'Altro' },
+        };
         const eur = (n) => '€ ' + Number(n).toLocaleString('it-IT');
         const yesno = (v) => v == null || v === '' ? null : (Number(v) ? 'Sì' : 'No');
+        const fmt1 = (n) => Number(n).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
         // key/value rows — only render pairs that have a value
         const kv = (pairs) => pairs.filter(([, v]) => v != null && v !== '')
             .map(([k, v]) => `<div class="pp-kv"><dt>${esc(k)}</dt><dd>${esc(String(v))}</dd></div>`).join('');
 
         // ── Caratteristiche ──────────────────────────────────────────────────
+        const riscaldamento = p.heating
+            ? [p.heating, L.heatsys[p.heating_system], L.fuel[p.heating_fuel]].filter(Boolean).join(' · ')
+            : null;
+        const clima = p.air_conditioning
+            ? [L.aircon[p.air_conditioning], L.airconType[p.air_conditioning_type]].filter(Boolean).join(' · ')
+            : null;
         const caratteristiche = kv([
             ['Contratto',        p.price_type === 'affitto' ? 'Affitto' : 'Vendita'],
-            ['Tipologia',        TYPE[p.property_type] || p.property_type],
+            ['Tipologia',        p.typology || TYPE[p.property_type] || p.property_type],
+            ['Classe immobile',  L.pclass[p.property_class] || null],
             ['Superficie',       p.sqm ? Math.round(p.sqm) + ' m²' : null],
             ['Locali',           p.locali || p.rooms || null],
+            ['Camere da letto',  p.rooms || null],
             ['Bagni',            p.bathrooms || null],
-            ['Piano',            p.floor || null],
+            ['Cucina',           L.kitchen[p.kitchen_type] || null],
+            ['Piano',            p.floor ? p.floor + (Number(p.multi_level) ? ' · su più livelli' : '') : (Number(p.multi_level) ? 'Su più livelli' : null)],
             ['Piani edificio',   p.total_floors || null],
             ['Anno costruzione', p.year_built || null],
             ['Stato',            p.condition_state || null],
+            ['Lati liberi',      p.free_sides || null],
+            ['Affaccio',         L.overlook[p.overlooking] || null],
             ['Classe energetica',p.energy_class || null],
-            ['Riscaldamento',    p.heating || null],
+            ['Riscaldamento',    riscaldamento],
+            ['Climatizzazione',  clima],
             ['Ascensore',        yesno(p.elevator)],
+            ['Accesso disabili', yesno(p.disabled_access)],
             ['Arredato',         p.furnished || null],
             ['Disponibilità',    STATUS[p.status] || p.status],
         ]);
 
-        // ── Dettaglio superficie (light — agency uses commercial m²) ─────────
-        const superficie = kv([
-            ['Superficie commerciale', p.sqm ? Math.round(p.sqm) + ' m²' : null],
-            ['Balconi',   p.balconies || null],
-            ['Terrazzi',  p.terraces || null],
-            ['Giardino',  p.garden || null],
-            ['Posti auto',p.parking_spaces || null],
-        ]);
+        // ── Dettaglio superficie: righe della scheda immobiliare.it ──────────
+        let superficieHtml = null;
+        if (Array.isArray(p.surfaces) && p.surfaces.length) {
+            let totMain = 0, totAll = 0;
+            const rows = p.surfaces.map(s => {
+                const comm = Number(s.commercial_sqm) || 0;
+                totAll += comm;
+                if (!Number(s.is_accessory)) totMain += comm;
+                return `<tr>
+                    <td>${esc(L.surface[s.surface_type] || s.surface_type)}${Number(s.is_accessory) ? ' <span class="text-muted">(accessoria)</span>' : ''}</td>
+                    <td>${esc(s.floor_label || '—')}</td>
+                    <td style="text-align:right">${fmt1(s.sqm)} m²</td>
+                    <td style="text-align:right">${fmt1(s.weight_percent)}%</td>
+                    <td style="text-align:right"><strong>${fmt1(comm)} m²</strong></td>
+                </tr>`;
+            }).join('');
+            superficieHtml = `<div style="overflow-x:auto"><table class="pp-surface-table">
+                <thead><tr><th>Consistenza</th><th>Piano</th><th style="text-align:right">Superficie</th><th style="text-align:right">Conteggio</th><th style="text-align:right">Commerciale</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table></div>
+            <p class="text-muted" style="font-size:13px;margin:8px 0 0;text-align:right">
+                Totale principale <strong>${fmt1(totMain)} m²</strong> &nbsp;·&nbsp; Totale principale e accessoria <strong>${fmt1(totAll)} m²</strong>
+            </p>`;
+        } else {
+            const superficie = kv([
+                ['Superficie commerciale', p.sqm ? Math.round(p.sqm) + ' m²' : null],
+                ['Balconi',   p.balconies || null],
+                ['Terrazzi',  p.terraces || null],
+                ['Giardino',  p.garden || null],
+                ['Posti auto',p.parking_spaces || null],
+            ]);
+            superficieHtml = superficie ? `<dl class="pp-kv-grid">${superficie}</dl>` : null;
+        }
 
         // ── Altre caratteristiche (chips) ────────────────────────────────────
         const chips = [];
@@ -146,32 +203,63 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         if (p.balconies) chips.push(p.balconies + ' balcon' + (p.balconies == 1 ? 'e' : 'i'));
         if (p.terraces) chips.push(p.terraces + ' terrazz' + (p.terraces == 1 ? 'o' : 'i'));
         if (p.parking_spaces) chips.push(p.parking_spaces + ' posto/i auto');
+        if (L.garage[p.garage_type] && p.garage_type !== 'nessuno') chips.push(L.garage[p.garage_type]);
         if (p.exposure) chips.push('Esposizione ' + p.exposure);
+        [['wardrobes','Armadi a muro'], ['cellar','Cantina'], ['attic_room','Mansarda'], ['tavern','Taverna'],
+         ['armored_door','Porta blindata'], ['alarm_system',"Impianto d'allarme"], ['electric_gate','Cancello elettrico'],
+         ['video_intercom','Videocitofono'], ['optical_fiber','Fibra ottica'], ['fireplace','Camino'],
+         ['jacuzzi','Idromassaggio'], ['pool','Piscina'], ['tennis_court','Campo da tennis'],
+        ].forEach(([k, label]) => { if (Number(p[k])) chips.push(label); });
+        if (L.windows[p.window_frames]) chips.push('Infissi: ' + L.windows[p.window_frames]);
+        if (L.tv[p.tv_system]) chips.push('TV ' + L.tv[p.tv_system].toLowerCase());
+        if (p.concierge && p.concierge !== 'no') chips.push('Portineria');
         (p.additional_features || '').split(',').map(f => f.trim()).filter(Boolean).forEach(f => chips.push(f));
         const altreHtml = chips.length
             ? `<div class="pp-feature-tags">${chips.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>`
             : '<p class="text-muted" style="margin:0;">Nessuna caratteristica aggiuntiva.</p>';
 
         // ── Informazioni sul prezzo ──────────────────────────────────────────
+        const priceLabel = Number(p.price_on_request)
+            ? 'Prezzo su richiesta'
+            : (p.price ? eur(p.price) + (p.price_type === 'affitto' ? '/mese' : '') : 'Non indicato');
         const prezzo = kv([
-            [p.price_type === 'affitto' ? 'Canone' : 'Prezzo', p.price ? eur(p.price) + (p.price_type === 'affitto' ? '/mese' : '') : 'Non indicato'],
+            [p.price_type === 'affitto' ? 'Canone' : 'Prezzo', priceLabel],
             ['Tipo contratto',       p.price_type === 'affitto' ? 'Locazione' : 'Vendita'],
-            ['Spese condominiali',   p.condo_fees ? eur(p.condo_fees) + '/mese' : null],
+            ['Tipo proprietà',       L.ownership[p.ownership_type] || null],
+            ['Spese condominiali',   p.condo_fees != null && p.condo_fees !== '' ? (parseFloat(p.condo_fees) === 0 ? 'Nessuna' : eur(p.condo_fees) + '/mese') : null],
+            ['Spese riscaldamento',  p.heating_costs != null && p.heating_costs !== '' ? (parseFloat(p.heating_costs) === 0 ? 'Nessuna' : eur(p.heating_costs) + '/anno') : null],
+            ['Libero',               yesno(p.is_vacant)],
+            ['Affitto con riscatto', yesno(p.rent_to_own)],
+            ['Immobile a reddito',   yesno(p.investment_property)],
             ['Rendita catastale',    p.cadastral_rendita ? eur(p.cadastral_rendita) : null],
             ['Riferimento',          p.reference_code || null],
         ]);
+
+        // ── Dati intermediazione ─────────────────────────────────────────────
+        const intermediazione = kv([
+            ['Agente',        p.agent_username || null],
+            ['Collaborazione',L.collab[p.collaboration] || null],
+            ['Tipo mandato',  L.mandate[p.mandate_type] || null],
+        ]);
+
+        // ── Descrizione (titolo annuncio + lingue disponibili) ───────────────
+        const langCount = p.descriptions ? Object.keys(p.descriptions).length : 0;
+        const descHtml =
+            (p.listing_title ? `<h4 class="pp-listing-title">${esc(p.listing_title)}</h4>` : '') +
+            (p.description ? `<p class="pp-info-description">${esc(p.description)}</p>` : `<p class="text-muted" style="margin:0;">Nessuna descrizione inserita.</p>`) +
+            (langCount ? `<p class="text-muted" style="font-size:12px;margin:8px 0 0;">Tradotta in ${langCount} altra/e lingua/e per i portali.</p>` : '') +
+            ((p.internal_notes || p.notes) ? `<p class="pp-info-notes"><strong>Note interne:</strong> ${esc(p.internal_notes || p.notes)}</p>` : '');
 
         const section = (id, title, body) => body
             ? `<section id="${id}" class="pp-section"><h3 class="pp-section-title">${title}</h3>${body}</section>` : '';
 
         sec.innerHTML =
             section('pp-sec-caratteristiche', 'Caratteristiche', `<dl class="pp-kv-grid">${caratteristiche}</dl>`) +
-            (superficie ? section('pp-sec-superficie', 'Dettaglio superficie', `<dl class="pp-kv-grid">${superficie}</dl>`) : '') +
+            (superficieHtml ? section('pp-sec-superficie', 'Dettaglio superficie', superficieHtml) : '') +
             section('pp-sec-altre', 'Altre caratteristiche', altreHtml) +
             section('pp-sec-prezzo', 'Informazioni sul prezzo', `<dl class="pp-kv-grid">${prezzo}</dl>`) +
-            section('pp-sec-descrizione', 'Descrizione',
-                (p.description ? `<p class="pp-info-description">${esc(p.description)}</p>` : `<p class="text-muted" style="margin:0;">Nessuna descrizione inserita.</p>`) +
-                ((p.internal_notes || p.notes) ? `<p class="pp-info-notes"><strong>Note interne:</strong> ${esc(p.internal_notes || p.notes)}</p>` : '')) +
+            (intermediazione ? section('pp-sec-intermediazione', 'Dati intermediazione', `<dl class="pp-kv-grid">${intermediazione}</dl>`) : '') +
+            section('pp-sec-descrizione', 'Descrizione', descHtml) +
             section('pp-sec-mappa', 'Mappa e zona', `<div id="pp-map" class="pp-map"></div><p class="text-muted" id="pp-map-hint" style="margin:8px 0 0;"></p>`);
 
         sec.hidden = false;
