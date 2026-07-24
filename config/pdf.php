@@ -258,6 +258,60 @@ function generatePropertyReportPdf(PDO $db, int $propertyId, int $adminId): arra
     return persistPdf($db, 'report', 'Scheda immobile #' . $propertyId, $pdf, (int) $property['client_id'], $propertyId, null, $adminId);
 }
 
+/**
+ * Key/value pairs identifying the Mandante (proprietario) on a mandate.
+ * Uses the extended anagrafica (phase59) when present so the document holds the
+ * data a real mandate needs — CF, nascita, residenza, and for a persona
+ * giuridica the ragione sociale + P.IVA — falling back gracefully when a field
+ * is empty on older/thin records.
+ */
+function mandantePairs(array $client): array
+{
+    $isCompany = ($client['person_type'] ?? 'fisica') === 'giuridica';
+
+    $resParts = [];
+    if (!empty($client['address'])) {
+        $resParts[] = $client['address'];
+    }
+    $line2 = trim(($client['cap'] ?? '') . ' ' . ($client['city'] ?? ''));
+    if (!empty($client['province'])) {
+        $line2 = trim($line2 . ' (' . $client['province'] . ')');
+    }
+    if ($line2 !== '') {
+        $resParts[] = $line2;
+    }
+    $residence = implode(', ', $resParts);
+
+    $pairs = [];
+    if ($isCompany && !empty($client['company_name'])) {
+        $pairs[] = ['Ragione sociale', $client['company_name']];
+        $pairs[] = ['Legale rappr.',   trim($client['name'] . ' ' . $client['surname'])];
+    } else {
+        $pairs[] = ['Nominativo', trim($client['name'] . ' ' . $client['surname'])];
+    }
+    if (!$isCompany && (!empty($client['birth_place']) || !empty($client['birth_date']))) {
+        $bp = $client['birth_place'] ?? '';
+        $bd = !empty($client['birth_date']) ? date('d/m/Y', strtotime($client['birth_date'])) : '';
+        $pairs[] = ['Nato/a', trim($bp . ($bd ? ' il ' . $bd : ''))];
+    }
+    if (!empty($client['codice_fiscale'])) {
+        $pairs[] = ['Codice fiscale', $client['codice_fiscale']];
+    }
+    if ($isCompany && !empty($client['vat_number'])) {
+        $pairs[] = ['Partita IVA', $client['vat_number']];
+    }
+    if ($residence !== '') {
+        $pairs[] = [$isCompany ? 'Sede legale' : 'Residenza', $residence];
+    }
+    $pairs[] = ['Email', $client['email'] ?? '—'];
+    if (!empty($client['pec_email'])) {
+        $pairs[] = ['PEC', $client['pec_email']];
+    }
+    $pairs[] = ['Telefono', $client['phone'] ?? '—'];
+
+    return $pairs;
+}
+
 function generateMandatoPdf(PDO $db, array $params, int $adminId): array
 {
     $clientId   = (int) ($params['client_id'] ?? 0);
@@ -291,11 +345,7 @@ function generateMandatoPdf(PDO $db, array $params, int $adminId): array
     $blocks = [
         ['type' => 'paragraph', 'text' => 'Oggetto: incarico di ' . $mandateType . ' immobiliare.'],
         ['type' => 'h2', 'text' => 'Il Mandante (proprietario)'],
-        ['type' => 'kv', 'pairs' => [
-            ['Nominativo', trim($client['name'] . ' ' . $client['surname'])],
-            ['Email',      $client['email'] ?? '—'],
-            ['Telefono',   $client['phone'] ?? '—'],
-        ]],
+        ['type' => 'kv', 'pairs' => mandantePairs($client)],
         ['type' => 'h2', 'text' => "L'immobile"],
         ['type' => 'kv', 'pairs' => [
             ['Indirizzo',  trim($property['address'] . ', ' . $property['city'] . ' ' . ($property['cap'] ?? ''))],

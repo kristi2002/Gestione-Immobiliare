@@ -47,6 +47,21 @@
         else window.App.navigateTo('clients');
     }
 
+    // Persona fisica vs giuridica: reveal company fields, relabel the anagrafica
+    // block as the legale rappresentante, and hide the birth fields (a company
+    // is not born). Keeps the form honest for mandato/contratto generation.
+    function applyPersonType() {
+        const isCompany = $('ce-person-type').value === 'giuridica';
+        $('ce-company-row').hidden = !isCompany;
+        $('ce-company-name').required = isCompany;
+        $('ce-birth-place-group').style.display = isCompany ? 'none' : '';
+        $('ce-birth-date-group').style.display  = isCompany ? 'none' : '';
+        $('ce-name-label').textContent    = isCompany ? 'Nome legale rappr.' : 'Nome';
+        $('ce-surname-label').textContent = isCompany ? 'Cognome legale rappr.' : 'Cognome';
+        $('ce-anag-legend').textContent      = isCompany ? 'Legale rappresentante' : 'Dati anagrafici';
+        $('ce-residence-legend').textContent = isCompany ? 'Sede legale' : 'Residenza';
+    }
+
     // Populate the "Agente di riferimento" dropdown from active agents.
     async function loadAgents(selectedId) {
         const sel = $('ce-agent');
@@ -71,14 +86,25 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             const c = json.data;
-            $('ce-id').value      = c.id;
-            $('ce-name').value    = c.name || '';
-            $('ce-surname').value = c.surname || '';
-            $('ce-cf').value      = c.codice_fiscale || '';
-            $('ce-phone').value   = c.phone || '';
-            $('ce-email').value   = c.email || '';
-            $('ce-status').value  = c.status || 'active';
-            $('ce-notes').value   = c.internal_notes || '';
+            $('ce-id').value           = c.id;
+            $('ce-person-type').value  = c.person_type || 'fisica';
+            $('ce-company-name').value = c.company_name || '';
+            $('ce-vat').value          = c.vat_number || '';
+            $('ce-name').value         = c.name || '';
+            $('ce-surname').value      = c.surname || '';
+            $('ce-cf').value           = c.codice_fiscale || '';
+            $('ce-birth-place').value  = c.birth_place || '';
+            $('ce-birth-date').value   = c.birth_date || '';   // MySQL DATE => 'YYYY-MM-DD'
+            $('ce-phone').value        = c.phone || '';
+            $('ce-email').value        = c.email || '';
+            $('ce-pec').value          = c.pec_email || '';
+            $('ce-address').value      = c.address || '';
+            $('ce-city').value         = c.city || '';
+            $('ce-cap').value          = c.cap || '';
+            $('ce-province').value     = c.province || '';
+            $('ce-status').value       = c.status || 'active';
+            $('ce-notes').value        = c.internal_notes || '';
+            applyPersonType();
             await loadAgents(c.assigned_agent_id);
         } catch (err) {
             showAlert('Impossibile caricare il proprietario: ' + err.message, 'error');
@@ -142,11 +168,21 @@
         clearError();
         const id   = $('ce-id').value;
         const data = {
+            person_type:    $('ce-person-type').value,
+            company_name:   $('ce-company-name').value.trim() || null,
+            vat_number:     $('ce-vat').value.trim().toUpperCase() || null,
             name:           $('ce-name').value.trim(),
             surname:        $('ce-surname').value.trim(),
             codice_fiscale: $('ce-cf').value.trim().toUpperCase() || null,
+            birth_place:    $('ce-birth-place').value.trim() || null,
+            birth_date:     $('ce-birth-date').value || null,
             phone:          $('ce-phone').value.trim(),
             email:          $('ce-email').value.trim(),
+            pec_email:      $('ce-pec').value.trim() || null,
+            address:        $('ce-address').value.trim() || null,
+            city:           $('ce-city').value.trim() || null,
+            cap:            $('ce-cap').value.trim() || null,
+            province:       $('ce-province').value.trim().toUpperCase() || null,
             status:         $('ce-status').value,
             internal_notes: $('ce-notes').value.trim(),
             assigned_agent_id: $('ce-agent').value ? Number($('ce-agent').value) : null,
@@ -211,6 +247,7 @@
         $('ce-back').addEventListener('click', goBack);
         $('ce-cancel').addEventListener('click', goBack);
         $('ce-form').addEventListener('submit', save);
+        $('ce-person-type').addEventListener('change', applyPersonType);
 
         // ID card uploads
         $('ce-btn-front').addEventListener('click', () => $('ce-id-front-file').click());
@@ -241,6 +278,7 @@
             loadIdDocs();
         } else {
             $('ce-title').textContent = 'Nuovo Proprietario';
+            applyPersonType();
             loadAgents();
             // Show the Carta di Identità card too, but uploads need a saved owner.
             $('ce-id-card-section').hidden = false;

@@ -158,8 +158,14 @@ function createClient(PDO $db): void
     $validated = validateClientInput($db, $data);
 
     $stmt = $db->prepare(
-        "INSERT INTO clients (name, surname, codice_fiscale, phone, email, internal_notes, status, assigned_agent_id)
-         VALUES (:name, :surname, :codice_fiscale, :phone, :email, :internal_notes, :status, :assigned_agent_id)"
+        "INSERT INTO clients
+            (name, surname, person_type, company_name, vat_number, codice_fiscale,
+             birth_place, birth_date, phone, email, pec_email,
+             address, city, cap, province, internal_notes, status, assigned_agent_id)
+         VALUES
+            (:name, :surname, :person_type, :company_name, :vat_number, :codice_fiscale,
+             :birth_place, :birth_date, :phone, :email, :pec_email,
+             :address, :city, :cap, :province, :internal_notes, :status, :assigned_agent_id)"
     );
     $stmt->execute($validated);
 
@@ -180,9 +186,12 @@ function updateClient(PDO $db, int $id): void
 
     $stmt = $db->prepare(
         "UPDATE clients
-         SET name = :name, surname = :surname, codice_fiscale = :codice_fiscale,
-             phone = :phone, email = :email, internal_notes = :internal_notes, status = :status,
-             assigned_agent_id = :assigned_agent_id
+         SET name = :name, surname = :surname, person_type = :person_type,
+             company_name = :company_name, vat_number = :vat_number, codice_fiscale = :codice_fiscale,
+             birth_place = :birth_place, birth_date = :birth_date,
+             phone = :phone, email = :email, pec_email = :pec_email,
+             address = :address, city = :city, cap = :cap, province = :province,
+             internal_notes = :internal_notes, status = :status, assigned_agent_id = :assigned_agent_id
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -219,6 +228,22 @@ function validateClientInput(PDO $db, array $data): array
     $email   = trim($data['email'] ?? '') ?: null;
     $notes   = trim($data['internal_notes'] ?? '') ?: null;
     $status  = trim($data['status'] ?? 'active');
+
+    // Anagrafica estesa (phase59): natura del soggetto, nascita, residenza.
+    $personType  = trim($data['person_type'] ?? 'fisica');
+    if (!in_array($personType, ['fisica', 'giuridica'], true)) {
+        $personType = 'fisica';
+    }
+    $companyName = trim($data['company_name'] ?? '') ?: null;
+    $vat         = strtoupper(trim($data['vat_number'] ?? '')) ?: null;
+    $pec         = trim($data['pec_email'] ?? '') ?: null;
+    $birthPlace  = trim($data['birth_place'] ?? '') ?: null;
+    $birthDate   = trim($data['birth_date'] ?? '') ?: null;
+    $address     = trim($data['address'] ?? '') ?: null;
+    $city        = trim($data['city'] ?? '') ?: null;
+    $cap         = trim($data['cap'] ?? '') ?: null;
+    $province    = strtoupper(trim($data['province'] ?? '')) ?: null;
+
     $agentId = $data['assigned_agent_id'] ?? null;
     if ($agentId === '' || $agentId === 0 || $agentId === '0') {
         $agentId = null;
@@ -253,13 +278,38 @@ function validateClientInput(PDO $db, array $data): array
     if (!in_array($status, CLIENT_STATUSES, true)) {
         apiError('Stato non valido.');
     }
+    if ($personType === 'giuridica' && $companyName === null) {
+        apiError('La ragione sociale è obbligatoria per le persone giuridiche.');
+    }
+    if ($pec !== null && !filter_var($pec, FILTER_VALIDATE_EMAIL)) {
+        apiError('Indirizzo PEC non valido.');
+    }
+    if ($vat !== null && !preg_match('/^[A-Z0-9]{8,16}$/', $vat)) {
+        apiError('Partita IVA non valida (8-16 caratteri alfanumerici).');
+    }
+    if ($birthDate !== null) {
+        $d = DateTime::createFromFormat('Y-m-d', $birthDate);
+        if (!$d || $d->format('Y-m-d') !== $birthDate) {
+            apiError('Data di nascita non valida.');
+        }
+    }
 
     return [
         'name'              => $name,
         'surname'           => $surname,
+        'person_type'       => $personType,
+        'company_name'      => $companyName,
+        'vat_number'        => $vat,
         'codice_fiscale'    => $cf,
+        'birth_place'       => $birthPlace,
+        'birth_date'        => $birthDate,
         'phone'             => $phone,
         'email'             => $email,
+        'pec_email'         => $pec,
+        'address'           => $address,
+        'city'              => $city,
+        'cap'               => $cap,
+        'province'          => $province,
         'internal_notes'    => $notes,
         'status'            => $status,
         'assigned_agent_id' => $agentId,
