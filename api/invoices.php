@@ -102,10 +102,10 @@ function createInvoice(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO invoices
-            (invoice_number, client_id, lead_id, description, amount, vat_rate,
+            (invoice_number, client_id, lead_id, property_id, description, amount, vat_rate,
              status, issue_date, due_date, paid_date, notes, created_by)
          VALUES
-            (:invoice_number, :client_id, :lead_id, :description, :amount, :vat_rate,
+            (:invoice_number, :client_id, :lead_id, :property_id, :description, :amount, :vat_rate,
              :status, :issue_date, :due_date, :paid_date, :notes, :created_by)"
     );
 
@@ -135,8 +135,8 @@ function updateInvoice(PDO $db, int $id): void
     $validated = validateInvoiceInput(apiGetJsonBody());
     $stmt = $db->prepare(
         "UPDATE invoices SET
-            client_id = :client_id, lead_id = :lead_id, description = :description,
-            amount = :amount, vat_rate = :vat_rate, status = :status,
+            client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
+            description = :description, amount = :amount, vat_rate = :vat_rate, status = :status,
             issue_date = :issue_date, due_date = :due_date, paid_date = :paid_date,
             notes = :notes
          WHERE id = :id"
@@ -177,6 +177,7 @@ function validateInvoiceInput(array $data): array
 {
     $clientId    = !empty($data['client_id']) ? (int) $data['client_id'] : null;
     $leadId      = !empty($data['lead_id']) ? (int) $data['lead_id'] : null;
+    $propertyId  = !empty($data['property_id']) ? (int) $data['property_id'] : null;
     $description = trim($data['description'] ?? '');
     $amount      = isset($data['amount']) && $data['amount'] !== '' ? (float) $data['amount'] : null;
     $vatRate     = isset($data['vat_rate']) && $data['vat_rate'] !== '' ? (float) $data['vat_rate'] : 22.00;
@@ -195,6 +196,7 @@ function validateInvoiceInput(array $data): array
     return [
         'client_id'   => $clientId,
         'lead_id'     => $leadId,
+        'property_id' => $propertyId,
         'description' => $description,
         'amount'      => $amount,
         'vat_rate'    => $vatRate,

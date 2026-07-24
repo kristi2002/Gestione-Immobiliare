@@ -16,60 +16,68 @@
         <form id="cte-form">
             <input type="hidden" id="cte-id">
 
-            <div class="form-group">
-                <label for="cte-title-input">Titolo <span class="required">*</span></label>
-                <input type="text" id="cte-title-input" class="form-input" required maxlength="255" placeholder="es. Locazione Via Roma 10 — Rossi 2024-2028">
-            </div>
+            <fieldset class="form-section">
+                <legend>Dati contratto</legend>
+                <div class="form-group">
+                    <label for="cte-title-input">Titolo <span class="required">*</span></label>
+                    <input type="text" id="cte-title-input" class="form-input" required maxlength="255" placeholder="es. Locazione Via Roma 10 — Rossi 2024-2028">
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="cte-type">Tipo</label>
+                        <select id="cte-type" class="form-select">
+                            <option value="locazione">Locazione</option>
+                            <option value="compravendita">Compravendita</option>
+                            <option value="preliminare">Preliminare</option>
+                            <option value="mandato">Mandato</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cte-status">Stato</label>
+                        <select id="cte-status" class="form-select">
+                            <option value="">Automatico (in base alle date)</option>
+                            <option value="draft">Bozza</option>
+                            <option value="sent">Inviato</option>
+                            <option value="signed">Firmato</option>
+                            <option value="cancelled">Annullato</option>
+                        </select>
+                        <small class="text-muted">Lascia "Automatico" per far decidere alle date: Attivo entro il periodo, Scaduto dopo la data fine.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="cte-property">Immobile <span class="required">*</span></label>
+                        <select id="cte-property" class="form-select" required>
+                            <option value="">— Seleziona immobile —</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
 
-            <div class="form-row form-row--3">
-                <div class="form-group">
-                    <label for="cte-type">Tipo</label>
-                    <select id="cte-type" class="form-select">
-                        <option value="locazione">Locazione</option>
-                        <option value="compravendita">Compravendita</option>
-                        <option value="preliminare">Preliminare</option>
-                        <option value="mandato">Mandato</option>
-                        <option value="altro">Altro</option>
-                    </select>
+            <fieldset class="form-section">
+                <legend>Parti</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cte-tenant">Inquilino</label>
+                        <select id="cte-tenant" class="form-select"><option value="">— Nessuno —</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cte-client">Proprietario</label>
+                        <select id="cte-client" class="form-select"><option value="">— Nessuno —</option></select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="cte-status">Stato</label>
-                    <select id="cte-status" class="form-select">
-                        <option value="">Automatico (in base alle date)</option>
-                        <option value="draft">Bozza</option>
-                        <option value="sent">Inviato</option>
-                        <option value="signed">Firmato</option>
-                        <option value="cancelled">Annullato</option>
-                    </select>
-                    <small class="text-muted">Lascia "Automatico" per far decidere alle date: Attivo entro il periodo, Scaduto dopo la data fine.</small>
-                </div>
-                <div class="form-group">
-                    <label for="cte-property">Immobile <span class="required">*</span></label>
-                    <select id="cte-property" class="form-select" required>
-                        <option value="">— Seleziona immobile —</option>
-                    </select>
-                </div>
-            </div>
+            </fieldset>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="cte-tenant">Inquilino</label>
-                    <select id="cte-tenant" class="form-select"><option value="">— Nessuno —</option></select>
+            <fieldset class="form-section">
+                <legend>Durata e canone</legend>
+                <div class="form-row form-row--4">
+                    <div class="form-group"><label for="cte-start">Inizio</label><input type="date" id="cte-start" class="form-input"></div>
+                    <div class="form-group"><label for="cte-end">Fine</label><input type="date" id="cte-end" class="form-input"></div>
+                    <div class="form-group"><label for="cte-rent">Canone (€)</label><input type="number" id="cte-rent" class="form-input" min="0" step="0.01"></div>
+                    <div class="form-group"><label for="cte-deposit">Deposito (€)</label><input type="number" id="cte-deposit" class="form-input" min="0" step="0.01"></div>
                 </div>
-                <div class="form-group">
-                    <label for="cte-client">Proprietario</label>
-                    <select id="cte-client" class="form-select"><option value="">— Nessuno —</option></select>
-                </div>
-            </div>
+            </fieldset>
 
-            <div class="form-row form-row--4">
-                <div class="form-group"><label for="cte-start">Inizio</label><input type="date" id="cte-start" class="form-input"></div>
-                <div class="form-group"><label for="cte-end">Fine</label><input type="date" id="cte-end" class="form-input"></div>
-                <div class="form-group"><label for="cte-rent">Canone (€)</label><input type="number" id="cte-rent" class="form-input" min="0" step="0.01"></div>
-                <div class="form-group"><label for="cte-deposit">Deposito (€)</label><input type="number" id="cte-deposit" class="form-input" min="0" step="0.01"></div>
-            </div>
-
-            <fieldset class="form-section" id="cte-fiscal-section" style="margin-top:16px;">
+            <fieldset class="form-section" id="cte-fiscal-section">
                 <legend>Registrazione e fisco (locazione)</legend>
                 <div class="form-row form-row--3">
                     <div class="form-group">
@@ -141,10 +149,12 @@
                 <p class="text-muted" style="font-size:12px;margin:4px 0 0 0">La registrazione telematica (RLI) si effettua tramite i servizi Agenzia delle Entrate; qui si tracciano estremi e scadenze.</p>
             </fieldset>
 
-            <div class="form-group">
-                <label for="cte-notes">Note</label>
-                <textarea id="cte-notes" class="form-textarea" rows="3"></textarea>
-            </div>
+            <fieldset class="form-section">
+                <legend>Note</legend>
+                <div class="form-group">
+                    <textarea id="cte-notes" class="form-textarea" rows="3"></textarea>
+                </div>
+            </fieldset>
 
             <div id="cte-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
 

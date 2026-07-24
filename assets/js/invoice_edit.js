@@ -8,6 +8,7 @@
     const API         = 'api/invoices.php';
     const CLIENTS_API = 'api/clients.php';
     const LEADS_API   = 'api/leads.php';
+    const PROPS_API   = 'api/properties.php';
 
     const vp        = window.App?.viewParams || {};
     const invoiceId = vp.invoiceId || null;
@@ -38,14 +39,18 @@
     }
 
     async function loadDropdowns() {
-        const [clients, leads] = await Promise.all([
+        const [clients, leads, props] = await Promise.all([
             fetchList(CLIENTS_API, { status: 'active' }).catch(() => []),
             fetchList(LEADS_API, {}).catch(() => []),
+            fetchList(PROPS_API, {}).catch(() => []),
         ]);
         $('ive-client').innerHTML = '<option value="">— Nessuno —</option>' +
             clients.map(c => `<option value="${c.id}">${esc(c.surname)} ${esc(c.name)}</option>`).join('');
         $('ive-lead').innerHTML = '<option value="">— Nessuno —</option>' +
             leads.map(l => `<option value="${l.id}">${esc(l.surname)} ${esc(l.name)}</option>`).join('');
+        $('ive-property').innerHTML = '<option value="">— Nessuno —</option>' +
+            props.filter(p => p.status !== 'archived')
+                 .map(p => `<option value="${p.id}">${esc(p.address)}, ${esc(p.city)}</option>`).join('');
     }
 
     async function loadInvoice() {
@@ -55,6 +60,7 @@
         $('ive-id').value = i.id;
         $('ive-client').value = i.client_id || '';
         $('ive-lead').value = i.lead_id || '';
+        $('ive-property').value = i.property_id || '';
         $('ive-description').value = i.description || '';
         $('ive-amount').value = i.amount ?? '';
         $('ive-vat').value = i.vat_rate ?? 22;
@@ -70,6 +76,7 @@
         return {
             client_id:   $('ive-client').value || null,
             lead_id:     $('ive-lead').value || null,
+            property_id: $('ive-property').value || null,
             description: $('ive-description').value.trim(),
             amount:      $('ive-amount').value,
             vat_rate:    $('ive-vat').value,
