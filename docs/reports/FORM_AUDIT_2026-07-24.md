@@ -1,5 +1,11 @@
 # Form standardization audit & plan — 2026-07-24
 
+> **STATUS: ✅ EXECUTED 2026-07-25.** All batches shipped & live-verified (docker :8090).
+> Migrations `phase60` (tenant anagrafica), `phase61` (leads CF), `phase62` (enum union).
+> Commits: Batch A `feat(inquilini)`, Batch B `fix(data) enums`, Batch C `refactor(form)`,
+> Batch D `style(form)`. Decisions taken: full scope A+B+C+P3; expand enums; tenant giuridica included.
+> Micro-polish left as-is (documents/valuation/commissions — audits rated them acceptable flat).
+
 **Goal:** bring every form in the app up to the standard set by the **immobili form**
 (`views/property_edit.html`), which is the source of truth because it mirrors the
 immobiliare.it insertion scheda. This audit compares all form-bearing views against
