@@ -44,6 +44,7 @@
         $('tne-id').value = t.id;
         $('tne-name').value = t.name || '';
         $('tne-surname').value = t.surname || '';
+        $('tne-cf').value = t.codice_fiscale || '';
         $('tne-email').value = t.email || '';
         $('tne-phone').value = t.phone || '';
         $('tne-property').value = t.property_id || '';
@@ -63,6 +64,7 @@
         const payload = {
             name:            $('tne-name').value,
             surname:         $('tne-surname').value,
+            codice_fiscale:  $('tne-cf').value.trim().toUpperCase(),
             email:           $('tne-email').value,
             phone:           $('tne-phone').value,
             property_id:     $('tne-property').value,

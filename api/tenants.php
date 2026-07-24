@@ -97,7 +97,7 @@ function listTenants(PDO $db): void
     $where = "WHERE t.status != 'archived'";
     $params = [];
     if ($search !== '') {
-        $where .= ' AND (t.name LIKE :s OR t.surname LIKE :s OR t.email LIKE :s OR p.address LIKE :s)';
+        $where .= ' AND (t.name LIKE :s OR t.surname LIKE :s OR t.email LIKE :s OR t.codice_fiscale LIKE :s OR p.address LIKE :s)';
         $params['s'] = '%' . $search . '%';
     }
 
@@ -145,10 +145,21 @@ function createTenant(PDO $db): void
     $name       = trim($data['name'] ?? '');
     $surname    = trim($data['surname'] ?? '');
     $email      = trim($data['email'] ?? '');
+    $phone      = trim($data['phone'] ?? '');
+    $cf         = strtoupper(trim($data['codice_fiscale'] ?? ''));
     $password   = $data['portal_password'] ?? '';
 
     if ($propertyId <= 0 || $name === '' || $surname === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         apiError('property_id, nome, cognome e email valida sono obbligatori.');
+    }
+    if ($phone === '') {
+        apiError('Il telefono è obbligatorio.');
+    }
+    // CF obbligatorio per la registrazione del contratto (RLI). Validazione di
+    // formato volutamente permissiva (16 alfanumerici): scarta i refusi evidenti
+    // senza rifiutare codici insoliti/esteri.
+    if (!preg_match('/^[A-Z0-9]{16}$/', $cf)) {
+        apiError('Codice Fiscale non valido: sono richiesti 16 caratteri (obbligatorio per la registrazione del contratto).');
     }
 
     $propStmt = $db->prepare('SELECT client_id FROM properties WHERE id = :id');
@@ -159,14 +170,15 @@ function createTenant(PDO $db): void
     }
 
     $stmt = $db->prepare(
-        'INSERT INTO tenants (name, surname, email, phone, notes, iban, sdd_mandate_ref, sdd_mandate_date)
-         VALUES (:name, :surname, :email, :phone, :notes, :iban, :sdd_mandate_ref, :sdd_mandate_date)'
+        'INSERT INTO tenants (name, surname, email, codice_fiscale, phone, notes, iban, sdd_mandate_ref, sdd_mandate_date)
+         VALUES (:name, :surname, :email, :codice_fiscale, :phone, :notes, :iban, :sdd_mandate_ref, :sdd_mandate_date)'
     );
     $stmt->execute([
         'name'    => $name,
         'surname' => $surname,
         'email'   => $email,
-        'phone'   => trim($data['phone'] ?? '') ?: null,
+        'codice_fiscale' => $cf,
+        'phone'   => $phone,
         'notes'   => trim($data['notes'] ?? '') ?: null,
         'iban'            => trim($data['iban'] ?? '') ?: null,
         'sdd_mandate_ref' => trim($data['sdd_mandate_ref'] ?? '') ?: null,
@@ -195,9 +207,22 @@ function updateTenant(PDO $db, int $id): void
         apiError('Inquilino non trovato.', 404);
     }
 
+    // CF resta obbligatorio anche in modifica se il campo viene inviato: non
+    // deve poter essere svuotato una volta impostato (serve per l'RLI).
+    if (array_key_exists('codice_fiscale', $data)) {
+        $cf = strtoupper(trim((string) $data['codice_fiscale']));
+        if (!preg_match('/^[A-Z0-9]{16}$/', $cf)) {
+            apiError('Codice Fiscale non valido: sono richiesti 16 caratteri.');
+        }
+        $data['codice_fiscale'] = $cf;
+    }
+    if (array_key_exists('phone', $data) && trim((string) $data['phone']) === '') {
+        apiError('Il telefono è obbligatorio.');
+    }
+
     $fields = [];
     $params = ['id' => $id];
-    foreach (['name', 'surname', 'email', 'phone', 'notes', 'status', 'iban', 'sdd_mandate_ref', 'sdd_mandate_date'] as $f) {
+    foreach (['name', 'surname', 'email', 'codice_fiscale', 'phone', 'notes', 'status', 'iban', 'sdd_mandate_ref', 'sdd_mandate_date'] as $f) {
         if (array_key_exists($f, $data)) {
             $fields[] = "{$f} = :{$f}";
             $params[$f] = ($data[$f] === '' ? null : $data[$f]);

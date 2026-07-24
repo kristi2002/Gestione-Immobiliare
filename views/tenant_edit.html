@@ -12,34 +12,53 @@
 
     <div id="tne-alert" class="alert" style="display:none;"></div>
 
-    <div class="card" style="padding:24px 28px;">
+    <div class="card" style="padding:8px 28px 24px;">
         <form id="tne-form">
             <input type="hidden" id="tne-id">
 
-            <div class="form-row form-row--2">
-                <div class="form-group"><label for="tne-name">Nome <span class="required">*</span></label><input type="text" id="tne-name" class="form-input" required></div>
-                <div class="form-group"><label for="tne-surname">Cognome <span class="required">*</span></label><input type="text" id="tne-surname" class="form-input" required></div>
-            </div>
-            <div class="form-row form-row--2">
-                <div class="form-group"><label for="tne-email">Email <span class="required">*</span></label><input type="email" id="tne-email" class="form-input" required></div>
-                <div class="form-group"><label for="tne-phone">Telefono</label><input type="text" id="tne-phone" class="form-input"></div>
-            </div>
-            <div class="form-group">
-                <label for="tne-property">Immobile <span class="required">*</span></label>
-                <select id="tne-property" class="form-select" required><option value="">— Seleziona —</option></select>
-            </div>
-            <div class="form-row form-row--3">
-                <div class="form-group"><label for="tne-lease-start">Inizio contratto</label><input type="date" id="tne-lease-start" class="form-input"></div>
-                <div class="form-group"><label for="tne-lease-end">Fine contratto</label><input type="date" id="tne-lease-end" class="form-input"></div>
-                <div class="form-group"><label for="tne-rent">Canone mensile (€)</label><input type="number" step="0.01" id="tne-rent" class="form-input"></div>
-            </div>
-            <div class="form-row form-row--3">
-                <div class="form-group"><label for="tne-iban">IBAN (addebito SEPA)</label><input type="text" id="tne-iban" class="form-input" maxlength="34" placeholder="IT.. per addebito diretto"></div>
-                <div class="form-group"><label for="tne-sdd-ref">Rif. mandato SDD</label><input type="text" id="tne-sdd-ref" class="form-input" maxlength="35"></div>
-                <div class="form-group"><label for="tne-sdd-date">Data mandato SDD</label><input type="date" id="tne-sdd-date" class="form-input"></div>
-            </div>
-            <div class="form-group" style="max-width:420px"><label for="tne-portal-pass">Password portale inquilino</label><input type="password" id="tne-portal-pass" class="form-input" minlength="8" placeholder="Min. 8 caratteri (opzionale in modifica)"></div>
-            <div class="form-group"><label for="tne-notes">Note</label><textarea id="tne-notes" class="form-textarea" rows="2"></textarea></div>
+            <fieldset class="form-section">
+                <legend>Anagrafica</legend>
+                <div class="form-row form-row--2">
+                    <div class="form-group"><label for="tne-name">Nome <span class="required">*</span></label><input type="text" id="tne-name" class="form-input" required maxlength="100" autocomplete="off"></div>
+                    <div class="form-group"><label for="tne-surname">Cognome <span class="required">*</span></label><input type="text" id="tne-surname" class="form-input" required maxlength="100" autocomplete="off"></div>
+                </div>
+                <div class="form-group" style="max-width:320px">
+                    <label for="tne-cf">Codice Fiscale <span class="required">*</span> <span class="form-hint-inline">— serve per registrare il contratto (RLI)</span></label>
+                    <input type="text" id="tne-cf" class="form-input" required maxlength="16" minlength="16" placeholder="es. RSSMRA80A01H501U" style="text-transform:uppercase" autocomplete="off">
+                </div>
+                <div class="form-row form-row--2">
+                    <div class="form-group"><label for="tne-email">Email <span class="required">*</span></label><input type="email" id="tne-email" class="form-input" required maxlength="255" autocomplete="off" placeholder="nome@esempio.it"></div>
+                    <div class="form-group"><label for="tne-phone">Telefono <span class="required">*</span></label><input type="tel" id="tne-phone" class="form-input" required maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 333 1234567"></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Locazione</legend>
+                <div class="form-group">
+                    <label for="tne-property">Immobile <span class="required">*</span></label>
+                    <select id="tne-property" class="form-select" required><option value="">— Seleziona —</option></select>
+                </div>
+                <div class="form-row form-row--3">
+                    <div class="form-group"><label for="tne-lease-start">Inizio contratto</label><input type="date" id="tne-lease-start" class="form-input"></div>
+                    <div class="form-group"><label for="tne-lease-end">Fine contratto</label><input type="date" id="tne-lease-end" class="form-input"></div>
+                    <div class="form-group"><label for="tne-rent">Canone mensile (€)</label><input type="number" step="0.01" id="tne-rent" class="form-input"></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Addebito SEPA</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group"><label for="tne-iban">IBAN (addebito SEPA)</label><input type="text" id="tne-iban" class="form-input" maxlength="34" placeholder="IT.. per addebito diretto"></div>
+                    <div class="form-group"><label for="tne-sdd-ref">Rif. mandato SDD</label><input type="text" id="tne-sdd-ref" class="form-input" maxlength="35"></div>
+                    <div class="form-group"><label for="tne-sdd-date">Data mandato SDD</label><input type="date" id="tne-sdd-date" class="form-input"></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Accesso portale &amp; note</legend>
+                <div class="form-group" style="max-width:420px"><label for="tne-portal-pass">Password portale inquilino</label><input type="password" id="tne-portal-pass" class="form-input" minlength="8" placeholder="Min. 8 caratteri (opzionale in modifica)"></div>
+                <div class="form-group"><label for="tne-notes">Note</label><textarea id="tne-notes" class="form-textarea" rows="2"></textarea></div>
+            </fieldset>
 
             <div id="tne-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
 
