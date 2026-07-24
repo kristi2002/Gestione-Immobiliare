@@ -51,7 +51,7 @@ try {
     $sql = "SELECT p.id, p.address, p.city, p.cap, p.province,
                    p.sqm, p.rooms, p.bathrooms, p.property_type,
                    p.energy_class,
-                   p.price, p.price_type, p.latitude, p.longitude,
+                   p.price, p.price_on_request, p.price_type, p.latitude, p.longitude,
                    COALESCE(
                        (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
                        (SELECT fm.file_path FROM property_media fm
@@ -72,7 +72,10 @@ try {
     foreach ($items as &$row) {
         $row['latitude']  = (float) $row['latitude'];
         $row['longitude'] = (float) $row['longitude'];
-        $row['price']     = $row['price'] !== null ? (float) $row['price'] : null;
+        // "Prezzo su richiesta": the price must never leave the server.
+        $row['price_on_request'] = (int) $row['price_on_request'];
+        $row['price'] = ($row['price_on_request'] === 0 && $row['price'] !== null)
+            ? (float) $row['price'] : null;
     }
     unset($row);
 

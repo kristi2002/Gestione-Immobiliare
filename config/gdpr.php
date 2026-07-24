@@ -169,6 +169,12 @@ function gdprExportSubject(PDO $db, string $subjectType, int $subjectId): array
     if ($subjectType === 'client') {
         $related = [
             'properties'          => ['SELECT * FROM properties WHERE client_id = :id', $byId],
+            'property_surfaces'   => ['SELECT s.* FROM property_surfaces s
+                                        JOIN properties p ON p.id = s.property_id
+                                       WHERE p.client_id = :id', $byId],
+            'property_descriptions' => ['SELECT d.* FROM property_descriptions d
+                                          JOIN properties p ON p.id = d.property_id
+                                         WHERE p.client_id = :id', $byId],
             'contracts'           => ['SELECT * FROM contracts WHERE client_id = :id', $byId],
             'documents'           => ['SELECT id, doc_type, original_name, created_at FROM documents WHERE client_id = :id', $byId],
             'communications'      => ['SELECT * FROM communications WHERE client_id = :id', $byId],

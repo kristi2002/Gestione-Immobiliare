@@ -327,7 +327,7 @@
 
   const fmtPrice = p => p == null ? 'Prezzo su richiesta'
     : '€ ' + Number(p).toLocaleString('it-IT', { maximumFractionDigits: 0 });
-  const priceSuffix = t => t === 'affitto' ? ' <small>/mese</small>' : '';
+  const priceSuffix = (t, p) => p != null && t === 'affitto' ? ' <small>/mese</small>' : '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -366,7 +366,7 @@
       const img = l.cover_url ? `<img src="../${esc(l.cover_url)}" alt="" loading="lazy">` : '';
       const marker = L.marker([l.latitude, l.longitude], { icon: pinIcon(l.price_type) })
         .bindPopup(`<div class="map-popup">${img}
-          <div class="map-popup__price">${fmtPrice(l.price)}${priceSuffix(l.price_type)}</div>
+          <div class="map-popup__price">${fmtPrice(l.price)}${priceSuffix(l.price_type, l.price)}</div>
           <div class="map-popup__addr">${esc(l.address)}, ${esc(l.city)}</div>
           <div class="map-popup__meta">${l.sqm ? esc(l.sqm) + ' m² · ' : ''}${l.rooms ? esc(l.rooms) + ' locali · ' : ''}${l.bathrooms ? esc(l.bathrooms) + ' bagni' : ''}</div>
           <div class="map-popup__meta">Classe energetica: ${l.energy_class ? esc(l.energy_class) : 'n.d.'}</div>
@@ -384,7 +384,7 @@
       <article class="map-item" data-id="${l.id}">
         <div class="map-item__thumb">${l.cover_url ? `<img src="../${esc(l.cover_url)}" alt="" loading="lazy">` : '🏠'}</div>
         <div class="map-item__body">
-          <div class="map-item__price">${fmtPrice(l.price)}${priceSuffix(l.price_type)}</div>
+          <div class="map-item__price">${fmtPrice(l.price)}${priceSuffix(l.price_type, l.price)}</div>
           <div class="map-item__addr">${esc(l.address)}, ${esc(l.city)}</div>
           <div class="map-item__meta">${l.sqm ? esc(l.sqm) + ' m² · ' : ''}${l.rooms ? esc(l.rooms) + ' locali · ' : ''}${l.bathrooms ? esc(l.bathrooms) + ' bagni' : ''}</div>
           <div class="map-item__meta">Classe energetica: ${l.energy_class ? esc(l.energy_class) : 'n.d.'}</div>
