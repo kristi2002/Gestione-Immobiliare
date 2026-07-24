@@ -124,6 +124,22 @@
             valuation:             'Valutazioni OMI',
         },
 
+        // Edit views that serve BOTH create and edit: the static viewTitles label
+        // ("Modifica …") is wrong in create mode. Pick by presence of the id param
+        // (absent => create), matching the in-card h2 set by the view script.
+        editTitles: {
+            client_edit:   { create: 'Nuovo Proprietario', edit: 'Modifica Proprietario', idKey: 'clientId' },
+            property_edit: { create: 'Nuovo Immobile',      edit: 'Modifica Immobile',     idKey: 'propertyId' },
+        },
+
+        resolveTitle(viewKey) {
+            const e = this.editTitles[viewKey];
+            if (e) {
+                return (this.viewParams && this.viewParams[e.idKey]) ? e.edit : e.create;
+            }
+            return this.viewTitles[viewKey] || null;
+        },
+
         init() {
             this.contentEl = document.getElementById('app-content');
             this.titleEl   = document.getElementById('page-title');
@@ -361,8 +377,9 @@
             }
             this.showLoading();
 
-            if (this.titleEl && this.viewTitles[viewKey]) {
-                this.titleEl.textContent = this.viewTitles[viewKey];
+            const pageTitle = this.resolveTitle(viewKey);
+            if (this.titleEl && pageTitle) {
+                this.titleEl.textContent = pageTitle;
             }
 
             try {
