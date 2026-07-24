@@ -229,8 +229,11 @@ function buildImmobiliareJson(array $p, array $descriptions = [], array $surface
             'air_conditioning_type' => $p['air_conditioning_type'] ?? null,
         ],
         'energy'         => [
-            'class'     => $p['energy_class'] ?? null,
-            'ipe_value' => isset($p['ipe_value']) && $p['ipe_value'] !== null ? (float) $p['ipe_value'] : null,
+            'class'           => $p['energy_class'] ?? null,
+            'ipe_value'       => isset($p['ipe_value']) && $p['ipe_value'] !== null ? (float) $p['ipe_value'] : null,
+            'ape_number'      => $p['ape_number'] ?? null,
+            'ape_issue_date'  => $p['ape_issue_date'] ?? null,
+            'ape_expiry_date' => $p['ape_expiry_date'] ?? null,
         ],
         'surfaces'       => $surfaces,
         'pricing'        => [
@@ -332,6 +335,9 @@ function exportXml(PDO $db): void
             'Overlooking'   => $p['overlooking'] ?? '',
             'EnergyClass'   => $p['energy_class'] ?? '',
             'EnergyIPE'     => $p['ipe_value'] !== null ? (string) $p['ipe_value'] : '',
+            'EnergyApeNumber'     => $p['ape_number'] ?? '',
+            'EnergyApeIssueDate'  => $p['ape_issue_date'] ?? '',
+            'EnergyApeExpiryDate' => $p['ape_expiry_date'] ?? '',
             'Heating'       => $p['heating'] ?? '',
             'HeatingSystem' => $p['heating_system'] ?? '',
             'HeatingFuel'   => $p['heating_fuel'] ?? '',
