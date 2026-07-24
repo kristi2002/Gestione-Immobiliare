@@ -264,8 +264,10 @@ function matchingLeads(PDO $db, int $id): void
             && mb_strtolower(trim($l['preferred_city'])) === mb_strtolower(trim($p['city']))) {
             $score += 30; $reasons[] = 'Città';
         }
+        // NB: property_type e' il "gruppo" (appartamento/villa/...), non la
+        // `typology` fine di immobiliare.it — l'etichetta segue il form immobili.
         if (!empty($l['preferred_type']) && $l['preferred_type'] === $p['property_type']) {
-            $score += 25; $reasons[] = 'Tipologia';
+            $score += 25; $reasons[] = 'Gruppo';
         }
         if ($price !== null) {
             $min = $l['budget_min'] !== null ? (float) $l['budget_min'] : null;
@@ -276,8 +278,9 @@ function matchingLeads(PDO $db, int $id): void
                 $score += 30; $reasons[] = 'Budget';
             }
         }
+        // properties.rooms = camere da letto (i "locali" sono rooms + other_rooms).
         if (!empty($l['min_rooms']) && $p['rooms'] !== null && (int) $p['rooms'] >= (int) $l['min_rooms']) {
-            $score += 10; $reasons[] = 'Locali';
+            $score += 10; $reasons[] = 'Camere';
         }
         if (!empty($l['min_sqm']) && $p['sqm'] !== null && (float) $p['sqm'] >= (float) $l['min_sqm']) {
             $score += 5; $reasons[] = 'Superficie';
