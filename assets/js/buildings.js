@@ -252,6 +252,9 @@
             document.getElementById('buildings-city').value        = item.city || '';
             document.getElementById('buildings-address').value     = item.address || '';
             document.getElementById('buildings-total-units').value = item.total_units || '';
+            document.getElementById('buildings-admin-name').value  = item.administrator_name || '';
+            document.getElementById('buildings-admin-phone').value = item.administrator_phone || '';
+            document.getElementById('buildings-admin-email').value = item.administrator_email || '';
             document.getElementById('buildings-notes').value       = item.notes || '';
         }
 
@@ -269,11 +272,14 @@
         btn.disabled = true; btn.textContent = 'Salvataggio…';
 
         const data = {
-            name:        document.getElementById('buildings-name').value.trim(),
-            city:        document.getElementById('buildings-city').value.trim(),
-            address:     document.getElementById('buildings-address').value.trim(),
-            total_units: parseInt(document.getElementById('buildings-total-units').value) || null,
-            notes:       document.getElementById('buildings-notes').value.trim(),
+            name:                document.getElementById('buildings-name').value.trim(),
+            city:                document.getElementById('buildings-city').value.trim(),
+            address:             document.getElementById('buildings-address').value.trim(),
+            total_units:         parseInt(document.getElementById('buildings-total-units').value) || null,
+            administrator_name:  document.getElementById('buildings-admin-name').value.trim(),
+            administrator_phone: document.getElementById('buildings-admin-phone').value.trim(),
+            administrator_email: document.getElementById('buildings-admin-email').value.trim(),
+            notes:               document.getElementById('buildings-notes').value.trim(),
         };
 
         try {
@@ -286,6 +292,14 @@
             if (!json.success) throw new Error(json.error);
             closeModal();
             showAlert('Edificio salvato con successo.', 'success');
+            // On CREATE, drop the agent straight into the new building's row,
+            // expanded, so "+ Collega immobile" is right there — the natural next
+            // step is adding its units, not hunting for the row in the list.
+            const saved = Array.isArray(json.data) ? json.data[0] : json.data;
+            if (!id && saved && saved.id) {
+                expandedId  = saved.id;
+                currentPage = 1;
+            }
             loadBuildings();
         } catch (err) {
             showAlert(err.message, 'error');

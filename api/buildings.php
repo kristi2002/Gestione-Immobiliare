@@ -75,7 +75,7 @@ function listBuildings(PDO $db): void
     $params = [];
 
     if ($search !== '') {
-        $where .= ' AND (b.name LIKE :search OR b.address LIKE :search OR b.city LIKE :search)';
+        $where .= ' AND (b.name LIKE :search OR b.address LIKE :search OR b.city LIKE :search OR b.administrator_name LIKE :search)';
         $params['search'] = '%' . $search . '%';
     }
 
@@ -130,8 +130,10 @@ function createBuilding(PDO $db): void
     $validated = validateBuildingInput($data);
 
     $stmt = $db->prepare(
-        "INSERT INTO buildings (name, address, city, total_units, notes)
-         VALUES (:name, :address, :city, :total_units, :notes)"
+        "INSERT INTO buildings (name, address, city, total_units, notes,
+                                administrator_name, administrator_phone, administrator_email)
+         VALUES (:name, :address, :city, :total_units, :notes,
+                 :administrator_name, :administrator_phone, :administrator_email)"
     );
     $stmt->execute($validated);
 
@@ -153,7 +155,9 @@ function updateBuilding(PDO $db, int $id): void
 
     $stmt = $db->prepare(
         "UPDATE buildings
-         SET name = :name, address = :address, city = :city, total_units = :total_units, notes = :notes
+         SET name = :name, address = :address, city = :city, total_units = :total_units, notes = :notes,
+             administrator_name = :administrator_name, administrator_phone = :administrator_phone,
+             administrator_email = :administrator_email
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -253,16 +257,27 @@ function validateBuildingInput(array $data): array
     $totalUnits = isset($data['total_units']) && $data['total_units'] !== '' ? (int) $data['total_units'] : 0;
     $notes      = trim($data['notes'] ?? '') ?: null;
 
+    // Amministratore di condominio — contatto opzionale (non ogni edificio ne ha uno).
+    $adminName  = trim($data['administrator_name'] ?? '') ?: null;
+    $adminPhone = trim($data['administrator_phone'] ?? '') ?: null;
+    $adminEmail = trim($data['administrator_email'] ?? '') ?: null;
+
     if ($name === '') apiError('Nome edificio obbligatorio.');
     if ($address === '') apiError('Indirizzo obbligatorio.');
     if ($city === '') apiError('Città obbligatoria.');
     if ($totalUnits < 0) apiError('Numero unità non valido.');
+    if ($adminEmail !== null && !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+        apiError('Email amministratore non valida.');
+    }
 
     return [
-        'name'        => $name,
-        'address'     => $address,
-        'city'        => $city,
-        'total_units' => $totalUnits,
-        'notes'       => $notes,
+        'name'                => $name,
+        'address'             => $address,
+        'city'                => $city,
+        'total_units'         => $totalUnits,
+        'notes'               => $notes,
+        'administrator_name'  => $adminName,
+        'administrator_phone' => $adminPhone,
+        'administrator_email' => $adminEmail,
     ];
 }
