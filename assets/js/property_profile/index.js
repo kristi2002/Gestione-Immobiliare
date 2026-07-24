@@ -1233,79 +1233,6 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         </table>`;
     }
 
-    // ── Edit modal ────────────────────────────────────────────────────────────
-
-    function loadClients() {
-        return fetch('api/clients.php?limit=500')
-            .then(r => r.json())
-            .then(json => {
-                const clients = json.data?.items || json.data || [];
-                const sel = document.getElementById('pp-client');
-                sel.innerHTML = '<option value="">— Seleziona proprietario —</option>' +
-                    clients.map(c => `<option value="${c.id}">${esc(c.name || c.full_name || '')}</option>`).join('');
-                return clients;
-            });
-    }
-
-    function openEditModal() {
-        const p = currentProperty;
-        if (!p) return;
-        loadClients().then(() => {
-            document.getElementById('pp-prop-id').value = p.id;
-            document.getElementById('pp-client').value = p.client_id || p.owner_id || '';
-            document.getElementById('pp-status').value = p.status || 'available';
-            document.getElementById('pp-address').value = p.address || '';
-            document.getElementById('pp-floor').value = p.floor || '';
-            document.getElementById('pp-city').value = p.city || '';
-            document.getElementById('pp-cap').value = p.cap || '';
-            document.getElementById('pp-province').value = p.province || '';
-            document.getElementById('pp-sqm').value = p.sqm || '';
-            document.getElementById('pp-rooms').value = p.rooms || '';
-            document.getElementById('pp-bathrooms').value = p.bathrooms || '';
-            document.getElementById('pp-property-type').value = p.property_type || 'appartamento';
-            document.getElementById('pp-price').value = p.price || '';
-            document.getElementById('pp-price-type').value = p.price_type || 'affitto';
-            document.getElementById('pp-description').value = p.description || '';
-            document.getElementById('pp-features').value = p.additional_features || '';
-            document.getElementById('pp-edit-notes').value = p.internal_notes || '';
-            document.getElementById('pp-edit-modal').hidden = false;
-        });
-    }
-
-    function closeEditModal() {
-        document.getElementById('pp-edit-modal').hidden = true;
-    }
-
-    function handleEditSubmit(e) {
-        e.preventDefault();
-        const body = {
-            id: propertyId,
-            client_id: document.getElementById('pp-client').value || null,
-            status: document.getElementById('pp-status').value,
-            address: document.getElementById('pp-address').value.trim(),
-            floor: document.getElementById('pp-floor').value.trim() || null,
-            city: document.getElementById('pp-city').value.trim(),
-            cap: document.getElementById('pp-cap').value.trim() || null,
-            province: document.getElementById('pp-province').value.trim().toUpperCase() || null,
-            sqm: parseFloat(document.getElementById('pp-sqm').value) || null,
-            rooms: parseInt(document.getElementById('pp-rooms').value, 10) || null,
-            bathrooms: parseInt(document.getElementById('pp-bathrooms').value, 10) || null,
-            property_type: document.getElementById('pp-property-type').value,
-            price: parseFloat(document.getElementById('pp-price').value) || null,
-            price_type: document.getElementById('pp-price-type').value,
-            description: document.getElementById('pp-description').value.trim() || null,
-            additional_features: document.getElementById('pp-features').value.trim() || null,
-            internal_notes: document.getElementById('pp-edit-notes').value.trim() || null,
-        };
-        const btn = document.getElementById('pp-edit-save');
-        btn.disabled = true;
-        fetch('api/properties.php?id=' + propertyId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-            .then(r => r.json())
-            .then(json => { if (!json.success) throw new Error(json.error || 'Errore'); closeEditModal(); loadProperty(); })
-            .catch(err => showAlert('Errore salvataggio: ' + err.message, 'error'))
-            .finally(() => { btn.disabled = false; });
-    }
-
     // ── Archive ───────────────────────────────────────────────────────────────
 
     function confirmArchive() {
@@ -1410,10 +1337,6 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         document.getElementById('pp-rem-close').addEventListener('click', closeReminderModal);
         document.getElementById('pp-rem-cancel').addEventListener('click', closeReminderModal);
         document.getElementById('pp-reminder-form').addEventListener('submit', handleReminderSubmit);
-
-        document.getElementById('pp-edit-close').addEventListener('click', closeEditModal);
-        document.getElementById('pp-edit-cancel').addEventListener('click', closeEditModal);
-        document.getElementById('pp-edit-form').addEventListener('submit', handleEditSubmit);
 
         document.getElementById('pp-archive-close').addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = true; });
         document.getElementById('pp-archive-cancel').addEventListener('click', () => { document.getElementById('pp-archive-modal').hidden = true; });

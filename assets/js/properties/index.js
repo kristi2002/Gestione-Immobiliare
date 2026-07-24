@@ -7,21 +7,18 @@
  * entry so it re-executes on every visit; the sub-modules stay cached singletons.
  */
 import {
-    API, CLIENTS_API, MEDIA_API, APPRAISAL_API, COMPARE_API, EXPORT_API,
-    RATING_LABELS, STATUS_LABELS, MEDIA_LABELS, MEDIA_ACCEPT, PAGE_LIMIT,
+    API, CLIENTS_API, APPRAISAL_API, COMPARE_API, EXPORT_API,
+    RATING_LABELS, STATUS_LABELS, PAGE_LIMIT,
 } from './constants.js';
 import {
-    nowLocalDatetime, csvCell, mediaUrl, isVideoMedia, isImageMedia,
+    nowLocalDatetime, csvCell, mediaUrl,
     escapeHtml, buildSocialCaption,
 } from './helpers.js';
-import { renderGalleryItem } from './templates.js';
 
     let importRows = [];
 
     let properties     = [];
     let clients        = [];
-    let currentMedia   = [];
-    let editingId      = null;
     let deleteTargetId = null;
     let searchTimer    = null;
     let currentPage    = 1;
@@ -39,24 +36,16 @@ import { renderGalleryItem } from './templates.js';
         els.clientFilter   = document.getElementById('property-client-filter');
         els.statusFilter   = document.getElementById('property-status-filter');
         els.alert          = document.getElementById('properties-alert');
-        els.modal          = document.getElementById('property-modal');
         els.deleteModal    = document.getElementById('property-delete-modal');
-        els.form           = document.getElementById('property-form');
-        els.modalTitle     = document.getElementById('property-modal-title');
-        els.clientSelect   = document.getElementById('property-client');
-        els.gallerySection = document.getElementById('gallery-section');
-        els.galleryHint    = document.getElementById('gallery-hint');
-        els.galleryGrid    = document.getElementById('gallery-grid');
         els.pagination     = document.getElementById('properties-pagination');
         els.bulkToolbar    = document.getElementById('properties-bulk-toolbar');
         els.bulkCount      = document.getElementById('properties-bulk-count');
         els.selectAll      = document.getElementById('properties-select-all');
         els.bulkAssignClient = document.getElementById('bulk-assign-client');
 
-        if (!els.grid || !els.form) return;
+        if (!els.grid) return;
 
         ensureCompareBar();
-        ensureLightbox();
         bindEvents();
         loadClients().then(() => {
             loadProperties();
@@ -105,20 +94,6 @@ import { renderGalleryItem } from './templates.js';
         });
     }
 
-    function ensureLightbox() {
-        if (document.getElementById('media-lightbox')) return;
-
-        const box = document.createElement('div');
-        box.className = 'media-lightbox';
-        box.id = 'media-lightbox';
-        box.hidden = true;
-        box.innerHTML = `
-            <button type="button" class="media-lightbox__close" id="media-lightbox-close" aria-label="Chiudi">&times;</button>
-            <div class="media-lightbox__content" id="media-lightbox-content"></div>
-            <p class="media-lightbox__caption" id="media-lightbox-caption"></p>`;
-        document.body.appendChild(box);
-    }
-
     function bindEvents() {
         // "Nuovo Immobile" now opens a dedicated page (not a modal).
         bindClick('btn-new-property', () => { if (window.App) window.App.navigateTo('property_edit'); });
@@ -140,25 +115,9 @@ import { renderGalleryItem } from './templates.js';
             apply(cols);
         })();
         bindClick('btn-toggle-map', toggleMap);
-        bindClick('property-modal-close', closeModal);
-        bindClick('property-modal-cancel', closeModal);
-        bindClick('btn-property-mandato', generateMandato);
         bindClick('property-delete-close', closeDeleteModal);
         bindClick('property-delete-cancel', closeDeleteModal);
         bindClick('property-delete-confirm', confirmDelete);
-        bindClick('btn-upload-media', uploadMedia);
-        bindChange('media-type', updateMediaFileAccept);
-        bindClick('media-lightbox-close', closeLightbox);
-        const lightbox = document.getElementById('media-lightbox');
-        if (lightbox) {
-            lightbox.addEventListener('click', (e) => {
-                if (e.target.id === 'media-lightbox') closeLightbox();
-            });
-        }
-
-        setupAutoGeocode();
-
-        els.form.addEventListener('submit', handleFormSubmit);
 
         // Social post modal (#13)
         bindClick('social-modal-close', closeSocialModal);
@@ -247,11 +206,6 @@ import { renderGalleryItem } from './templates.js';
             els.statusFilter.addEventListener('change', () => { currentPage = 1; loadProperties(); });
         }
 
-        if (els.modal) {
-            els.modal.addEventListener('click', (e) => {
-                if (e.target === els.modal) closeModal();
-            });
-        }
         if (els.deleteModal) {
             els.deleteModal.addEventListener('click', (e) => {
                 if (e.target === els.deleteModal) closeDeleteModal();
@@ -278,7 +232,6 @@ import { renderGalleryItem } from './templates.js';
             `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`
         ).join('');
 
-        els.clientSelect.innerHTML = '<option value="">— Seleziona proprietario —</option>' + options;
         els.clientFilter.innerHTML = '<option value="">Tutti i proprietari</option>' + options;
         els.bulkAssignClient.innerHTML = '<option value="">— Proprietario —</option>' + options;
     }
@@ -310,19 +263,6 @@ import { renderGalleryItem } from './templates.js';
         } catch (err) {
             els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
-        }
-    }
-
-    async function loadMedia(propertyId) {
-        try {
-            const res  = await fetch(`${MEDIA_API}?property_id=${propertyId}`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-
-            currentMedia = json.data;
-            renderGallery();
-        } catch (err) {
-            els.galleryGrid.innerHTML = `<p class="text-muted gallery-empty">${escapeHtml(err.message)}</p>`;
         }
     }
 
@@ -436,14 +376,6 @@ import { renderGalleryItem } from './templates.js';
                     e.preventDefault();
                     if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(card.dataset.id, 10) });
                 }
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const prop = properties.find(p => p.id == btn.dataset.id);
-                if (prop) openModal(prop);
             });
         });
 
@@ -776,221 +708,6 @@ import { renderGalleryItem } from './templates.js';
         URL.revokeObjectURL(a.href);
     }
 
-    async function generateMandato() {
-        const propertyId = parseInt(document.getElementById('property-id').value, 10);
-        const clientId = parseInt(document.getElementById('property-client').value, 10);
-        if (!propertyId || !clientId) {
-            alert('Salva prima l\'immobile con un proprietario associato.');
-            return;
-        }
-        const res = await fetch('api/generate_pdf.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'mandato', property_id: propertyId, client_id: clientId }),
-        });
-        const json = await res.json();
-        if (json.success) window.open(json.data.download, '_blank');
-        else alert(json.error || 'Errore generazione mandato');
-    }
-
-    function renderGallery() {
-        if (currentMedia.length === 0) {
-            els.galleryGrid.innerHTML = '<p class="text-muted gallery-empty">Nessun file caricato. Usa il form sopra per aggiungere foto, video, planimetrie, cartine o allegati.</p>';
-            return;
-        }
-
-        const groups = {};
-        currentMedia.forEach(m => {
-            const key = m.media_type || 'attachment';
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(m);
-        });
-
-        const order = ['photo', 'video', 'floor_plan', 'house_map', 'attachment'];
-        els.galleryGrid.innerHTML = order.filter(t => groups[t]?.length).map(type => `
-            <div class="gallery-section">
-                <h4 class="gallery-section__title">${escapeHtml(MEDIA_LABELS[type] || type)} (${groups[type].length})</h4>
-                <div class="gallery-section__grid">
-                    ${groups[type].map(m => renderGalleryItem(m)).join('')}
-                </div>
-            </div>
-        `).join('');
-
-        els.galleryGrid.querySelectorAll('.btn-delete-media').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteMedia(btn.dataset.id);
-            });
-        });
-
-        els.galleryGrid.querySelectorAll('.btn-set-cover').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                setCoverMedia(btn.dataset.id);
-            });
-        });
-
-        els.galleryGrid.querySelectorAll('.gallery-item__preview').forEach(el => {
-            el.addEventListener('click', () => {
-                const item = currentMedia.find(m => m.id == el.closest('.gallery-item')?.dataset.id);
-                if (item) openLightbox(item);
-            });
-        });
-    }
-
-    function updateMediaFileAccept() {
-        const type = document.getElementById('media-type').value;
-        document.getElementById('media-file').accept = MEDIA_ACCEPT[type] || '';
-    }
-
-    function openLightbox(item) {
-        ensureLightbox();
-        const box = document.getElementById('media-lightbox');
-        const content = document.getElementById('media-lightbox-content');
-        const caption = document.getElementById('media-lightbox-caption');
-        const url = mediaUrl(item.url);
-        const isImage = isImageMedia(item) && item.mime_type !== 'application/pdf';
-        const isVideo = isVideoMedia(item);
-
-        if (isVideo) {
-            const type = item.mime_type || 'video/mp4';
-            content.innerHTML = `<video src="${escapeHtml(url)}" controls autoplay playsinline preload="metadata"><source src="${escapeHtml(url)}" type="${escapeHtml(type)}"></video>`;
-        } else if (isImage) {
-            content.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(item.original_name)}">`;
-        } else if (item.mime_type === 'application/pdf') {
-            content.innerHTML = `<iframe src="${escapeHtml(url)}" title="${escapeHtml(item.original_name)}"></iframe>`;
-        } else {
-            content.innerHTML = `<p class="text-muted">Anteprima non disponibile. <a href="${escapeHtml(url)}" target="_blank" rel="noopener">Apri il file</a></p>`;
-        }
-
-        caption.textContent = `${MEDIA_LABELS[item.media_type] || item.media_type} — ${item.original_name}`;
-        box.hidden = false;
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeLightbox() {
-        const box = document.getElementById('media-lightbox');
-        if (!box) return;
-        box.hidden = true;
-        const content = document.getElementById('media-lightbox-content');
-        if (content) content.innerHTML = '';
-        document.body.style.overflow = '';
-    }
-
-    async function setCoverMedia(mediaId) {
-        if (!editingId) return;
-
-        try {
-            const res = await fetch(`${MEDIA_API}?action=set_cover`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ property_id: editingId, media_id: parseInt(mediaId, 10) }),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-
-            await loadMedia(editingId);
-            loadProperties();
-            showAlert('Anteprima card aggiornata.', 'success');
-        } catch (err) {
-            showAlert(err.message, 'error');
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Modal
-    // -------------------------------------------------------------------------
-
-    async function openModal(property = null) {
-        els.form.reset();
-        document.getElementById('property-id').value = '';
-        editingId = null;
-        currentMedia = [];
-        document.getElementById('property-geo-confidence').style.display = 'none';
-        document.getElementById('property-geo-confidence-value').value = '';
-        document.getElementById('property-price-history-section').hidden = true;
-        document.getElementById('property-price-history').innerHTML = 'Nessuna variazione registrata.';
-        document.getElementById('btn-property-mandato').hidden = true;
-
-        if (property) {
-            try {
-                const res = await fetch(`${API}?id=${property.id}`);
-                const json = await res.json();
-                if (json.success) property = json.data;
-            } catch (_) { /* use list data */ }
-
-            editingId = property.id;
-            els.modalTitle.textContent = 'Modifica Immobile';
-            document.getElementById('property-id').value          = property.id;
-            document.getElementById('property-client').value      = property.client_id;
-            document.getElementById('property-status').value    = property.status;
-            document.getElementById('property-address').value   = property.address;
-            document.getElementById('property-city').value      = property.city;
-            document.getElementById('property-cap').value       = property.cap || '';
-            document.getElementById('property-province').value  = property.province || '';
-            document.getElementById('property-floor').value      = property.floor || '';
-            document.getElementById('property-type').value       = property.property_type || 'appartamento';
-            document.getElementById('property-year-built').value = property.year_built ?? '';
-            document.getElementById('property-sqm').value        = property.sqm ?? '';
-            document.getElementById('property-rooms').value     = property.rooms ?? '';
-            document.getElementById('property-bathrooms').value = property.bathrooms ?? '';
-            document.getElementById('property-description').value = property.description || '';
-            document.getElementById('property-features').value  = property.additional_features || '';
-            document.getElementById('property-notes').value     = property.internal_notes || '';
-            document.getElementById('property-price').value     = property.price ?? '';
-            document.getElementById('property-price-type').value = property.price_type || 'affitto';
-            document.getElementById('property-latitude').value  = property.latitude ?? '';
-            document.getElementById('property-longitude').value = property.longitude ?? '';
-            showGeoConfidence(property.geo_confidence);
-            document.getElementById('property-geo-confidence-value').value = property.geo_confidence || '';
-
-            renderPriceHistory(property.price_history || []);
-            document.getElementById('btn-property-mandato').hidden = false;
-
-            els.gallerySection.hidden = false;
-            els.galleryHint.hidden    = true;
-            updateMediaFileAccept();
-            loadMedia(property.id);
-        } else {
-            els.modalTitle.textContent = 'Nuovo Immobile';
-            document.getElementById('property-status').value = 'available';
-            els.gallerySection.hidden = true;
-            els.galleryHint.hidden    = false;
-            els.galleryGrid.innerHTML = '';
-            updateMediaFileAccept();
-        }
-
-        els.modal.hidden = false;
-        document.getElementById('property-address').focus();
-    }
-
-    function renderPriceHistory(history) {
-        const section = document.getElementById('property-price-history-section');
-        const container = document.getElementById('property-price-history');
-        if (!history.length) {
-            section.hidden = true;
-            return;
-        }
-        section.hidden = false;
-        const typeLabels = { affitto: 'Affitto', vendita: 'Vendita' };
-        container.innerHTML = history.map(h => {
-            const oldP = h.old_price != null ? `€ ${Number(h.old_price).toLocaleString('it-IT')}` : '—';
-            const newP = h.new_price != null ? `€ ${Number(h.new_price).toLocaleString('it-IT')}` : '—';
-            const oldT = h.old_price_type ? typeLabels[h.old_price_type] || h.old_price_type : '';
-            const newT = h.new_price_type ? typeLabels[h.new_price_type] || h.new_price_type : '';
-            const date = new Date(h.changed_at).toLocaleString('it-IT', {
-                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-            });
-            return `<div class="price-history-item">${date}: ${oldP}${oldT ? ' (' + escapeHtml(oldT) + ')' : ''} → <strong>${newP}</strong>${newT ? ' (' + escapeHtml(newT) + ')' : ''}${h.changed_by_name ? ' · ' + escapeHtml(h.changed_by_name) : ''}</div>`;
-        }).join('');
-    }
-
-    function closeModal() {
-        els.modal.hidden = true;
-        editingId = null;
-        closeLightbox();
-    }
-
     function openDeleteModal(id, label) {
         deleteTargetId = id;
         document.getElementById('delete-property-label').textContent = label;
@@ -1005,35 +722,6 @@ import { renderGalleryItem } from './templates.js';
     // -------------------------------------------------------------------------
     // CRUD actions
     // -------------------------------------------------------------------------
-
-    // Automatic geocoding: coordinates fill in while the address is typed
-    // (Geocode.bindAuto in geocode.js) — the "Trova" button is gone.
-    function setupAutoGeocode() {
-        if (typeof Geocode === 'undefined' || !Geocode.bindAuto) return;
-        Geocode.bindAuto(
-            { address: 'property-address', city: 'property-city', cap: 'property-cap', province: 'property-province' },
-            (hit) => {
-                document.getElementById('property-latitude').value = hit.lat;
-                document.getElementById('property-longitude').value = hit.lng;
-                if (hit.suggested_province && !document.getElementById('property-province').value.trim()) {
-                    document.getElementById('property-province').value = hit.suggested_province.replace(/^Provincia di\s+/i, '').slice(0, 10);
-                }
-                showGeoConfidence(hit.confidence, hit.source);
-            }
-        );
-    }
-
-    function showGeoConfidence(confidence, source = '') {
-        const valueEl = document.getElementById('property-geo-confidence-value');
-        if (valueEl) valueEl.value = confidence || '';
-
-        // The confidence note is intentionally not shown in the form.
-        const el = document.getElementById('property-geo-confidence');
-        if (el) {
-            el.textContent = '';
-            el.style.display = 'none';
-        }
-    }
 
     // ── Social post modal (#13) ───────────────────────────────────────────────
     function loadSocialMedia(propertyId) {
@@ -1136,73 +824,6 @@ import { renderGalleryItem } from './templates.js';
         }
     }
 
-    async function handleFormSubmit(e) {
-        e.preventDefault();
-
-        const id   = document.getElementById('property-id').value;
-        const data = collectFormData();
-        const saveBtn = document.getElementById('property-modal-save');
-
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Salvataggio...';
-
-        try {
-            const saved = await saveProperty(data, id || null);
-            const wasNew = !id;
-
-            closeModal();
-            showAlert(wasNew ? 'Immobile creato con successo.' : 'Immobile salvato con successo.', 'success');
-            loadProperties();
-            if (wasNew && window.App) {
-                window.App.navigateTo('property_profile', { propertyId: saved.id });
-            }
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Salva';
-        }
-    }
-
-    function collectFormData() {
-        return {
-            client_id:           document.getElementById('property-client').value,
-            address:             document.getElementById('property-address').value.trim(),
-            city:                document.getElementById('property-city').value.trim(),
-            cap:                 document.getElementById('property-cap').value.trim(),
-            province:            document.getElementById('property-province').value.trim(),
-            floor:               document.getElementById('property-floor').value.trim(),
-            property_type:       document.getElementById('property-type').value,
-            year_built:          document.getElementById('property-year-built').value,
-            sqm:                 document.getElementById('property-sqm').value,
-            rooms:               document.getElementById('property-rooms').value,
-            bathrooms:           document.getElementById('property-bathrooms').value,
-            description:         document.getElementById('property-description').value.trim(),
-            additional_features: document.getElementById('property-features').value.trim(),
-            internal_notes:      document.getElementById('property-notes').value.trim(),
-            status:              document.getElementById('property-status').value,
-            price:               document.getElementById('property-price').value,
-            price_type:          document.getElementById('property-price-type').value,
-            latitude:            document.getElementById('property-latitude').value,
-            longitude:           document.getElementById('property-longitude').value,
-            geo_confidence:      document.getElementById('property-geo-confidence-value').value || null,
-        };
-    }
-
-    async function saveProperty(data, id) {
-        const url    = id ? `${API}?id=${id}` : API;
-        const method = id ? 'PUT' : 'POST';
-
-        const res  = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        return json.data;
-    }
-
     async function confirmDelete() {
         if (!deleteTargetId) return;
 
@@ -1221,66 +842,6 @@ import { renderGalleryItem } from './templates.js';
             showAlert(err.message, 'error');
         } finally {
             btn.disabled = false;
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Gallery
-    // -------------------------------------------------------------------------
-
-    async function uploadMedia() {
-        if (!editingId) {
-            showAlert('Salva prima l\'immobile.', 'error');
-            return;
-        }
-
-        const fileInput = document.getElementById('media-file');
-        const mediaType = document.getElementById('media-type').value;
-
-        if (!fileInput.files.length) {
-            showAlert('Seleziona un file da caricare.', 'error');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('property_id', editingId);
-        formData.append('media_type', mediaType);
-        formData.append('file', fileInput.files[0]);
-
-        const btn = document.getElementById('btn-upload-media');
-        btn.disabled = true;
-        btn.textContent = 'Caricamento...';
-
-        try {
-            const res  = await fetch(MEDIA_API, { method: 'POST', body: formData });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-
-            fileInput.value = '';
-            await loadMedia(editingId);
-            loadProperties();
-            showAlert('File caricato con successo.', 'success');
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Carica file';
-        }
-    }
-
-    async function deleteMedia(mediaId) {
-        if (!await confirmDialog('Vuoi eliminare questo file dalla galleria?', { title: 'Elimina file' })) return;
-
-        try {
-            const res  = await fetch(`${MEDIA_API}?id=${mediaId}`, { method: 'DELETE' });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-
-            await loadMedia(editingId);
-            loadProperties();
-            showAlert('File eliminato.', 'success');
-        } catch (err) {
-            showAlert(err.message, 'error');
         }
     }
 
