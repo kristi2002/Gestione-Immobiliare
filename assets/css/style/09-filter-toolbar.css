@@ -3,8 +3,21 @@
    tightens card alignment). Shared classes → applies everywhere.
    ============================================================================ */
 
-/* View header: title left, actions right, clean wrap */
-.view-header { align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+/* View header — single home for the whole family (box model + actions row).
+   The title/description text (.view-header__text) is sized here for
+   completeness but theme-orlandi.css keeps it hidden: app.js copies it into
+   the real topbar on navigation, so on screen this bar is actions-only —
+   see justify-content: flex-end there, the deliberate final override. */
+.view-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
+}
 .view-header__text h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
 .view-header__text p { font-size: 13px; color: var(--color-text-muted); margin-top: 2px; }
 .view-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -130,41 +143,13 @@
 }
 .view-cols-row .btn.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
-/* ---- Unified page control band ------------------------------------------
-   filters.js (unifyPageBar) merges each view's floating action row into the
-   main filter bar and hoists it to the top of the view, so every page shares
-   the same anatomy: topbar → control band → stats → content. */
-.view-header--merged { display: none !important; }
-.toolbar--pagebar { margin-top: 0; margin-bottom: 16px; }
-.fb-actions {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding-left: 12px; margin-left: 2px;
-    border-left: 1px solid var(--color-border);
-}
-.fb-actions .btn {
-    height: 40px; border-radius: 9px;
-    display: inline-flex; align-items: center;
-}
-.toolbar--merged .fb-actions { flex-wrap: nowrap; }
-
 /* --- Docked filter bar (scrolled up into the topbar) → keep it COMPACT ---
-   When filters.js merges the bar into the topbar on scroll, the row used to cram
-   search + saved-searches + Azioni + Filtri + sort + export + import + "+ Nuovo"
-   next to the topbar's own title/search/icons. While merged we hide the page
-   search + saved-search controls (the topbar already has a global search) and the
-   secondary export/import buttons — Azioni / Filtri / sort and the primary
-   "+ Nuovo <entity>" stay. The full bar returns when scrolled back to the top. */
+   filters.js pins the page's filter toolbar into the topbar on scroll (see
+   setupMergeToTopbar). While merged we hide the search + saved-search controls
+   (the topbar already has a global search) so Azioni / Filtri / sort stay on
+   one clean line. The full bar returns when scrolled back to the top. */
 .toolbar--merged .fb-group--left { display: none; }
-.toolbar--merged .fb-actions .btn--export,
-.toolbar--merged .fb-actions .btn--import { display: none; }
-.toolbar--merged .fb-actions { border-left: none; padding-left: 0; margin-left: 0; }
 .toolbar--merged .filter-bar__controls.fb-ref { justify-content: flex-end; }
-@media (max-width: 720px) {
-    .fb-actions {
-        border-left: none; padding-left: 0; margin-left: 0;
-        justify-content: flex-start;
-    }
-}
 
 /* ---- Card alignment: one shared left edge, no wrapping headers ---- */
 .entity-card__prop-header { padding-left: 16px; padding-right: 16px; flex-wrap: nowrap; }

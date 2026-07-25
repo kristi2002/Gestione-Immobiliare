@@ -2,8 +2,6 @@
    Phase 11 — Leads, Visite, Mappa, Fatture, Valutazioni, Template, 2FA, CSV
    =========================================================================== */
 
-.view-header__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-
 /* Status badges (shared) */
 .badge--lead-new        { background: #dbeafe; color: #1d4ed8; }
 .badge--lead-contacted  { background: #fef3c7; color: #b45309; }
@@ -707,15 +705,7 @@ a.topbar-user:hover { background: var(--color-hover, rgba(0,0,0,.04)); }
     .cal-day { min-height: 72px; }
 }
 
-/* --- Reports page --- */
-.reports-toolbar {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 8px 14px;
-    box-shadow: var(--shadow);
-}
-
+/* --- Reports page --- (shared .reports-toolbar chrome lives in 01-base.css) */
 .reports-toolbar__label {
     font-size: 13px;
     font-weight: 600;

@@ -39,18 +39,25 @@ wins**:
 
 | Layer | Owns |
 |-------|------|
-| `01-base.css` | **Design tokens (`:root`)** + base shell (`.sidebar`, `.topbar`, `.content-section`), base `.card`, the `.btn` system. The foundation. |
+| `01-base.css` | **Design tokens (`:root`)** + base shell (`.sidebar`, `.content-section`), base `.card`, the `.btn` system, `.toolbar`/`.reports-toolbar` chrome. The foundation. |
 | `02-properties-media.css` | Properties split-view + map, media gallery |
 | `03-clients-cards.css` | Client profile / cards, sidebar backdrop |
-| `04-phase11.css` | Leads / visite / mappa / fatture / valutazioni / 2FA / CSV badges |
-| `05-ui-polish.css` | Cross-cutting polish (zebra lists, card/topbar refinements) |
+| `04-phase11.css` | **Grab bag, not a component file** — entity cards + status badges (lead/contract/payment/expense/appointment/invoice), calendar, map, appraisal/portal-export modals, TOTP, CSV import, pagination/bulk selection. Named after the dev sprint that produced it, not its content; a real name would have to be "everything shipped in one phase," which isn't useful. Splitting it by component is future work — don't add to it, and don't copy its shape for new files (see §1 rule 5). |
+| `05-ui-polish.css` | Cross-cutting polish (zebra lists, card refinements) |
 | `06-buttons-responsive.css` | Button visual polish + responsive |
-| `07-refresh-2026.css` | 2026 refresh (typography, depth, focus/hover, shell tweaks) |
-| `08-shell-dashboard.css` | Shell + dashboard redesign (light sidebar, topbar over content) |
-| `09-filter-toolbar.css` | Unified filter toolbar + card-header alignment |
+| `07-refresh-2026.css` | **Also a grab bag** — topbar logo/global search, custom datepicker, valuation quick-form, contract filter-pill dots, per-owner card accent colours, plus the filter-bar-pins-into-topbar-on-scroll mechanics (`.topbar-filters`, `.toolbar--merged`). Same caveat as `04-phase11.css`: the name marks *when*, not *what*. |
+| `08-shell-dashboard.css` | Shell + dashboard redesign (light sidebar, dashboard stat/table components) |
+| `09-filter-toolbar.css` | **Single home for `.view-header` and the reference filter-bar** (`.fb-*`, built by `filters.js`'s `buildRefBar`) + card-header alignment |
 
 `06`–`08` are "era layers" written to override earlier shell/button rules by loading
 later. That's the source of the known collisions in §4 — treat them as legacy.
+
+`04-phase11.css` and `07-refresh-2026.css` keep their sprint/date names on purpose:
+renaming them to something component-shaped would misrepresent what's actually in
+them (see above). A number is honest about being a grab bag; a wrong descriptive
+name isn't. If you're adding a new, single-purpose block of styles, it does **not**
+belong in either — follow §1 rule 5 and give it its own `NN-<page>.css` instead of
+growing these two further.
 
 ---
 
@@ -121,10 +128,37 @@ patterns to copy — don't add new redefinitions of them:
 - **`.btn` / `.btn--primary`** — redefined across `01-base`, `06-buttons-responsive`,
   `07-refresh-2026` (both files literally comment "loaded last so it wins").
 - **`.sidebar`** — `01-base` (dark) vs `08-shell-dashboard` (light redesign).
-- **`.topbar`** — `01-base`, `05-ui-polish`, `08-shell-dashboard`, plus `theme-orlandi`
-  (which owns the z-index).
 
 Migrating these to a single home per selector is a **separate, incremental, visually-verified
-task** (see the tracked follow-up) — it must be done a few selectors at a time with a
-before/after check in the browser, because the current look depends on the exact cascade.
-This file is the guardrail so the debt stops growing in the meantime.
+task** — do it a few selectors at a time with a before/after check in the browser, because
+the current look depends on the exact cascade. This file is the guardrail so the debt stops
+growing in the meantime.
+
+### Resolved (2026-07-25)
+
+These were consolidated to a single home, visually re-verified in the browser at each step —
+the pattern to follow for the ones still open above:
+
+- **`.topbar`** — was split across `01-base`, `05-ui-polish`, `08-shell-dashboard` and
+  `theme-orlandi`. Now lives entirely in `theme-orlandi.css` (the documented last-wins theme
+  layer); the others no longer mention it.
+- **`.view-header` / `.view-header__text` / `.view-header__actions`** — box model and the
+  `__actions` row were duplicated across `01-base` and `04-phase11` in addition to
+  `09-filter-toolbar`. Consolidated into `09-filter-toolbar.css`. The page title and one-line
+  description (`.view-header__text`) no longer render in the page body at all — `app.js` reads
+  them out of the markup on every navigation and copies them into the real topbar
+  (`#page-title` / `#topbar-sub`), so `.view-header` is now action-buttons-only and collapses
+  entirely (`:has()`) on the many views that have no actions. Four views
+  (`documents.html`, `appointments.html`, `expenses.html`, `invoices.html`) had their action
+  button as a bare child of `.view-header` instead of inside `.view-header__actions` like every
+  other view — fixed, since it also fed the box-collapse rule above.
+- **`.reports-toolbar` chrome** (background/border/radius/shadow) — redefined in `01-base`,
+  `04-phase11`, and again (box-shadow only) in `05-ui-polish`. Consolidated onto the same rule
+  as `.toolbar` in `01-base.css`, with one explicit override for its distinct padding.
+- **The old "merge" behavior** (`filters.js`'s `unifyPageBar`) — always-on, not scroll-triggered:
+  it stuffed each view's header actions into the filter bar and hoisted the bar to the top of
+  the page, unevenly (pages whose action button wasn't inside `.view-header__actions` never
+  merged, pages with many actions wrapped to 2–3 ragged rows). Removed outright, along with the
+  CSS it alone produced (`.view-header--merged`, `.fb-actions`, `.toolbar--pagebar`). The
+  scroll-triggered pin-into-topbar behavior (`setupMergeToTopbar`, `.toolbar--merged`) is
+  unrelated and unaffected — that one stays.

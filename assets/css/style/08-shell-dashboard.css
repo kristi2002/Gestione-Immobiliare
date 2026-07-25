@@ -1,7 +1,9 @@
 /* ============================================================================
    SHELL + DASHBOARD REDESIGN  (light sidebar, top bar over content)
-   Landify-inspired refresh. This block is intentionally last so it overrides
-   the earlier shell rules via source order.
+   Landify-inspired refresh. Loads after 01-base so it overrides the earlier
+   shell rules — but 09-filter-toolbar.css and theme-orlandi.css load AFTER
+   this file and win where they touch the same selectors (.topbar's own rules
+   now live entirely in theme-orlandi.css, the documented single home).
    ============================================================================ */
 :root {
     --rd-nav:      #5b6a80;
@@ -22,18 +24,6 @@
 .main-wrapper {
     margin-top: 0;                 /* top bar is no longer a fixed full-width bar */
     height: 100vh;
-}
-.topbar {
-    position: sticky;
-    top: 0;
-    left: auto;
-    right: auto;
-    width: auto;
-    box-shadow: none;
-    border-bottom: 1px solid var(--color-border);
-    padding-left: 28px;
-    padding-right: 28px;
-    /* z-index owned by theme-orlandi .topbar (single source of truth) */
 }
 .app-content { height: auto; flex: 1; }
 
@@ -245,7 +235,6 @@ details.nav-group > summary:hover { color: var(--rd-nav); }
     .main-wrapper { margin-left: 0; height: auto; }
     .sidebar { top: 0; height: 100vh; transform: translateX(-100%); box-shadow: var(--shadow-md); }
     .sidebar.open { transform: translateX(0); }
-    .topbar { position: sticky; padding-left: 16px; padding-right: 16px; }
     .db-stats { grid-template-columns: 1fr; }
     .db-pagehead h1 { font-size: 19px; }
 }

@@ -138,14 +138,20 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 /* Footer */
 .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
-/* --- Topbar: floating white card carrying the page title --- */
+/* --- Topbar: floating white card carrying the page title ---
+   Single home for the whole selector (consolidated out of 01-base,
+   05-ui-polish and 08-shell-dashboard — see assets/css/README.md §4). */
 .topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--color-surface);
     height: auto; min-height: 74px;
     margin: var(--shell-gap) var(--shell-gap) 4px calc(var(--shell-gap) / 2 + 4px);
     padding: 12px 18px;
-    border: none; border-bottom: none;
     border-radius: 16px;
     box-shadow: var(--shadow-md);
+    position: sticky;
     top: 0;
     /* Single source of truth for the topbar layer — was conflicting across era
        files (15 in 08-shell, 1150 in 01-base, 1200 in 03-clients mobile), and the
@@ -160,7 +166,7 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
     font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: var(--color-text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw;
 }
-.topbar-sub { font-size: 12.5px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; }
+.topbar-sub { font-size: 13px; color: var(--color-text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; }
 @media (max-width: 1100px) { .topbar-sub { display: none; } .topbar-title h1 { font-size: 18px; } }
 
 .app-content { padding: 10px 18px 44px calc(var(--shell-gap) / 2 + 4px); }
@@ -294,11 +300,17 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 /* =====================================================================
    List pages — stat strip + list card + table (mockup anatomy)
    ===================================================================== */
-/* The page title lives in the topbar — hide every view's duplicate header
-   text and keep only its action buttons, aligned right (mockup pattern). */
+/* The page title and one-line purpose description now live in the real topbar
+   (#page-title / #topbar-sub — app.js reads this markup on every navigation and
+   copies it up), so never render the source text here. When a view has no
+   header actions either, the whole bar collapses instead of leaving an empty
+   strip with just its border. */
 .view-header .view-header__text { display: none; }
-.view-header { justify-content: flex-end; }
-.view-header--bare { justify-content: flex-end; margin-bottom: 14px; }
+/* Scoped to the page-header pattern (always has .view-header__text) so the
+   unrelated card sub-headers reusing the .view-header class (settings.html
+   panels: bare <h3> + button, no .view-header__text) are never touched. */
+.view-header:has(.view-header__text):not(:has(.view-header__actions)) { display: none; }
+.view-header { justify-content: flex-end; align-items: center; }
 
 
 .list-card { overflow: visible; }

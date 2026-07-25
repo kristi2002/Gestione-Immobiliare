@@ -68,6 +68,7 @@
     const App = {
         contentEl:  null,
         titleEl:    null,
+        subEl:      null,
         currentView: null,
         viewParams: {},
         _viewToken: 0,
@@ -97,6 +98,7 @@
             settings:       'Impostazioni',
             client_profile:        'Scheda Cliente',
             agent_profile:         'Scheda Agente',
+            property_profile:      'Scheda Immobile',
             client_edit:           'Modifica Proprietario',
             property_edit:         'Modifica Immobile',
             contract_edit:         'Contratto',
@@ -143,6 +145,7 @@
         init() {
             this.contentEl = document.getElementById('app-content');
             this.titleEl   = document.getElementById('page-title');
+            this.subEl     = document.getElementById('topbar-sub');
 
             this.bindNavigation();
             this.bindContentNavigation();
@@ -401,6 +404,16 @@
 
                 this.contentEl.innerHTML = html;
                 if (token !== this._viewToken) return;
+
+                // The view's own one-line purpose description (markup source of
+                // truth stays in views/*.html, kept invisible there — see
+                // .view-header__text in theme-orlandi.css) replaces the topbar's
+                // welcome line so every page says what it's for, not just its name.
+                if (this.subEl) {
+                    const desc = this.contentEl.querySelector('.view-header__text p');
+                    this.subEl.textContent = desc ? desc.textContent.trim() : '';
+                }
+
                 this.injectStyles(this.contentEl);
                 await this.executeScripts(this.contentEl);
                 if (window.lucide) window.lucide.createIcons();

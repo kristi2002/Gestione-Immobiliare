@@ -123,7 +123,7 @@
         toggle.type = 'button';
         toggle.className = 'toolbar-toggle';
         toggle.setAttribute('aria-expanded', String(wasOpen));
-        toggle.innerHTML = '<span>Filtri</span><span class="toggle-icon">â–¼</span>';
+        toggle.innerHTML = '<span>Filtri</span><span class="toggle-icon">▼</span>';
         bar.parentNode.insertBefore(toggle, bar);
 
         if (wasOpen) bar.classList.add('is-open');
@@ -226,7 +226,7 @@
         const pageKey = 'fbSaved:' + (bar.id || (location.pathname + '|' + [...bar.classList].join('.')));
 
         // Panels are position:fixed and placed via JS so they escape the toolbar's
-        // overflow:hidden and any stacking context â€” never render behind the list.
+        // overflow:hidden and any stacking context — never render behind the list.
         function closeAllPanels() { bar.querySelectorAll('.fb-pop.open, .fb-menu.open').forEach(p => p.classList.remove('open')); }
         function placePanel(btn, panel, align) {
             const pw = panel.offsetWidth || 250;
@@ -263,7 +263,7 @@
         saveIcon.title = 'Salva la ricerca corrente'; saveIcon.innerHTML = REF_ICONS.save;
         left.append(saveWrap, saveIcon);
 
-        // Bulk Action dropdown â€” wraps the page's existing .bulk-toolbar (its
+        // Bulk Action dropdown — wraps the page's existing .bulk-toolbar (its
         // buttons/checkbox keep their ids, so the page's bulk JS keeps working).
         const bulk = bar.parentElement && bar.parentElement.querySelector('.bulk-toolbar');
         if (bulk) {
@@ -320,13 +320,13 @@
             right.appendChild(fWrap);
         }
 
-        // Sort â€” client-side reorder of the current results
+        // Sort — client-side reorder of the current results
         const sortWrap = document.createElement('div'); sortWrap.className = 'fb-ctrl';
         const sortBtn = document.createElement('button'); sortBtn.type = 'button'; sortBtn.className = 'fb-btn';
-        sortBtn.innerHTML = REF_ICONS.sort + '<span class="fb-sort-label">PiÃ¹ recenti</span><span class="fb-chev">' + REF_ICONS.chev + '</span>';
+        sortBtn.innerHTML = REF_ICONS.sort + '<span class="fb-sort-label">Più recenti</span><span class="fb-chev">' + REF_ICONS.chev + '</span>';
         const sortLabel = sortBtn.querySelector('.fb-sort-label');
         const sortMenu = document.createElement('div'); sortMenu.className = 'fb-menu';
-        [['recent', 'PiÃ¹ recenti'], ['old', 'Meno recenti'], ['az', 'A â†’ Z'], ['za', 'Z â†’ A']].forEach(([k, lab], i) => {
+        [['recent', 'Più recenti'], ['old', 'Meno recenti'], ['az', 'A → Z'], ['za', 'Z → A']].forEach(([k, lab], i) => {
             const b = document.createElement('button'); b.type = 'button'; b.dataset.sort = k;
             b.innerHTML = '<span>' + lab + '</span>'; if (i === 0) b.classList.add('is-active');
             sortMenu.appendChild(b);
@@ -335,7 +335,7 @@
         sortBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(sortBtn, sortMenu, 'right'); });
         right.appendChild(sortWrap);
 
-        // No Filtri popover to host it â†’ "Azzera" closes the row, after Ordina.
+        // No Filtri popover to host it → "Azzera" closes the row, after Ordina.
         if (!fields.length && clearBtn) right.appendChild(clearBtn);
 
         controls.classList.add('fb-ref');
@@ -463,7 +463,7 @@
         bar.addEventListener('change', updateVisibility);
         bar.addEventListener('click', (e) => {
             if (e.target.closest('.comm-tab, .forecast-period')) {
-                // Tab classes update after their own handlers â€” defer.
+                // Tab classes update after their own handlers — defer.
                 setTimeout(updateVisibility, 0);
             }
         });
@@ -472,19 +472,19 @@
     }
 
     // On scroll-down, the filter bar becomes ONE with the top bar: it pins over
-    // the topbar (fixed) instead of sitting under it â€” matching the property-
+    // the topbar (fixed) instead of sitting under it — matching the property-
     // profile sub-nav. A spacer holds its place so content doesn't jump.
     /**
      * On scroll, merge the page's local filter toolbar UP into the global-search
      * topbar so search + filters read as one bar. Scrolling back drops it home.
      *
      * We portal the actual <div class="toolbar"> element (not a clone), so every
-     * input keeps its id and its bound listeners â€” the page modules keep working.
+     * input keeps its id and its bound listeners — the page modules keep working.
      */
     function setupMergeToTopbar(bar) {
         if (bar._mergeBound) return;
         // Skip toolbars nested in their own scroll context (modals, side panels)
-        // or inside a card â€” those are inline form rows, not page-level filter bars.
+        // or inside a card — those are inline form rows, not page-level filter bars.
         if (bar.closest('.modal, .modal-overlay, .chat-sidebar, .card, [data-no-sticky]')) return;
         const topbar   = document.querySelector('.topbar');
         const slot     = document.getElementById('topbar-filters');
@@ -533,39 +533,6 @@
         onScroll();
     }
 
-    // Unified page anatomy: merge the view's floating action row
-    // (.view-header__actions — "+ Nuovo X", view toggles, export/import…) into
-    // the main filter bar's right group, then hoist that bar to the top of the
-    // view. Every list page then reads the same way:
-    // topbar → control band (filters | actions) → stats → content.
-    function unifyPageBar(scope) {
-        const viewRoot = scope.firstElementChild;
-        if (!viewRoot) return;
-
-        const bar = [...viewRoot.querySelectorAll('.toolbar')].find(b =>
-            b.dataset.filterBarBound === '1' &&
-            !b.closest('.modal, .modal-overlay, .chat-sidebar, [data-no-sticky]'));
-        if (!bar) return;                       // no page-level filter bar → leave the view alone
-
-        const header  = viewRoot.querySelector(':scope > .view-header');
-        const actions = header && header.querySelector('.view-header__actions');
-        if (actions && actions.childElementCount) {
-            const host = bar.querySelector('.fb-group--right') ||
-                         bar.querySelector('.filter-bar__controls') || bar;
-            const cluster = document.createElement('div');
-            cluster.className = 'fb-actions';
-            [...actions.childNodes].forEach(n => cluster.appendChild(n));
-            host.appendChild(cluster);
-        }
-        if (header) header.classList.add('view-header--merged');
-
-        // Same position on every page: the band is the first block of the view
-        // (right after the now-hidden header), even if it was inside a card.
-        const target = header ? header.nextElementSibling : viewRoot.firstElementChild;
-        if (bar !== target) viewRoot.insertBefore(bar, target);
-        bar.classList.add('toolbar--pagebar');
-    }
-
     window.FilterBar = {
         setupIn(root) {
             const scope = root || document;
@@ -577,7 +544,6 @@
             if (topbar) topbar.classList.remove('topbar--has-filters');
 
             scope.querySelectorAll(BAR_SELECTORS).forEach(setupBar);
-            try { unifyPageBar(scope); } catch (_) { /* keep the view's own layout */ }
             scope.querySelectorAll('.toolbar').forEach(setupMergeToTopbar);
         },
     };

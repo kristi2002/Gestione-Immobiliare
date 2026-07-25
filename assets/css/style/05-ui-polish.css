@@ -12,7 +12,6 @@
 .settings-panel .card,
 .table-wrapper,
 .cal-main,
-.reports-toolbar,
 .report-card {
     border-color: var(--color-border);
     box-shadow: var(--shadow);
@@ -63,11 +62,6 @@
 .invoice-card {
     margin-bottom: 10px;
     box-shadow: var(--shadow);
-}
-
-.topbar {
-    border-bottom-color: var(--color-border);
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 
 .pagination-container {

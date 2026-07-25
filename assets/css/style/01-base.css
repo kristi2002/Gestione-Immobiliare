@@ -297,24 +297,8 @@ details.nav-group[open] > summary .nav-group-arrow {
 }
 
 /* --------------------------------------------------------------------------
-   Topbar
+   Topbar — single home is theme-orlandi.css (floating sticky card design).
    -------------------------------------------------------------------------- */
-.topbar {
-    height: var(--topbar-height);
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 0 20px;
-    /* Full-width bar spanning the whole top of the page, above the sidebar. */
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    box-shadow: var(--shadow);
-}
 
 .sidebar-toggle {
     display: none;
@@ -488,36 +472,9 @@ details.nav-group[open] > summary .nav-group-arrow {
 }
 
 /* --------------------------------------------------------------------------
-   View header & toolbar (Phase 2+)
+   Toolbar (Phase 2+) — .view-header itself lives in 09-filter-toolbar.css,
+   the single home for the whole page-header/toolbar family (see assets/css/README.md).
    -------------------------------------------------------------------------- */
-.view-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: var(--section-gap);
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--color-border);
-    flex-wrap: wrap;
-}
-
-.view-header__actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.view-header h2 {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.view-header p {
-    color: var(--color-text-muted);
-    font-size: 14px;
-}
-
 .toolbar,
 .reports-toolbar,
 .filter-bar {
@@ -527,7 +484,8 @@ details.nav-group[open] > summary .nav-group-arrow {
     gap: 10px;
 }
 
-.toolbar {
+.toolbar,
+.reports-toolbar {
     margin-bottom: 18px;
     padding: 14px 16px;
     background: var(--color-surface);
@@ -535,6 +493,9 @@ details.nav-group[open] > summary .nav-group-arrow {
     border-radius: var(--radius);
     box-shadow: var(--shadow);
 }
+/* Reports keeps its own tighter, non-collapsible geometry (see 04-phase11.css) —
+   single home for the shared chrome above, this is the one deliberate override. */
+.reports-toolbar { padding: 8px 14px; margin-bottom: 0; }
 
 .filter-bar__actions {
     display: flex;
