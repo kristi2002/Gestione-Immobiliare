@@ -2,7 +2,6 @@
     'use strict';
 
     const API        = 'api/property_applications.php';
-    const LEADS_API  = 'api/leads.php';
     const PROPS_API  = 'api/properties.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
@@ -277,6 +276,14 @@
             </div>` : ''}
         `;
 
+        const convertBtn = document.getElementById('pa-detail-convert-lead');
+        if (convertBtn) {
+            convertBtn.disabled = !!item.converted_to_lead_id;
+            convertBtn.textContent = item.converted_to_lead_id
+                ? `Già convertito (lead #${item.converted_to_lead_id})`
+                : 'Converti in Lead';
+        }
+
         els.detailModal.hidden = false;
     }
 
@@ -315,27 +322,22 @@
 
     async function convertToLead() {
         if (!activeItem) return;
+        if (activeItem.converted_to_lead_id) {
+            showAlert('Richiesta già convertita in lead.', 'error');
+            return;
+        }
         const btn = document.getElementById('pa-detail-convert-lead');
         if (btn) { btn.disabled = true; btn.textContent = 'Conversione…'; }
 
-        const applicant = activeItem.applicant_name || `${activeItem.first_name || ''} ${activeItem.last_name || ''}`.trim() || activeItem.name || '';
-        const nameParts = applicant.trim().split(/\s+/);
-        const firstName = nameParts[0] || applicant;
-        const lastName  = nameParts.slice(1).join(' ') || '-';
-
         try {
-            const res  = await fetch(LEADS_API, {
+            // Use the server's own convert_lead action — it derives interest_type
+            // from application_type, carries the property in the lead notes (leads
+            // has no property_id column), and is transactional + idempotent
+            // (409s if already converted). Do not rebuild this logic client-side.
+            const res  = await fetch(`${API}?action=convert_lead&id=${activeItem.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name:        firstName,
-                    surname:     lastName,
-                    email:       activeItem.applicant_email || '',
-                    phone:       activeItem.applicant_phone || '',
-                    property_id: activeItem.property_id || null,
-                    source:      'web',
-                    notes:       `Convertito da richiesta #${activeItem.id}`,
-                }),
+                body: '{}',
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);

@@ -19,6 +19,8 @@
         els.tbody       = document.getElementById('inventory-tbody');
         els.pagination  = document.getElementById('inventory-pagination');
         els.propSelect  = document.getElementById('inventory-property-select');
+        els.categoryFilter  = document.getElementById('inventory-category-filter');
+        els.conditionFilter = document.getElementById('inventory-condition-filter');
         els.placeholder = document.getElementById('inventory-placeholder');
         els.content     = document.getElementById('inventory-content');
         els.modal       = document.getElementById('inventory-modal');
@@ -47,6 +49,9 @@
                 document.getElementById('btn-print-inventory').style.display = 'none';
             }
         });
+
+        els.categoryFilter.addEventListener('change', () => { currentPage = 1; loadItems(); });
+        els.conditionFilter.addEventListener('change', () => { currentPage = 1; loadItems(); });
 
         document.getElementById('btn-new-item').addEventListener('click', () => openModal());
         document.getElementById('btn-print-inventory').addEventListener('click', printReport);
@@ -104,6 +109,8 @@
     async function loadItems() {
         if (!selectedProperty) return;
         const params = new URLSearchParams({ property_id: selectedProperty, page: currentPage, limit: PAGE_LIMIT });
+        if (els.categoryFilter.value) params.set('category', els.categoryFilter.value);
+        if (els.conditionFilter.value) params.set('min_condition', els.conditionFilter.value);
 
         softLoad(els.tbody, '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 

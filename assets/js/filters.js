@@ -413,6 +413,11 @@
     }
 
     function setupBar(bar) {
+        // Opt-out for toolbars that aren't list filters — e.g. a mandatory
+        // "pick an entity first" selector that gates all page content. Reflowing
+        // those into the collapsed "Filtri" popover hides the only control the
+        // page has, breaking the primary interaction instead of just tidying it.
+        if (bar.hasAttribute('data-no-filterbar')) return;
         if (!hasFilters(bar)) return;
         if (bar.dataset.filterBarBound === '1') return;
         bar.dataset.filterBarBound = '1';

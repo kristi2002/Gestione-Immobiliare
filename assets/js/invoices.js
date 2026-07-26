@@ -195,7 +195,7 @@
         const inv = invoices.find(x => x.id == id);
         if (!inv) return;
         const data = {
-            client_id: inv.client_id, lead_id: inv.lead_id, description: inv.description,
+            client_id: inv.client_id, lead_id: inv.lead_id, property_id: inv.property_id, description: inv.description,
             amount: inv.amount, vat_rate: inv.vat_rate, status,
             issue_date: inv.issue_date, due_date: inv.due_date,
             paid_date: status === 'paid' ? (inv.paid_date || new Date().toISOString().slice(0, 10)) : inv.paid_date,

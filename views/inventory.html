@@ -12,11 +12,33 @@
 
     <div id="inventory-alert" class="alert" style="display:none;"></div>
 
-    <div class="toolbar" style="margin-bottom:1rem;">
+    <div class="toolbar" data-no-filterbar style="margin-bottom:1rem;">
         <div class="form-group" style="margin:0;max-width:320px;">
             <label for="inventory-property-select" style="font-weight:600;">Seleziona immobile</label>
             <select id="inventory-property-select" class="form-select">
                 <option value="">— Scegli un immobile —</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;max-width:220px;">
+            <label for="inventory-category-filter" style="font-weight:600;">Categoria</label>
+            <select id="inventory-category-filter" class="form-select">
+                <option value="">Tutte le categorie</option>
+                <option value="mobile">Mobile / Arredo</option>
+                <option value="arredamento">Arredamento</option>
+                <option value="elettrodomestico">Elettrodomestico</option>
+                <option value="impianto">Impianto</option>
+                <option value="altro">Altro</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;max-width:220px;">
+            <label for="inventory-condition-filter" style="font-weight:600;">Condizione minima</label>
+            <select id="inventory-condition-filter" class="form-select">
+                <option value="">Tutte</option>
+                <option value="1">★ 1+</option>
+                <option value="2">★★ 2+</option>
+                <option value="3">★★★ 3+</option>
+                <option value="4">★★★★ 4+</option>
+                <option value="5">★★★★★ 5</option>
             </select>
         </div>
     </div>

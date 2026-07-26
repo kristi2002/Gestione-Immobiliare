@@ -55,8 +55,9 @@ try {
 function listInventory(PDO $db): void
 {
     $pagination = apiGetPagination();
-    $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
-    $category   = trim($_GET['category'] ?? '');
+    $propertyId   = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $category     = trim($_GET['category'] ?? '');
+    $minCondition = isset($_GET['min_condition']) && $_GET['min_condition'] !== '' ? (int) $_GET['min_condition'] : null;
 
     $where  = 'WHERE 1=1';
     $params = [];
@@ -68,6 +69,10 @@ function listInventory(PDO $db): void
     if ($category !== '' && in_array($category, INVENTORY_CATEGORIES, true)) {
         $where .= ' AND pi.category = :category';
         $params['category'] = $category;
+    }
+    if ($minCondition !== null && $minCondition >= 1 && $minCondition <= 5) {
+        $where .= ' AND pi.condition_rating >= :min_condition';
+        $params['min_condition'] = $minCondition;
     }
 
     $countSql = "SELECT COUNT(*) FROM property_inventory pi $where";

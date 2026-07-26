@@ -85,8 +85,15 @@
 
         els.tbody.querySelectorAll('.btn-scad-go').forEach(b => {
             b.addEventListener('click', () => {
+                if (!window.App) return;
                 const view = b.dataset.view;
-                if (window.App) window.App.navigateTo(view);
+                const id   = parseInt(b.dataset.id, 10);
+                // Deep-link into the specific record where a dedicated view exists;
+                // insurance/aml have no per-record view yet, so those still land
+                // on the list (same as before — not a regression, just not deep).
+                if (view === 'contracts' && id) window.App.navigateTo('contract_edit', { contractId: id });
+                else if (view === 'properties' && id) window.App.navigateTo('property_profile', { propertyId: id });
+                else window.App.navigateTo(view);
             });
         });
     }

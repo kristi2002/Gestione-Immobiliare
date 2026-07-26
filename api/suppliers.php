@@ -12,7 +12,7 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 apiHandleOptions();
 
-const SUPPLIER_CATEGORIES = ['idraulico','elettricista','muratore','falegname','imbianchino','giardiniere','pulizie','altro'];
+const SUPPLIER_CATEGORIES = ['idraulico','elettricista','muratore','falegname','imbianchino','giardiniere','giardinaggio','pulizie','ascensore','serrature','altro'];
 
 try {
     $db     = getDB();

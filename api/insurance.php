@@ -12,7 +12,7 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 apiHandleOptions();
 
-const INSURANCE_TYPES = ['incendio', 'responsabilita', 'globale_fabbricato', 'altro'];
+const INSURANCE_TYPES = ['incendio', 'responsabilita', 'responsabilita_civile', 'globale_fabbricato', 'furto', 'multirischio', 'vita', 'altro'];
 
 try {
     $db     = getDB();
