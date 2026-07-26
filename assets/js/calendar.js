@@ -1,23 +1,23 @@
 /**
- * Calendario Visuale — monthly reminder calendar (Phase 10)
+ * Calendario Visuale — monthly calendar merging promemoria + visite (Phase 10,
+ * extended to include appointments so the calendar reflects what the agency
+ * actually has scheduled, not just reminders).
  */
 (function () {
     'use strict';
 
-    const API = 'api/reminders.php';
+    const REM_API  = 'api/reminders.php';
+    const APPT_API = 'api/appointments.php';
 
     const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
-    const STATUS_LABELS = {
-        pending:   'In sospeso',
-        completed: 'Completato',
-        cancelled: 'Annullato',
-    };
+    const REM_STATUS_LABELS = { pending: 'In sospeso', completed: 'Completato', cancelled: 'Annullato' };
+    const APPT_STATUS_LABELS = { scheduled: 'Programmata', completed: 'Completata', cancelled: 'Annullata', no_show: 'Mancata presentazione' };
 
     let viewYear, viewMonth;     // month currently displayed (0-based month)
-    let events = [];             // reminders for the displayed range
-    let selectedKey = null;
+    let events = [];             // merged reminders + appointments for the displayed range
+    let typeFilter = 'all';      // 'all' | 'reminder' | 'appointment'
 
     const els = {};
 
@@ -41,6 +41,15 @@
             loadMonth();
         });
 
+        document.querySelectorAll('.cal-type-toggle button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.cal-type-toggle button').forEach(b => b.classList.remove('is-active'));
+                btn.classList.add('is-active');
+                typeFilter = btn.dataset.type;
+                renderGrid();
+            });
+        });
+
         loadMonth();
     }
 
@@ -53,7 +62,6 @@
 
     async function loadMonth() {
         els.title.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
-        selectedKey = null;
         resetSide();
 
         const from = `${viewYear}-${pad(viewMonth + 1)}-01`;
@@ -61,16 +69,41 @@
         const to = `${viewYear}-${pad(viewMonth + 1)}-${pad(lastDay)}`;
 
         try {
-            const res  = await fetch(`${API}?from=${from}&to=${to}&page=1&limit=500`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            events = typeof Pagination !== 'undefined'
-                ? Pagination.parseResponse(json).items
-                : (Array.isArray(json.data) ? json.data : (json.data?.items || []));
+            const [remJson, apptJson] = await Promise.all([
+                fetch(`${REM_API}?from=${from}&to=${to}&page=1&limit=500`).then(r => r.json()),
+                fetch(`${APPT_API}?from=${from}&to=${to}&page=1&limit=500`).then(r => r.json()),
+            ]);
+            if (!remJson.success) throw new Error(remJson.error);
+            if (!apptJson.success) throw new Error(apptJson.error);
+
+            const reminders = itemsOf(remJson).map(r => ({
+                type: 'reminder', id: r.id, date: r.reminder_date, status: r.status,
+                title: r.title, subtitle: r.description || '', raw: r,
+            }));
+            const appointments = itemsOf(apptJson).map(a => {
+                const who = [a.lead_name, a.lead_surname].filter(Boolean).join(' ')
+                    || [a.client_name, a.client_surname].filter(Boolean).join(' ');
+                const where = [a.property_address, a.property_city].filter(Boolean).join(', ');
+                return {
+                    type: 'appointment', id: a.id, date: a.appointment_date, status: a.status,
+                    title: where || 'Visita', subtitle: who, raw: a,
+                };
+            });
+            events = [...reminders, ...appointments];
             renderGrid();
         } catch (err) {
             showAlert(err.message, 'error');
         }
+    }
+
+    function itemsOf(json) {
+        return typeof Pagination !== 'undefined'
+            ? Pagination.parseResponse(json).items
+            : (Array.isArray(json.data) ? json.data : (json.data?.items || []));
+    }
+
+    function visibleEvents() {
+        return typeFilter === 'all' ? events : events.filter(e => e.type === typeFilter);
     }
 
     function renderGrid() {
@@ -80,10 +113,11 @@
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
         const byDay = {};
-        events.forEach(ev => {
-            const key = ev.reminder_date.slice(0, 10);
+        visibleEvents().forEach(ev => {
+            const key = ev.date.slice(0, 10);
             (byDay[key] = byDay[key] || []).push(ev);
         });
+        Object.values(byDay).forEach(list => list.sort((a, b) => a.date.localeCompare(b.date)));
 
         const today = new Date();
         const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -95,16 +129,19 @@
 
         for (let d = 1; d <= daysInMonth; d++) {
             const key = `${viewYear}-${pad(viewMonth + 1)}-${pad(d)}`;
+            const dow = new Date(viewYear, viewMonth, d).getDay(); // 0=Sun, 6=Sat
+            const isWeekend = dow === 0 || dow === 6;
             const dayEvents = byDay[key] || [];
             const isToday = key === todayKey;
 
-            const chips = dayEvents.slice(0, 3).map(ev =>
-                `<span class="cal-event cal-event--${ev.status}" title="${escapeHtml(ev.title)}">${escapeHtml(truncate(ev.title, 16))}</span>`
-            ).join('');
-            const more = dayEvents.length > 3 ? `<span class="cal-event cal-event--more">+${dayEvents.length - 3}</span>` : '';
+            const chips = dayEvents.slice(0, 3).map(ev => `
+                <span class="cal-event cal-event--${ev.type} cal-event--${ev.type}-${ev.status}" title="${escapeHtml(ev.title)}">
+                    <i class="cal-event__dot"></i>${escapeHtml(truncate(ev.title, 15))}
+                </span>`).join('');
+            const more = dayEvents.length > 3 ? `<span class="cal-event cal-event--more">+${dayEvents.length - 3} altri</span>` : '';
 
             html += `
-                <div class="cal-day${isToday ? ' cal-day--today' : ''}${dayEvents.length ? ' cal-day--has-events' : ''}" data-key="${key}">
+                <div class="cal-day${isToday ? ' cal-day--today' : ''}${isWeekend ? ' cal-day--weekend' : ''}${dayEvents.length ? ' cal-day--has-events' : ''}" data-key="${key}">
                     <span class="cal-day__num">${d}</span>
                     <div class="cal-day__events">${chips}${more}</div>
                 </div>`;
@@ -116,14 +153,18 @@
             cell.addEventListener('click', () => selectDay(cell.dataset.key, byDay[cell.dataset.key] || []));
         });
 
-        // Show today's agenda by default when viewing the current month.
-        if (today.getFullYear() === viewYear && today.getMonth() === viewMonth) {
+        // Show today's agenda by default when viewing the current month, else
+        // keep whatever day was selected (re-render on type-filter change).
+        const keepKey = els.sideBody.dataset.key;
+        if (keepKey && (byDay[keepKey] || keepKey in byDay)) {
+            selectDay(keepKey, byDay[keepKey] || []);
+        } else if (today.getFullYear() === viewYear && today.getMonth() === viewMonth) {
             selectDay(todayKey, byDay[todayKey] || []);
         }
     }
 
     function selectDay(key, dayEvents) {
-        selectedKey = key;
+        els.sideBody.dataset.key = key;
         els.grid.querySelectorAll('.cal-day').forEach(c => c.classList.remove('cal-day--selected'));
         const cell = els.grid.querySelector(`.cal-day[data-key="${key}"]`);
         if (cell) cell.classList.add('cal-day--selected');
@@ -132,28 +173,40 @@
         els.sideTitle.textContent = d.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
         if (!dayEvents.length) {
-            els.sideBody.innerHTML = '<p class="text-muted">Nessun promemoria in questa data.</p>';
+            els.sideBody.innerHTML = '<p class="text-muted">Nessun evento in questa data.</p>';
             return;
         }
 
-        els.sideBody.innerHTML = dayEvents.map(ev => `
-            <div class="cal-side-item cal-side-item--${ev.status}">
-                <div class="cal-side-item__time">${formatTime(ev.reminder_date)}</div>
+        els.sideBody.innerHTML = dayEvents.map(ev => {
+            const icon  = ev.type === 'appointment' ? 'calendar-check' : 'bell';
+            const label = ev.type === 'appointment' ? (APPT_STATUS_LABELS[ev.status] || ev.status) : (REM_STATUS_LABELS[ev.status] || ev.status);
+            return `
+            <div class="cal-side-item cal-side-item--${ev.type}-${ev.status}" data-type="${ev.type}" data-id="${ev.id}">
+                <div class="cal-side-item__head">
+                    <i data-lucide="${icon}" class="cal-side-item__icon"></i>
+                    <div class="cal-side-item__time">${formatTime(ev.date)}</div>
+                    <span class="badge cal-side-item__badge">${escapeHtml(label)}</span>
+                </div>
                 <div class="cal-side-item__title">${escapeHtml(ev.title)}</div>
-                ${ev.description ? `<div class="cal-side-item__desc text-muted">${escapeHtml(truncate(ev.description, 80))}</div>` : ''}
-                <span class="badge badge--reminder-${ev.status}">${STATUS_LABELS[ev.status] || ev.status}</span>
-            </div>
-        `).join('') + '<button type="button" class="btn btn--ghost btn--sm" id="cal-goto-reminders" style="margin-top:12px">Apri Promemoria →</button>';
+                ${ev.subtitle ? `<div class="cal-side-item__desc text-muted">${escapeHtml(truncate(ev.subtitle, 90))}</div>` : ''}
+            </div>`;
+        }).join('');
 
-        const goto = document.getElementById('cal-goto-reminders');
-        if (goto) goto.addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('reminders');
+        els.sideBody.querySelectorAll('.cal-side-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (!window.App) return;
+                if (item.dataset.type === 'appointment') window.App.navigateTo('appointment_edit', { appointmentId: Number(item.dataset.id) });
+                else window.App.navigateTo('reminders');
+            });
         });
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     function resetSide() {
+        delete els.sideBody.dataset.key;
         els.sideTitle.textContent = 'Seleziona un giorno';
-        els.sideBody.innerHTML = '<p class="text-muted">Clicca su un giorno del calendario per vedere i promemoria.</p>';
+        els.sideBody.innerHTML = '<p class="text-muted">Clicca su un giorno del calendario per vedere gli eventi.</p>';
     }
 
     // -------------------------------------------------------------------------
@@ -169,7 +222,7 @@
     }
 
     function formatTime(dateStr) {
-        return new Date(dateStr).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        return new Date(dateStr.replace(' ', 'T')).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     }
 
     function pad(n) { return String(n).padStart(2, '0'); }

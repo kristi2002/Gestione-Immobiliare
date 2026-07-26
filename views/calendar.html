@@ -7,6 +7,11 @@
             <p>Visualizza i promemoria del mese. Clicca un giorno per i dettagli.</p>
         </div>
         <div class="view-header__actions">
+            <div class="cal-type-toggle">
+                <button type="button" class="is-active" data-type="all">Tutti</button>
+                <button type="button" data-type="reminder">Promemoria</button>
+                <button type="button" data-type="appointment">Visite</button>
+            </div>
             <button class="btn btn--ghost" id="cal-prev" title="Mese precedente">‹</button>
             <span class="cal-title" id="cal-title">—</span>
             <button class="btn btn--ghost" id="cal-next" title="Mese successivo">›</button>
@@ -19,13 +24,14 @@
     <div class="cal-layout">
         <div class="cal-main">
             <div class="cal-weekdays">
-                <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+                <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span class="is-weekend">Sab</span><span class="is-weekend">Dom</span>
             </div>
             <div class="cal-grid" id="cal-grid"></div>
             <div class="cal-legend">
-                <span><i class="cal-legend__dot cal-legend__dot--pending"></i> In sospeso</span>
-                <span><i class="cal-legend__dot cal-legend__dot--completed"></i> Completato</span>
-                <span><i class="cal-legend__dot cal-legend__dot--cancelled"></i> Annullato</span>
+                <span><i class="cal-legend__dot cal-legend__dot--reminder-pending"></i> Promemoria in sospeso</span>
+                <span><i class="cal-legend__dot cal-legend__dot--reminder-completed"></i> Promemoria completato</span>
+                <span><i class="cal-legend__dot cal-legend__dot--appointment-scheduled"></i> Visita programmata</span>
+                <span><i class="cal-legend__dot cal-legend__dot--appointment-completed"></i> Visita completata</span>
             </div>
         </div>
         <aside class="cal-side" id="cal-side">

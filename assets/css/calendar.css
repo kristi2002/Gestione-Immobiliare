@@ -10,8 +10,40 @@
 .calendar-view .view-header__actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     flex-wrap: wrap;
+}
+
+.calendar-view .cal-type-toggle {
+    display: flex;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    margin-right: 6px;
+}
+
+.calendar-view .cal-type-toggle button {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.calendar-view .cal-type-toggle button:hover {
+    color: var(--color-text);
+}
+
+.calendar-view .cal-type-toggle button.is-active {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .calendar-view .cal-layout {
@@ -48,6 +80,11 @@
     letter-spacing: 0.04em;
 }
 
+.calendar-view .cal-weekdays span.is-weekend {
+    color: var(--color-primary);
+    opacity: 0.7;
+}
+
 .calendar-view .cal-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -70,6 +107,12 @@
 .calendar-view .cal-day:hover {
     background: var(--color-bg);
     border-color: #cbd5e1;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.calendar-view .cal-day--weekend {
+    background: #fafbfc;
 }
 
 .calendar-view .cal-day--empty {
@@ -124,33 +167,38 @@
 }
 
 .calendar-view .cal-event {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 5px;
     font-size: 10px;
     line-height: 1.3;
-    padding: 2px 5px;
+    padding: 2px 6px 2px 4px;
     border-radius: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    background: var(--color-primary-light);
-    color: var(--color-primary-dark);
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
-.calendar-view .cal-event--pending {
-    background: #dbeafe;
-    color: #1d4ed8;
+.calendar-view .cal-event__dot {
+    width: 6px;
+    height: 6px;
+    min-width: 6px;
+    border-radius: 50%;
+    background: currentColor;
 }
 
-.calendar-view .cal-event--completed {
-    background: #dcfce7;
-    color: #15803d;
-}
+/* Promemoria — blue/green/gray by status */
+.calendar-view .cal-event--reminder-pending   { background: #dbeafe; color: #1d4ed8; }
+.calendar-view .cal-event--reminder-completed { background: #dcfce7; color: #15803d; }
+.calendar-view .cal-event--reminder-cancelled { background: #f1f5f9; color: #64748b; text-decoration: line-through; }
 
-.calendar-view .cal-event--cancelled {
-    background: #f1f5f9;
-    color: #64748b;
-    text-decoration: line-through;
-}
+/* Visite — amber/violet family so they read as visually distinct from reminders */
+.calendar-view .cal-event--appointment-scheduled { background: #fef3c7; color: #b45309; }
+.calendar-view .cal-event--appointment-completed { background: #ede9fe; color: #6d28d9; }
+.calendar-view .cal-event--appointment-cancelled { background: #f1f5f9; color: #64748b; text-decoration: line-through; }
+.calendar-view .cal-event--appointment-no_show   { background: #fee2e2; color: #b91c1c; }
 
 .calendar-view .cal-event--more {
     background: transparent;
@@ -183,9 +231,10 @@
     display: inline-block;
 }
 
-.calendar-view .cal-legend__dot--pending   { background: #2f6fe0; }
-.calendar-view .cal-legend__dot--completed  { background: #16a34a; }
-.calendar-view .cal-legend__dot--cancelled  { background: #94a3b8; }
+.calendar-view .cal-legend__dot--reminder-pending      { background: #1d4ed8; }
+.calendar-view .cal-legend__dot--reminder-completed    { background: #16a34a; }
+.calendar-view .cal-legend__dot--appointment-scheduled { background: #b45309; }
+.calendar-view .cal-legend__dot--appointment-completed { background: #6d28d9; }
 
 .calendar-view .cal-side {
     background: var(--color-surface);
@@ -216,22 +265,58 @@
     border: 1px solid var(--color-border);
     border-radius: 8px;
     background: var(--color-bg);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.calendar-view .cal-side-item:hover {
+    background: var(--color-surface);
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.calendar-view .cal-side-item__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.calendar-view .cal-side-item__icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--color-text-muted);
 }
 
 .calendar-view .cal-side-item__time {
     font-size: 12px;
     color: var(--color-text-muted);
+    font-weight: 600;
 }
+
+.calendar-view .cal-side-item__badge {
+    margin-left: auto;
+    font-size: 10.5px;
+    padding: 2px 8px;
+}
+
+.calendar-view .cal-side-item--reminder-pending .cal-side-item__badge      { background: #dbeafe; color: #1d4ed8; }
+.calendar-view .cal-side-item--reminder-completed .cal-side-item__badge   { background: #dcfce7; color: #15803d; }
+.calendar-view .cal-side-item--reminder-cancelled .cal-side-item__badge   { background: #f1f5f9; color: #64748b; }
+.calendar-view .cal-side-item--appointment-scheduled .cal-side-item__badge { background: #fef3c7; color: #b45309; }
+.calendar-view .cal-side-item--appointment-completed .cal-side-item__badge { background: #ede9fe; color: #6d28d9; }
+.calendar-view .cal-side-item--appointment-cancelled .cal-side-item__badge { background: #f1f5f9; color: #64748b; }
+.calendar-view .cal-side-item--appointment-no_show .cal-side-item__badge   { background: #fee2e2; color: #b91c1c; }
 
 .calendar-view .cal-side-item__title {
     font-weight: 600;
-    margin-top: 4px;
+    margin-top: 6px;
     font-size: 14px;
 }
 
 .calendar-view .cal-side-item__desc {
     font-size: 13px;
-    margin: 6px 0 8px;
+    margin: 6px 0 0;
 }
 
 @media (max-width: 900px) {
