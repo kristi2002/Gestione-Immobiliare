@@ -4,14 +4,23 @@
     const API      = 'api/buildings.php';
     const PROP_API = 'api/properties.php';
 
+    const PROP_STATUS = { available: 'Disponibile', rented: 'Affittato', sold: 'Venduto', maintenance: 'Manutenzione', archived: 'Archiviato' };
+    const PROP_COLOR  = { available: '#16a34a', rented: '#2563eb', sold: '#7c3aed', maintenance: '#d97706', archived: '#94a3b8' };
+
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+    function mediaUrl(path) {
+        if (!path) return '';
+        if (/^https?:\/\//i.test(path) || path.startsWith('/')) return path;
+        return '/' + String(path).replace(/^\.\//, '');
+    }
 
     let currentPage    = 1;
     const PAGE_LIMIT   = 25;
     let deleteTargetId = null;
-    let expandedId     = null;
     let allProperties  = [];
+    let buildings      = [];
+    let railBuildingId = null;
     const els          = {};
 
     function init() {
@@ -25,6 +34,8 @@
         els.linkModal  = document.getElementById('buildings-link-modal');
 
         bindEvents();
+        bindRail();
+        bindRowMenu();
         loadProperties();
         loadBuildings();
     }
@@ -69,7 +80,7 @@
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
-        softLoad(els.tbody, '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
+        softLoad(els.tbody, '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -77,135 +88,238 @@
             if (!json.success) throw new Error(json.error);
 
             const parsed = window.Pagination.parseResponse(json);
-            renderRows(parsed.items);
+            buildings = parsed.items;
+            renderRows(buildings);
             window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadBuildings(); });
         } catch (err) {
             els.tbody.classList.remove('is-loading');
-            els.tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
+            els.tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
         }
     }
 
     function renderRows(items) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
-            els.tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Nessun edificio trovato.</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Nessun edificio trovato.</td></tr>';
             return;
         }
 
-        const rows = [];
-        items.forEach(b => {
-            const isExpanded = expandedId === b.id;
-            rows.push(`<tr class="building-row" data-id="${b.id}" style="cursor:pointer;">
-                <td data-label=""></td>
+        els.tbody.innerHTML = items.map(b => `<tr class="building-row" data-id="${b.id}" style="cursor:pointer;">
                 <td data-label="Nome"><strong>${esc(b.name)}</strong></td>
                 <td data-label="Indirizzo">${esc(b.address || '—')}</td>
                 <td data-label="Città">${esc(b.city || '—')}</td>
-                <td data-label="Unità totali">${esc(b.total_units ?? '—')}</td>
+                <td data-label="Unità totali">${esc(b.total_units ?? b.unit_count ?? '—')}</td>
                 <td data-label="Occupate">${esc(b.occupancy_count ?? '—')}</td>
-                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-b-edit" data-id="${b.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-b-del" data-id="${b.id}" data-name="${esc(b.name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                <td data-label="Azioni" class="lt-actions">
+                    <button class="btn btn--sm btn--ghost btn-rail" data-id="${b.id}" title="Azioni" aria-label="Azioni edificio" aria-haspopup="menu"><i data-lucide="more-vertical"></i></button>
                 </td>
-            </tr>`);
+            </tr>`).join('');
 
-            if (isExpanded) {
-                rows.push(`<tr class="building-expand-row" data-parent="${b.id}">
-                    <td colspan="7" style="background:var(--color-surface-alt,#f8f9fa);padding:0.75rem 1.5rem;">
-                        <div id="building-props-${b.id}" class="text-muted">Caricamento immobili…</div>
-                        <div style="margin-top:0.5rem;">
-                            <button class="btn btn--sm btn--ghost btn-b-link" data-id="${b.id}">+ Collega immobile</button>
-                        </div>
-                    </td>
-                </tr>`);
-            }
-        });
-
-        els.tbody.innerHTML = rows.join('');
-
-        // Expand toggle
         els.tbody.querySelectorAll('.building-row').forEach(row => {
             row.addEventListener('click', e => {
-                if (e.target.closest('button')) return;
-                const id = parseInt(row.dataset.id);
-                expandedId = expandedId === id ? null : id;
-                renderRows(items);
-                if (expandedId) loadBuildingProperties(expandedId);
+                if (e.target.closest('button, input, a')) return;
+                openRail(parseInt(row.dataset.id, 10));
             });
         });
-
-        els.tbody.querySelectorAll('.btn-b-edit').forEach(btn => {
-            btn.addEventListener('click', async e => {
-                e.stopPropagation();
-                try {
-                    const res  = await fetch(`${API}?id=${btn.dataset.id}`);
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.error);
-                    const item = Array.isArray(json.data) ? json.data[0] : json.data;
-                    openModal(item);
-                } catch (err) { showAlert(err.message, 'error'); }
-            });
-        });
-
-        els.tbody.querySelectorAll('.btn-b-del').forEach(btn => {
+        els.tbody.querySelectorAll('.btn-rail').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
-                deleteTargetId = btn.dataset.id;
-                document.getElementById('buildings-delete-name').textContent = btn.dataset.name;
-                els.delModal.hidden = false;
+                const b = items.find(x => x.id === Number(btn.dataset.id));
+                if (b) openRowMenu(btn, b);
             });
         });
 
-        els.tbody.querySelectorAll('.btn-b-link').forEach(btn => {
-            btn.addEventListener('click', e => {
-                e.stopPropagation();
-                openLinkModal(btn.dataset.id);
-            });
-        });
-
-        // Load expanded properties after render
-        if (expandedId) loadBuildingProperties(expandedId);
+        if (window.lucide) window.lucide.createIcons();
     }
 
-    async function loadBuildingProperties(buildingId) {
-        const container = document.getElementById(`building-props-${buildingId}`);
-        if (!container) return;
-        container.textContent = 'Caricamento…';
+    // ── Row kebab menu (Visualizzazione completa / Modifica / Collega immobile / Elimina) ──
+
+    let rowMenuEl = null;
+
+    function bindRowMenu() {
+        const gone = () => !document.body.contains(els.tbody);
+        function cleanup() {
+            closeRowMenu();
+            document.removeEventListener('click', onDocClick);
+            document.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onAnyMove, true);
+            window.removeEventListener('resize', onAnyMove);
+        }
+        function onDocClick(e) {
+            if (gone()) { cleanup(); return; }
+            if (rowMenuEl && !rowMenuEl.contains(e.target)) closeRowMenu();
+        }
+        function onKey(e) {
+            if (gone()) { cleanup(); return; }
+            if (e.key === 'Escape') closeRowMenu();
+        }
+        function onAnyMove() {
+            if (gone()) { cleanup(); return; }
+            closeRowMenu();
+        }
+        document.addEventListener('click', onDocClick);
+        document.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onAnyMove, true);
+        window.addEventListener('resize', onAnyMove);
+    }
+
+    function closeRowMenu() {
+        if (rowMenuEl) { rowMenuEl.remove(); rowMenuEl = null; }
+    }
+
+    function openRowMenu(btn, building) {
+        if (rowMenuEl && Number(rowMenuEl.dataset.id) === building.id) { closeRowMenu(); return; }
+        closeRowMenu();
+
+        const menu = document.createElement('div');
+        menu.className = 'lt-menu';
+        menu.dataset.id = building.id;
+        menu.setAttribute('role', 'menu');
+        menu.innerHTML = `
+            <button type="button" class="lt-menu__item" data-act="view" role="menuitem">
+                <i data-lucide="eye"></i> Visualizzazione completa
+            </button>
+            <button type="button" class="lt-menu__item" data-act="edit" role="menuitem">
+                <i data-lucide="pencil"></i> Modifica
+            </button>
+            <button type="button" class="lt-menu__item" data-act="link" role="menuitem">
+                <i data-lucide="link"></i> Collega immobile
+            </button>
+            <div class="lt-menu__sep"></div>
+            <button type="button" class="lt-menu__item lt-menu__item--danger" data-act="delete" role="menuitem">
+                <i data-lucide="trash-2"></i> Elimina
+            </button>`;
+        document.body.appendChild(menu);
+
+        const r  = btn.getBoundingClientRect();
+        const mw = menu.offsetWidth;
+        const mh = menu.offsetHeight;
+        let left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+        let top  = r.bottom + 6;
+        if (top + mh > window.innerHeight - 8) top = r.top - mh - 6;
+        menu.style.left = Math.max(8, left) + 'px';
+        menu.style.top  = Math.max(8, top) + 'px';
+
+        menu.querySelector('[data-act="view"]').addEventListener('click', () => {
+            closeRowMenu();
+            if (window.App) window.App.navigateTo('building_profile', { buildingId: building.id });
+        });
+        menu.querySelector('[data-act="edit"]').addEventListener('click', async () => {
+            closeRowMenu();
+            try {
+                const res  = await fetch(`${API}?id=${building.id}`);
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error);
+                openModal(json.data);
+            } catch (err) { showAlert(err.message, 'error'); }
+        });
+        menu.querySelector('[data-act="link"]').addEventListener('click', () => {
+            closeRowMenu();
+            openLinkModal(building.id);
+        });
+        menu.querySelector('[data-act="delete"]').addEventListener('click', () => {
+            closeRowMenu();
+            deleteTargetId = building.id;
+            document.getElementById('buildings-delete-name').textContent = building.name;
+            els.delModal.hidden = false;
+        });
+
+        if (window.lucide) window.lucide.createIcons();
+        rowMenuEl = menu;
+    }
+
+    // ── Detail rail (right-hand sidebar drawer) ──────────────────────
+
+    function bindRail() {
+        const rail = document.getElementById('building-rail');
+        if (!rail) return;
+        document.getElementById('building-rail-close')?.addEventListener('click', closeRail);
+        document.getElementById('building-rail-open-full')?.addEventListener('click', () => {
+            const id = railBuildingId;
+            if (id && window.App) {
+                closeRail();
+                window.App.navigateTo('building_profile', { buildingId: id });
+            }
+        });
+        document.addEventListener('keydown', function onEsc(e) {
+            if (e.key === 'Escape' && !rail.hidden) closeRail();
+            if (!document.body.contains(rail)) document.removeEventListener('keydown', onEsc);
+        });
+    }
+
+    function closeRail() {
+        const rail = document.getElementById('building-rail');
+        if (rail) rail.hidden = true;
+        railBuildingId = null;
+        document.querySelectorAll('.building-row.is-active').forEach(r => r.classList.remove('is-active'));
+    }
+
+    async function openRail(id) {
+        railBuildingId = id;
+        document.querySelectorAll('.building-row').forEach(r => r.classList.toggle('is-active', Number(r.dataset.id) === id));
+
+        const rail = document.getElementById('building-rail');
+        rail.hidden = false;
+        document.getElementById('building-rail-name').textContent = 'Caricamento…';
+        document.getElementById('building-rail-chips').innerHTML = '';
+        document.getElementById('building-rail-admin').innerHTML = '<p class="text-muted detail-rail__empty">—</p>';
+        document.getElementById('building-rail-props').innerHTML = '<p class="text-muted detail-rail__empty">Caricamento…</p>';
+
         try {
-            const res  = await fetch(`${API}?id=${buildingId}&include_properties=1`);
+            const res  = await fetch(`${API}?id=${id}`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            const building = Array.isArray(json.data) ? json.data[0] : json.data;
-            const props    = building.properties || [];
+            const b = json.data;
+            if (railBuildingId !== id) return; // user moved on before this resolved
 
+            document.getElementById('building-rail-name').textContent = b.name;
+
+            const chips = [];
+            if (b.city) chips.push(`<span class="badge"><i data-lucide="map-pin"></i> ${esc(b.city)}</span>`);
+            chips.push(`<span class="badge">${esc(b.unit_count ?? 0)} unità</span>`);
+            if (b.occupancy_count != null) chips.push(`<span class="badge badge--active">${esc(b.occupancy_count)} occupate</span>`);
+            document.getElementById('building-rail-chips').innerHTML = chips.join('');
+
+            const admin = [];
+            if (b.administrator_name) admin.push(`<div class="rail-doc"><i data-lucide="user"></i> ${esc(b.administrator_name)}</div>`);
+            if (b.administrator_phone) admin.push(`<div class="rail-doc"><i data-lucide="phone"></i> <a href="tel:${esc(b.administrator_phone)}">${esc(b.administrator_phone)}</a></div>`);
+            if (b.administrator_email) admin.push(`<div class="rail-doc"><i data-lucide="mail"></i> <a href="mailto:${esc(b.administrator_email)}">${esc(b.administrator_email)}</a></div>`);
+            document.getElementById('building-rail-admin').innerHTML = admin.join('') || '<p class="text-muted detail-rail__empty">Nessun amministratore registrato.</p>';
+
+            const propsEl = document.getElementById('building-rail-props');
+            const props = b.properties || [];
             if (!props.length) {
-                container.innerHTML = '<span class="text-muted">Nessun immobile collegato.</span>';
-                return;
-            }
-
-            container.innerHTML = `<ul style="margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:0.5rem;">
-                ${props.map(p => `<li style="background:white;border:1px solid var(--color-border,#e0e0e0);border-radius:6px;padding:0.3rem 0.75rem;font-size:0.875rem;">
-                    ${esc(p.address || p.title || `#${p.id}`)}
-                    <button class="btn btn--sm" style="margin-left:0.5rem;padding:0 4px;font-size:0.7rem;color:var(--color-danger,#c0392b);background:none;border:none;cursor:pointer;"
-                        data-building="${buildingId}" data-prop="${p.id}" title="Scollega"><i data-lucide="x"></i></button>
-                </li>`).join('')}
-            </ul>`;
-
-            container.querySelectorAll('[data-prop]').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    if (!await confirmDialog('Vuoi scollegare questo immobile dall\'edificio?', { title: 'Scollega immobile', confirmText: 'Scollega', danger: false, icon: 'link' })) return;
-                    try {
-                        const r = await fetch(`${API}?id=${btn.dataset.building}&action=unlink_property&property_id=${btn.dataset.prop}`, {
-                            method: 'DELETE',
-                        });
-                        const j = await r.json();
-                        if (!j.success) throw new Error(j.error);
-                        loadBuildingProperties(buildingId);
-                    } catch (err) { showAlert(err.message, 'error'); }
+                propsEl.innerHTML = '<p class="text-muted detail-rail__empty">Nessun immobile collegato.</p>';
+            } else {
+                propsEl.innerHTML = props.slice(0, 6).map(p => {
+                    const thumb = p.cover_url
+                        ? `<img src="${esc(mediaUrl(p.cover_url))}" alt="" loading="lazy">`
+                        : '<i data-lucide="building-2"></i>';
+                    return `<div class="rail-prop" data-prop-id="${p.id}" style="cursor:pointer;">
+                        <div class="rail-prop__img">${thumb}</div>
+                        <div class="rail-prop__txt">
+                            <b>${esc(p.address)}, ${esc(p.city)}</b>
+                            <span>${PROP_STATUS[p.status] || p.status || ''}${p.sqm ? ' · ' + esc(p.sqm) + ' m²' : ''}</span>
+                        </div>
+                    </div>`;
+                }).join('') + (props.length > 6 ? `<p class="text-muted detail-rail__empty">+${props.length - 6} altri — vedi scheda completa</p>` : '');
+                propsEl.querySelectorAll('[data-prop-id]').forEach(el => {
+                    el.addEventListener('click', () => {
+                        closeRail();
+                        if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(el.dataset.propId, 10) });
+                    });
                 });
-            });
+            }
+            if (window.lucide) window.lucide.createIcons();
         } catch (err) {
-            container.textContent = err.message;
+            const fallback = buildings.find(x => x.id === id);
+            document.getElementById('building-rail-name').textContent = fallback?.name || '—';
+            document.getElementById('building-rail-props').innerHTML = `<p class="text-muted detail-rail__empty">${esc(err.message)}</p>`;
         }
+    }
+
+    function refreshRailIfOpen(id) {
+        if (railBuildingId === id) openRail(id);
     }
 
     function openLinkModal(buildingId) {
@@ -233,7 +347,8 @@
             if (!json.success) throw new Error(json.error);
             closeLinkModal();
             showAlert('Immobile collegato.', 'success');
-            loadBuildingProperties(buildingId);
+            loadBuildings();
+            refreshRailIfOpen(Number(buildingId));
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
@@ -292,15 +407,9 @@
             if (!json.success) throw new Error(json.error);
             closeModal();
             showAlert('Edificio salvato con successo.', 'success');
-            // On CREATE, drop the agent straight into the new building's row,
-            // expanded, so "+ Collega immobile" is right there — the natural next
-            // step is adding its units, not hunting for the row in the list.
             const saved = Array.isArray(json.data) ? json.data[0] : json.data;
-            if (!id && saved && saved.id) {
-                expandedId  = saved.id;
-                currentPage = 1;
-            }
             loadBuildings();
+            if (id && saved && saved.id) refreshRailIfOpen(Number(saved.id));
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
@@ -317,7 +426,7 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             closeDeleteModal();
-            if (expandedId == deleteTargetId) expandedId = null;
+            if (railBuildingId == deleteTargetId) closeRail();
             showAlert('Edificio eliminato.', 'success');
             loadBuildings();
         } catch (err) {

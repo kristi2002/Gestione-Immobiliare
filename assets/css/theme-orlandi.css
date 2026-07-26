@@ -126,6 +126,15 @@ a.sb-profile:hover { background: rgba(255, 255, 255, 0.1); }
 .nav-link:hover .nav-icon, .nav-link:hover [data-lucide],
 .nav-link.active .nav-icon, .nav-link.active [data-lucide] { color: #fff; }
 
+/* Nav item present in code but intentionally turned off (see config/roles.php DISABLED_VIEWS) */
+.nav-link--disabled { cursor: not-allowed; opacity: 0.45; }
+.nav-link--disabled:hover { background: none; color: rgba(255, 255, 255, 0.7); }
+.nav-badge {
+    margin-left: auto; font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px; padding: 2px 7px; flex-shrink: 0;
+}
+
 /* Section labels */
 details.nav-group > summary { padding: 14px 12px 6px; }
 .nav-group-label {
@@ -546,7 +555,8 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .rail-prop__txt span { font-size: 12.5px; font-weight: 800; color: var(--color-primary); }
 .detail-rail__empty { font-size: 12.5px; }
 .detail-rail__cta { margin-top: auto; justify-content: center; width: 100%; }
-.lt tbody tr.lt-row.is-active { background: #e9f2fc; box-shadow: inset 3px 0 0 var(--color-primary); }
+.lt tbody tr.lt-row.is-active,
+.data-table tbody tr.is-active { background: #e9f2fc; box-shadow: inset 3px 0 0 var(--color-primary); }
 
 /* Cards / panels */
 .db-card, .card {

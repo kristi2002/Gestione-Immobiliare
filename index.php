@@ -118,7 +118,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                         <li><a href="view.php?name=inventory" class="nav-link" data-view="inventory"><i class="nav-icon" data-lucide="package"></i><span class="nav-label">Inventario</span></a></li>
                         <?php endif; ?>
                         <?php if (canAccessView('portal_sync')): ?>
-                        <li><a href="view.php?name=portal_sync" class="nav-link" data-view="portal_sync"><i class="nav-icon" data-lucide="globe-2"></i><span class="nav-label">Pubblicazioni portali</span></a></li>
+                        <li><a href="view.php?name=portal_sync" class="nav-link<?= isViewDisabled('portal_sync') ? ' nav-link--disabled' : '' ?>" data-view="portal_sync" aria-disabled="<?= isViewDisabled('portal_sync') ? 'true' : 'false' ?>"><i class="nav-icon" data-lucide="globe-2"></i><span class="nav-label">Pubblicazioni portali</span><?php if (isViewDisabled('portal_sync')): ?><span class="nav-badge">Presto</span><?php endif; ?></a></li>
                         <?php endif; ?>
                         <?php if (canAccessView('valuation')): ?>
                         <li><a href="view.php?name=valuation" class="nav-link" data-view="valuation"><i class="nav-icon" data-lucide="calculator"></i><span class="nav-label">Valutazioni OMI</span></a></li>

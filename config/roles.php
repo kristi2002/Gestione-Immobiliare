@@ -7,10 +7,20 @@ const ADMIN_ROLES = ['super_admin', 'admin', 'agent', 'readonly'];
 
 const ROLE_PERMISSIONS = [
     'super_admin' => ['*'],
-    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','calendar','map','reminders','automations','tenants','tenant_edit','keys','agents','reports','social','settings','pdf','buildings','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
-    'agent'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','calendar','map','reminders','automations','tenants','tenant_edit','keys','pdf','buildings','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
-    'readonly'    => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','calendar','map','reminders','tenants','tenant_edit','buildings','insurance','meters','suppliers','inventory','surveys','forecast','property_applications','invoices','invoice_edit','aml','scadenzario','portal_sync','valuation'],
+    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','agents','reports','social','settings','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
+    'agent'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
+    'readonly'    => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','calendar','map','reminders','tenants','tenant_edit','tenant_profile','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','forecast','property_applications','invoices','invoice_edit','aml','scadenzario','portal_sync','valuation'],
 ];
+
+// Features present in code but intentionally turned off — no working backend
+// behind them yet (portal_sync only tracks status; there's no real feed/API
+// push). Blocked unconditionally for every role until re-enabled here.
+const DISABLED_VIEWS = ['portal_sync'];
+
+function isViewDisabled(string $view): bool
+{
+    return in_array($view, DISABLED_VIEWS, true);
+}
 
 const VIEW_MIN_ROLE = [
     'settings'     => 'super_admin',

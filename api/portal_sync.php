@@ -17,6 +17,10 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 apiHandleOptions();
 
+if (isViewDisabled('portal_sync')) {
+    apiError('Pubblicazione portali non attiva: richiede un feed/API a pagamento non ancora configurato.', 403);
+}
+
 const PORTALS         = ['immobiliare', 'idealista', 'casa', 'subito', 'sito_agenzia', 'altro'];
 const PORTAL_STATUSES = ['draft', 'publishing', 'published', 'error', 'removed'];
 

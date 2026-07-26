@@ -9,6 +9,8 @@
     const LEADS_API = 'api/leads.php';
 
     const STATUS_LABELS = { out: 'In possesso', in_office: 'In ufficio', lost: 'Smarrite' };
+    const KEY_TYPE_LABELS = { portone: 'Portone principale', appartamento: 'Appartamento', cantina: 'Cantina', box: 'Box auto', cancello: 'Cancello / telecomando', altro: 'Altro' };
+    const KEY_TYPE_ICONS  = { portone: 'door-open', appartamento: 'home', cantina: 'archive', box: 'car', cancello: 'radio', altro: 'key' };
 
     let keys = [];
     let properties = [];
@@ -90,22 +92,33 @@
             els.grid.innerHTML = '<div class="entity-empty">Nessun registro chiavi.</div>';
             return;
         }
-        els.grid.innerHTML = keys.map(k => `
-            <div class="entity-card">
+        els.grid.innerHTML = keys.map(k => {
+            const typeIcon  = KEY_TYPE_ICONS[k.key_type] || 'key';
+            const typeLabel = KEY_TYPE_LABELS[k.key_type] || 'Altro';
+            const qty       = parseInt(k.quantity, 10) || 1;
+            return `
+            <div class="entity-card key-card">
                 <div class="entity-card__header">
-                    <strong><i data-lucide="key"></i> ${escapeHtml(k.address)}, ${escapeHtml(k.city)}</strong>
+                    <strong><i data-lucide="${typeIcon}"></i> ${escapeHtml(k.address)}, ${escapeHtml(k.city)}</strong>
                     <span class="badge badge--key-${k.status}">${STATUS_LABELS[k.status] || k.status}</span>
                 </div>
+                <div class="key-card__tags">
+                    <span class="badge key-card__type">${escapeHtml(typeLabel)}</span>
+                    ${qty > 1 ? `<span class="badge key-card__qty">× ${qty} copie</span>` : ''}
+                    ${k.key_code ? `<span class="key-card__code" title="Codice portachiavi">${escapeHtml(k.key_code)}</span>` : ''}
+                </div>
                 <div class="entity-card__body">
-                    <div class="entity-card__info">Detentore: ${escapeHtml(k.holder_username || k.holder_name || '—')}</div>
+                    <div class="entity-card__info"><i data-lucide="user"></i> ${escapeHtml(k.holder_username || k.holder_name || 'Nessun detentore')}</div>
                     ${k.location ? `<div class="entity-card__info text-muted"><i data-lucide="map-pin"></i> ${escapeHtml(k.location)}</div>` : ''}
-                    ${k.handed_at ? `<div class="entity-card__info text-muted">Consegnate: ${formatDate(k.handed_at)}</div>` : ''}
+                    ${k.handed_at ? `<div class="entity-card__info text-muted"><i data-lucide="calendar-check"></i> Consegnate: ${formatDate(k.handed_at)}</div>` : ''}
+                    ${k.returned_at ? `<div class="entity-card__info text-muted"><i data-lucide="calendar-x"></i> Restituite: ${formatDate(k.returned_at)}</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
                     <button class="btn btn--sm btn--ghost btn-edit-key" data-id="${k.id}">Modifica</button>
                     <button class="btn btn--sm btn--ghost btn-del-key" data-id="${k.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
 
         els.grid.querySelectorAll('.btn-edit-key').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -137,6 +150,9 @@
         document.getElementById('key-modal-title').textContent = item ? 'Modifica chiavi' : 'Registra chiavi';
         document.getElementById('key-id').value = item?.id || '';
         document.getElementById('key-property').value = item?.property_id || '';
+        document.getElementById('key-type').value = item?.key_type || 'portone';
+        document.getElementById('key-quantity').value = item?.quantity || 1;
+        document.getElementById('key-code').value = item?.key_code || '';
         document.getElementById('key-holder').value = item?.holder_id || '';
         document.getElementById('key-holder-name').value = item?.holder_name || '';
         document.getElementById('key-status').value = item?.status || 'in_office';
@@ -154,6 +170,9 @@
         const id = document.getElementById('key-id').value;
         const payload = {
             property_id: parseInt(document.getElementById('key-property').value, 10),
+            key_type: document.getElementById('key-type').value,
+            quantity: parseInt(document.getElementById('key-quantity').value, 10) || 1,
+            key_code: document.getElementById('key-code').value.trim() || null,
             holder_id: document.getElementById('key-holder').value || null,
             holder_name: document.getElementById('key-holder-name').value.trim() || null,
             status: document.getElementById('key-status').value,

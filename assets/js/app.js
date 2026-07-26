@@ -105,11 +105,13 @@
             invoice_edit:          'Fattura',
             lead_edit:             'Lead',
             tenant_edit:           'Inquilino',
+            tenant_profile:        'Scheda Inquilino',
             appointment_edit:      'Appuntamento',
             expense_edit:          'Spesa',
             payment_edit:          'Pagamento',
             automations:           'Automazioni Clienti',
             buildings:             'Edifici',
+            building_profile:      'Scheda Edificio',
             insurance:             'Assicurazioni',
             meters:                'Contatori',
             suppliers:             'Fornitori',
@@ -197,6 +199,8 @@
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
+
+                    if (link.classList.contains('nav-link--disabled')) return;
 
                     const view = link.dataset.view;
 

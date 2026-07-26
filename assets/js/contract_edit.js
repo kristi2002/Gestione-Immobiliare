@@ -1,6 +1,6 @@
 /**
  * Contract create / edit — dedicated page (replaces the old modal).
- * viewParams: { contractId } for edit; { propertyId } / { clientId } to preselect on create.
+ * viewParams: { contractId } for edit; { propertyId } / { clientId } / { tenantId } to preselect on create.
  */
 (function () {
     'use strict';
@@ -28,6 +28,7 @@
     function backTarget() {
         if (vp.propertyId) return ['property_profile', { propertyId: vp.propertyId }];
         if (vp.clientId)   return ['client_profile', { clientId: vp.clientId }];
+        if (vp.tenantId)   return ['tenant_profile', { tenantId: vp.tenantId }];
         return ['contracts', {}];
     }
     function goBack() { if (window.App) { const [v, p] = backTarget(); window.App.navigateTo(v, p); } }
@@ -181,6 +182,7 @@
             $('cte-status').value = ''; // default new contracts to Automatico (date-driven)
             if (vp.propertyId) $('cte-property').value = String(vp.propertyId);
             if (vp.clientId) $('cte-client').value = String(vp.clientId);
+            if (vp.tenantId) $('cte-tenant').value = String(vp.tenantId);
             $('cte-title-input').focus();
         }
     }

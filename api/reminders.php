@@ -63,6 +63,7 @@ function listReminders(PDO $db): void
     $to       = trim($_GET['to'] ?? '');
     $filterClientId  = isset($_GET['client_id'])   ? (int) $_GET['client_id']   : null;
     $filterPropertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $filterTenantId  = isset($_GET['tenant_id'])   ? (int) $_GET['tenant_id']   : null;
     $notifyClient    = isset($_GET['notify_client']) ? (int) $_GET['notify_client'] : null;
     $maintenanceOnly = !empty($_GET['type']) && $_GET['type'] === 'maintenance';
     $filterPriority  = trim($_GET['priority'] ?? '');
@@ -111,6 +112,10 @@ function listReminders(PDO $db): void
     if ($filterPropertyId) {
         $where .= ' AND r.property_id = :filter_property_id';
         $params['filter_property_id'] = $filterPropertyId;
+    }
+    if ($filterTenantId) {
+        $where .= ' AND r.tenant_id = :filter_tenant_id';
+        $params['filter_tenant_id'] = $filterTenantId;
     }
     if ($notifyClient !== null) {
         $where .= ' AND r.notify_client = :notify_client';
@@ -180,11 +185,11 @@ function createReminder(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO reminders
             (title, description, reminder_date, end_date, frequency, status,
-             client_id, property_id, notify_admin, notify_client,
+             client_id, property_id, tenant_id, notify_admin, notify_client,
              email_subject, email_body)
          VALUES
             (:title, :description, :reminder_date, :end_date, :frequency, :status,
-             :client_id, :property_id, :notify_admin, :notify_client,
+             :client_id, :property_id, :tenant_id, :notify_admin, :notify_client,
              :email_subject, :email_body)"
     );
     $stmt->execute($validated);
@@ -207,7 +212,7 @@ function updateReminder(PDO $db, int $id): void
         "UPDATE reminders
          SET title = :title, description = :description, reminder_date = :reminder_date,
              end_date = :end_date, frequency = :frequency, status = :status,
-             client_id = :client_id, property_id = :property_id,
+             client_id = :client_id, property_id = :property_id, tenant_id = :tenant_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
              email_subject = :email_subject, email_body = :email_body
          WHERE id = :id"
@@ -288,6 +293,7 @@ function validateReminderInput(array $data): array
     $status       = trim($data['status'] ?? 'pending');
     $clientId     = !empty($data['client_id']) ? (int) $data['client_id'] : null;
     $propertyId   = !empty($data['property_id']) ? (int) $data['property_id'] : null;
+    $tenantId     = !empty($data['tenant_id']) ? (int) $data['tenant_id'] : null;
     $notifyAdmin  = !empty($data['notify_admin']) ? 1 : 0;
     $notifyClient = !empty($data['notify_client']) ? 1 : 0;
     $emailSubject = trim($data['email_subject'] ?? '') ?: null;
@@ -327,6 +333,7 @@ function validateReminderInput(array $data): array
         'status'        => $status,
         'client_id'     => $clientId,
         'property_id'   => $propertyId,
+        'tenant_id'     => $tenantId,
         'notify_admin'  => $notifyAdmin,
         'notify_client' => $notifyClient,
         'email_subject' => $emailSubject,

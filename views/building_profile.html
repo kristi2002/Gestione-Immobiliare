@@ -1,99 +1,59 @@
-<div class="buildings-view">
+<div class="building-profile-view">
+
+    <!-- Back nav -->
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="btn-back-to-buildings">← Edifici</button>
+    </div>
+
     <div class="view-header">
         <div class="view-header__text">
-            <h2>Edifici / Complessi</h2>
-            <p>Gestisci gli edifici e i loro immobili collegati.</p>
-        </div>
-        <div class="view-header__actions">
-            <button class="btn btn--primary" id="btn-new-building">+ Nuovo Edificio</button>
+            <h2>Scheda edificio</h2>
+            <p>Scheda completa dell'edificio: unità, amministratore e immobili collegati.</p>
         </div>
     </div>
 
-    <div id="buildings-alert" class="alert" style="display:none;"></div>
-
-    <div class="db-stats">
-        <div class="db-stat">
-            <div class="db-stat__chip"><i data-lucide="building"></i></div>
-            <div class="db-stat__label">Edifici Totali</div>
-            <div class="db-stat__value" id="bstat-total">—</div>
+    <!-- Hero card: avatar + name + admin + notes -->
+    <div class="profile-hero card">
+        <div class="profile-hero__avatar" id="profile-avatar"><i data-lucide="building"></i></div>
+        <div class="profile-hero__info">
+            <div class="profile-hero__name">
+                <h2 id="profile-name">Caricamento...</h2>
+            </div>
+            <div class="profile-hero__meta" id="profile-meta"></div>
+            <div class="profile-hero__notes" id="profile-notes" hidden>
+                <strong>Note</strong>
+                <p id="profile-notes-text"></p>
+            </div>
         </div>
-        <div class="db-stat">
-            <div class="db-stat__chip"><i data-lucide="door-open"></i></div>
-            <div class="db-stat__label">Unità Totali</div>
-            <div class="db-stat__value" id="bstat-units">—</div>
-        </div>
-        <div class="db-stat">
-            <div class="db-stat__chip"><i data-lucide="map-pin"></i></div>
-            <div class="db-stat__label">Città</div>
-            <div class="db-stat__value" id="bstat-cities">—</div>
-        </div>
-        <div class="db-stat">
-            <div class="db-stat__chip"><i data-lucide="plus-circle"></i></div>
-            <div class="db-stat__label">Aggiunti quest'anno</div>
-            <div class="db-stat__value" id="bstat-new">—</div>
-        </div>
-    </div>
-    <script>
-    (function () {
-        fetch('api/buildings.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
-            if (!j.success) return;
-            var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-            set('bstat-total', j.data.total); set('bstat-units', j.data.units);
-            set('bstat-cities', j.data.cities); set('bstat-new', j.data.new_year);
-        }).catch(function () {});
-    })();
-    </script>
-
-    <div class="toolbar">
-        <div class="search-box">
-            <input type="search" id="buildings-search" class="form-input" placeholder="Cerca per nome o indirizzo…" autocomplete="off">
+        <div class="profile-hero__actions">
+            <button class="btn btn--ghost btn--sm" id="btn-profile-edit"><i data-lucide="pencil"></i> Modifica</button>
+            <button class="btn btn--ghost btn--sm" id="btn-profile-link"><i data-lucide="link"></i> Collega immobile</button>
         </div>
     </div>
 
-    <div class="table-wrapper">
-        <table class="data-table" id="buildings-table">
-            <thead>
-                <tr>
-                    <th>Nome edificio</th>
-                    <th>Indirizzo</th>
-                    <th>Città</th>
-                    <th>Unità totali</th>
-                    <th>Occupate</th>
-                    <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody id="buildings-tbody">
-                <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <div id="buildings-pagination" class="pagination-container"></div>
+    <div id="profile-alert" class="alert" style="display:none;"></div>
 
-    <!-- Right detail rail (mirrors proprietari/inquilini) -->
-    <aside class="detail-rail" id="building-rail" hidden aria-label="Dettaglio edificio">
-        <button type="button" class="detail-rail__close" id="building-rail-close" aria-label="Chiudi">&times;</button>
-        <div class="detail-rail__id">
-            <span class="detail-rail__avatar" id="building-rail-avatar"><i data-lucide="building"></i></span>
-            <h3 id="building-rail-name">—</h3>
-            <div class="detail-rail__chips" id="building-rail-chips"></div>
-        </div>
-        <div class="detail-rail__sec">
-            <h4>Amministratore</h4>
-            <div class="detail-rail__box" id="building-rail-admin"></div>
-        </div>
-        <div class="detail-rail__sec">
-            <h4>Immobili collegati</h4>
-            <div id="building-rail-props"><p class="text-muted detail-rail__empty">—</p></div>
-        </div>
-        <button type="button" class="btn btn--primary detail-rail__cta" id="building-rail-open-full">Visualizza Completo</button>
-    </aside>
+    <!-- Amministratore -->
+    <div class="card" id="profile-admin-card" style="margin-bottom:16px;" hidden>
+        <h4 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);">Amministratore di condominio</h4>
+        <div id="profile-admin-box" style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;"></div>
+    </div>
+
+    <!-- Immobili -->
+    <div class="profile-panel__header">
+        <span class="text-muted" id="profile-props-count"></span>
+    </div>
+    <div id="profile-props-grid" class="entity-grid">
+        <div class="entity-loading">Caricamento…</div>
+    </div>
+
 </div>
 
-<!-- New / Edit building modal -->
+<!-- reuse buildings.js modals by including the same markup ids the page already knows how to drive -->
 <div class="modal-overlay" id="buildings-modal" hidden>
     <div class="modal modal--lg" role="dialog" aria-labelledby="buildings-modal-title">
         <div class="modal-header">
-            <h3 id="buildings-modal-title">Nuovo Edificio</h3>
+            <h3 id="buildings-modal-title">Modifica Edificio</h3>
             <button class="modal-close" id="buildings-modal-close" aria-label="Chiudi">&times;</button>
         </div>
         <form id="buildings-form" class="modal-body">
@@ -153,7 +113,6 @@
     </div>
 </div>
 
-<!-- Link property modal -->
 <div class="modal-overlay" id="buildings-link-modal" hidden>
     <div class="modal modal--sm" role="dialog" aria-labelledby="buildings-link-title">
         <div class="modal-header">
@@ -176,21 +135,4 @@
     </div>
 </div>
 
-<!-- Delete confirm modal -->
-<div class="modal-overlay" id="buildings-delete-modal" hidden>
-    <div class="modal modal--sm" role="dialog">
-        <div class="modal-header">
-            <h3>Elimina edificio</h3>
-            <button class="modal-close" id="buildings-delete-close" aria-label="Chiudi">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p>Sei sicuro di voler eliminare <strong id="buildings-delete-name"></strong>?</p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn--ghost" id="buildings-delete-cancel">Annulla</button>
-            <button type="button" class="btn btn--danger" id="buildings-delete-confirm">Elimina</button>
-        </div>
-    </div>
-</div>
-
-<script src="assets/js/buildings.js"></script>
+<script src="assets/js/building_profile/index.js"></script>

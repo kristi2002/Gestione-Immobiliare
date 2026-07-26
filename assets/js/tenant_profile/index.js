@@ -1,0 +1,501 @@
+/**
+ * Scheda Inquilino — dedicated tenant profile view
+ */
+import {
+    API, PROPS_API, DOCS_API, REM_API, CONT_API, PAY_API,
+    STATUS_LABELS, FREQ_LABELS, PROP_STATUS, PROP_COLOR, PAY_STATUS, PAY_COLOR, DOC_ICONS, REM_ICONS,
+} from './constants.js';
+import { esc, fmtDate } from './helpers.js';
+
+let tenant   = null;
+let tenantId = null;
+let tabsLoaded = new Set();
+
+function init() {
+    tenantId = window.App?.viewParams?.tenantId;
+    if (!tenantId) {
+        showAlert('ID inquilino non specificato. Torna all\'elenco e riprova.', 'error');
+        return;
+    }
+
+    bindEvents();
+    loadTenant();
+}
+
+function bindEvents() {
+    document.getElementById('btn-back-to-tenants').addEventListener('click', () => {
+        if (window.App) window.App.navigateTo('tenants');
+    });
+
+    document.getElementById('btn-profile-edit').addEventListener('click', () => {
+        if (window.App) window.App.navigateTo('tenant_edit', { tenantId });
+    });
+    document.getElementById('btn-profile-new-contratto').addEventListener('click', () => {
+        if (window.App) window.App.navigateTo('contract_edit', { tenantId, propertyId: tenant?.property_id || undefined });
+    });
+    document.getElementById('btn-profile-new-pagamento').addEventListener('click', () => {
+        if (window.App) window.App.navigateTo('payment_edit', { tenantId });
+    });
+    document.getElementById('btn-profile-new-reminder').addEventListener('click', () => openReminderModal());
+
+    // Tab switching
+    document.querySelectorAll('.profile-tab').forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    // Reminder form
+    document.getElementById('profile-reminder-close').addEventListener('click', closeReminderModal);
+    document.getElementById('profile-reminder-cancel').addEventListener('click', closeReminderModal);
+    document.getElementById('profile-reminder-modal').addEventListener('click', e => {
+        if (e.target === document.getElementById('profile-reminder-modal')) closeReminderModal();
+    });
+    document.getElementById('profile-reminder-form').addEventListener('submit', saveReminder);
+
+    // Document upload (attached to the tenant's current property, if any)
+    document.getElementById('profile-doc-upload').addEventListener('change', uploadDocuments);
+}
+
+// ── Tenant load ──────────────────────────────────────────────────
+
+async function loadTenant() {
+    try {
+        const res  = await fetch(`${API}?id=${tenantId}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        tenant = json.data;
+        renderHero();
+        loadTab('lease');
+    } catch (err) {
+        showAlert('Impossibile caricare l\'inquilino: ' + err.message, 'error');
+    }
+}
+
+function renderHero() {
+    const initials = ((tenant.name || '')[0] || '') + ((tenant.surname || '')[0] || '');
+    document.getElementById('profile-avatar').textContent = initials.toUpperCase();
+    document.getElementById('profile-name').textContent = `${tenant.name} ${tenant.surname}`;
+
+    const badge = document.getElementById('profile-status-badge');
+    badge.textContent = STATUS_LABELS[tenant.status] || tenant.status;
+    badge.className = `badge badge--${tenant.status}`;
+
+    const meta = [];
+    if (tenant.phone) meta.push(`<span><i data-lucide="phone"></i> <a href="tel:${esc(tenant.phone)}">${esc(tenant.phone)}</a></span>`);
+    if (tenant.email) meta.push(`<span><i data-lucide="mail"></i> <a href="mailto:${esc(tenant.email)}">${esc(tenant.email)}</a></span>`);
+    if (tenant.codice_fiscale) meta.push(`<span><i data-lucide="id-card"></i> ${esc(tenant.codice_fiscale)}</span>`);
+    if (tenant.property_address) meta.push(`<span><i data-lucide="building-2"></i> ${esc(tenant.property_address)}, ${esc(tenant.property_city || '')}</span>`);
+    document.getElementById('profile-meta').innerHTML = meta.join('');
+
+    const waEl = document.getElementById('profile-wa-action');
+    if (waEl) waEl.innerHTML = (tenant.phone && window.WA) ? window.WA.buttonHtml(tenant.phone, '', { className: 'btn-wa--label', label: 'WhatsApp' }) : '';
+
+    const notesEl = document.getElementById('profile-notes');
+    if (tenant.notes && tenant.notes.trim()) {
+        document.getElementById('profile-notes-text').textContent = tenant.notes;
+        notesEl.hidden = false;
+    } else {
+        notesEl.hidden = true;
+    }
+}
+
+// ── Tab logic ────────────────────────────────────────────────────
+
+function switchTab(tab) {
+    document.querySelectorAll('.profile-tab').forEach(t => {
+        t.classList.toggle('profile-tab--active', t.dataset.tab === tab);
+    });
+    document.querySelectorAll('.profile-panel').forEach(p => {
+        p.hidden = (p.id !== `profile-panel-${tab}`);
+    });
+    if (!tabsLoaded.has(tab)) loadTab(tab);
+}
+
+function loadTab(tab) {
+    tabsLoaded.add(tab);
+    if (tab === 'lease')            loadLease();
+    else if (tab === 'contratti')   loadContratti();
+    else if (tab === 'pagamenti')   loadPagamenti();
+    else if (tab === 'documents')   loadDocuments();
+    else if (tab === 'reminders')   loadReminders();
+}
+
+// ── Locazione (current lease + property card) ────────────────────
+
+async function loadLease() {
+    const grid = document.getElementById('profile-lease-grid');
+    const countEl = document.getElementById('profile-lease-count');
+    if (!tenant.property_id) {
+        countEl.textContent = '';
+        grid.innerHTML = '<div class="entity-empty">Nessuna locazione attiva per questo inquilino.</div>';
+        return;
+    }
+    grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+    try {
+        const res  = await fetch(`${PROPS_API}?id=${tenant.property_id}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const p = json.data;
+        countEl.textContent = 'Locazione in corso';
+
+        const photo = p.cover_url
+            ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;prop-card-thumb prop-card-thumb--empty&quot;>&#x1F3E2;</div>'">`
+            : `<div class="prop-card-thumb prop-card-thumb--empty"><i data-lucide="building-2"></i></div>`;
+        const color = PROP_COLOR[p.status] || '#94a3b8';
+        const rent  = tenant.monthly_rent ? `<span class="profile-prop-rent">€ ${Number(tenant.monthly_rent).toLocaleString('it-IT')}/mese</span>` : '';
+        const period = [tenant.lease_start ? fmtDate(tenant.lease_start) : null, tenant.lease_end ? fmtDate(tenant.lease_end) : null].filter(Boolean).join(' → ');
+
+        grid.innerHTML = `
+        <div class="entity-card profile-prop-card entity-card--clickable" data-prop-id="${p.id}" style="cursor:pointer;">
+            <div class="prop-card-thumb-wrap">${photo}</div>
+            <div class="entity-card__body">
+                <div class="entity-card__name" style="font-size:14px;">${esc(p.address)}, ${esc(p.city)}</div>
+                <div class="profile-prop-meta">
+                    <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;">${PROP_STATUS[p.status] || p.status}</span>
+                    ${p.sqm ? `<span class="text-muted" style="font-size:12px;">${esc(p.sqm)} m²</span>` : ''}
+                    ${rent}
+                </div>
+                ${period ? `<div class="text-muted" style="font-size:12px;margin-top:6px;"><i data-lucide="calendar"></i> ${period}</div>` : ''}
+            </div>
+        </div>`;
+
+        grid.querySelectorAll('[data-prop-id]').forEach(card => {
+            card.addEventListener('click', () => {
+                if (window.App) window.App.navigateTo('property_profile', { propertyId: parseInt(card.dataset.propId, 10) });
+            });
+        });
+        if (window.lucide) window.lucide.createIcons();
+    } catch (err) {
+        grid.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+    }
+}
+
+// ── Contratti ────────────────────────────────────────────────────
+
+const CT_TYPE = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
+
+function ctState(c) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (c.status === 'cancelled') return { label: 'Annullato', color: '#94a3b8' };
+    if (c.status === 'expired' || (c.end_date && c.end_date < today)) return { label: 'Scaduto', color: '#dc2626' };
+    if (c.status === 'signed') {
+        if (c.start_date && c.start_date > today) return { label: 'In attesa', color: '#d97706' };
+        return { label: 'Attivo', color: '#16a34a' };
+    }
+    if (c.status === 'sent') return { label: 'Inviato', color: '#2563eb' };
+    return { label: 'Bozza', color: '#94a3b8' };
+}
+
+async function loadContratti() {
+    const list = document.getElementById('profile-contratti-list');
+    list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+    try {
+        const res  = await fetch(`${CONT_API}?tenant_id=${tenantId}&limit=200&page=1`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        document.getElementById('profile-contratti-count').textContent =
+            items.length ? `${items.length} contratt${items.length === 1 ? 'o' : 'i'}` : '';
+
+        if (!items.length) {
+            list.innerHTML = '<div class="entity-empty">Nessun contratto per questo inquilino. Usa "Nuovo Contratto".</div>';
+            return;
+        }
+
+        list.innerHTML = items.map(c => {
+            const st = ctState(c);
+            const type = CT_TYPE[c.contract_type] || c.contract_type;
+            const where = c.property_address ? `${esc(c.property_address)}, ${esc(c.property_city)}` : '—';
+            const rent = c.monthly_rent ? `€ ${Number(c.monthly_rent).toLocaleString('it-IT')}/mese` : '';
+            const period = [c.start_date ? fmtDate(c.start_date) : null, c.end_date ? fmtDate(c.end_date) : null].filter(Boolean).join(' → ');
+            return `
+            <div class="doc-item">
+                <span class="doc-item__icon"><i data-lucide="copy"></i></span>
+                <div class="doc-item__info">
+                    <div class="doc-item__name">${esc(c.title || type)} — ${where}</div>
+                    <div class="doc-item__meta">
+                        <span class="badge" style="background:${st.color}20;color:${st.color};border:1px solid ${st.color}40;font-size:11px;">${st.label}</span>
+                        · ${type}${rent ? ' · ' + rent : ''}${period ? ' · ' + period : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+    }
+}
+
+// ── Pagamenti ────────────────────────────────────────────────────
+
+async function loadPagamenti() {
+    const list = document.getElementById('profile-pagamenti-list');
+    list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+    try {
+        const res  = await fetch(`${PAY_API}?tenant_id=${tenantId}&limit=200&page=1`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        document.getElementById('profile-pagamenti-count').textContent =
+            items.length ? `${items.length} pagament${items.length === 1 ? 'o' : 'i'}` : '';
+
+        if (!items.length) {
+            list.innerHTML = '<div class="entity-empty">Nessun pagamento registrato. Usa "Nuovo Pagamento" o genera lo scadenzario dal contratto.</div>';
+            return;
+        }
+
+        list.innerHTML = items.map(p => {
+            const color = PAY_COLOR[p.status] || '#94a3b8';
+            const label = PAY_STATUS[p.status] || p.status;
+            const amount = Number(p.amount || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return `
+            <div class="doc-item">
+                <span class="doc-item__icon"><i data-lucide="euro"></i></span>
+                <div class="doc-item__info">
+                    <div class="doc-item__name">€ ${amount} — scadenza ${fmtDate(p.due_date)}</div>
+                    <div class="doc-item__meta">
+                        <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;font-size:11px;">${label}</span>
+                        ${p.paid_date ? ' · pagato il ' + fmtDate(p.paid_date) : ''}
+                    </div>
+                </div>
+                <div class="doc-item__actions">
+                    ${p.status === 'pending' || p.status === 'late'
+                        ? `<button class="btn btn--sm btn--ghost btn-pay-mark" data-id="${p.id}" title="Segna come pagato"><i data-lucide="check"></i></button>`
+                        : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+        list.querySelectorAll('.btn-pay-mark').forEach(btn => {
+            btn.addEventListener('click', () => markPaymentPaid(btn.dataset.id, items));
+        });
+    } catch (err) {
+        list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+    }
+}
+
+async function markPaymentPaid(id, items) {
+    const payment = items.find(p => p.id == id);
+    if (!payment) return;
+    const data = {
+        tenant_id:   payment.tenant_id,
+        property_id: payment.property_id,
+        contract_id: payment.contract_id || null,
+        amount:      payment.amount,
+        due_date:    payment.due_date,
+        paid_date:   new Date().toISOString().slice(0, 10),
+        status:      'paid',
+        notes:       payment.notes || '',
+    };
+    try {
+        const res  = await fetch(`${PAY_API}?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        tabsLoaded.delete('pagamenti');
+        loadPagamenti();
+        showAlert('Pagamento segnato come pagato.', 'success');
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
+
+// ── Documenti (dell'immobile locato — condivisi con proprietario/altri inquilini) ──
+
+async function loadDocuments() {
+    const list = document.getElementById('profile-docs-list');
+    const hint = document.getElementById('profile-docs-hint');
+    const uploadLabel = document.getElementById('profile-doc-upload-label');
+    if (!tenant.property_id) {
+        hint.textContent = '';
+        uploadLabel.style.display = 'none';
+        list.innerHTML = '<div class="entity-empty">Nessuna locazione attiva: nessun immobile a cui allegare documenti.</div>';
+        return;
+    }
+    uploadLabel.style.display = '';
+    hint.textContent = 'Documenti associati all\'immobile locato — condivisi con il proprietario e visibili anche a eventuali altri inquilini dello stesso immobile.';
+    list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+    try {
+        const res  = await fetch(`${DOCS_API}?property_id=${tenant.property_id}&limit=200&page=1`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        document.getElementById('profile-docs-count').textContent =
+            items.length ? `${items.length} document${items.length === 1 ? 'o' : 'i'}` : '';
+
+        if (!items.length) {
+            list.innerHTML = '<div class="entity-empty">Nessun documento associato. Carica il primo con il pulsante sopra.</div>';
+            return;
+        }
+
+        const DOC_TYPE_LABELS = { invoice: 'Fattura', contract: 'Contratto', id: 'Documento ID', other: 'Altro' };
+        list.innerHTML = items.map(d => {
+            const ext  = (d.original_name || d.title || '').split('.').pop().toLowerCase();
+            const icon = DOC_ICONS[ext] || '<i data-lucide="paperclip"></i>';
+            const name = d.title || d.original_name || 'Documento';
+            return `
+            <div class="doc-item">
+                <span class="doc-item__icon">${icon}</span>
+                <div class="doc-item__info">
+                    <div class="doc-item__name">${esc(name)}</div>
+                    <div class="doc-item__meta">${DOC_TYPE_LABELS[d.doc_type] || d.doc_type || ''} · ${fmtDate(d.created_at)}</div>
+                </div>
+                <div class="doc-item__actions">
+                    <a href="api/download_document.php?id=${d.id}" class="btn btn--sm btn--ghost" target="_blank" title="Scarica"><i data-lucide="download"></i></a>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+    }
+}
+
+async function uploadDocuments(e) {
+    const files = [...e.target.files];
+    if (!files.length || !tenant.property_id) return;
+    let errors = 0;
+    for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('title', file.name);
+        fd.append('doc_type', 'other');
+        fd.append('property_id', tenant.property_id);
+        try {
+            const res  = await fetch(DOCS_API, { method: 'POST', body: fd });
+            const json = await res.json();
+            if (!json.success) errors++;
+        } catch { errors++; }
+    }
+    e.target.value = '';
+    tabsLoaded.delete('documents');
+    await loadDocuments();
+    showAlert(errors ? `${files.length - errors} caricati, ${errors} errori.` : `${files.length} document${files.length === 1 ? 'o caricato' : 'i caricati'}.`, errors ? 'error' : 'success');
+}
+
+// ── Reminders ────────────────────────────────────────────────────
+
+async function loadReminders() {
+    const list = document.getElementById('profile-reminders-list');
+    list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
+    let reminders = [];
+    try {
+        const res  = await fetch(`${REM_API}?tenant_id=${tenantId}&limit=100&page=1`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        reminders = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        const cnt = reminders.length;
+        document.getElementById('profile-reminders-count').textContent =
+            cnt ? `${cnt} promemori${cnt === 1 ? 'o' : 'a'}` : '';
+
+        if (!cnt) {
+            list.innerHTML = '<div class="entity-empty">Nessun promemoria configurato. Creane uno con il pulsante sopra.</div>';
+            return;
+        }
+
+        list.innerHTML = reminders.map(r => `
+            <div class="reminder-item reminder-item--${r.status}">
+                <span class="reminder-item__icon">${REM_ICONS[r.status] || '<i data-lucide="bell"></i>'}</span>
+                <div class="reminder-item__info">
+                    <div class="reminder-item__title">${esc(r.title)}</div>
+                    <div class="reminder-item__meta">
+                        ${r.reminder_date ? `<i data-lucide="calendar"></i> ${fmtDate(r.reminder_date)}` : ''}
+                        ${r.frequency ? ` · ${FREQ_LABELS[r.frequency] || r.frequency}` : ''}
+                    </div>
+                </div>
+                <div class="reminder-item__actions">
+                    ${r.status === 'pending' ? `<button class="btn btn--sm btn--ghost btn-done-rem" data-id="${r.id}" title="Segna completato"><i data-lucide="check-circle"></i></button>` : ''}
+                    <button class="btn btn--sm btn--ghost btn-edit-rem" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-del-rem" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>`).join('');
+
+        list.querySelectorAll('.btn-done-rem').forEach(btn => {
+            btn.addEventListener('click', () => completeReminder(btn.dataset.id));
+        });
+        list.querySelectorAll('.btn-edit-rem').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const r = reminders.find(x => x.id == btn.dataset.id);
+                if (r) openReminderModal(r);
+            });
+        });
+        list.querySelectorAll('.btn-del-rem').forEach(btn => {
+            btn.addEventListener('click', () => deleteReminder(btn.dataset.id));
+        });
+    } catch (err) {
+        list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
+    }
+}
+
+function openReminderModal(r = null) {
+    document.getElementById('profile-reminder-title-el').textContent = r ? 'Modifica Promemoria' : 'Nuovo Promemoria';
+    document.getElementById('profile-reminder-id').value    = r?.id || '';
+    document.getElementById('profile-reminder-title').value = r?.title || '';
+    document.getElementById('profile-reminder-freq').value  = r?.frequency || 'once';
+    document.getElementById('profile-reminder-date').value  = (r?.reminder_date || '').slice(0, 10);
+    document.getElementById('profile-reminder-notes').value = r?.description || '';
+    document.getElementById('profile-reminder-modal').hidden = false;
+    document.getElementById('profile-reminder-title').focus();
+}
+
+function closeReminderModal() {
+    document.getElementById('profile-reminder-modal').hidden = true;
+}
+
+async function saveReminder(e) {
+    e.preventDefault();
+    const id   = document.getElementById('profile-reminder-id').value;
+    const data = {
+        title:          document.getElementById('profile-reminder-title').value.trim(),
+        frequency:      document.getElementById('profile-reminder-freq').value,
+        reminder_date:  document.getElementById('profile-reminder-date').value || null,
+        description:    document.getElementById('profile-reminder-notes').value.trim(),
+        tenant_id:      parseInt(tenantId, 10),
+        status:         'pending',
+    };
+    const url    = id ? `${REM_API}?id=${id}` : REM_API;
+    const method = id ? 'PUT' : 'POST';
+    try {
+        const res  = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        closeReminderModal();
+        tabsLoaded.delete('reminders');
+        loadReminders();
+        showAlert('Promemoria salvato.', 'success');
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
+
+async function completeReminder(id) {
+    const res  = await fetch(`${REM_API}?id=${id}&action=complete`, { method: 'PATCH' });
+    const json = await res.json();
+    if (json.success) {
+        tabsLoaded.delete('reminders');
+        loadReminders();
+    } else {
+        showAlert(json.error, 'error');
+    }
+}
+
+async function deleteReminder(id) {
+    if (!await confirmDialog('Eliminare questo promemoria?', { title: 'Elimina promemoria', confirmText: 'Elimina' })) return;
+    const res  = await fetch(`${REM_API}?id=${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (json.success) {
+        tabsLoaded.delete('reminders');
+        loadReminders();
+    } else {
+        showAlert(json.error, 'error');
+    }
+}
+
+// ── Utilities ────────────────────────────────────────────────────
+
+function showAlert(msg, type) {
+    const el = document.getElementById('profile-alert');
+    el.textContent = msg;
+    el.className   = `alert alert--${type}`;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 4500);
+}
+
+init();

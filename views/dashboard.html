@@ -396,7 +396,7 @@
                 <td>${contratto}</td>
                 <td class="db-amt">${fmtEuro(r.price)}${priceSuffix}</td>
                 <td><span class="badge ${st[0]}">${esc(st[1])}</span></td>
-                <td><a class="db-rowaction" href="view.php?name=properties" data-view="properties" title="Apri immobili" aria-label="Apri immobili"><i data-lucide="arrow-right"></i></a></td>
+                <td><a class="db-rowaction" href="view.php?name=property_profile&id=${r.id}" data-view="property_profile" data-id="${r.id}" title="Apri scheda immobile" aria-label="Apri scheda immobile"><i data-lucide="arrow-right"></i></a></td>
             </tr>`;
         }).join('');
     }
@@ -404,7 +404,14 @@
     function bindSpaLinks() {
         document.querySelectorAll('.dashboard-view [data-view]').forEach(link => {
             link.addEventListener('click', e => {
-                if (window.App) { e.preventDefault(); window.App.navigateTo(link.dataset.view); }
+                if (!window.App) return;
+                e.preventDefault();
+                const id = link.dataset.id;
+                if (link.dataset.view === 'property_profile' && id) {
+                    window.App.navigateTo('property_profile', { propertyId: Number(id) });
+                } else {
+                    window.App.navigateTo(link.dataset.view);
+                }
             });
         });
     }

@@ -8,6 +8,7 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 apiHandleOptions();
 
 const KEY_STATUSES = ['out', 'in_office', 'lost'];
+const KEY_TYPES     = ['portone', 'appartamento', 'cantina', 'box', 'cancello', 'altro'];
 
 try {
     $db     = getDB();
@@ -95,8 +96,8 @@ function createKey(PDO $db): void
 {
     $data = apiGetJsonBody();
     $stmt = $db->prepare(
-        "INSERT INTO property_keys (property_id, holder_id, holder_name, location, notes, handed_at, returned_at, status)
-         VALUES (:property_id, :holder_id, :holder_name, :location, :notes, :handed_at, :returned_at, :status)"
+        "INSERT INTO property_keys (property_id, key_type, quantity, key_code, holder_id, holder_name, location, notes, handed_at, returned_at, status)
+         VALUES (:property_id, :key_type, :quantity, :key_code, :holder_id, :holder_name, :location, :notes, :handed_at, :returned_at, :status)"
     );
     $stmt->execute(validateKeyInput($data));
     getKey($db, (int) $db->lastInsertId());
@@ -106,7 +107,8 @@ function updateKey(PDO $db, int $id): void
 {
     $data = apiGetJsonBody();
     $stmt = $db->prepare(
-        "UPDATE property_keys SET property_id=:property_id, holder_id=:holder_id, holder_name=:holder_name,
+        "UPDATE property_keys SET property_id=:property_id, key_type=:key_type, quantity=:quantity, key_code=:key_code,
+         holder_id=:holder_id, holder_name=:holder_name,
          location=:location, notes=:notes, handed_at=:handed_at, returned_at=:returned_at, status=:status
          WHERE id=:id"
     );
@@ -130,8 +132,17 @@ function validateKeyInput(array $data): array
     $status = $data['status'] ?? 'in_office';
     if (!in_array($status, KEY_STATUSES, true)) apiError('Stato non valido.');
 
+    $keyType = $data['key_type'] ?? 'altro';
+    if (!in_array($keyType, KEY_TYPES, true)) apiError('Tipo chiave non valido.');
+
+    $quantity = (int) ($data['quantity'] ?? 1);
+    if ($quantity < 1) $quantity = 1;
+
     return [
         'property_id'  => $propertyId,
+        'key_type'     => $keyType,
+        'quantity'     => $quantity,
+        'key_code'     => trim($data['key_code'] ?? '') ?: null,
         'holder_id'    => !empty($data['holder_id']) ? (int) $data['holder_id'] : null,
         'holder_name'  => trim($data['holder_name'] ?? '') ?: null,
         'location'     => trim($data['location'] ?? '') ?: null,

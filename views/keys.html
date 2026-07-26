@@ -37,50 +37,87 @@
         </div>
         <form id="key-form" class="modal-body">
             <input type="hidden" id="key-id">
-            <div class="form-group">
-                <label for="key-property">Immobile <span class="required">*</span></label>
-                <select id="key-property" class="form-select" required></select>
-            </div>
-            <div class="form-row">
+
+            <fieldset class="form-section">
+                <legend>Immobile e chiave</legend>
                 <div class="form-group">
-                    <label for="key-holder">Agente</label>
-                    <select id="key-holder" class="form-select">
-                        <option value="">— Nessuno —</option>
-                    </select>
+                    <label for="key-property">Immobile <span class="required">*</span></label>
+                    <select id="key-property" class="form-select" required></select>
+                </div>
+                <div class="form-row form-row--2">
+                    <div class="form-group">
+                        <label for="key-type">Tipo chiave</label>
+                        <select id="key-type" class="form-select">
+                            <option value="portone">Portone principale</option>
+                            <option value="appartamento">Appartamento</option>
+                            <option value="cantina">Cantina</option>
+                            <option value="box">Box auto</option>
+                            <option value="cancello">Cancello / telecomando</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="key-quantity">Copie</label>
+                        <input type="number" id="key-quantity" class="form-input" min="1" value="1">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="key-holder-name">Altro detentore</label>
-                    <input type="text" id="key-holder-name" class="form-input" placeholder="Se non è un agente">
+                    <label for="key-code">Codice portachiavi</label>
+                    <input type="text" id="key-code" class="form-input" maxlength="50" placeholder="es. A12 — etichetta fisica del portachiavi">
                 </div>
-            </div>
-            <div class="form-row">
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Detentore e stato</legend>
+                <div class="form-row form-row--2">
+                    <div class="form-group">
+                        <label for="key-holder">Agente</label>
+                        <select id="key-holder" class="form-select">
+                            <option value="">— Nessuno —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="key-holder-name">Altro detentore</label>
+                        <input type="text" id="key-holder-name" class="form-input" placeholder="Se non è un agente">
+                    </div>
+                </div>
+                <div class="form-row form-row--2">
+                    <div class="form-group">
+                        <label for="key-status">Stato</label>
+                        <select id="key-status" class="form-select">
+                            <option value="in_office">In ufficio</option>
+                            <option value="out">In possesso</option>
+                            <option value="lost">Smarrite</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="key-location">Ubicazione</label>
+                        <input type="text" id="key-location" class="form-input" placeholder="Cassetta, cassetto ufficio…">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Date</legend>
+                <div class="form-row form-row--2">
+                    <div class="form-group">
+                        <label for="key-handed">Consegnate il</label>
+                        <input type="date" id="key-handed" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="key-returned">Restituite il</label>
+                        <input type="date" id="key-returned" class="form-input">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Note</legend>
                 <div class="form-group">
-                    <label for="key-status">Stato</label>
-                    <select id="key-status" class="form-select">
-                        <option value="in_office">In ufficio</option>
-                        <option value="out">In possesso</option>
-                        <option value="lost">Smarrite</option>
-                    </select>
+                    <textarea id="key-notes" class="form-textarea" rows="3"></textarea>
                 </div>
-                <div class="form-group">
-                    <label for="key-location">Ubicazione</label>
-                    <input type="text" id="key-location" class="form-input" placeholder="Cassetta, cassetto ufficio…">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="key-handed">Consegnate il</label>
-                    <input type="date" id="key-handed" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="key-returned">Restituite il</label>
-                    <input type="date" id="key-returned" class="form-input">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="key-notes">Note</label>
-                <textarea id="key-notes" class="form-textarea" rows="3"></textarea>
-            </div>
+            </fieldset>
+
             <div class="modal-footer">
                 <button type="button" class="btn btn--ghost" id="key-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary">Salva</button>

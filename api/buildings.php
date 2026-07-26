@@ -111,7 +111,15 @@ function getBuilding(PDO $db, int $id): void
 
     $propStmt = $db->prepare(
         "SELECT p.id, p.address, p.city, p.sqm, p.rooms, p.status, p.price, p.price_type,
-                c.name AS client_name, c.surname AS client_surname
+                c.name AS client_name, c.surname AS client_surname,
+                COALESCE(
+                    (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                    (SELECT fm.file_path FROM property_media fm
+                     WHERE fm.property_id = p.id
+                       AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
+                       AND fm.mime_type LIKE 'image/%'
+                     ORDER BY fm.sort_order ASC, fm.created_at ASC LIMIT 1)
+                ) AS cover_url
          FROM properties p
          LEFT JOIN clients c ON c.id = p.client_id
          WHERE p.building_id = :bid

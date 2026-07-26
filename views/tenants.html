@@ -73,6 +73,25 @@
         </div>
         <div id="tenants-pagination" class="pagination-container"></div>
     </div>
+
+    <!-- Right detail rail (mirrors proprietari) -->
+    <aside class="detail-rail" id="tenant-rail" hidden aria-label="Dettaglio inquilino">
+        <button type="button" class="detail-rail__close" id="tenant-rail-close" aria-label="Chiudi">&times;</button>
+        <div class="detail-rail__id">
+            <span class="detail-rail__avatar" id="tenant-rail-avatar">—</span>
+            <h3 id="tenant-rail-name">—</h3>
+            <div class="detail-rail__chips" id="tenant-rail-chips"></div>
+        </div>
+        <div class="detail-rail__sec">
+            <h4>Contatti</h4>
+            <div class="detail-rail__box" id="tenant-rail-contacts"></div>
+        </div>
+        <div class="detail-rail__sec">
+            <h4>Locazione</h4>
+            <div id="tenant-rail-props"><p class="text-muted detail-rail__empty">—</p></div>
+        </div>
+        <button type="button" class="btn btn--primary detail-rail__cta" id="tenant-rail-open-full">Visualizza Completo</button>
+    </aside>
 </div>
 <script>
 (function () {

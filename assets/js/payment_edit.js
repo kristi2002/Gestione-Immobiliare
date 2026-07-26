@@ -1,6 +1,6 @@
 /**
  * Payment (pagamento) create / edit — dedicated page (replaces the old modal).
- * viewParams: { paymentId } for edit.
+ * viewParams: { paymentId } for edit; { tenantId } to preselect on create.
  */
 (function () {
     'use strict';
@@ -24,7 +24,11 @@
     function showError(m) { const el = $('pye-error'); if (el) { el.textContent = m; el.style.display = 'block'; } }
     function clearError() { const el = $('pye-error'); if (el) el.style.display = 'none'; }
 
-    function goBack() { if (window.App) window.App.navigateTo('payments'); }
+    function goBack() {
+        if (!window.App) return;
+        if (vp.tenantId) window.App.navigateTo('tenant_profile', { tenantId: vp.tenantId });
+        else window.App.navigateTo('payments');
+    }
 
     async function fetchList(url, params) {
         if (window.Pagination?.fetchList) return window.Pagination.fetchList(url, params || {});
@@ -117,6 +121,7 @@
         } else {
             $('pye-title').textContent = 'Nuovo Pagamento';
             $('pye-status').value = 'pending';
+            if (vp.tenantId) { $('pye-tenant').value = String(vp.tenantId); onTenantChange(); }
             $('pye-tenant').focus();
         }
     }
