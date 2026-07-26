@@ -1,6 +1,6 @@
 /**
  * Appointment (visita) create / edit — dedicated page (replaces the old modal).
- * viewParams: { appointmentId } for edit; { propertyId } to preselect on create.
+ * viewParams: { appointmentId } for edit; { propertyId } / { leadId } / { clientId } to preselect on create.
  */
 (function () {
     'use strict';
@@ -27,7 +27,9 @@
 
     function goBack() {
         if (!window.App) return;
-        if (vp.propertyId) window.App.navigateTo('property_profile', { propertyId: vp.propertyId });
+        if (vp.leadId) window.App.navigateTo('lead_edit', { leadId: vp.leadId });
+        else if (vp.propertyId) window.App.navigateTo('property_profile', { propertyId: vp.propertyId });
+        else if (vp.clientId) window.App.navigateTo('client_profile', { clientId: vp.clientId });
         else window.App.navigateTo('appointments');
     }
 
@@ -129,6 +131,8 @@
             const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0);
             $('ape-date').value = toLocal(d.toISOString());
             if (vp.propertyId) $('ape-property').value = String(vp.propertyId);
+            if (vp.leadId) $('ape-lead').value = String(vp.leadId);
+            if (vp.clientId) $('ape-client').value = String(vp.clientId);
         }
     }
 

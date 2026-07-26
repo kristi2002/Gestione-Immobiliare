@@ -1,13 +1,15 @@
 (function () {
     'use strict';
 
-    const API       = 'api/surveys.php';
+    const API        = 'api/surveys.php';
     const TENANT_API = 'api/tenants.php';
+    const PROP_API   = 'api/properties.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
     let currentPage = 1;
     const PAGE_LIMIT = 25;
+    let tenants = [];
     const els = {};
 
     function init() {
@@ -18,6 +20,7 @@
 
         bindEvents();
         loadTenants();
+        loadProperties();
         loadSurveys();
     }
 
@@ -27,6 +30,7 @@
         document.getElementById('surveys-link-cancel').addEventListener('click', closeLinkModal);
         els.linkModal.addEventListener('click', e => { if (e.target === els.linkModal) closeLinkModal(); });
         document.getElementById('surveys-link-generate').addEventListener('click', generateLink);
+        document.getElementById('surveys-tenant-select').addEventListener('change', onTenantChange);
         document.getElementById('btn-copy-survey-link').addEventListener('click', () => {
             const url = document.getElementById('surveys-link-url');
             url.select();
@@ -37,15 +41,42 @@
 
     async function loadTenants() {
         try {
-            const items = await window.Pagination.fetchList(TENANT_API);
+            tenants = await window.Pagination.fetchList(TENANT_API);
             const sel = document.getElementById('surveys-tenant-select');
-            items.forEach(t => {
+            tenants.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.id;
                 opt.textContent = `${t.name || ''} ${t.surname || ''}`.trim() || `#${t.id}`;
                 sel.appendChild(opt);
             });
         } catch (e) { /* non-critical */ }
+    }
+
+    async function loadProperties() {
+        try {
+            const items = await window.Pagination.fetchList(PROP_API);
+            const sel = document.getElementById('surveys-property-select');
+            items.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.address || ''}, ${p.city || ''}`;
+                sel.appendChild(opt);
+            });
+        } catch (e) { /* non-critical */ }
+    }
+
+    // Pre-fill the property from the tenant's current lease (still overridable —
+    // a survey can be about a past tenancy at a different property).
+    function onTenantChange() {
+        const tenantId = document.getElementById('surveys-tenant-select').value;
+        const hint = document.getElementById('surveys-property-hint');
+        const t = tenants.find(x => String(x.id) === String(tenantId));
+        if (t && t.property_id) {
+            document.getElementById('surveys-property-select').value = t.property_id;
+            hint.textContent = `Locazione in corso: ${t.property_address || ''}, ${t.property_city || ''}`;
+        } else {
+            hint.textContent = '';
+        }
     }
 
     async function loadSurveys() {
@@ -108,6 +139,8 @@
 
     function openLinkModal() {
         document.getElementById('surveys-tenant-select').value = '';
+        document.getElementById('surveys-property-select').value = '';
+        document.getElementById('surveys-property-hint').textContent = '';
         document.getElementById('surveys-generated-link').style.display = 'none';
         document.getElementById('surveys-link-url').value = '';
         els.linkModal.hidden = false;
@@ -116,7 +149,8 @@
     function closeLinkModal() { els.linkModal.hidden = true; }
 
     async function generateLink() {
-        const tenantId = document.getElementById('surveys-tenant-select').value;
+        const tenantId   = document.getElementById('surveys-tenant-select').value;
+        const propertyId = document.getElementById('surveys-property-select').value;
         if (!tenantId) { showAlert('Seleziona un inquilino.', 'error'); return; }
 
         const btn = document.getElementById('surveys-link-generate');
@@ -126,7 +160,7 @@
             const res  = await fetch(API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'generate_link', tenant_id: tenantId }),
+                body: JSON.stringify({ tenant_id: tenantId, property_id: propertyId || null }),
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);

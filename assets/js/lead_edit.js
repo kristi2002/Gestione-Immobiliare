@@ -187,6 +187,16 @@
             $('lde-title').textContent = 'Modifica Lead';
             try { await loadLead(); }
             catch (err) { showAlert('Impossibile caricare il lead: ' + err.message, 'error'); }
+
+            const scheduleBtn = $('lde-schedule-visit');
+            if (scheduleBtn) {
+                scheduleBtn.hidden = false;
+                scheduleBtn.addEventListener('click', () => {
+                    if (!window.App) return;
+                    const propertyId = $('lde-property-id').value || undefined;
+                    window.App.navigateTo('appointment_edit', { leadId, propertyId });
+                });
+            }
         } else {
             $('lde-title').textContent = 'Nuovo Lead';
             $('lde-name').focus();
