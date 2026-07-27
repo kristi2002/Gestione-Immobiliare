@@ -470,19 +470,22 @@
                 const href = link.getAttribute('href');
                 if (!href) return;
 
+                // Scope the dedupe to <head>: scanning the whole document also
+                // matches this very link (the partial is already connected when
+                // this runs), so every partial stylesheet looked "already there"
+                // and got removed without a replacement.
                 const hrefPath = normalizeHref(href);
-                const already = [...document.querySelectorAll('link[rel="stylesheet"]')]
+                const already = [...document.head.querySelectorAll('link[rel="stylesheet"]')]
                     .some(l => normalizeHref(l.getAttribute('href')) === hrefPath);
 
-                if (!already) {
-                    const el = document.createElement('link');
-                    el.rel = 'stylesheet';
-                    const bust = href.includes('?') ? '&' : '?';
-                    el.href = `${href}${bust}v=${Date.now()}`;
-                    if (link.crossOrigin) el.crossOrigin = link.crossOrigin;
-                    document.head.appendChild(el);
+                if (already) {
+                    link.remove();
+                } else {
+                    // Move the node itself rather than cloning it: the sheet the
+                    // parser already fetched stays applied, so there is no
+                    // re-fetch and no flash of unstyled content on navigation.
+                    document.head.appendChild(link);
                 }
-                link.remove();
             });
         },
 

@@ -134,6 +134,7 @@ function getAppointment(PDO $db, int $id): void
 function createAppointment(PDO $db): void
 {
     $validated = validateAppointmentInput($db, apiGetJsonBody());
+    assertAgentIsFree($db, $validated);
     $notify    = (bool) $validated['notify_client'];
 
     $stmt = $db->prepare(
@@ -157,6 +158,7 @@ function updateAppointment(PDO $db, int $id): void
 {
     if (!appointmentExists($db, $id)) apiError('Appuntamento non trovato.', 404);
     $validated = validateAppointmentInput($db, apiGetJsonBody());
+    assertAgentIsFree($db, $validated, $id);
     $notify    = (bool) $validated['notify_client'];
 
     $stmt = $db->prepare(
@@ -185,6 +187,64 @@ function deleteAppointment(PDO $db, int $id): void
     $db->prepare("DELETE FROM appointments WHERE id = :id")->execute(['id' => $id]);
     logActivity('delete', 'appointment', $id, 'Appuntamento eliminato #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Appuntamento eliminato.']);
+}
+
+/**
+ * Double-booking guard: an agent cannot be in two places at once.
+ *
+ * Mirrors assertNoOverlappingLease() in contracts.php. Only `scheduled`
+ * appointments occupy the agent — cancelled / completed / no_show ones neither
+ * block nor are blocked. Appointments with no agent assigned are not checked,
+ * since there is nobody to double-book.
+ *
+ * Overlap is half-open ([start, start+duration)), so 10:00-11:00 and 11:00-12:00
+ * are adjacent, not conflicting.
+ */
+function assertAgentIsFree(PDO $db, array $v, ?int $excludeId = null): void
+{
+    if (empty($v['agent_id']) || $v['status'] !== 'scheduled' || empty($v['appointment_date'])) {
+        return;
+    }
+
+    // Duration is inlined as an int (validated 1..1440 above): the connection
+    // runs with EMULATE_PREPARES, which would bind it as the string '60' and
+    // leave INTERVAL depending on MySQL's string→number coercion.
+    $duration = (int) $v['duration_minutes'];
+
+    $sql = "SELECT a.id, a.appointment_date, a.duration_minutes,
+                   p.address AS property_address
+              FROM appointments a
+              LEFT JOIN properties p ON p.id = a.property_id
+             WHERE a.agent_id = :agent_id
+               AND a.status = 'scheduled'
+               AND a.appointment_date
+                     < DATE_ADD(:new_start, INTERVAL {$duration} MINUTE)
+               AND DATE_ADD(a.appointment_date, INTERVAL a.duration_minutes MINUTE)
+                     > :new_start2";
+    $params = [
+        'agent_id'   => $v['agent_id'],
+        'new_start'  => $v['appointment_date'],
+        'new_start2' => $v['appointment_date'],
+    ];
+    if ($excludeId !== null) {
+        $sql .= ' AND a.id <> :exclude_id';
+        $params['exclude_id'] = $excludeId;
+    }
+
+    $stmt = $db->prepare($sql . ' LIMIT 1');
+    $stmt->execute($params);
+    $conflict = $stmt->fetch();
+
+    if ($conflict) {
+        $when  = date('d/m/Y H:i', strtotime($conflict['appointment_date']));
+        $where = $conflict['property_address'] ? " presso {$conflict['property_address']}" : '';
+        apiError(
+            "Doppia prenotazione: l'agente ha già un appuntamento che si sovrappone "
+            . "(#{$conflict['id']}, {$when}, {$conflict['duration_minutes']} min{$where}). "
+            . "Scegli un altro orario, un altro agente, oppure annulla l'altro appuntamento.",
+            409
+        );
+    }
 }
 
 /**
