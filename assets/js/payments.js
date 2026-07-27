@@ -15,6 +15,18 @@
         cancelled: 'Annullato',
     };
 
+    /**
+     * "In ritardo" is derived server-side (payments.php SQL_IS_LATE) and returned
+     * as `is_late`, because nothing routinely writes status='late' to the column.
+     * Render from this — not p.status — or an overdue row shows the "In attesa"
+     * badge while sitting inside the "In ritardo" filter.
+     */
+    function effStatus(p) {
+        return (Number(p.is_late) === 1 && p.status !== 'paid' && p.status !== 'cancelled')
+            ? 'late'
+            : p.status;
+    }
+
     let payments   = [];
     let tenants    = [];
     let properties = [];
@@ -133,16 +145,17 @@
         }
 
         els.grid.innerHTML = payments.map(p => {
-            const markPaidBtn = window.canWrite !== false && (p.status === 'pending' || p.status === 'late')
+            const st = effStatus(p);
+            const markPaidBtn = window.canWrite !== false && (st === 'pending' || st === 'late')
                 ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${p.id}" title="Segna come pagato"><i data-lucide="check"></i> Pagato</button>`
                 : '';
 
             return `
-            <div class="entity-card payment-card payment-card--${p.status} entity-card--clickable" data-id="${p.id}">
+            <div class="entity-card payment-card payment-card--${st} entity-card--clickable" data-id="${p.id}">
                 <div class="entity-card__header">
                     <div class="entity-card__title-group">
                         <div class="entity-card__name">€ ${formatPrice(p.amount)}</div>
-                        <span class="badge badge--payment-${p.status}">${STATUS_LABELS[p.status] || p.status}</span>
+                        <span class="badge badge--payment-${st}">${STATUS_LABELS[st] || st}</span>
                     </div>
                 </div>
                 <div class="entity-card__body">
@@ -194,9 +207,10 @@
 
     function openSchedaModal(p) {
         schedaPaymentId = p.id;
+        const st = effStatus(p);
         document.getElementById('scheda-pay-amount').textContent = '€ ' + formatPrice(p.amount);
         document.getElementById('scheda-pay-badge').innerHTML =
-            `<span class="badge badge--payment-${p.status}">${STATUS_LABELS[p.status] || p.status}</span>`;
+            `<span class="badge badge--payment-${st}">${STATUS_LABELS[st] || st}</span>`;
 
         document.getElementById('scheda-pay-body').innerHTML = `
             <div class="scheda-rows">
@@ -208,7 +222,7 @@
             </div>`;
 
         const paidBtn = document.getElementById('scheda-pay-paid');
-        paidBtn.hidden = !(window.canWrite !== false && (p.status === 'pending' || p.status === 'late'));
+        paidBtn.hidden = !(window.canWrite !== false && (st === 'pending' || st === 'late'));
 
         const editBtn = document.getElementById('scheda-pay-edit');
         if (editBtn) editBtn.hidden = window.canWrite === false;
@@ -348,9 +362,13 @@
                 if (!json.success) throw new Error(json.error);
                 const d = json.data;
                 const eur = (n) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n || 0);
-                let msg = `${d.count} addebiti idonei · totale ${eur(d.total)}.`;
+                let msg = `${d.count} addebiti idonei · totale ${eur(d.total)}`;
+                if (d.collection_date) msg += ` · addebito il ${formatDate(d.collection_date)}`;
+                msg += '.';
                 if (d.missing && d.missing.length) msg += ` ⚠ Configura: ${d.missing.join(', ')}.`;
-                if (d.skipped && d.skipped.length) msg += ` Esclusi (mandato/IBAN mancante): ${d.skipped.length}.`;
+                if (d.skipped && d.skipped.length) msg += ` Esclusi (mandato/IBAN mancante o non valido): ${d.skipped.length}.`;
+                // Blocking problems: these are exactly what the bank would reject.
+                if (d.problems && d.problems.length) msg += ` ⛔ Da correggere: ${d.problems.join(' | ')}`;
                 preview.textContent = msg;
                 dlBtn.disabled = !d.ready;
             } catch (err) {

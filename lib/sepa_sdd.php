@@ -120,6 +120,166 @@ function sepaIban(?string $iban): string
     return strtoupper(preg_replace('/\s+/', '', (string) $iban));
 }
 
+/** Registered IBAN length per country (SEPA area + the common non-SEPA ones). */
+const SEPA_IBAN_LENGTHS = [
+    'AD' => 24, 'AT' => 20, 'BE' => 16, 'BG' => 22, 'CH' => 21, 'CY' => 28,
+    'CZ' => 24, 'DE' => 22, 'DK' => 18, 'EE' => 20, 'ES' => 24, 'FI' => 18,
+    'FR' => 27, 'GB' => 22, 'GI' => 23, 'GR' => 27, 'HR' => 21, 'HU' => 28,
+    'IE' => 22, 'IS' => 26, 'IT' => 27, 'LI' => 21, 'LT' => 20, 'LU' => 20,
+    'LV' => 21, 'MC' => 27, 'MT' => 31, 'NL' => 18, 'NO' => 15, 'PL' => 28,
+    'PT' => 25, 'RO' => 24, 'SE' => 24, 'SI' => 19, 'SK' => 24, 'SM' => 27,
+    'VA' => 22,
+];
+
+/**
+ * ISO 13616 IBAN check — structure, registered country length, and the mod-97
+ * checksum.
+ *
+ * Without this a typo'd IBAN produces a perfectly well-formed file that the bank
+ * rejects on upload, after the agent has already believed the rent was collected.
+ * Catching it at export time is the difference between a form error and a missed
+ * collection cycle.
+ */
+function sepaIbanIsValid(?string $iban): bool
+{
+    $iban = sepaIban($iban);
+
+    if (!preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/', $iban)) {
+        return false;
+    }
+    $country = substr($iban, 0, 2);
+    if (isset(SEPA_IBAN_LENGTHS[$country]) && strlen($iban) !== SEPA_IBAN_LENGTHS[$country]) {
+        return false;
+    }
+
+    // Move the first 4 chars to the end, then map letters to digits (A=10 … Z=35).
+    $rearranged = substr($iban, 4) . substr($iban, 0, 4);
+    $numeric    = '';
+    for ($i = 0, $len = strlen($rearranged); $i < $len; $i++) {
+        $c = $rearranged[$i];
+        $numeric .= ctype_alpha($c) ? (string) (ord($c) - 55) : $c;
+    }
+
+    // mod 97 on a number far wider than PHP_INT_MAX — fold it in small chunks
+    // so no intermediate value can overflow (avoids needing bcmath/gmp).
+    $remainder = 0;
+    foreach (str_split($numeric, 7) as $chunk) {
+        $remainder = (int) ((string) $remainder . $chunk) % 97;
+    }
+
+    return $remainder === 1;
+}
+
+/**
+ * Pre-flight check run BEFORE the XML is handed to the agent.
+ *
+ * These are the conditions that make a bank reject an otherwise well-formed
+ * pain.008 file. Returns a list of human-readable Italian problems; empty means
+ * the batch is safe to submit.
+ *
+ * @param array{name:string,iban:string,creditor_id:string} $creditor
+ * @param array<int,array<string,mixed>> $txs
+ * @param string $collectionDate Y-m-d
+ * @param string $today          Y-m-d (passed in — no clock in this lib)
+ * @return string[]
+ */
+function sepaSddValidate(array $creditor, array $txs, string $collectionDate, string $today): array
+{
+    $errors = [];
+
+    if (!sepaIbanIsValid($creditor['iban'] ?? '')) {
+        $errors[] = "IBAN dell'agenzia non valido (Impostazioni → Fatturazione): controlla il codice IBAN.";
+    }
+    // Italian Creditor Identifier: IT + 2 check digits + 3 business code + 22 alnum.
+    $cid = strtoupper(preg_replace('/\s+/', '', (string) ($creditor['creditor_id'] ?? '')));
+    if (!preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{3}[A-Z0-9]{1,28}$/', $cid)) {
+        $errors[] = 'Identificativo Creditore SEPA non valido (atteso es. IT66ZZZ12345678901).';
+    }
+    if (trim((string) ($creditor['name'] ?? '')) === '') {
+        $errors[] = "Ragione sociale dell'agenzia mancante (Impostazioni).";
+    }
+
+    if (empty($txs)) {
+        $errors[] = 'Nessun addebito da includere nel file.';
+    }
+
+    // CORE direct debits need lead time: the bank must receive the file before the
+    // requested collection date. A date already in the past is an instant reject.
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $collectionDate)) {
+        $errors[] = 'Data di addebito non valida.';
+    } elseif ($collectionDate < $today) {
+        $errors[] = "Data di addebito ($collectionDate) nel passato: scegli una data futura.";
+    }
+
+    foreach ($txs as $t) {
+        $who = trim((string) ($t['debtor_name'] ?? '')) ?: 'inquilino senza nome';
+
+        if (!sepaIbanIsValid($t['debtor_iban'] ?? '')) {
+            $errors[] = "IBAN non valido per $who — correggi la scheda inquilino.";
+        }
+        if ((float) ($t['amount'] ?? 0) <= 0) {
+            $errors[] = "Importo non valido per $who.";
+        }
+        if (trim((string) ($t['mandate_id'] ?? '')) === '') {
+            $errors[] = "Riferimento mandato SDD mancante per $who.";
+        }
+        $mandateDate = substr((string) ($t['mandate_date'] ?? ''), 0, 10);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $mandateDate)) {
+            $errors[] = "Data del mandato SDD mancante o non valida per $who.";
+        } elseif ($mandateDate > $today) {
+            $errors[] = "Data del mandato SDD nel futuro per $who.";
+        }
+        if (trim((string) ($t['debtor_name'] ?? '')) === '') {
+            $errors[] = 'Un addebito non ha il nome del debitore.';
+        }
+    }
+
+    return array_values(array_unique($errors));
+}
+
+/** Filesystem location of the optional official ISO 20022 schema. */
+function sepaSddSchemaPath(): string
+{
+    return __DIR__ . '/schema/pain.008.001.02.xsd';
+}
+
+/**
+ * Validate the generated XML against the official pain.008.001.02 XSD.
+ *
+ * The schema is NOT vendored in this repo (see lib/schema/README.md for where to
+ * download it). When the file is absent this returns ['skipped' => true] and the
+ * caller relies on sepaSddValidate() alone; dropping the .xsd in place activates
+ * full schema validation with no code change.
+ *
+ * @return array{skipped:bool,valid:bool,errors:string[]}
+ */
+function sepaSddSchemaValidate(string $xml): array
+{
+    $xsd = sepaSddSchemaPath();
+    if (!is_readable($xsd)) {
+        return ['skipped' => true, 'valid' => true, 'errors' => []];
+    }
+
+    $prev = libxml_use_internal_errors(true);
+    libxml_clear_errors();
+
+    $dom = new DOMDocument();
+    $errors = [];
+    if (!$dom->loadXML($xml)) {
+        $errors[] = 'XML generato non leggibile.';
+    } elseif (!$dom->schemaValidate($xsd)) {
+        foreach (libxml_get_errors() as $e) {
+            $errors[] = trim($e->message) . (($e->line ?? 0) ? " (riga {$e->line})" : '');
+        }
+        if (!$errors) $errors[] = 'Il file non rispetta lo schema pain.008.001.02.';
+    }
+
+    libxml_clear_errors();
+    libxml_use_internal_errors($prev);
+
+    return ['skipped' => false, 'valid' => empty($errors), 'errors' => $errors];
+}
+
 /** SEPA allows a restricted Latin charset; strip anything outside it. */
 function sepaClean(?string $s, int $max): string
 {

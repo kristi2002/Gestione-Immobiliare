@@ -42,16 +42,75 @@
             fetchList(TENANTS_API, {}).catch(() => []),
             fetchList(PROPS_API, {}).catch(() => []),
         ]);
+        // tenants.php resolves each tenant's current contract (see currentContractJoinSql)
+        // and already returns monthly_rent + lease dates alongside property/contract —
+        // carry them onto the option so picking a tenant can prefill the whole form.
         $('pye-tenant').innerHTML = '<option value="">— Seleziona inquilino —</option>' +
-            tenants.map(t => `<option value="${t.id}" data-property="${t.property_id || ''}" data-contract="${t.contract_id || ''}">${esc(t.surname)} ${esc(t.name)}</option>`).join('');
+            tenants.map(t => `<option value="${t.id}" data-property="${t.property_id || ''}" data-contract="${t.contract_id || ''}" data-rent="${t.monthly_rent ?? ''}" data-lease-start="${(t.lease_start || '').substring(0, 10)}" data-lease-end="${(t.lease_end || '').substring(0, 10)}">${esc(t.surname)} ${esc(t.name)}</option>`).join('');
         $('pye-property').innerHTML = '<option value="">— Seleziona immobile —</option>' +
             props.map(p => `<option value="${p.id}">${esc(p.address)}, ${esc(p.city)}</option>`).join('');
     }
 
+    // Values written by the last autofill. Re-picking a tenant replaces them, but a
+    // figure the agent typed themselves is never overwritten.
+    const autofilled = { amount: null, dueDate: null };
+
+    function ymd(d) {
+        return d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
+    }
+
+    /**
+     * Next rent due date on the lease's day-of-month anchor.
+     *
+     * Clamps the anchor to each month's length, the same way the server-side
+     * scadenzario does (contracts.php generatePayments), so a lease starting the
+     * 31st lands on the 28th/30th instead of overflowing into the next month.
+     * Returns '' when the lease has no start date or has already ended.
+     */
+    function nextDueDate(leaseStart, leaseEnd) {
+        if (!leaseStart) return '';
+        const start = new Date(leaseStart + 'T00:00:00');
+        if (isNaN(start)) return '';
+
+        const anchorDay = start.getDate();
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+
+        // This month's occurrence; if it has already passed, take next month's.
+        let y = today.getFullYear(), m = today.getMonth();
+        const atMonth = (yy, mm) => new Date(yy, mm, Math.min(anchorDay, new Date(yy, mm + 1, 0).getDate()));
+        let due = atMonth(y, m);
+        if (due < today) due = atMonth(y, m + 1);
+
+        if (due < start) due = start;
+        if (leaseEnd) {
+            const end = new Date(leaseEnd + 'T00:00:00');
+            if (!isNaN(end) && due > end) return '';  // lease is over — no sensible default
+        }
+        return ymd(due);
+    }
+
     function onTenantChange() {
         const opt = $('pye-tenant').selectedOptions[0];
-        if (opt && opt.dataset.property) $('pye-property').value = opt.dataset.property;
-        if (opt) $('pye-contract-id').value = opt.dataset.contract || '';
+        if (!opt) return;
+        if (opt.dataset.property) $('pye-property').value = opt.dataset.property;
+        $('pye-contract-id').value = opt.dataset.contract || '';
+
+        // On an existing payment the stored figures win — never overwrite them.
+        if (isEdit) return;
+
+        const rent = opt.dataset.rent;
+        if (rent && ($('pye-amount').value === '' || $('pye-amount').value === autofilled.amount)) {
+            $('pye-amount').value = rent;
+            autofilled.amount = rent;
+        }
+
+        const due = nextDueDate(opt.dataset.leaseStart, opt.dataset.leaseEnd);
+        if (due && ($('pye-due-date').value === '' || $('pye-due-date').value === autofilled.dueDate)) {
+            $('pye-due-date').value = due;
+            autofilled.dueDate = due;
+        }
     }
 
     async function loadPayment() {

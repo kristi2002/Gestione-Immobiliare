@@ -57,6 +57,13 @@ try {
             $skipped[] = $debtor . ' (mandato/IBAN mancante)';
             continue;
         }
+        // A malformed IBAN would sail through XML generation and be rejected by the
+        // bank on upload. Skip it here so it shows up in the readiness preview as a
+        // fixable row instead of silently poisoning the batch.
+        if (!sepaIbanIsValid($r['iban'])) {
+            $skipped[] = $debtor . ' (IBAN non valido)';
+            continue;
+        }
         $txs[] = [
             'end_to_end_id' => 'RENT-' . $r['id'],
             'amount'        => (float) $r['amount'],
@@ -68,30 +75,52 @@ try {
         ];
     }
 
+    $today = date('Y-m-d');
+
+    // Requested collection date. CORE direct debits need lead time for the bank to
+    // present them, so a date in the past (or today) is an automatic reject — when
+    // the caller doesn't pick one, fall back to the 5th of the month only while it
+    // is still far enough ahead, otherwise the soonest safe date.
+    $collectionDate = trim($_GET['collection_date'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $collectionDate)) {
+        $earliest       = date('Y-m-d', strtotime($today . ' +2 days'));
+        $collectionDate = max($month . '-05', $earliest);
+    }
+
+    $problems = sepaSddValidate($creditor, $txs, $collectionDate, $today);
+
     if (!empty($_GET['check'])) {
+        $schemaAvailable = is_readable(sepaSddSchemaPath());
         apiSuccess([
-            'ready'       => empty($missing) && count($txs) > 0,
-            'missing'     => $missing,
-            'count'       => count($txs),
-            'total'       => array_sum(array_map(fn($t) => $t['amount'], $txs)),
-            'skipped'     => $skipped,
-            'month'       => $month,
+            'ready'           => empty($missing) && empty($problems) && count($txs) > 0,
+            'missing'         => $missing,
+            'problems'        => $problems,
+            'count'           => count($txs),
+            'total'           => array_sum(array_map(fn($t) => $t['amount'], $txs)),
+            'skipped'         => $skipped,
+            'month'           => $month,
+            'collection_date' => $collectionDate,
+            'schema_validation' => $schemaAvailable ? 'attiva' : 'non disponibile',
         ]);
     }
 
-    if (!empty($missing)) apiError('Configurazione incompleta: ' . implode(', ', $missing));
-    if (empty($txs))      apiError('Nessun addebito SDD idoneo per ' . $month . '.');
-
-    $collectionDate = trim($_GET['collection_date'] ?? '');
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $collectionDate)) {
-        $collectionDate = $month . '-05'; // default: 5th of the month
-    }
+    if (!empty($missing))  apiError('Configurazione incompleta: ' . implode(', ', $missing));
+    if (empty($txs))       apiError('Nessun addebito SDD idoneo per ' . $month . '.');
+    if (!empty($problems)) apiError('File non generato — correggi prima: ' . implode(' | ', $problems));
 
     // Deterministic ids (no clock in the lib): stamp here.
     $msgId     = 'SDD-' . str_replace('-', '', $month) . '-' . substr(md5($creditor['iban'] . $month), 0, 8);
     $createdAt = date('Y-m-d\TH:i:s');
 
     $xml = sepaSddBuildXml($creditor, $txs, $collectionDate, $msgId, $createdAt);
+
+    // Structural check against the official XSD when the schema is installed
+    // (lib/schema/README.md); a no-op otherwise. Never serve a file we know the
+    // bank will bounce.
+    $schema = sepaSddSchemaValidate($xml);
+    if (!$schema['valid']) {
+        apiError('Il file generato non rispetta lo schema pain.008.001.02: ' . implode(' | ', array_slice($schema['errors'], 0, 5)), 500);
+    }
 
     apiDiscardBufferedOutput();
     header('Content-Type: application/xml; charset=utf-8');

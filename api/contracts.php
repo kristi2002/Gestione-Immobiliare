@@ -187,6 +187,12 @@ function createContract(PDO $db): void
 
     $newId = (int) $db->lastInsertId();
     logActivity('create', 'contract', $newId, 'Contratto creato: ' . $validated['title']);
+
+    // A signed lease with rent + dates gets its scadenzario immediately; without
+    // this the contract exists but the payments module knows nothing about it
+    // until someone remembers to press "Genera scadenzario".
+    autoGeneratePaymentSchedule($db, $newId);
+
     getContract($db, $newId);
 }
 
@@ -218,6 +224,12 @@ function updateContract(PDO $db, int $id): void
     $stmt->execute(array_merge($validated, ['id' => $id]));
 
     logActivity('update', 'contract', $id, 'Contratto aggiornato #' . $id . ' (' . $validated['status'] . ')');
+
+    // Covers the common path where a lease is drafted first and signed later: at
+    // creation it wasn't in force yet, so nothing was generated. insertPaymentSchedule
+    // is a no-op when a schedule already exists, so repeated saves are harmless.
+    autoGeneratePaymentSchedule($db, $id);
+
     getContract($db, $id);
 }
 
@@ -410,23 +422,51 @@ function istatAdjustment(PDO $db, int $id): void
     apiSuccess($result);
 }
 
-function generatePayments(PDO $db, int $id): void
+/**
+ * Why a contract cannot have a rent schedule generated. Empty array = eligible.
+ *
+ * Shared by the manual "Genera scadenzario" button (which surfaces the reason to
+ * the agent) and the automatic generation on save (which just stays quiet).
+ *
+ * @return string[]
+ */
+function paymentScheduleBlockers(array $contract): array
 {
-    $stmt = $db->prepare("SELECT * FROM contracts WHERE id = :id");
-    $stmt->execute(['id' => $id]);
-    $contract = $stmt->fetch();
-    if (!$contract) apiError('Contratto non trovato.', 404);
+    $blockers = [];
+    if (($contract['contract_type'] ?? '') !== 'locazione')
+        $blockers[] = 'La generazione dello scadenzario è disponibile solo per contratti di locazione.';
+    if (empty($contract['tenant_id']))
+        $blockers[] = 'Il contratto non ha un inquilino associato.';
+    if (empty($contract['monthly_rent']))
+        $blockers[] = 'Il contratto non ha un canone mensile.';
+    if (empty($contract['start_date']))
+        $blockers[] = 'Il contratto non ha una data di inizio.';
+    if (empty($contract['end_date']))
+        $blockers[] = 'Il contratto non ha una data di fine.';
+    return $blockers;
+}
 
-    if ($contract['contract_type'] !== 'locazione')
-        apiError('La generazione dello scadenzario è disponibile solo per contratti di locazione.');
-    if (!$contract['tenant_id'])
-        apiError('Il contratto non ha un inquilino associato.');
-    if (!$contract['monthly_rent'])
-        apiError('Il contratto non ha un canone mensile.');
-    if (!$contract['start_date'])
-        apiError('Il contratto non ha una data di inizio.');
-    if (!$contract['end_date'])
-        apiError('Il contratto non ha una data di fine.');
+/**
+ * A contract is "in force" when it is signed or left on Automatico (NULL status)
+ * — the same rule the "Attivi" list filter uses. Drafts and cancelled contracts
+ * must NOT auto-generate a schedule: that would fill the payments module with
+ * rent rows for a lease nobody has signed yet.
+ */
+function contractIsInForce(array $contract): bool
+{
+    $status = $contract['status'] ?? null;
+    return $status === null || $status === '' || $status === 'signed';
+}
+
+/**
+ * Insert the full rent schedule for a contract.
+ *
+ * @return int rows created, or -1 when a schedule already exists (caller decides
+ *             whether that is an error or a no-op).
+ */
+function insertPaymentSchedule(PDO $db, array $contract): int
+{
+    $id = (int) $contract['id'];
 
     // Run the whole generation inside a transaction and lock the contract row so
     // two concurrent "genera scadenzario" requests can't both pass the guard and
@@ -441,7 +481,7 @@ function generatePayments(PDO $db, int $id): void
         $existStmt->execute(['cid' => $id]);
         if ((int) $existStmt->fetchColumn() > 0) {
             $db->rollBack();
-            apiError('Esiste già uno scadenzario per questo contratto. Elimina i pagamenti esistenti prima di rigenerarlo.');
+            return -1;
         }
 
         $start = new DateTime($contract['start_date']);
@@ -496,8 +536,59 @@ function generatePayments(PDO $db, int $id): void
         throw $e;
     }
 
+    return $count;
+}
+
+function generatePayments(PDO $db, int $id): void
+{
+    $stmt = $db->prepare("SELECT * FROM contracts WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    $contract = $stmt->fetch();
+    if (!$contract) apiError('Contratto non trovato.', 404);
+
+    $blockers = paymentScheduleBlockers($contract);
+    if ($blockers) apiError($blockers[0]);
+
+    $count = insertPaymentSchedule($db, $contract);
+    if ($count === -1) {
+        apiError('Esiste già uno scadenzario per questo contratto. Elimina i pagamenti esistenti prima di rigenerarlo.');
+    }
+
     logActivity('create', 'contract', $id, "Scadenzario generato: $count pagamenti per contratto #$id");
     apiSuccess(['contract_id' => $id, 'payments_created' => $count, 'message' => "$count pagamenti creati."]);
+}
+
+/**
+ * Generate the rent schedule automatically when a lease is saved in force.
+ *
+ * Before this, a contract saved without clicking "Genera scadenzario" was
+ * invisible to the entire payments module — no rows, no KPI contribution, no
+ * overdue reminders. Silent by design: an ineligible or already-scheduled
+ * contract is simply skipped, and a failure here must never take down the save
+ * the agent actually asked for.
+ *
+ * @return int rows created (0 when skipped)
+ */
+function autoGeneratePaymentSchedule(PDO $db, int $id): int
+{
+    try {
+        $stmt = $db->prepare("SELECT * FROM contracts WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        $contract = $stmt->fetch();
+
+        if (!$contract) return 0;
+        if (!contractIsInForce($contract)) return 0;
+        if (paymentScheduleBlockers($contract)) return 0;
+
+        $count = insertPaymentSchedule($db, $contract);
+        if ($count > 0) {
+            logActivity('create', 'contract', $id, "Scadenzario generato automaticamente: $count pagamenti per contratto #$id");
+        }
+        return max(0, $count);
+    } catch (Throwable $e) {
+        error_log('autoGeneratePaymentSchedule failed for contract #' . $id . ': ' . $e->getMessage());
+        return 0;
+    }
 }
 
 function contractExists(PDO $db, int $id): bool

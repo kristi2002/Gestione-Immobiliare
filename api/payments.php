@@ -15,6 +15,25 @@ apiHandleOptions();
 
 const PAYMENT_STATUSES = ['pending', 'paid', 'late', 'cancelled'];
 
+/**
+ * "In ritardo" is a DERIVED state, not just a column value.
+ *
+ * Nothing in the app routinely flips `status` to 'late' — the only writer is
+ * api/payment_reminder_log.php, as a side effect of logging a reminder. So an
+ * unpaid payment past its due date almost always still reads 'pending'.
+ *
+ * The KPI strip on the payments page has always computed "late" as
+ * (status='late' OR overdue pending), while the status filter matched only the
+ * literal column — so the stat said "€ 4.500 (5)" and the "In ritardo" filter
+ * came back nearly empty. These two constants are the single definition both
+ * the stats and the list filter now use, so the numbers agree.
+ *
+ * They also partition the unpaid set: an overdue payment is "in ritardo" and is
+ * therefore NOT also counted as "in attesa".
+ */
+const SQL_IS_LATE    = "(pay.status = 'late' OR (pay.status = 'pending' AND pay.due_date < CURDATE()))";
+const SQL_IS_PENDING = "(pay.status = 'pending' AND pay.due_date >= CURDATE())";
+
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];
@@ -60,18 +79,18 @@ function paymentStats(PDO $db): void
            AND COALESCE(paid_date, due_date) >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
            AND COALESCE(paid_date, due_date) <= LAST_DAY(CURDATE())"
     )->fetchColumn();
+    // "In attesa (mese)" excludes anything already overdue — those are counted by
+    // the "In ritardo" stat below, and a payment must not appear under both.
     $pendingMonth = (float) $db->query(
-        "SELECT COALESCE(SUM(amount),0) FROM payments
-         WHERE status = 'pending'
-           AND due_date BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())"
+        "SELECT COALESCE(SUM(amount),0) FROM payments pay
+         WHERE " . SQL_IS_PENDING . "
+           AND pay.due_date BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())"
     )->fetchColumn();
     $lateTotal = (float) $db->query(
-        "SELECT COALESCE(SUM(amount),0) FROM payments
-         WHERE status = 'late' OR (status = 'pending' AND due_date < CURDATE())"
+        "SELECT COALESCE(SUM(amount),0) FROM payments pay WHERE " . SQL_IS_LATE
     )->fetchColumn();
     $lateCount = (int) $db->query(
-        "SELECT COUNT(*) FROM payments
-         WHERE status = 'late' OR (status = 'pending' AND due_date < CURDATE())"
+        "SELECT COUNT(*) FROM payments pay WHERE " . SQL_IS_LATE
     )->fetchColumn();
     $yearPaid = (float) $db->query(
         "SELECT COALESCE(SUM(amount),0) FROM payments
@@ -108,8 +127,16 @@ function listPayments(PDO $db): void
         $params['property_id'] = $propertyId;
     }
     if ($status !== '' && in_array($status, PAYMENT_STATUSES, true)) {
-        $where .= ' AND pay.status = :status';
-        $params['status'] = $status;
+        // 'late' and 'pending' are derived (see SQL_IS_LATE / SQL_IS_PENDING) so the
+        // filter agrees with the KPI strip; 'paid' and 'cancelled' are plain columns.
+        if ($status === 'late') {
+            $where .= ' AND ' . SQL_IS_LATE;
+        } elseif ($status === 'pending') {
+            $where .= ' AND ' . SQL_IS_PENDING;
+        } else {
+            $where .= ' AND pay.status = :status';
+            $params['status'] = $status;
+        }
     }
     if ($month !== null && $month >= 1 && $month <= 12) {
         $where .= ' AND MONTH(pay.due_date) = :month';
@@ -122,7 +149,8 @@ function listPayments(PDO $db): void
 
     $countSql = "SELECT COUNT(*) FROM payments pay $where";
 
-    $dataSql = "SELECT pay.*, t.name AS tenant_name, t.surname AS tenant_surname,
+    $dataSql = "SELECT pay.*, " . SQL_IS_LATE . " AS is_late,
+                   t.name AS tenant_name, t.surname AS tenant_surname,
                    p.address AS property_address, p.city AS property_city
             FROM payments pay
             INNER JOIN tenants t ON t.id = pay.tenant_id
@@ -138,7 +166,8 @@ function listPayments(PDO $db): void
 function getPayment(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
-        "SELECT pay.*, t.name AS tenant_name, t.surname AS tenant_surname,
+        "SELECT pay.*, " . SQL_IS_LATE . " AS is_late,
+                t.name AS tenant_name, t.surname AS tenant_surname,
                 p.address AS property_address, p.city AS property_city
          FROM payments pay
          INNER JOIN tenants t ON t.id = pay.tenant_id
