@@ -72,6 +72,10 @@
     async function loadAutomations() {
         const params = new URLSearchParams();
         params.set('notify_client', '1');
+        // Un'automazione è la REGOLA, non i suoi invii: da phase65 un promemoria
+        // ricorrente materializza le occorrenze come righe, e senza questo
+        // filtro una automazione mensile comparirebbe qui come 12 schede.
+        params.set('series', 'parents');
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 

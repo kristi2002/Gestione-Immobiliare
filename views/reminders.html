@@ -18,8 +18,11 @@
 
     <div class="toolbar">
         <div class="search-box">
-            <input type="search" id="reminder-search" class="form-input" placeholder="Cerca per titolo, proprietario, immobile…" autocomplete="off">
+            <input type="search" id="reminder-search" class="form-input" placeholder="Cerca per titolo, contatto, immobile…" autocomplete="off">
         </div>
+        <select id="reminder-agent-filter" class="form-select">
+            <option value="">Tutti gli agenti</option>
+        </select>
         <select id="reminder-status-filter" class="form-select">
             <option value="">Tutti gli stati</option>
             <option value="pending" selected>In sospeso</option>
@@ -50,14 +53,15 @@
                     <th>Data scadenza</th>
                     <th>Frequenza</th>
                     <th>Stato</th>
-                    <th>Proprietario</th>
+                    <th>Contatto</th>
+                    <th>Assegnato a</th>
                     <th>Notifiche</th>
                     <th class="col-actions">Azioni</th>
                 </tr>
             </thead>
             <tbody id="reminders-tbody">
                 <tr>
-                    <td colspan="7" class="table-empty">Caricamento...</td>
+                    <td colspan="8" class="table-empty">Caricamento...</td>
                 </tr>
             </tbody>
         </table>
@@ -76,15 +80,43 @@
             <input type="hidden" id="reminder-id">
 
             <fieldset class="form-section">
-                <legend>Dettagli promemoria</legend>
+                <legend>Cosa</legend>
                 <div class="form-group">
                     <label for="reminder-title">Titolo <span class="required">*</span></label>
-                    <input type="text" id="reminder-title" class="form-input" required maxlength="255">
+                    <input type="text" id="reminder-title" class="form-input" required maxlength="255"
+                           list="reminder-title-options" autocomplete="off"
+                           placeholder="Scegli un'attività o scrivila">
+                    <datalist id="reminder-title-options">
+                        <option value="Chiamare cliente"></option>
+                        <option value="Richiamare lead"></option>
+                        <option value="Richiedere documenti"></option>
+                        <option value="Verifica mutuo"></option>
+                        <option value="Sollecito pagamento"></option>
+                        <option value="Fissare appuntamento"></option>
+                        <option value="Invio proposta"></option>
+                        <option value="Rinnovo contratto"></option>
+                        <option value="Sopralluogo immobile"></option>
+                        <option value="Consegna chiavi"></option>
+                        <option value="Aggiornare annuncio"></option>
+                        <option value="Verifica APE e certificazioni"></option>
+                    </datalist>
+                    <div class="rem-quick-titles" id="reminder-title-chips">
+                        <button type="button" class="rem-chip" data-title="Chiamare cliente">Chiamare cliente</button>
+                        <button type="button" class="rem-chip" data-title="Richiamare lead">Richiamare lead</button>
+                        <button type="button" class="rem-chip" data-title="Richiedere documenti">Richiedere documenti</button>
+                        <button type="button" class="rem-chip" data-title="Verifica mutuo">Verifica mutuo</button>
+                        <button type="button" class="rem-chip" data-title="Sollecito pagamento">Sollecito pagamento</button>
+                        <button type="button" class="rem-chip" data-title="Fissare appuntamento">Fissare appuntamento</button>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="reminder-description">Descrizione</label>
-                    <textarea id="reminder-description" class="form-textarea" rows="2"></textarea>
+                    <label for="reminder-description">Descrizione <span class="text-muted">(facoltativa)</span></label>
+                    <textarea id="reminder-description" class="form-textarea" rows="2" placeholder="Dettagli utili a chi eseguirà il compito"></textarea>
                 </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Quando</legend>
                 <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="reminder-date">Data e ora <span class="required">*</span></label>
@@ -110,22 +142,43 @@
                         </select>
                     </div>
                 </div>
+                <div class="form-group" id="reminder-end-wrap" hidden>
+                    <label for="reminder-end">Ripeti fino al <span class="text-muted">(facoltativo)</span></label>
+                    <input type="date" id="reminder-end" class="form-input">
+                    <small class="form-hint" id="reminder-series-hint"></small>
+                </div>
             </fieldset>
 
             <fieldset class="form-section">
-                <legend>Associazioni</legend>
+                <legend>Riferimenti</legend>
+                <div class="form-group">
+                    <label for="reminder-property">Immobile</label>
+                    <select id="reminder-property" class="form-select">
+                        <option value="">— Nessuno —</option>
+                    </select>
+                    <div class="ape-owner-hint" id="reminder-owner-hint">
+                        <i data-lucide="user-round"></i>
+                        <span>Proprietario</span>
+                        <strong id="reminder-owner-name">— nessun immobile selezionato —</strong>
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="reminder-client">Proprietario</label>
-                        <select id="reminder-client" class="form-select">
-                            <option value="">— Nessuno —</option>
-                        </select>
+                        <label for="reminder-contact">Contatto</label>
+                        <input type="text" id="reminder-contact" class="form-input"
+                               list="reminder-contact-options" autocomplete="off"
+                               placeholder="Cerca proprietario, lead o inquilino">
+                        <datalist id="reminder-contact-options"></datalist>
+                        <input type="hidden" id="reminder-contact-type">
+                        <input type="hidden" id="reminder-contact-id">
+                        <small class="form-hint" id="reminder-contact-hint">Chiunque in rubrica: acquirenti, venditori, inquilini.</small>
                     </div>
                     <div class="form-group">
-                        <label for="reminder-property">Immobile</label>
-                        <select id="reminder-property" class="form-select">
-                            <option value="">— Nessuno —</option>
+                        <label for="reminder-agent">Assegnato a</label>
+                        <select id="reminder-agent" class="form-select">
+                            <option value="">— Non assegnato —</option>
                         </select>
+                        <small class="form-hint">Riceve lui la notifica interna, al posto dell'indirizzo dell'agenzia.</small>
                     </div>
                 </div>
             </fieldset>
@@ -135,21 +188,22 @@
                 <div class="form-row">
                     <label class="checkbox-label">
                         <input type="checkbox" id="reminder-notify-admin" checked>
-                        Notifica admin (email agenzia)
+                        Notifica interna (agente assegnato o agenzia)
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" id="reminder-notify-client">
-                        Notifica proprietario via email
+                        Notifica il contatto via email
                     </label>
                 </div>
 
                 <div id="client-email-fields" hidden>
+                    <div class="alert alert--warning" id="reminder-notify-warning" hidden></div>
                     <div class="form-group">
-                        <label for="reminder-email-subject">Oggetto email al proprietario</label>
+                        <label for="reminder-email-subject">Oggetto email al contatto</label>
                         <input type="text" id="reminder-email-subject" class="form-input" maxlength="255" placeholder="Lascia vuoto per usare il titolo">
                     </div>
                     <div class="form-group">
-                        <label for="reminder-email-body">Testo email al proprietario</label>
+                        <label for="reminder-email-body">Testo email al contatto</label>
                         <textarea id="reminder-email-body" class="form-textarea" rows="4" placeholder="Lascia vuoto per usare un testo predefinito"></textarea>
                     </div>
                 </div>
@@ -163,4 +217,4 @@
     </div>
 </div>
 
-<script src="assets/js/reminders.js"></script>
+<script src="assets/js/reminders.js?v=2"></script>

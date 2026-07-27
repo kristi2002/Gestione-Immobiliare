@@ -536,11 +536,16 @@ Validates Mailgun HMAC-SHA256 signature. Matches sender to a client by email add
 The same endpoint serves both general reminders and maintenance tickets (filtered by `type`).
 
 **`GET /api/reminders.php`** — list  
-Query params: `search`, `status`, `frequency`, `due_soon` (1 = due within 7 days), `type` (maintenance / reminder), `client_id`, `property_id`
+Query params: `search`, `status`, `frequency`, `due_soon` (1 = due within 7 days), `type` (maintenance / reminder), `client_id`, `lead_id`, `tenant_id`, `property_id`, `assigned_agent_id`, `notify_client`, `series` (`parents` = hide generated occurrences)
 
 **`GET /api/reminders.php?id={id}`** — single
 
-**`POST /api/reminders.php`** — create
+**`GET /api/reminders.php?action=contacts`** — unified address book (clients + leads + tenants) for the contact picker; each row carries `contact_type`
+
+**`GET /api/reminders.php?action=agents`** — assignable admin users
+
+**`POST /api/reminders.php`** — create  
+Contact: send either `contact_type` (`client` / `lead` / `tenant`) + `contact_id`, or the explicit `client_id` / `lead_id` / `tenant_id`. With a `property_id` and no contact, the property's owner is filled in automatically.
 
 **`PUT /api/reminders.php?id={id}`** — full update  
 Sub-actions: `action=assign_supplier` (set `supplier_id`), `action=maintenance_status` (update kanban column)
@@ -550,6 +555,20 @@ Sub-actions: `action=assign_supplier` (set `supplier_id`), `action=maintenance_s
 **`PATCH /api/reminders.php?id={id}&action=cancel`** — cancel
 
 **`DELETE /api/reminders.php?id={id}`** — cancel reminder
+
+#### Recurring reminders (series)
+
+A reminder with `frequency != once` materialises its occurrences as real rows
+(`series_id` → the parent), up to `end_date` or 12 months ahead. So each date can
+be completed or cancelled on its own, and the calendar shows the whole schedule.
+
+- Regeneration is idempotent — re-saving a series never duplicates it.
+- `complete` on the parent closes only that date; `cancel` pauses the series
+  (drops future pending occurrences), `reopen` regenerates it.
+- `process_reminders` tops series up so they never run dry at the horizon, and
+  returns `extended` alongside `processed`.
+- Rows created before this scheme (no occurrences) keep rolling forward one step
+  at a time, exactly as before.
 
 ---
 
