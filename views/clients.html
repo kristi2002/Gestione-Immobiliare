@@ -202,4 +202,30 @@
     </div>
 </div>
 
+<!-- Unisci duplicati modal -->
+<div class="modal-overlay" id="merge-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="merge-modal-title">
+        <div class="modal-header">
+            <h3 id="merge-modal-title">Unisci duplicati</h3>
+            <button class="modal-close" id="merge-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" id="merge-target" style="margin-top:0"></p>
+            <div id="merge-modal-error" class="alert alert--error" style="display:none;"></div>
+            <div id="merge-list">Ricerca duplicati…</div>
+            <p class="text-muted" id="merge-explain" hidden>
+                Il duplicato selezionato verrà archiviato e tutto ciò che gli è collegato —
+                immobili, contratti, documenti, comunicazioni, appuntamenti — passerà al
+                proprietario qui sopra. L'operazione non è annullabile automaticamente.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="merge-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="merge-confirm" disabled>
+                <i data-lucide="merge"></i> Unisci nel proprietario corrente
+            </button>
+        </div>
+    </div>
+</div>
+
 <script type="module" src="assets/js/clients/index.js"></script>

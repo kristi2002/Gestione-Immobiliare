@@ -32,6 +32,7 @@ function init() {
     bindRail();
     bindRowMenu();
     bindMessageModal();
+    bindMergeModal();
     loadClients();
     loadStats();
 }
@@ -569,6 +570,9 @@ function openRowMenu(btn, client) {
         <button type="button" class="lt-menu__item" data-act="message" role="menuitem">
             <i data-lucide="mail"></i> Invia messaggio
         </button>
+        <button type="button" class="lt-menu__item" data-act="merge" role="menuitem">
+            <i data-lucide="merge"></i> Unisci duplicati
+        </button>
         <button type="button" class="lt-menu__item" data-act="archive" role="menuitem" disabled title="Funzione in arrivo">
             <i data-lucide="archive"></i> Archivia
         </button>
@@ -592,6 +596,10 @@ function openRowMenu(btn, client) {
     menu.querySelector('[data-act="message"]').addEventListener('click', () => {
         closeRowMenu();
         openMessageModal(client);
+    });
+    menu.querySelector('[data-act="merge"]').addEventListener('click', () => {
+        closeRowMenu();
+        openMergeModal(client);
     });
     menu.querySelector('[data-act="delete"]').addEventListener('click', () => {
         closeRowMenu();
@@ -948,6 +956,114 @@ function showAlert(message, type) {
     els.alert._timer = setTimeout(() => {
         els.alert.style.display = 'none';
     }, 4000);
+}
+
+// -------------------------------------------------------------------------
+// Unisci duplicati — la stessa persona inserita più volte (import CSV ripetuto,
+// anagrafiche storiche senza codice fiscale) compare come proprietari distinti,
+// ognuno con i propri immobili e le proprie comunicazioni. Qui si sceglie quale
+// duplicato far confluire nel record corrente.
+// -------------------------------------------------------------------------
+
+let mergeTargetClient = null;
+let mergeSourceId     = null;
+
+function bindMergeModal() {
+    const modal = document.getElementById('merge-modal');
+    if (!modal) return;
+    document.getElementById('merge-modal-close').addEventListener('click', closeMergeModal);
+    document.getElementById('merge-cancel').addEventListener('click', closeMergeModal);
+    document.getElementById('merge-confirm').addEventListener('click', confirmMerge);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeMergeModal(); });
+}
+
+async function openMergeModal(client) {
+    mergeTargetClient = client;
+    mergeSourceId     = null;
+
+    const modal = document.getElementById('merge-modal');
+    const list  = document.getElementById('merge-list');
+    document.getElementById('merge-modal-error').style.display = 'none';
+    document.getElementById('merge-explain').hidden = true;
+    document.getElementById('merge-confirm').disabled = true;
+    document.getElementById('merge-target').innerHTML =
+        `Record da conservare: <strong>${escapeHtml(client.name)} ${escapeHtml(client.surname)}</strong> (#${client.id})`;
+    list.textContent = 'Ricerca duplicati…';
+    modal.hidden = false;
+    if (window.lucide) window.lucide.createIcons();
+
+    const params = new URLSearchParams({ action: 'check_duplicate', exclude_id: client.id });
+    ['name', 'surname', 'email', 'phone', 'codice_fiscale'].forEach(f => {
+        if (client[f]) params.set(f, client[f]);
+    });
+
+    try {
+        const res  = await fetch(`${API}?${params}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const matches = json.data.matches || [];
+        if (!matches.length) {
+            list.innerHTML = '<p class="text-muted">Nessun possibile duplicato trovato per questo proprietario.</p>';
+            return;
+        }
+
+        list.innerHTML = matches.map(m => `
+            <label class="merge-option">
+                <input type="radio" name="merge-source" value="${m.id}">
+                <span class="merge-option__body">
+                    <strong>${escapeHtml(m.name)} ${escapeHtml(m.surname)}</strong> <span class="text-muted">#${m.id}</span>
+                    ${m.status === 'archived' ? '<span class="badge">archiviato</span>' : ''}
+                    <span class="merge-option__meta text-muted">
+                        ${escapeHtml(m.email || 'nessuna email')} · ${escapeHtml(m.phone || 'nessun telefono')}
+                        · ${m.property_count} immobili
+                    </span>
+                    <span class="merge-option__why">Corrisponde per: ${escapeHtml((m.match_reasons || []).join(', ') || '—')}</span>
+                </span>
+            </label>`).join('');
+
+        list.querySelectorAll('input[name="merge-source"]').forEach(input => {
+            input.addEventListener('change', () => {
+                mergeSourceId = Number(input.value);
+                document.getElementById('merge-confirm').disabled = false;
+                document.getElementById('merge-explain').hidden = false;
+            });
+        });
+    } catch (err) {
+        list.innerHTML = `<div class="entity-error">${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function closeMergeModal() {
+    document.getElementById('merge-modal').hidden = true;
+    mergeTargetClient = null;
+    mergeSourceId     = null;
+}
+
+async function confirmMerge() {
+    if (!mergeTargetClient || !mergeSourceId) return;
+    const btn = document.getElementById('merge-confirm');
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API}?action=merge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_id: mergeSourceId, target_id: mergeTargetClient.id }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        closeMergeModal();
+        showAlert(json.data.message, 'success');
+        loadClients();
+        loadStats();
+    } catch (err) {
+        const box = document.getElementById('merge-modal-error');
+        box.textContent = err.message;
+        box.style.display = 'block';
+        btn.disabled = false;
+    }
 }
 
 // -------------------------------------------------------------------------

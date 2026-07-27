@@ -27,8 +27,17 @@ function sendWhatsAppMessage(string $toPhone, string $body): array
         $from = 'whatsapp:' . $from;
     }
 
-    $url  = 'https://api.twilio.com/2010-04-01/Accounts/' . $cfg['account_sid'] . '/Messages.json';
-    $post = http_build_query(['From' => $from, 'To' => 'whatsapp:' . $to, 'Body' => $body]);
+    $url    = 'https://api.twilio.com/2010-04-01/Accounts/' . $cfg['account_sid'] . '/Messages.json';
+    $fields = ['From' => $from, 'To' => 'whatsapp:' . $to, 'Body' => $body];
+
+    // Senza StatusCallback Twilio non ci dice mai se il messaggio è stato
+    // consegnato o letto: la riga in communications resterebbe 'sent' per sempre.
+    $callback = twilioStatusCallbackUrl();
+    if ($callback !== null) {
+        $fields['StatusCallback'] = $callback;
+    }
+
+    $post = http_build_query($fields);
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -52,10 +61,99 @@ function sendWhatsAppMessage(string $toPhone, string $body): array
     $data = json_decode($raw, true);
     return [
         'success'     => true,
-        'status'      => 'sent',
+        'status'      => twilioStatusToCommStatus($data['status'] ?? 'sent'),
         'external_id' => $data['sid'] ?? ('wa-' . uniqid()),
         'error'       => null,
     ];
+}
+
+/**
+ * URL pubblico dello status callback, o null se APP_URL non è configurato
+ * (in locale Twilio non potrebbe comunque raggiungerci).
+ */
+function twilioStatusCallbackUrl(): ?string
+{
+    $appUrl = defined('APP_URL') ? rtrim((string) APP_URL, '/') : '';
+    if ($appUrl === '' || !str_starts_with($appUrl, 'http')) {
+        return null;
+    }
+    return $appUrl . '/api/twilio_status_callback.php';
+}
+
+/**
+ * Mappa il MessageStatus di Twilio sull'enum communications.status.
+ * Twilio: accepted|queued|sending|sent|delivered|read|undelivered|failed|received
+ */
+function twilioStatusToCommStatus(string $twilioStatus): string
+{
+    return match (strtolower(trim($twilioStatus))) {
+        'accepted', 'queued', 'sending' => 'queued',
+        'delivered'                     => 'delivered',
+        'read'                          => 'read',
+        'undelivered', 'failed'         => 'failed',
+        'received'                      => 'received',
+        default                         => 'sent',
+    };
+}
+
+/**
+ * Ordine di avanzamento degli stati. I callback Twilio possono arrivare fuori
+ * sequenza (il 'sent' dopo il 'delivered'): senza questo confronto un ritardo
+ * di rete farebbe tornare indietro le spunte già mostrate all'agente.
+ */
+function commStatusRank(string $status): int
+{
+    return match ($status) {
+        'draft'     => 0,
+        'queued'    => 1,
+        'sent'      => 2,
+        'delivered' => 3,
+        'read'      => 4,
+        'failed'    => 5, // terminale: vince sempre, va mostrato all'agente
+        default     => 2, // 'received' e simili: nessun avanzamento previsto
+    };
+}
+
+/**
+ * Verifica la firma HMAC-SHA1 con cui Twilio firma ogni webhook.
+ *
+ * Ritorna:
+ *   'ok'           — firma valida
+ *   'invalid'      — firma assente o non corrispondente
+ *   'unconfigured' — nessun auth token in produzione: non possiamo verificare,
+ *                    quindi la richiesta va RIFIUTATA (fail closed)
+ *   'skipped'      — nessun auth token fuori produzione: check saltato (dev)
+ *
+ * @param string $endpointPath percorso dell'endpoint come lo vede Twilio,
+ *                             es. '/api/twilio_status_callback.php'
+ */
+function verifyTwilioRequest(string $endpointPath, array $post): string
+{
+    $authToken = getSetting('twilio_auth_token') ?: (getenv('TWILIO_AUTH_TOKEN') ?: '');
+
+    if ($authToken === '') {
+        $isProd = strtolower((string) env('APP_ENV', 'production')) === 'production';
+        return $isProd ? 'unconfigured' : 'skipped';
+    }
+
+    $signature = $_SERVER['HTTP_X_TWILIO_SIGNATURE'] ?? '';
+    if ($signature === '') {
+        return 'invalid';
+    }
+
+    // Algoritmo Twilio: URL canonico + parametri POST ordinati per chiave,
+    // concatenati chiave+valore, poi HMAC-SHA1 con l'auth token.
+    $appUrl = defined('APP_URL') ? rtrim((string) APP_URL, '/') : '';
+    $sigBase = $appUrl . $endpointPath;
+
+    ksort($post);
+    foreach ($post as $key => $value) {
+        $sigBase .= $key . $value;
+    }
+
+    $expected = base64_encode(hash_hmac('sha1', $sigBase, $authToken, true));
+
+    return hash_equals($expected, $signature) ? 'ok' : 'invalid';
 }
 
 function normalizeWhatsAppNumber(string $phone): string

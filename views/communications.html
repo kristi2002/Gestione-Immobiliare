@@ -49,10 +49,27 @@
                     <div class="chat-compose__tabs">
                         <button type="button" class="chat-tab chat-tab--active" data-mode="send" data-channel="email" id="tab-send-email"><i data-lucide="mail"></i> Email</button>
                         <button type="button" class="chat-tab" data-mode="send" data-channel="whatsapp" id="tab-send-wa"><i data-lucide="message-circle"></i> WhatsApp</button>
-                        <button type="button" class="chat-tab" data-mode="receive" id="tab-receive">Registra ricevuta</button>
+                        <button type="button" class="chat-tab" data-mode="receive" id="tab-receive"><i data-lucide="notebook-pen"></i> Registra</button>
                     </div>
 
                     <form id="chat-form">
+                        <div class="form-group" id="chat-log-kind-group" hidden>
+                            <label for="chat-log-kind">Cosa stai registrando</label>
+                            <select id="chat-log-kind" class="form-input">
+                                <option value="email|received">Email ricevuta</option>
+                                <option value="whatsapp|received">WhatsApp ricevuto</option>
+                                <option value="sms|received">SMS ricevuto</option>
+                                <option value="chiamata|received">Chiamata ricevuta</option>
+                                <option value="chiamata|sent">Chiamata effettuata</option>
+                                <option value="nota|sent">Nota interna</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="chat-property-group" hidden>
+                            <label for="chat-property">Collega a immobile</label>
+                            <select id="chat-property" class="form-input">
+                                <option value="">— Nessun immobile —</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label for="chat-subject">Oggetto</label>
                             <input type="text" id="chat-subject" class="form-input" maxlength="255" placeholder="Oggetto dell'email">

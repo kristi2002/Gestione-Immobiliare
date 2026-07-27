@@ -14,7 +14,13 @@ require_once __DIR__ . '/../config/mail_html.php';
 
 apiHandleOptions();
 
-const COMM_CHANNELS   = ['email', 'whatsapp'];
+// Canali. I primi due vengono realmente spediti; sms/chiamata/nota sono
+// registrazioni manuali di qualcosa avvenuto fuori dal gestionale.
+// ATTENZIONE: questa lista deve restare allineata all'enum communications.channel
+// (migrazione phase67) — un canale presente qui ma non nell'enum viene rifiutato
+// dal DB, uno presente nell'enum ma non qui viene rifiutato dall'API.
+const COMM_CHANNELS   = ['email', 'whatsapp', 'sms', 'chiamata', 'nota'];
+const COMM_DISPATCHED = ['email', 'whatsapp'];
 const COMM_DIRECTIONS = ['sent', 'received'];
 
 // Limite complessivo degli allegati per singola email.
@@ -29,6 +35,8 @@ try {
     if ($method === 'GET') {
         if ($id) {
             getMessage($db, $id);
+        } elseif (($_GET['action'] ?? '') === 'statuses' && isset($_GET['client_id'])) {
+            listStatuses($db, (int) $_GET['client_id']);
         } elseif (isset($_GET['summary'])) {
             listSummary($db);
         } elseif (isset($_GET['client_id'])) {
@@ -72,7 +80,10 @@ function listSummary(PDO $db): void
                     ORDER BY cm2.created_at DESC LIMIT 1) AS last_message_preview,
                    (SELECT cm2.direction FROM communications cm2
                     WHERE cm2.client_id = c.id
-                    ORDER BY cm2.created_at DESC LIMIT 1) AS last_message_direction
+                    ORDER BY cm2.created_at DESC LIMIT 1) AS last_message_direction,
+                   (SELECT cm2.channel FROM communications cm2
+                    WHERE cm2.client_id = c.id
+                    ORDER BY cm2.created_at DESC LIMIT 1) AS last_message_channel
             FROM clients c
             LEFT JOIN communications cm ON cm.client_id = c.id
             $where
@@ -90,9 +101,11 @@ function listThread(PDO $db, int $clientId): void
     }
 
     $stmt = $db->prepare(
-        "SELECT cm.*, c.name AS client_name, c.surname AS client_surname, c.email AS client_email
+        "SELECT cm.*, c.name AS client_name, c.surname AS client_surname, c.email AS client_email,
+                p.address AS property_address, p.city AS property_city
          FROM communications cm
          INNER JOIN clients c ON c.id = cm.client_id
+         LEFT JOIN properties p ON p.id = cm.property_id
          WHERE cm.client_id = :client_id
          ORDER BY cm.created_at ASC"
     );
@@ -104,18 +117,45 @@ function listThread(PDO $db, int $clientId): void
     $clientStmt->execute(['id' => $clientId]);
     $client = $clientStmt->fetch();
 
+    // Immobili collegabili a un messaggio: serve al select "Collega a immobile"
+    // del compose, e evita un secondo round-trip all'apertura del thread.
+    $propStmt = $db->prepare(
+        "SELECT id, address, city FROM properties
+          WHERE client_id = :id AND status != 'archived'
+          ORDER BY address ASC"
+    );
+    $propStmt->execute(['id' => $clientId]);
+
     apiSuccess([
-        'client'   => $client,
-        'messages' => $stmt->fetchAll(),
+        'client'     => $client,
+        'properties' => $propStmt->fetchAll(),
+        'messages'   => $stmt->fetchAll(),
     ]);
+}
+
+/**
+ * Solo id + stato del thread aperto: è ciò che il client ricarica a intervalli
+ * per far avanzare le spunte senza riscaricare tutti i corpi dei messaggi.
+ */
+function listStatuses(PDO $db, int $clientId): void
+{
+    $stmt = $db->prepare(
+        "SELECT id, status, status_detail, status_updated_at
+           FROM communications
+          WHERE client_id = :client_id AND direction = 'sent'"
+    );
+    $stmt->execute(['client_id' => $clientId]);
+    apiSuccess(['statuses' => $stmt->fetchAll()]);
 }
 
 function getMessage(PDO $db, int $id): void
 {
     $stmt = $db->prepare(
-        "SELECT cm.*, c.name AS client_name, c.surname AS client_surname
+        "SELECT cm.*, c.name AS client_name, c.surname AS client_surname,
+                p.address AS property_address, p.city AS property_city
          FROM communications cm
          INNER JOIN clients c ON c.id = cm.client_id
+         LEFT JOIN properties p ON p.id = cm.property_id
          WHERE cm.id = :id"
     );
     $stmt->execute(['id' => $id]);
@@ -150,14 +190,35 @@ function createMessage(PDO $db): void
         apiError('Canale non valido.');
     }
 
+    // Una nota interna è scritta dall'agenzia per l'agenzia: normalizziamo la
+    // direzione così non finisce a sinistra come se l'avesse mandata il cliente.
+    if ($channel === 'nota') {
+        $direction = 'sent';
+    }
+
     $clientStmt = $db->prepare(
-        "SELECT id, name, surname, email FROM clients WHERE id = :id AND status != 'archived'"
+        "SELECT id, name, surname, email, phone FROM clients WHERE id = :id AND status != 'archived'"
     );
     $clientStmt->execute(['id' => $clientId]);
     $client = $clientStmt->fetch();
 
     if (!$client) {
         apiError('Proprietario non trovato o archiviato.');
+    }
+
+    // ── Immobile di contesto ────────────────────────────────────────────────
+    // Rivalidato server-side: l'immobile deve appartenere al proprietario del
+    // thread, altrimenti il collegamento diventa un modo per far comparire un
+    // immobile altrui nella conversazione.
+    $propertyId = (int) ($data['property_id'] ?? 0) ?: null;
+    if ($propertyId !== null) {
+        $propStmt = $db->prepare(
+            "SELECT id FROM properties WHERE id = :pid AND client_id = :cid"
+        );
+        $propStmt->execute(['pid' => $propertyId, 'cid' => $clientId]);
+        if (!$propStmt->fetchColumn()) {
+            apiError('L\'immobile selezionato non appartiene a questo proprietario.', 403);
+        }
     }
 
     // ── Allegati (documenti già caricati nel gestionale) ─────────────────────
@@ -227,12 +288,20 @@ function createMessage(PDO $db): void
         $attachmentMeta = json_encode($meta, JSON_UNESCAPED_UNICODE);
     }
 
-    $fromEmail = getMailConfig()['agency_email'];
-    $toEmail   = $client['email'];
-    $status    = $direction === 'received' ? 'received' : 'sent';
+    // Mittente/destinatario dipendono dalla DIREZIONE, non dal fatto che il
+    // messaggio venga spedito davvero: anche una chiamata registrata a mano ha
+    // un verso, e invertirlo falsa lo storico.
+    if ($direction === 'received') {
+        $fromEmail = $client['email'] ?: null;
+        $toEmail   = getMailConfig()['agency_email'];
+    } else {
+        $fromEmail = getMailConfig()['agency_email'];
+        $toEmail   = $client['email'];
+    }
+    $status     = $direction === 'received' ? 'received' : 'sent';
     $externalId = null;
 
-    if ($direction === 'sent') {
+    if ($direction === 'sent' && in_array($channel, COMM_DISPATCHED, true)) {
         if ($channel === 'email') {
             if (empty($client['email'])) {
                 apiError('Il proprietario non ha un indirizzo email configurato.');
@@ -261,21 +330,19 @@ function createMessage(PDO $db): void
             $status     = $result['status'];
             $externalId = $result['external_id'];
         }
-    } else {
-        $fromEmail = $client['email'] ?: null;
-        $toEmail   = getMailConfig()['agency_email'];
     }
 
     $stmt = $db->prepare(
         "INSERT INTO communications
-            (client_id, direction, channel, subject, body, attachments,
-             from_email, to_email, status, external_id)
+            (client_id, property_id, direction, channel, subject, body, attachments,
+             from_email, to_email, status, status_updated_at, external_id)
          VALUES
-            (:client_id, :direction, :channel, :subject, :body, :attachments,
-             :from_email, :to_email, :status, :external_id)"
+            (:client_id, :property_id, :direction, :channel, :subject, :body, :attachments,
+             :from_email, :to_email, :status, NOW(), :external_id)"
     );
     $stmt->execute([
         'client_id'   => $clientId,
+        'property_id' => $propertyId,
         'direction'   => $direction,
         'channel'     => $channel,
         'subject'     => $subject,

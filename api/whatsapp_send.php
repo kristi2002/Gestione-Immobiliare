@@ -35,13 +35,17 @@ $clientId = isset($data['client_id']) ? (int)$data['client_id'] : null;
 if ($tenantId || $clientId) {
     try {
         $db = getDB();
+        // external_id: senza il SID Twilio lo status callback non ha modo di
+        // ritrovare questa riga e lo stato resterebbe congelato all'invio.
         $db->prepare(
-            'INSERT INTO communications (client_id, direction, channel, subject, body, status, created_at)
-             VALUES (:cid, "sent", "whatsapp", :subj, :body, "sent", NOW())'
+            'INSERT INTO communications (client_id, direction, channel, subject, body, status, status_updated_at, external_id, created_at)
+             VALUES (:cid, "sent", "whatsapp", :subj, :body, :status, NOW(), :ext, NOW())'
         )->execute([
-            'cid'  => $clientId,
-            'subj' => 'WhatsApp: ' . mb_substr($message, 0, 80),
-            'body' => $message,
+            'cid'    => $clientId,
+            'subj'   => 'WhatsApp: ' . mb_substr($message, 0, 80),
+            'body'   => $message,
+            'status' => $result['status'],
+            'ext'    => $result['external_id'],
         ]);
     } catch (PDOException) {
         // Non-fatal — message already sent

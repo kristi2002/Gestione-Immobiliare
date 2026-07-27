@@ -1273,6 +1273,97 @@
     font-size: 12px;
 }
 
+/* ── Canali: una bolla deve dire da sola come è arrivato il messaggio ───────
+   Selettori composti (due classi) per vincere su .chat-bubble--sent definita
+   in 05-ui-polish.css, che nel bundle viene caricata dopo questo file. */
+
+.chat-bubble__channel {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    opacity: 0.65;
+    margin-bottom: 5px;
+}
+
+/* WhatsApp — verde, il colore con cui l'agente lo riconosce ovunque */
+.chat-bubble--ch-whatsapp.chat-bubble--sent {
+    background: #128c7e;
+    color: #fff;
+}
+.chat-bubble--ch-whatsapp.chat-bubble--received {
+    background: #e7ffdb;
+    border-color: #b6e5a1;
+    color: #14532d;
+}
+
+/* SMS — stessa famiglia "messaggistica" ma distinta dal verde WhatsApp */
+.chat-bubble--ch-sms.chat-bubble--sent {
+    background: #6d28d9;
+    color: #fff;
+}
+.chat-bubble--ch-sms.chat-bubble--received {
+    background: #f3e8ff;
+    border-color: #d8b4fe;
+    color: #4c1d95;
+}
+
+/* Chiamata — registrazione di una telefonata: nessun corpo "spedito",
+   quindi bordo tratteggiato per non farla sembrare un messaggio scritto */
+.chat-bubble--ch-chiamata.chat-bubble--sent,
+.chat-bubble--ch-chiamata.chat-bubble--received {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px dashed var(--color-warning);
+}
+
+/* Nota interna — non è una conversazione: centrata, grigia, citazione.
+   Doppia classe anche qui: .chat-bubble di 05-ui-polish.css imporrebbe
+   altrimenti il font-size delle bolle normali. */
+.chat-bubble.chat-bubble--note {
+    align-self: center;
+    max-width: 88%;
+    background: transparent;
+    color: var(--color-text-muted);
+    border: none;
+    border-left: 3px solid var(--color-border);
+    border-radius: 0;
+    padding: 6px 14px;
+    font-size: 13px;
+}
+.chat-bubble--note .chat-bubble__channel { color: var(--color-text-muted); }
+
+/* Pill "collega a immobile" */
+.chat-bubble__property {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    background: transparent;
+    color: inherit;
+    opacity: 0.85;
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+    max-width: 100%;
+    text-align: left;
+}
+.chat-bubble__property:hover { opacity: 1; }
+.chat-bubble__property i,
+.chat-bubble__property svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* Spunte di consegna */
+.chat-bubble__status { margin-left: auto; }
+.chat-status { font-weight: 700; }
+.chat-status.is-delivered { opacity: 1; }
+.chat-status.is-read { color: #38bdf8; }
+.chat-bubble--received .chat-status.is-read { color: #0284c7; }
+.chat-status.is-failed { color: #fecaca; font-weight: 600; }
+.chat-bubble--received .chat-status.is-failed { color: var(--color-danger); }
+
 /* ── Scheda immobile stile immobiliare.it (property_edit) ─────────────────── */
 
 /* Toggle Sì/No a segmenti — terzo stato implicito: nessuno attivo = non specificato */

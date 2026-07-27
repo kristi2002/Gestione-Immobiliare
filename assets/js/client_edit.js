@@ -39,6 +39,64 @@
     function clearError() {
         const el = $('ce-error');
         if (el) el.style.display = 'none';
+        const dup = $('ce-duplicate');
+        if (dup) dup.style.display = 'none';
+    }
+
+    // ── Anti-duplicati ──────────────────────────────────────────────────────
+    // L'indice unico copre solo il codice fiscale: due schede della stessa
+    // persona con CF diversi (o senza) restano possibili, e da lì nascono i
+    // proprietari elencati due o tre volte con gli immobili sparsi tra loro.
+    // Qui l'inserimento non viene bloccato — viene mostrato cosa esiste già.
+    let duplicateAcknowledged = false;
+
+    async function findDuplicates(data) {
+        const params = new URLSearchParams({ action: 'check_duplicate' });
+        if (clientId) params.set('exclude_id', clientId);
+        ['name', 'surname', 'email', 'phone', 'codice_fiscale'].forEach(f => {
+            if (data[f]) params.set(f, data[f]);
+        });
+        try {
+            const res  = await fetch(`${API}?${params}`);
+            const json = await res.json();
+            return json.success ? (json.data.matches || []) : [];
+        } catch (_) {
+            return []; // il controllo è un aiuto, non deve impedire di salvare
+        }
+    }
+
+    function showDuplicateWarning(matches, onProceed) {
+        const el = $('ce-duplicate');
+        if (!el) { onProceed(); return; }
+
+        el.innerHTML = `
+            <strong>Forse questo proprietario esiste già.</strong>
+            <ul style="margin:8px 0 10px 18px">
+                ${matches.map(m => `
+                    <li>
+                        <button type="button" class="btn-link" data-open="${m.id}">
+                            ${escapeHtml(m.name)} ${escapeHtml(m.surname)}
+                        </button>
+                        — ${escapeHtml(m.email || 'nessuna email')} · ${escapeHtml(m.phone || 'nessun telefono')}
+                        · ${m.property_count} immobili
+                        ${m.status === 'archived' ? ' <em>(archiviato)</em>' : ''}
+                        <br><span class="text-muted">corrisponde per: ${escapeHtml((m.match_reasons || []).join(', '))}</span>
+                    </li>`).join('')}
+            </ul>
+            <button type="button" class="btn btn--sm btn--ghost" id="ce-dup-proceed">Salva comunque, è una persona diversa</button>`;
+        el.style.display = 'block';
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        el.querySelectorAll('[data-open]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.App) window.App.navigateTo('client_profile', { clientId: Number(btn.dataset.open) });
+            });
+        });
+        $('ce-dup-proceed').addEventListener('click', () => {
+            duplicateAcknowledged = true;
+            el.style.display = 'none';
+            onProceed();
+        });
     }
 
     function goBack() {
@@ -166,7 +224,6 @@
     async function save(e) {
         e.preventDefault();
         clearError();
-        const id   = $('ce-id').value;
         const data = {
             person_type:    $('ce-person-type').value,
             company_name:   $('ce-company-name').value.trim() || null,
@@ -188,6 +245,25 @@
             assigned_agent_id: $('ce-agent').value ? Number($('ce-agent').value) : null,
         };
 
+        const saveBtn = $('ce-save');
+
+        // Solo in creazione: in modifica il record esiste già, avvisare che
+        // "assomiglia a se stesso" sarebbe rumore.
+        if (!clientId && !duplicateAcknowledged) {
+            saveBtn.disabled = true;
+            const matches = await findDuplicates(data);
+            saveBtn.disabled = false;
+            if (matches.length) {
+                showDuplicateWarning(matches, () => persist(data));
+                return;
+            }
+        }
+
+        await persist(data);
+    }
+
+    async function persist(data) {
+        const id      = $('ce-id').value;
         const saveBtn = $('ce-save');
         saveBtn.disabled = true;
         saveBtn.textContent = 'Salvataggio...';

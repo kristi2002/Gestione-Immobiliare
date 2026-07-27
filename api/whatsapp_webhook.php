@@ -22,39 +22,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // FAIL CLOSED in production: if no auth token is configured we cannot verify the
 // signature, so an unsigned/forged request must be rejected. Only non-production
 // skips the check (to ease local dev/testing).
-$twilioAuthToken = getSetting('twilio_auth_token') ?: (getenv('TWILIO_AUTH_TOKEN') ?: '');
+// Logica condivisa con api/twilio_status_callback.php: verifyTwilioRequest()
+// in config/whatsapp.php. Il comportamento è identico a prima — 503 se in
+// produzione manca l'auth token, 403 se la firma non torna.
+$verdict = verifyTwilioRequest('/api/whatsapp_webhook.php', $_POST);
 
-if ($twilioAuthToken === '') {
-    $isProd = strtolower((string) env('APP_ENV', 'production')) === 'production';
-    if ($isProd) {
-        error_log('[whatsapp_webhook] REJECTED: no twilio_auth_token configured in production — refusing unverified request.');
-        http_response_code(503);
-        echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
-        exit;
-    }
+if ($verdict === 'unconfigured') {
+    error_log('[whatsapp_webhook] REJECTED: no twilio_auth_token configured in production — refusing unverified request.');
+    http_response_code(503);
+    echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+    exit;
+}
+if ($verdict === 'invalid') {
+    http_response_code(403);
+    echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+    exit;
+}
+if ($verdict === 'skipped') {
     error_log('[whatsapp_webhook] WARNING: no twilio_auth_token — skipping signature check (non-production only).');
-} else {
-    $twilioSignature = $_SERVER['HTTP_X_TWILIO_SIGNATURE'] ?? '';
-
-    // Build the canonical URL exactly as Twilio sees it
-    $appUrl       = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
-    $canonicalUrl = $appUrl . '/api/whatsapp_webhook.php';
-
-    // Twilio algorithm: sort POST params alphabetically, concatenate key+value, append to URL, HMAC-SHA1
-    $params = $_POST;
-    ksort($params);
-    $sigBase = $canonicalUrl;
-    foreach ($params as $key => $value) {
-        $sigBase .= $key . $value;
-    }
-
-    $expectedSignature = base64_encode(hash_hmac('sha1', $sigBase, $twilioAuthToken, true));
-
-    if ($twilioSignature === '' || !hash_equals($expectedSignature, $twilioSignature)) {
-        http_response_code(403);
-        echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
-        exit;
-    }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 

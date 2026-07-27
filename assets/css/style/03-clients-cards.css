@@ -1104,3 +1104,23 @@ body.nav-open {
     }
 }
 
+
+/* ── Unisci duplicati (modal Proprietari) ─────────────────────────────────── */
+.merge-option {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.merge-option:hover { background: var(--color-bg); }
+.merge-option:has(input:checked) { border-color: var(--color-primary); background: var(--color-bg); }
+.merge-option input { margin-top: 3px; flex-shrink: 0; }
+.merge-option__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.merge-option__meta { font-size: 12px; }
+.merge-option__why { font-size: 12px; color: var(--color-primary); }
