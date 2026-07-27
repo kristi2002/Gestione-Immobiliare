@@ -41,7 +41,7 @@
                         <input type="text" id="pe-address" class="form-input" required maxlength="255" autocomplete="off" placeholder="Inizia a scrivere: es. Via Galileo Galilei 142…">
                         <div class="addr-suggestions" id="pe-addr-suggestions" hidden></div>
                     </div>
-                    <p class="text-muted" style="font-size:12px;margin:4px 0 0;">Scegli l'indirizzo dai suggerimenti: città, CAP, provincia e mappa si compilano da soli.</p>
+                    <p class="field-hint">Scegli l'indirizzo dai suggerimenti: città, CAP, provincia e mappa si compilano da soli.</p>
                 </div>
                 <div class="form-row form-row--3">
                     <div class="form-group">
@@ -59,14 +59,14 @@
                 </div>
                 <div class="form-group">
                     <label for="pe-latitude">Coordinate</label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <input type="number" id="pe-latitude" class="form-input" step="0.00000001" placeholder="Lat" style="flex:1;min-width:120px">
-                        <input type="number" id="pe-longitude" class="form-input" step="0.00000001" placeholder="Lng" style="flex:1;min-width:120px">
+                    <div class="field-inline">
+                        <input type="number" id="pe-latitude" class="form-input" step="0.00000001" placeholder="Lat">
+                        <input type="number" id="pe-longitude" class="form-input" step="0.00000001" placeholder="Lng">
                     </div>
-                    <p id="pe-geo-confidence" class="text-muted" style="font-size:12px;margin-top:4px;display:none"></p>
+                    <p id="pe-geo-confidence" class="field-hint" style="display:none"></p>
                     <input type="hidden" id="pe-geo-confidence-value">
                     <div id="pe-map" class="pe-map" hidden></div>
-                    <p class="text-muted" style="font-size:12px;margin:6px 0 0;">Puoi anche trascinare il punto sulla mappa per correggere la posizione.</p>
+                    <p class="field-hint">Puoi anche trascinare il punto sulla mappa per correggere la posizione.</p>
                 </div>
             </fieldset>
 
@@ -189,9 +189,9 @@
                     </div>
                     <div class="form-group">
                         <label for="pe-locali">Totale locali</label>
-                        <div style="display:flex;gap:8px;align-items:center">
-                            <input type="number" id="pe-locali" class="form-input" readonly style="max-width:90px">
-                            <span class="text-muted" id="pe-locali-label" style="font-size:13px"></span>
+                        <div class="field-inline">
+                            <input type="number" id="pe-locali" class="form-input form-input--narrow" readonly>
+                            <span class="field-unit" id="pe-locali-label"></span>
                         </div>
                     </div>
                     <div class="form-group">
@@ -454,15 +454,18 @@
                     </div>
                     <div class="form-group">
                         <label for="pe-ipe">Indice di prestazione energetica</label>
-                        <div style="display:flex;gap:8px;align-items:center">
-                            <input type="number" id="pe-ipe" class="form-input" min="0" step="0.01" style="max-width:140px">
-                            <span class="text-muted" style="font-size:13px;white-space:nowrap">kWh/m² anno</span>
+                        <div class="field-inline">
+                            <input type="number" id="pe-ipe" class="form-input form-input--narrow" min="0" step="0.01">
+                            <span class="field-unit">kWh/m² anno</span>
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="pe-check"><input type="checkbox" id="pe-energy-pending"> Indice di prestazione energetica in attesa di certificazione</label>
-                    <label class="pe-check"><input type="checkbox" id="pe-energy-exempt"> Immobile esente da certificazione energetica</label>
+                    <label>Deroghe</label>
+                    <div class="check-stack">
+                        <label class="pe-check"><input type="checkbox" id="pe-energy-pending"> Indice di prestazione energetica in attesa di certificazione</label>
+                        <label class="pe-check"><input type="checkbox" id="pe-energy-exempt"> Immobile esente da certificazione energetica</label>
+                    </div>
                 </div>
                 <div class="form-row form-row--3">
                     <div class="form-group">
@@ -478,7 +481,7 @@
                         <input type="date" id="pe-ape-expiry" class="form-input">
                     </div>
                 </div>
-                <p class="text-muted" style="font-size:12px;margin:4px 0 0 0">La scadenza APE si compila da sola a 10 anni dal rilascio se lasciata vuota.</p>
+                <p class="field-hint">La scadenza APE si compila da sola a 10 anni dal rilascio se lasciata vuota.</p>
             </fieldset>
 
             <fieldset class="form-section">
@@ -583,7 +586,7 @@
 
             <div id="pe-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
 
-            <div class="form-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
+            <div class="form-actions">
                 <button type="button" class="btn btn--ghost" id="pe-mandato" hidden><i data-lucide="file-pen-line"></i> Mandato agenzia</button>
                 <button type="button" class="btn btn--ghost" id="pe-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="pe-save">Salva</button>

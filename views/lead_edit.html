@@ -141,9 +141,10 @@
 .lead-edit-view .form-advanced[open] > summary { margin-bottom: 6px; }
 .lead-edit-view .form-hint-inline { font-weight: 400; font-size: 12px; color: var(--color-text-muted, #94a3b8); }
 .lead-edit-view .lde-actions {
-    position: sticky; bottom: 0; z-index: 5;
+    /* bottom cancels .app-content's padding-bottom — see 12-forms.css */
+    position: sticky; bottom: calc(-1 * var(--app-content-pad-b, 0px)); z-index: 5;
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    margin: 20px -28px -24px; padding: 14px 28px;
+    margin: 28px -28px -24px; padding: 14px 28px;
     background: var(--color-surface, #fff);
     border-top: 1px solid var(--color-border, #e6ebf1);
 }

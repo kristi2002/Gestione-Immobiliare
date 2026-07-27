@@ -178,7 +178,10 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .topbar-sub { font-size: 13px; color: var(--color-text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; }
 @media (max-width: 1100px) { .topbar-sub { display: none; } .topbar-title h1 { font-size: 18px; } }
 
-.app-content { padding: 10px 18px 44px calc(var(--shell-gap) / 2 + 4px); }
+/* --app-content-pad-b mirrors the padding-bottom below. Sticky footers inside
+   the scroller (the *_edit form action bars) resolve `bottom` against this
+   padding edge, so they need to cancel it out to sit flush. Keep in sync. */
+.app-content { --app-content-pad-b: 44px; padding: 10px 18px 44px calc(var(--shell-gap) / 2 + 4px); }
 
 /* Mobile: the sidebar becomes a full-height overlay again, panels lose margins */
 @media (max-width: 768px) {
@@ -188,7 +191,7 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
     .main-wrapper { margin-left: 0; }
     .topbar { margin: 10px 10px 4px; min-height: 60px; padding: 8px 12px; }
     .topbar-title h1 { max-width: 40vw; }
-    .app-content { padding: 8px 10px 40px; }
+    .app-content { --app-content-pad-b: 40px; padding: 8px 10px 40px; }
 }
 
 /* =====================================================================

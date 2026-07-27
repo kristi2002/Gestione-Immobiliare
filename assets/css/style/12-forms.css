@@ -1,0 +1,291 @@
+/* =====================================================================
+   12-forms.css — the "Nuovo / Modifica" form layer.
+
+   Applies to every dedicated edit page (.entity-edit-view): immobili,
+   proprietari, inquilini, contratti, lead, appuntamenti, spese, fatture,
+   pagamenti. Loaded last in the style/ chain so it wins over the
+   auto-fit rule in 07-refresh-2026.css.
+
+   Three problems this fixes, in order of how much they hurt:
+
+   1. Column widths changed row to row. `.entity-edit-view .form-row` used
+      repeat(auto-fit, minmax(230px,1fr)), which outranks .form-row--3/--4
+      (0,2,0 vs 0,1,0), so every row sized its own columns from however many
+      fields it happened to hold: a 2-field row rendered 445px-wide inputs
+      directly under a 3-field row of 291px ones, and .form-row--4 never
+      produced 4 columns at all — the 4th field wrapped onto its own line.
+      Replaced with one 12-column grid and fixed spans, so field edges line
+      up down the whole form.
+
+   2. No hierarchy. Section legends were 13px/700 and field labels 13px/600
+      in the same ink — on a 4000px form nothing marked where a section
+      began. Legends are now larger, separated by a rule and real space;
+      labels step back to a muted 12.5px.
+
+   3. Boxes inside boxes. Eleven bordered fieldsets nested in a bordered
+      card. The fieldset borders are gone; sections are separated
+      typographically instead.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Sections — typographic separation, no nested boxes
+   --------------------------------------------------------------------- */
+/* A <legend> is painted at the fieldset's top border edge and ignores the
+   fieldset's padding-top (and its own margin-top), so the separator rule
+   can't be a border-top — the title would sit right on top of it. Draw the
+   rule as a pseudo-element centred in the 40px gap between sections instead,
+   which also keeps the fieldset/legend pairing intact for screen readers.
+   min-width:0 defeats the UA's min-inline-size:min-content on fieldset,
+   which would otherwise let a wide grid child push the form sideways. */
+.entity-edit-view .form-section {
+    position: relative;
+    border: 0;
+    border-radius: 0;
+    margin: 40px 0 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.entity-edit-view .form-section::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -20px;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.entity-edit-view .form-section:first-of-type {
+    margin-top: 6px;
+}
+
+.entity-edit-view .form-section:first-of-type::before {
+    display: none;
+}
+
+.entity-edit-view .form-section > *:last-child {
+    margin-bottom: 0;
+}
+
+.entity-edit-view .form-section > legend {
+    display: block;
+    width: 100%;
+    float: none;
+    padding: 0;
+    margin: 0 0 16px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+}
+
+/* "Non visibile in pubblicità" and friends — a quiet pill, not a shout. */
+.entity-edit-view .form-section > legend .section-flag {
+    font-weight: 600;
+    letter-spacing: 0;
+    vertical-align: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   Grid — one 12-column ruler for the whole form
+   Rows declare how many columns they want; a row that is short of fields
+   leaves the trailing columns empty instead of stretching what it has.
+   --------------------------------------------------------------------- */
+.entity-edit-view .form-row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 20px;
+    row-gap: 20px;
+    align-items: start;
+    margin-bottom: 20px;
+}
+
+.entity-edit-view .form-row:last-child {
+    margin-bottom: 0;
+}
+
+.entity-edit-view .form-row > * {
+    grid-column: span 6;
+    min-width: 0;
+}
+
+.entity-edit-view .form-row--3 > * { grid-column: span 4; }
+.entity-edit-view .form-row--4 > * { grid-column: span 3; }
+
+/* Spacing between fields is the grid's job — drop the legacy margin so
+   grid rows aren't 36px apart while label-to-input is 6px. */
+.entity-edit-view .form-row > .form-group {
+    margin-bottom: 0;
+}
+
+/* Full-width fields standing on their own between rows. */
+.entity-edit-view .form-section > .form-group {
+    margin-bottom: 20px;
+}
+
+.entity-edit-view .form-section > .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Structural collapse — 4-up loses a column before 3-up does, and both
+   stack on phones. Matches the existing 768px breakpoint in 03-clients. */
+@media (max-width: 1180px) {
+    .entity-edit-view .form-row--4 > * { grid-column: span 6; }
+}
+
+@media (max-width: 1000px) {
+    .entity-edit-view .form-row--3 > * { grid-column: span 6; }
+    .entity-edit-view .form-row--4 > * { grid-column: span 6; }
+}
+
+@media (max-width: 768px) {
+    .entity-edit-view .form-row > *,
+    .entity-edit-view .form-row--3 > *,
+    .entity-edit-view .form-row--4 > * { grid-column: span 12; }
+}
+
+/* ---------------------------------------------------------------------
+   Labels & controls — labels recede, values lead
+   Global (not scoped): modals share the same form vocabulary.
+   :not(.pe-check) keeps the inline checkbox labels on their own styling.
+   --------------------------------------------------------------------- */
+.form-group > label:not(.pe-check) {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #5b6779;              /* 5.6:1 on white — readable, not shouting */
+    margin-bottom: 6px;
+}
+
+.form-group > label:not(.pe-check) .required {
+    margin-left: 1px;
+}
+
+/* `.form-group label` (0,1,1) has always outranked `.pe-check` (0,1,0), so the
+   inline checkbox labels rendered as block 13px ink instead of the muted
+   flex row they were written to be. Restate at (0,2,1) so they win. */
+.form-group label.pe-check,
+.pe-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: #5b6779;
+    cursor: pointer;
+}
+
+.form-group label.pe-check input,
+.pe-check input {
+    accent-color: var(--color-primary);
+    flex: none;
+    margin: 0;
+}
+
+/* One radius vocabulary: segmented toggles and steppers matched the old
+   14px card radius while inputs sit at 10px. */
+.yn,
+.stepper__btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.stepper__btn:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.yn { border-radius: var(--radius-sm); }
+
+/* Steppers and Sì/No toggles sit on the same baseline grid as an input
+   (9px padding + 14px/normal line-height + 1px borders = 36px). */
+.entity-edit-view .yn__btn,
+.entity-edit-view .stepper__btn { min-height: 36px; }
+
+/* ---------------------------------------------------------------------
+   Field utilities — replace the inline styles these pages grew
+   --------------------------------------------------------------------- */
+.field-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.field-inline > .form-input { flex: 1 1 0; min-width: 0; }
+.field-inline > .form-input--narrow { flex: 0 1 130px; }
+
+.field-unit {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* --color-text-muted lands at 4.59:1 on white — passing, but thin for 12px
+   helper text. One notch darker reads comfortably and still sits behind the
+   label; the weight difference carries the hierarchy. */
+.field-hint {
+    font-size: 12px;
+    line-height: 1.45;
+    font-weight: 400;
+    color: #5b6779;
+    margin: 6px 0 0;
+}
+
+/* A labelled stack of checkboxes (energy-certificate exemptions, etc.) —
+   previously two orphan checkboxes floating with no heading. */
+.check-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.check-stack .pe-check,
+.check-stack label.pe-check { margin-top: 0; }
+
+/* Read-only derived values (Totale locali, Superficie commerciale) should
+   look computed, not editable. */
+.form-input[readonly],
+.form-select[disabled] {
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    cursor: default;
+}
+
+.form-input[readonly]:hover:not(:focus) { border-color: var(--color-border); }
+
+/* ---------------------------------------------------------------------
+   Sub-blocks that aren't plain fields (superfici table, language tabs)
+   --------------------------------------------------------------------- */
+.entity-edit-view .surface-head { padding: 0 0 2px; }
+
+.entity-edit-view .lang-tabs { margin-bottom: 16px; }
+
+/* ---------------------------------------------------------------------
+   Actions — pinned to the bottom of a form that can run 4000px tall.
+   The 28px inline bleed matches the card padding used by all nine
+   *_edit views; keep them in sync if that padding ever changes.
+   --------------------------------------------------------------------- */
+.entity-edit-view .form-actions {
+    position: sticky;
+    /* `bottom` resolves against the scroller's padding edge, and .app-content
+       carries 44px of bottom padding — at bottom:0 the bar floats 44px up and
+       form content scrolls visibly underneath it. Cancel the padding out. */
+    bottom: calc(-1 * var(--app-content-pad-b, 0px));
+    z-index: 5;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 28px -28px -24px;
+    padding: 14px 28px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* The card's 28px inline padding is a hardcoded inline style on all nine
+   *_edit views and doesn't shrink on narrow screens, so the bleed stays -28px
+   here too — a smaller value leaves a white gutter beside the bar. */
+@media (max-width: 768px) {
+    .entity-edit-view .form-actions .btn { flex: 1 1 auto; justify-content: center; }
+}
