@@ -259,11 +259,61 @@ function deleteContract(PDO $db, int $id): void
         apiError('Contratto non trovato.', 404);
     }
 
-    $stmt = $db->prepare("DELETE FROM contracts WHERE id = :id");
-    $stmt->execute(['id' => $id]);
+    // A rent schedule is not financial history until money actually moves: an
+    // untouched 'pending' row is a projection, and since contracts now generate
+    // one automatically on save, refusing to delete a lease because of rows the
+    // app itself created would be absurd. A SETTLED payment is different — that
+    // is accounting history, and phase25/phase48 set the house rule that an
+    // entity must never be hard-deleted out from under it.
+    $stmt = $db->prepare(
+        "SELECT
+            SUM(status = 'paid' OR paid_date IS NOT NULL) AS settled,
+            SUM(NOT (status = 'paid' OR paid_date IS NOT NULL)) AS unsettled
+         FROM payments WHERE contract_id = :cid"
+    );
+    $stmt->execute(['cid' => $id]);
+    $counts    = $stmt->fetch() ?: [];
+    $settled   = (int) ($counts['settled'] ?? 0);
+    $unsettled = (int) ($counts['unsettled'] ?? 0);
 
-    logActivity('delete', 'contract', $id, 'Contratto eliminato #' . $id);
-    apiSuccess(['id' => $id, 'message' => 'Contratto eliminato.']);
+    if ($settled > 0) {
+        apiError(
+            "Impossibile eliminare: il contratto ha $settled pagament" . ($settled === 1 ? 'o incassato' : 'i incassati')
+            . '. Lo storico contabile non può essere cancellato — annulla il contratto invece di eliminarlo.',
+            409
+        );
+    }
+
+    // fk_payments_contract is RESTRICT (phase70), so the schedule must go first
+    // or the contract delete is refused. Both in one transaction: never leave a
+    // contract whose schedule has already been removed.
+    $db->beginTransaction();
+    try {
+        if ($unsettled > 0) {
+            $del = $db->prepare("DELETE FROM payments WHERE contract_id = :cid");
+            $del->execute(['cid' => $id]);
+        }
+
+        $stmt = $db->prepare("DELETE FROM contracts WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+
+    $detail = 'Contratto eliminato #' . $id
+        . ($unsettled > 0 ? " (rimosse $unsettled rate non incassate)" : '');
+    logActivity('delete', 'contract', $id, $detail);
+    apiSuccess([
+        'id'               => $id,
+        'payments_deleted' => $unsettled,
+        'message'          => 'Contratto eliminato.'
+            . ($unsettled > 0 ? " Rimosse $unsettled rate non incassate dallo scadenzario." : ''),
+    ]);
 }
 
 // ---------------------------------------------------------------------------
