@@ -55,8 +55,23 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    // SQLSTATE 23000 is "integrity constraint violation" — which covers foreign
+    // keys BUT ALSO NOT NULL (1048) and duplicate keys (1062). Reporting all of
+    // them as "esistono record collegati" is what hid the Automatico bug for so
+    // long: a NULL-into-NOT-NULL insert was reported as a foreign-key problem,
+    // pointing at the wrong cause entirely. Split on the driver error code.
     if ($e->getCode() === '23000') {
-        apiError('Operazione non consentita: esistono record collegati a questo contratto. Rimuoverli prima di procedere.', 409);
+        $driverCode = (int) ($e->errorInfo[1] ?? 0);
+        if ($driverCode === 1451 || $driverCode === 1452) {
+            apiError('Operazione non consentita: esistono record collegati a questo contratto. Rimuoverli prima di procedere.', 409);
+        }
+        if ($driverCode === 1062) {
+            apiError('Esiste già un contratto con questi dati.', 409);
+        }
+        if ($driverCode === 1048) {
+            apiError('Dati incompleti: un campo obbligatorio del contratto è vuoto.', 400);
+        }
+        apiError('Operazione non consentita: vincolo di integrità violato.', 409);
     }
     apiError('Errore database.', 500);
 }
