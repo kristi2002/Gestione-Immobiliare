@@ -7,8 +7,12 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/mail_html.php';
+require_once __DIR__ . '/automation_templates.php';
 
 const REMINDER_FREQUENCIES = ['once', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
+
+/** Frequenze la cui data va riderivata da una regola del giorno a ogni passo. */
+const REMINDER_MONTH_STEPS = ['monthly' => 1, 'quarterly' => 3, 'yearly' => 12];
 
 /** Quanto avanti nel tempo viene materializzata una serie senza data di fine. */
 const REMINDER_SERIES_HORIZON_MONTHS = 12;
@@ -26,16 +30,28 @@ const REMINDER_SERIES_TOPUP_MONTHS = 3;
  */
 function processDueReminders(PDO $db): array
 {
+    // Prima si drena la coda eventi: un'automazione a evento con ritardo 0 deve
+    // partire nello stesso giro di cron in cui l'evento viene raccolto, non nel
+    // successivo (fino a 15 minuti dopo).
+    require_once __DIR__ . '/automation_events.php';
+    $eventOutcome = processPendingAutomationEvents($db);
+
     // The recipient of a "notify client" reminder is not always a `clients`
     // row: an appointment reminder usually targets a LEAD, and maintenance
     // reminders target a TENANT. Resolve all three and let
     // reminderRecipient() pick, otherwise those reminders silently end up
     // as 'skipped_no_email'.
+    //
+    // trigger_type='scheduled' esclude le REGOLE a evento: hanno una
+    // reminder_date solo perché la colonna è NOT NULL, non sono un invio da
+    // fare. Le loro occorrenze, materializzate dal dispatcher, sono normali
+    // righe 'scheduled' e passano di qui come tutte le altre.
     $stmt = $db->prepare(
         "SELECT r.*, c.name AS client_name, c.surname AS client_surname, c.email AS client_email,
                 l.name AS lead_name, l.surname AS lead_surname, l.email AS lead_email,
                 t.name AS tenant_first_name, t.surname AS tenant_surname, t.email AS tenant_email,
                 p.address AS property_address, p.city AS property_city,
+                p.price AS property_price, p.reference_code AS property_reference,
                 au.username AS agent_username, au.email AS agent_email
          FROM reminders r
          LEFT JOIN clients c ON c.id = r.client_id
@@ -44,6 +60,7 @@ function processDueReminders(PDO $db): array
          LEFT JOIN properties p ON p.id = r.property_id
          LEFT JOIN admin_users au ON au.id = r.assigned_agent_id
          WHERE r.status = 'pending' AND r.reminder_date <= NOW()
+           AND r.trigger_type = 'scheduled'
          ORDER BY r.reminder_date ASC"
     );
     $stmt->execute();
@@ -62,6 +79,7 @@ function processDueReminders(PDO $db): array
     return [
         'processed' => count($results),
         'extended'  => $extended,
+        'events'    => $eventOutcome,
         'results'   => $results,
     ];
 }
@@ -87,17 +105,31 @@ function processSingleReminder(PDO $db, array $reminder): array
     $recipient = reminderRecipient($reminder);
 
     if ($reminder['notify_client'] && $recipient['email'] !== '') {
-        $subject = $reminder['email_subject'] ?: $reminder['title'];
-        $body    = $reminder['email_body'] ?: buildDefaultClientEmailBody($reminder);
+        // I token si risolvono ORA, non al salvataggio: un'occorrenza generata
+        // dieci mesi fa deve comunque riportare l'indirizzo e il prezzo di oggi.
+        $ctx     = buildAutomationContext($reminder);
+        $subject = renderAutomationTemplate($reminder['email_subject'] ?: $reminder['title'], $ctx);
+        $body    = renderAutomationTemplate($reminder['email_body'] ?: buildDefaultClientEmailBody($reminder), $ctx);
         $result  = sendHtmlEmail($recipient['email'], $subject, $body);
 
         if ($result['success']) {
+            $outcome = !empty($result['simulated']) ? 'simulated' : 'sent';
             logClientNotification($db, $reminder, $subject, $body, $recipient['email']);
-            $actions['client'] = 'sent';
+            logReminderDispatch($db, $reminder, $outcome, $recipient, $subject, $body,
+                $outcome === 'simulated' ? 'mail_enabled=false: email non spedita.' : null);
+            $actions['client'] = $outcome;
         } else {
+            // Prima l'esito negativo viveva solo in questa variabile e finiva
+            // nello stdout del cron: in app un'automazione che non ha mai
+            // consegnato nulla era indistinguibile da una che funziona.
+            logReminderDispatch($db, $reminder, 'failed', $recipient, $subject, $body, $result['error'] ?? 'Invio non riuscito.');
             $actions['client'] = 'failed';
         }
     } elseif ($reminder['notify_client']) {
+        logReminderDispatch(
+            $db, $reminder, 'skipped', $recipient, null, null,
+            'Il contatto collegato non ha un indirizzo email.'
+        );
         $actions['client'] = 'skipped_no_email';
     }
 
@@ -117,7 +149,12 @@ function processSingleReminder(PDO $db, array $reminder): array
         $update->execute(['id' => $id]);
         $actions['status'] = 'completed';
     } else {
-        $nextDate = calculateNextReminderDate($reminder['reminder_date'], $frequency);
+        $nextDate = calculateNextReminderDate(
+            $reminder['reminder_date'],
+            $frequency,
+            effectiveReminderDayRule($reminder),
+            effectiveReminderTime($reminder)
+        );
         // Stop automation if end_date is set and next occurrence would be past it
         if (!empty($reminder['end_date']) && $nextDate > $reminder['end_date']) {
             $update = $db->prepare(
@@ -149,23 +186,81 @@ function processSingleReminder(PDO $db, array $reminder): array
  * is set in practice; when more than one is, the client wins because that is
  * the historical behaviour this function replaced.
  *
- * @return array{email: string, name: string}
+ * @return array{email: string, name: string, type: string}
  */
 function reminderRecipient(array $reminder): array
 {
     $candidates = [
-        [$reminder['client_email'] ?? '', ($reminder['client_name'] ?? '') . ' ' . ($reminder['client_surname'] ?? '')],
-        [$reminder['lead_email'] ?? '', ($reminder['lead_name'] ?? '') . ' ' . ($reminder['lead_surname'] ?? '')],
-        [$reminder['tenant_email'] ?? '', ($reminder['tenant_first_name'] ?? '') . ' ' . ($reminder['tenant_surname'] ?? '')],
+        ['client', $reminder['client_email'] ?? '', ($reminder['client_name'] ?? '') . ' ' . ($reminder['client_surname'] ?? '')],
+        ['lead', $reminder['lead_email'] ?? '', ($reminder['lead_name'] ?? '') . ' ' . ($reminder['lead_surname'] ?? '')],
+        ['tenant', $reminder['tenant_email'] ?? '', ($reminder['tenant_first_name'] ?? '') . ' ' . ($reminder['tenant_surname'] ?? '')],
     ];
 
-    foreach ($candidates as [$email, $name]) {
+    foreach ($candidates as [$type, $email, $name]) {
         if (!empty($email)) {
-            return ['email' => trim($email), 'name' => trim($name)];
+            return ['email' => trim($email), 'name' => trim($name), 'type' => $type];
         }
     }
 
-    return ['email' => '', 'name' => ''];
+    // Nessuna email: il tipo serve comunque al registro invii per distinguere
+    // «contatto senza indirizzo» da «nessun contatto collegato».
+    foreach ([['client', 'client_id'], ['lead', 'lead_id'], ['tenant', 'tenant_id']] as [$type, $fk]) {
+        if (!empty($reminder[$fk])) {
+            return ['email' => '', 'name' => '', 'type' => $type];
+        }
+    }
+
+    return ['email' => '', 'name' => '', 'type' => 'none'];
+}
+
+/**
+ * Registra l'esito reale di un invio.
+ *
+ * `communications` non basta e non può bastare: ha client_id NOT NULL, quindi
+ * un'email a un lead o a un inquilino non aveva dove essere scritta, e i
+ * fallimenti non ci finivano affatto. Qui viene registrato tutto — riuscito,
+ * simulato, fallito, saltato — con il testo effettivamente spedito (token già
+ * risolti), che è l'unica prova di cosa ha ricevuto il cliente.
+ *
+ * `automation_id` punta sempre alla regola, così la scheda automazione
+ * interroga un solo indice invece di unire madre e occorrenze.
+ */
+function logReminderDispatch(
+    PDO $db,
+    array $reminder,
+    string $status,
+    array $recipient,
+    ?string $subject,
+    ?string $body,
+    ?string $error = null
+): void {
+    $reminderId   = (int) $reminder['id'];
+    $automationId = !empty($reminder['series_id']) ? (int) $reminder['series_id'] : $reminderId;
+
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO reminder_dispatch_log
+                (reminder_id, automation_id, dispatched_at, channel, recipient_type,
+                 recipient_email, rendered_subject, rendered_body, status, error_details)
+             VALUES
+                (:reminder_id, :automation_id, NOW(), 'email', :recipient_type,
+                 :recipient_email, :subject, :body, :status, :error)"
+        );
+        $stmt->execute([
+            'reminder_id'     => $reminderId,
+            'automation_id'   => $automationId,
+            'recipient_type'  => $recipient['type'] ?? 'none',
+            'recipient_email' => $recipient['email'] !== '' ? $recipient['email'] : null,
+            'subject'         => $subject !== null ? mb_substr($subject, 0, 255) : null,
+            'body'            => $body,
+            'status'          => $status,
+            'error'           => $error,
+        ]);
+    } catch (PDOException $e) {
+        // Il registro è diagnostica: se la tabella non è ancora migrata il cron
+        // deve continuare a spedire, non fermarsi per non poter prendere nota.
+        error_log('[reminders] dispatch log non scritto: ' . $e->getMessage());
+    }
 }
 
 function buildAdminNotificationBody(array $reminder): string
@@ -293,6 +388,13 @@ function syncReminderSeries(PDO $db, int $parentId): int
         return 0; // inesistente, oppure è essa stessa un'occorrenza
     }
 
+    // Una regola a evento non ha una cadenza da materializzare, e le occorrenze
+    // che possiede sono già scattate su fatti realmente accaduti: la DELETE qui
+    // sotto le cancellerebbe solo perché l'agente ha ritoccato il testo.
+    if (($parent['trigger_type'] ?? 'scheduled') === 'event') {
+        return 0;
+    }
+
     $db->prepare("DELETE FROM reminders WHERE series_id = :id AND status = 'pending'")
        ->execute(['id' => $parentId]);
 
@@ -339,6 +441,9 @@ function generateReminderOccurrences(PDO $db, array $parent, string $fromDate): 
              :notify_admin, :notify_client, :email_subject, :email_body, :series_id)"
     );
 
+    $dayRule = effectiveReminderDayRule($parent);
+    $time    = effectiveReminderTime($parent);
+
     $cursor  = $fromDate;
     $written = 0;
     $steps   = 0;
@@ -349,7 +454,7 @@ function generateReminderOccurrences(PDO $db, array $parent, string $fromDate): 
 
     while ($written < REMINDER_SERIES_MAX_OCCURRENCES && $steps < $maxSteps) {
         $steps++;
-        $cursor = calculateNextReminderDate($cursor, $frequency);
+        $cursor = calculateNextReminderDate($cursor, $frequency, $dayRule, $time);
         $at     = new DateTime($cursor);
 
         if ($at > $horizon) {
@@ -418,27 +523,187 @@ function topUpReminderSeries(PDO $db): int
     return $added;
 }
 
-function calculateNextReminderDate(string $currentDate, string $frequency): string
-{
+// ---------------------------------------------------------------------------
+// Calendario: quando cade la prossima occorrenza
+// ---------------------------------------------------------------------------
+
+/**
+ * Prossima data della serie.
+ *
+ * Il vecchio `+1 month` di PHP derivava: da 31 gennaio dà 3 MARZO (febbraio ha
+ * 28 giorni e l'eccedenza trabocca), poi 3 aprile, poi 3 maggio. Una mensile
+ * avviata il 29-31 saltava un mese e cambiava giorno per sempre. Qui il salto
+ * mensile è troncato all'ultimo giorno valido, e se c'è una regola del giorno
+ * la data viene riderivata dalla regola: 31 gen → 28 feb → 31 mar, senza deriva.
+ *
+ * @param string|null $dayRule regola del giorno (dom:/nth:), ignorata sulle
+ *                             cadenze a giorni fissi — snappare una quindicinale
+ *                             al 15 del mese ne annullerebbe la cadenza.
+ * @param string|null $time    'HH:MM[:SS]', l'ora di invio.
+ */
+function calculateNextReminderDate(
+    string $currentDate,
+    string $frequency,
+    ?string $dayRule = null,
+    ?string $time = null
+): string {
     $dt = new DateTime($currentDate);
 
-    switch ($frequency) {
-        case 'weekly':
-            $dt->modify('+1 week');
-            break;
-        case 'biweekly':
-            $dt->modify('+15 days');
-            break;
-        case 'monthly':
-            $dt->modify('+1 month');
-            break;
-        case 'quarterly':
-            $dt->modify('+3 months');
-            break;
-        case 'yearly':
-            $dt->modify('+1 year');
-            break;
+    if (isset(REMINDER_MONTH_STEPS[$frequency])) {
+        $dt = addMonthsClamped($dt, REMINDER_MONTH_STEPS[$frequency]);
+        if ($dayRule) {
+            applyReminderDayRule($dt, $dayRule);
+        }
+    } elseif ($frequency === 'weekly') {
+        $dt->modify('+1 week');
+    } elseif ($frequency === 'biweekly') {
+        $dt->modify('+15 days');
     }
 
+    applyReminderTime($dt, $time);
+
     return $dt->format('Y-m-d H:i:s');
+}
+
+/**
+ * Somma mesi mantenendo il giorno, troncato all'ultimo giorno del mese di
+ * arrivo. Il calcolo passa dal primo del mese apposta: sommare i mesi partendo
+ * dal 31 è precisamente ciò che fa traboccare PHP.
+ */
+function addMonthsClamped(DateTime $dt, int $months): DateTime
+{
+    $day  = (int) $dt->format('j');
+    $hour = (int) $dt->format('G');
+    $min  = (int) $dt->format('i');
+    $sec  = (int) $dt->format('s');
+
+    $target = (clone $dt)->modify('first day of this month')->modify("+{$months} months");
+    $target->setDate(
+        (int) $target->format('Y'),
+        (int) $target->format('n'),
+        min($day, (int) $target->format('t'))
+    );
+    $target->setTime($hour, $min, $sec);
+
+    return $target;
+}
+
+/**
+ * Applica una regola del giorno alla data, restando nello stesso mese/settimana.
+ *
+ *   dom:<1-31>      giorno fisso del mese (troncato a fine mese)
+ *   dom:last        ultimo giorno del mese
+ *   nth:<1-4>:<1-7> es. nth:1:1 = primo lunedì (1=lunedì, 7=domenica)
+ *   nth:last:<1-7>  ultimo <giorno> del mese
+ *   dow:<1-7>       giorno della settimana (settimanali)
+ */
+function applyReminderDayRule(DateTime $dt, string $rule): void
+{
+    $parts = explode(':', strtolower(trim($rule)));
+    $kind  = $parts[0] ?? '';
+
+    $year  = (int) $dt->format('Y');
+    $month = (int) $dt->format('n');
+    $last  = (int) $dt->format('t');
+
+    if ($kind === 'dom' && isset($parts[1])) {
+        $day = $parts[1] === 'last' ? $last : max(1, min((int) $parts[1], $last));
+        $dt->setDate($year, $month, $day);
+        return;
+    }
+
+    if ($kind === 'nth' && isset($parts[1], $parts[2])) {
+        $weekday = max(1, min(7, (int) $parts[2]));
+
+        if ($parts[1] === 'last') {
+            $day = $last;
+            while ((int) (new DateTime("{$year}-{$month}-{$day}"))->format('N') !== $weekday) {
+                $day--;
+            }
+            $dt->setDate($year, $month, $day);
+            return;
+        }
+
+        $nth       = max(1, min(4, (int) $parts[1]));
+        $firstDow  = (int) (new DateTime("{$year}-{$month}-1"))->format('N');
+        $day       = 1 + (($weekday - $firstDow + 7) % 7) + ($nth - 1) * 7;
+        // Un "quarto martedì" può non esistere in un mese corto: si scala
+        // all'ultimo che esiste invece di sconfinare nel mese dopo.
+        while ($day > $last) {
+            $day -= 7;
+        }
+        $dt->setDate($year, $month, $day);
+        return;
+    }
+
+    if ($kind === 'dow' && isset($parts[1])) {
+        $weekday = max(1, min(7, (int) $parts[1]));
+        $delta   = $weekday - (int) $dt->format('N');
+        if ($delta !== 0) {
+            $dt->modify(sprintf('%+d days', $delta));
+        }
+    }
+}
+
+function applyReminderTime(DateTime $dt, ?string $time): void
+{
+    if ($time === null || $time === '') {
+        return;
+    }
+    $parts = explode(':', $time);
+    $dt->setTime((int) ($parts[0] ?? 0), (int) ($parts[1] ?? 0), 0);
+}
+
+/**
+ * Regola del giorno effettiva di una serie.
+ *
+ * Senza regola esplicita ne viene dedotta una dalla data di partenza, così
+ * anche il comportamento predefinito si auto-corregge: un mensile del 31
+ * scende a 28 in febbraio e RISALE a 31 in marzo, invece di restare a 28 per
+ * sempre come farebbe qualsiasi calcolo incrementale.
+ */
+function effectiveReminderDayRule(array $reminder): ?string
+{
+    if (!isset(REMINDER_MONTH_STEPS[$reminder['frequency'] ?? ''])) {
+        return null; // settimanali/quindicinali: il passo conserva già il giorno
+    }
+    if (!empty($reminder['day_rule'])) {
+        return $reminder['day_rule'];
+    }
+    return 'dom:' . (int) (new DateTime($reminder['reminder_date']))->format('j');
+}
+
+/** Ora di invio effettiva: colonna dedicata, o l'ora già presente nella data. */
+function effectiveReminderTime(array $reminder): ?string
+{
+    return !empty($reminder['schedule_time']) ? substr((string) $reminder['schedule_time'], 0, 5) : null;
+}
+
+/**
+ * Normalizza la data di partenza scelta nel form perché rispetti già regola del
+ * giorno e ora di invio.
+ *
+ * Farlo una volta all'ancora invece che a ogni passo tiene il generatore
+ * banale: da lì in poi ogni occorrenza eredita giorno e ora corretti. Se la
+ * data scelta è già passata rispetto alla regola nel suo periodo (es. "il 1 del
+ * mese" scelto il 26), si parte dal periodo successivo — mai all'indietro.
+ */
+function normalizeReminderAnchor(string $date, string $frequency, ?string $dayRule, ?string $time): string
+{
+    $dt = new DateTime($date);
+    applyReminderTime($dt, $time);
+
+    if ($frequency === 'once' || !$dayRule) {
+        return $dt->format('Y-m-d H:i:s');
+    }
+
+    $candidate = clone $dt;
+    applyReminderDayRule($candidate, $dayRule);
+    applyReminderTime($candidate, $time);
+
+    if ($candidate < $dt) {
+        return calculateNextReminderDate($dt->format('Y-m-d H:i:s'), $frequency, $dayRule, $time);
+    }
+
+    return $candidate->format('Y-m-d H:i:s');
 }

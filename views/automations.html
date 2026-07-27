@@ -2,7 +2,7 @@
     <div class="view-header">
         <div class="view-header__text">
             <h2>Automazioni verso i Clienti</h2>
-            <p>Email programmate inviate automaticamente ai proprietari in base alla frequenza configurata.</p>
+            <p>Email inviate automaticamente: a calendario, oppure quando accade qualcosa nel gestionale.</p>
         </div>
         <div class="view-header__actions">
             <button class="btn btn--primary" id="btn-new-automation">+ Nuova Automazione</button>
@@ -13,8 +13,13 @@
 
     <div class="toolbar">
         <div class="search-box">
-            <input type="search" id="automation-search" class="form-input" placeholder="Cerca per titolo o proprietario…" autocomplete="off">
+            <input type="search" id="automation-search" class="form-input" placeholder="Cerca per nome, oggetto o contatto…" autocomplete="off">
         </div>
+        <select id="automation-trigger-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <option value="scheduled">A calendario</option>
+            <option value="event">A evento</option>
+        </select>
         <select id="automation-status-filter" class="form-select">
             <option value="" selected>Tutte</option>
             <option value="pending">Attive</option>
@@ -48,54 +53,176 @@
             <input type="hidden" id="automation-id">
 
             <fieldset class="form-section">
-                <legend>Destinatario</legend>
+                <legend>Attivazione</legend>
                 <div class="form-group">
-                    <label for="automation-client">Proprietario <span class="required">*</span></label>
-                    <select id="automation-client" class="form-select" required>
-                        <option value="">— Seleziona proprietario —</option>
-                    </select>
+                    <div class="segmented" role="radiogroup" aria-label="Tipo di attivazione">
+                        <label class="segmented__option">
+                            <input type="radio" name="automation-trigger" value="scheduled" checked>
+                            <span><i data-lucide="calendar-clock"></i> A calendario</span>
+                        </label>
+                        <label class="segmented__option">
+                            <input type="radio" name="automation-trigger" value="event">
+                            <span><i data-lucide="zap"></i> Al verificarsi di un evento</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Evento -->
+                <div id="automation-event-fields" hidden>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="automation-event">Evento <span class="required">*</span></label>
+                            <select id="automation-event" class="form-select">
+                                <option value="">— Seleziona evento —</option>
+                            </select>
+                            <small class="form-hint" id="automation-event-hint"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="automation-recipient-rule">Destinatari <span class="required">*</span></label>
+                            <select id="automation-recipient-rule" class="form-select">
+                                <option value="">— Seleziona evento prima —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="automation-delay">Invia dopo</label>
+                            <div class="input-group">
+                                <input type="number" id="automation-delay" class="form-input" min="0" max="720" value="0">
+                                <select id="automation-delay-unit" class="form-select">
+                                    <option value="1">minuti</option>
+                                    <option value="60" selected>ore</option>
+                                    <option value="1440">giorni</option>
+                                </select>
+                            </div>
+                            <small class="form-hint">0 = appena l'evento viene rilevato (entro il giro di cron successivo).</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendario -->
+                <div id="automation-schedule-fields">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="automation-frequency">Frequenza <span class="required">*</span></label>
+                            <select id="automation-frequency" class="form-select">
+                                <option value="weekly">Settimanale</option>
+                                <option value="biweekly">Quindicinale (ogni 15 giorni)</option>
+                                <option value="monthly" selected>Mensile</option>
+                                <option value="quarterly">Trimestrale</option>
+                                <option value="yearly">Annuale</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="automation-time">Ora di invio <span class="required">*</span></label>
+                            <input type="time" id="automation-time" class="form-input" value="09:00">
+                            <small class="form-hint">Le email partono a quest'ora, non all'ora in cui salvi.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row" id="automation-day-row">
+                        <div class="form-group">
+                            <label for="automation-day-mode">Giorno</label>
+                            <select id="automation-day-mode" class="form-select">
+                                <option value="">Stesso giorno della data di inizio</option>
+                                <option value="dom">Giorno fisso del mese</option>
+                                <option value="dom_last">Ultimo giorno del mese</option>
+                                <option value="nth">Un giorno della settimana</option>
+                            </select>
+                            <small class="form-hint" id="automation-day-hint">
+                                Un giorno fisso si auto-corregge: il 31 diventa 28 a febbraio e torna 31 a marzo.
+                            </small>
+                        </div>
+                        <div class="form-group" id="automation-dom-group" hidden>
+                            <label for="automation-day-of-month">Giorno del mese</label>
+                            <input type="number" id="automation-day-of-month" class="form-input" min="1" max="31" value="1">
+                        </div>
+                        <div class="form-group" id="automation-nth-group" hidden>
+                            <label for="automation-nth-week">Ricorrenza</label>
+                            <div class="input-group">
+                                <select id="automation-nth-week" class="form-select">
+                                    <option value="1">Il primo</option>
+                                    <option value="2">Il secondo</option>
+                                    <option value="3">Il terzo</option>
+                                    <option value="4">Il quarto</option>
+                                    <option value="last">L'ultimo</option>
+                                </select>
+                                <select id="automation-nth-dow" class="form-select">
+                                    <option value="1">lunedì</option>
+                                    <option value="2">martedì</option>
+                                    <option value="3">mercoledì</option>
+                                    <option value="4">giovedì</option>
+                                    <option value="5">venerdì</option>
+                                    <option value="6">sabato</option>
+                                    <option value="7">domenica</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="automation-start">Data inizio <span class="required">*</span></label>
+                            <input type="date" id="automation-start" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="automation-end">Data fine</label>
+                            <input type="date" id="automation-end" class="form-input">
+                            <small class="form-hint">Lascia vuoto per ripetere a tempo indefinito.</small>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section" id="automation-target-section">
+                <legend>Destinatario</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="automation-contact">Contatto <span class="required">*</span></label>
+                        <input type="text" id="automation-contact" class="form-input"
+                               list="automation-contact-options" autocomplete="off"
+                               placeholder="Cerca proprietario, lead o inquilino">
+                        <datalist id="automation-contact-options"></datalist>
+                        <input type="hidden" id="automation-contact-type">
+                        <input type="hidden" id="automation-contact-id">
+                        <small class="form-hint" id="automation-contact-hint">Proprietari, acquirenti e inquilini: tutta la rubrica.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="automation-property">Immobile</label>
+                        <select id="automation-property" class="form-select">
+                            <option value="">— Nessuno —</option>
+                        </select>
+                        <small class="form-hint">Se scelto, i token <code>{{immobile.*}}</code> si riempiono da qui.</small>
+                    </div>
                 </div>
             </fieldset>
 
             <fieldset class="form-section">
                 <legend>Contenuto email</legend>
                 <div class="form-group">
+                    <label for="automation-name">Nome automazione <span class="required">*</span></label>
+                    <input type="text" id="automation-name" class="form-input" required maxlength="255"
+                           placeholder="es. Report mensile proprietari">
+                    <small class="form-hint">Solo interno: è il titolo con cui la ritrovi in elenco.</small>
+                </div>
+                <div class="form-group">
                     <label for="automation-subject">Oggetto email <span class="required">*</span></label>
                     <input type="text" id="automation-subject" class="form-input" required maxlength="255"
-                           placeholder="es. Aggiornamento mensile sul tuo immobile">
+                           placeholder="es. Aggiornamento su {{immobile.indirizzo}}">
                 </div>
                 <div class="form-group">
                     <label for="automation-body">Corpo del messaggio <span class="required">*</span></label>
-                    <textarea id="automation-body" class="form-textarea" rows="6" required
-                              placeholder="Gentile [Nome],&#10;&#10;...&#10;&#10;Cordiali saluti,&#10;Agenzia"></textarea>
-                    <small class="form-hint">Puoi usare il nome del proprietario inserendolo manualmente nel testo.</small>
+                    <textarea id="automation-body" class="form-textarea" rows="7" required
+                              placeholder="Gentile {{contatto.nome}},&#10;&#10;...&#10;&#10;Cordiali saluti,&#10;{{agenzia.nome}}"></textarea>
                 </div>
-            </fieldset>
-
-            <fieldset class="form-section">
-                <legend>Programmazione</legend>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="automation-frequency">Frequenza <span class="required">*</span></label>
-                        <select id="automation-frequency" class="form-select" required>
-                            <option value="weekly">Settimanale</option>
-                            <option value="biweekly">Quindicinale (ogni 15 giorni)</option>
-                            <option value="monthly" selected>Mensile</option>
-                            <option value="quarterly">Trimestrale</option>
-                            <option value="yearly">Annuale</option>
-                        </select>
+                <div class="token-picker" id="automation-tokens">
+                    <div class="token-picker__intro">
+                        Clicca un segnaposto per inserirlo nel campo selezionato: viene sostituito al momento dell'invio.
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="automation-start">Data inizio <span class="required">*</span></label>
-                        <input type="date" id="automation-start" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="automation-end">Data fine</label>
-                        <input type="date" id="automation-end" class="form-input">
-                        <small class="form-hint">Lascia vuoto per ripetere a tempo indefinito.</small>
-                    </div>
+                <div class="form-group">
+                    <label>Anteprima oggetto</label>
+                    <div class="token-preview" id="automation-preview">—</div>
                 </div>
             </fieldset>
 
@@ -107,4 +234,17 @@
     </div>
 </div>
 
-<script src="assets/js/automations.js?v=1"></script>
+<!-- Storico invii -->
+<div class="modal-overlay" id="automation-log-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="automation-log-title">
+        <div class="modal-header">
+            <h3 id="automation-log-title">Storico invii</h3>
+            <button class="modal-close" id="automation-log-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" id="automation-log-body">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/automations.js?v=2"></script>

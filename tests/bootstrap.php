@@ -61,3 +61,5 @@ if (!function_exists('APP_URL')) {
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../config/whatsapp.php';
 require_once __DIR__ . '/../config/meta.php';
+require_once __DIR__ . '/../config/automation_templates.php';
+require_once __DIR__ . '/../config/reminders.php';

@@ -10,6 +10,7 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/automation_events.php';
 
 apiHandleOptions();
 
@@ -156,7 +157,14 @@ function createAppointment(PDO $db): void
 
 function updateAppointment(PDO $db, int $id): void
 {
-    if (!appointmentExists($db, $id)) apiError('Appuntamento non trovato.', 404);
+    // Serve la riga intera, non la sola esistenza: l'evento "visita conclusa"
+    // è una TRANSIZIONE, e risalvare un appuntamento già completato non deve
+    // rimandare la richiesta di riscontro al cliente.
+    $stmt = $db->prepare("SELECT * FROM appointments WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    $existing = $stmt->fetch();
+    if (!$existing) apiError('Appuntamento non trovato.', 404);
+
     $validated = validateAppointmentInput($db, apiGetJsonBody());
     assertAgentIsFree($db, $validated, $id);
     $notify    = (bool) $validated['notify_client'];
@@ -173,6 +181,14 @@ function updateAppointment(PDO $db, int $id): void
     $stmt->execute(array_merge($validated, ['id' => $id]));
 
     syncAppointmentReminder($db, $id, $validated, $notify);
+
+    if ($existing['status'] !== 'completed' && $validated['status'] === 'completed') {
+        emitAutomationEvent($db, 'appointment.completed', 'appointment', $id, [
+            'property_id' => $validated['property_id'] ?? null,
+            'lead_id'     => $validated['lead_id'] ?? null,
+            'client_id'   => $validated['client_id'] ?? null,
+        ]);
+    }
 
     logActivity('update', 'appointment', $id, 'Appuntamento aggiornato #' . $id);
     getAppointment($db, $id);

@@ -1,0 +1,149 @@
+/* ==========================================================================
+   Automazioni (phase66)
+   Segmented control per il tipo di trigger, pillole dei token dinamici,
+   anteprima dell'oggetto, righe di esito sulle schede.
+   ========================================================================== */
+
+/* ---- Scelta del trigger: calendario vs evento ---- */
+
+.segmented {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 10px;
+    background: var(--color-bg, #f1f5f9);
+}
+
+.segmented__option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.segmented__option span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+}
+
+.segmented__option span svg { width: 15px; height: 15px; }
+
+.segmented__option input:checked + span {
+    background: var(--color-surface, #fff);
+    color: var(--color-primary, #2563eb);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .10);
+}
+
+/* Il focus da tastiera vive sull'input, che è invisibile: senza questo la
+   navigazione con Tab non mostra dove si trova. */
+.segmented__option input:focus-visible + span {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 2px;
+}
+
+/* ---- Coppie di controlli che formano un valore solo (numero + unità) ---- */
+
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+.input-group > * { flex: 1 1 0; min-width: 0; }
+
+/* ---- Token dinamici ---- */
+
+.token-picker {
+    margin: 4px 0 16px;
+    padding: 12px 14px;
+    border: 1px dashed var(--color-border, #e2e8f0);
+    border-radius: 10px;
+    background: var(--color-bg, #f8fafc);
+}
+
+.token-picker__intro {
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+    color: var(--color-text-muted, #64748b);
+}
+
+.token-picker__group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.token-picker__group:last-child { margin-bottom: 0; }
+
+.token-picker__label {
+    flex: 0 0 84px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--color-text-muted, #94a3b8);
+}
+
+.token-pill {
+    padding: 3px 10px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 999px;
+    background: var(--color-surface, #fff);
+    color: var(--color-primary, #2563eb);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.74rem;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+}
+
+.token-pill:hover {
+    background: rgba(37, 99, 235, .08);
+    border-color: var(--color-primary, #2563eb);
+}
+
+.token-preview {
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: var(--color-bg, #f1f5f9);
+    color: var(--color-text, #334155);
+    font-size: 0.88rem;
+    min-height: 38px;
+    word-break: break-word;
+}
+
+/* ---- Schede ---- */
+
+/* L'oggetto email sotto il nome: tre automazioni per lo stesso cliente si
+   distinguono dal nome, non dal destinatario che hanno in comune. */
+.entity-card__subtitle {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #64748b);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.automation-card .entity-card__info {
+    align-items: flex-start;
+    line-height: 1.45;
+}
+
+.automation-card .entity-card__info .badge {
+    margin-left: 6px;
+    vertical-align: baseline;
+}
+
+.automation-card em {
+    color: var(--color-text-muted, #94a3b8);
+    font-style: normal;
+    font-size: 0.85em;
+}

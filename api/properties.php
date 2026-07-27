@@ -10,6 +10,8 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/matching.php';
+require_once __DIR__ . '/../config/automation_events.php';
 
 apiHandleOptions();
 
@@ -240,80 +242,15 @@ function matchingLeads(PDO $db, int $id): void
     $p = $stmt->fetch();
     if (!$p) apiError('Immobile non trovato.', 404);
 
-    // A rental listing matches renters (affitto/entrambi); a sale matches buyers.
-    $wantInterest = ($p['price_type'] ?? 'affitto') === 'vendita'
-        ? ['acquisto', 'entrambi']
-        : ['affitto', 'entrambi'];
-    $in = implode(',', array_fill(0, count($wantInterest), '?'));
-
-    $sql = "SELECT * FROM leads
-            WHERE status IN ('new','contacted','interested','negotiating')
-              AND interest_type IN ($in)";
-    $stmt = $db->prepare($sql);
-    $stmt->execute($wantInterest);
-    $leads = $stmt->fetchAll();
-
-    $price = $p['price'] !== null ? (float) $p['price'] : null;
-    $matches = [];
-
-    foreach ($leads as $l) {
-        $score   = 0;
-        $reasons = [];
-
-        if (!empty($l['preferred_city']) && !empty($p['city'])
-            && mb_strtolower(trim($l['preferred_city'])) === mb_strtolower(trim($p['city']))) {
-            $score += 30; $reasons[] = 'Città';
-        }
-        // NB: property_type e' il "gruppo" (appartamento/villa/...), non la
-        // `typology` fine di immobiliare.it — l'etichetta segue il form immobili.
-        if (!empty($l['preferred_type']) && $l['preferred_type'] === $p['property_type']) {
-            $score += 25; $reasons[] = 'Gruppo';
-        }
-        if ($price !== null) {
-            $min = $l['budget_min'] !== null ? (float) $l['budget_min'] : null;
-            $max = $l['budget_max'] !== null ? (float) $l['budget_max'] : null;
-            $okMin = $min === null || $price >= $min;
-            $okMax = $max === null || $price <= $max;
-            if ($okMin && $okMax && ($min !== null || $max !== null)) {
-                $score += 30; $reasons[] = 'Budget';
-            }
-        }
-        // properties.rooms = camere da letto (i "locali" sono rooms + other_rooms).
-        if (!empty($l['min_rooms']) && $p['rooms'] !== null && (int) $p['rooms'] >= (int) $l['min_rooms']) {
-            $score += 10; $reasons[] = 'Camere';
-        }
-        if (!empty($l['min_sqm']) && $p['sqm'] !== null && (float) $p['sqm'] >= (float) $l['min_sqm']) {
-            $score += 5; $reasons[] = 'Superficie';
-        }
-
-        if ($score <= 0) continue;
-
-        $matches[] = [
-            'id'       => (int) $l['id'],
-            'name'     => trim(($l['name'] ?? '') . ' ' . ($l['surname'] ?? '')),
-            'phone'    => $l['phone'] ?? null,
-            'email'    => $l['email'] ?? null,
-            'status'   => $l['status'],
-            'interest_type' => $l['interest_type'],
-            'budget_min' => $l['budget_min'] !== null ? (float) $l['budget_min'] : null,
-            'budget_max' => $l['budget_max'] !== null ? (float) $l['budget_max'] : null,
-            'score'    => $score,
-            'reasons'  => $reasons,
-        ];
-    }
-
-    usort($matches, fn($a, $b) => $b['score'] <=> $a['score']);
-    $matches = array_slice($matches, 0, 5);
-
     apiSuccess([
         'property' => [
             'id'         => (int) $p['id'],
             'address'    => $p['address'],
             'city'       => $p['city'],
-            'price'      => $price,
+            'price'      => $p['price'] !== null ? (float) $p['price'] : null,
             'price_type' => $p['price_type'],
         ],
-        'matches' => $matches,
+        'matches' => scoreLeadsForProperty($db, $p),
     ]);
 }
 
@@ -482,6 +419,17 @@ function updateProperty(PDO $db, int $id): void
     } catch (Throwable $e) {
         $db->rollBack();
         throw $e;
+    }
+
+    // Solo i RIBASSI, e solo a commit avvenuto: un evento accodato prima del
+    // commit annuncerebbe un ribasso che il rollback non ha mai reso vero.
+    // Un rincaro non interessa a nessun acquirente, quindi non genera evento.
+    if ($priceValueChanged && $oldPriceNum !== null && $newPriceNum !== null && $newPriceNum < $oldPriceNum) {
+        emitAutomationEvent($db, 'property.price_reduced', 'property', $id, [
+            'property_id' => $id,
+            'old_price'   => $oldPriceNum,
+            'new_price'   => $newPriceNum,
+        ]);
     }
 
     logActivity('update', 'property', $id, 'Immobile aggiornato #' . $id);

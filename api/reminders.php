@@ -14,10 +14,14 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/reminders.php';
+require_once __DIR__ . '/../config/automation_events.php';
 
 apiHandleOptions();
 
 const REMINDER_STATUSES = ['pending', 'completed', 'cancelled'];
+
+/** Regola del giorno: dom:<1-31|last>, nth:<1-4|last>:<1-7>, dow:<1-7>. */
+const REMINDER_DAY_RULE_PATTERN = '/^(dom:(last|[1-9]|[12]\d|3[01])|nth:(last|[1-4]):[1-7]|dow:[1-7])$/';
 
 /** Il contatto di un promemoria può essere un proprietario, un lead o un inquilino. */
 const REMINDER_CONTACT_TYPES = ['client' => 'client_id', 'lead' => 'lead_id', 'tenant' => 'tenant_id'];
@@ -34,6 +38,11 @@ try {
                 listContacts($db);
             } elseif ($action === 'agents') {
                 listAgents($db);
+            } elseif ($action === 'tokens') {
+                listAutomationVocabulary();
+            } elseif ($action === 'dispatch_log') {
+                if (!$id) apiError('ID automazione mancante.');
+                listDispatchLog($db, $id);
             } elseif ($id) {
                 getReminder($db, $id);
             } else {
@@ -150,6 +159,18 @@ function listReminders(PDO $db): void
     if ($seriesScope === 'parents') {
         $where .= ' AND r.series_id IS NULL';
     }
+
+    // Una regola a evento non è un promemoria: ha una data fittizia (la colonna
+    // è NOT NULL) e non va mai eseguita per conto suo. Senza questo filtro
+    // comparirebbe in agenda e sul calendario come un impegno di oggi che non
+    // esiste. Solo la pagina Automazioni la chiede, con trigger=all.
+    $triggerScope = trim($_GET['trigger'] ?? '');
+    if ($triggerScope === 'event' || $triggerScope === 'scheduled') {
+        $where .= ' AND r.trigger_type = :trigger_type';
+        $params['trigger_type'] = $triggerScope;
+    } elseif ($triggerScope !== 'all') {
+        $where .= " AND r.trigger_type = 'scheduled'";
+    }
     if ($notifyClient !== null) {
         $where .= ' AND r.notify_client = :notify_client';
         $params['notify_client'] = $notifyClient;
@@ -179,12 +200,29 @@ function listReminders(PDO $db): void
 
     $countSql = "SELECT COUNT(*) FROM reminders r $joins $where";
 
+    // Prossimo/ultimo invio: la scheda automazione deve rispondere a «ha
+    // consegnato? quando riparte?» senza una seconda chiamata per riga.
+    //
+    // Il MIN comprende la riga madre (`o.id = r.id`), non solo le figlie: la
+    // PRIMA occorrenza di una serie è la madre stessa, e guardando solo le
+    // figlie un'automazione che parte il 31/08 annuncerebbe il 30/09.
     $dataSql = "SELECT r.*, c.name AS client_name, c.surname AS client_surname,
                    ld.name AS lead_name, ld.surname AS lead_surname,
                    tn.name AS tenant_contact_name, tn.surname AS tenant_contact_surname,
                    au.username AS agent_username,
                    p.address AS property_address, p.city AS property_city,
+                   p.reference_code AS property_reference,
                    (SELECT COUNT(*) FROM reminders o WHERE o.series_id = r.id) AS occurrence_count,
+                   (SELECT MIN(o.reminder_date) FROM reminders o
+                     WHERE (o.series_id = r.id OR o.id = r.id)
+                       AND o.status = 'pending' AND o.reminder_date > NOW()
+                       AND o.trigger_type = 'scheduled') AS next_occurrence_at,
+                   (SELECT dl.dispatched_at FROM reminder_dispatch_log dl
+                     WHERE dl.automation_id = r.id ORDER BY dl.dispatched_at DESC LIMIT 1) AS last_dispatch_at,
+                   (SELECT dl.status FROM reminder_dispatch_log dl
+                     WHERE dl.automation_id = r.id ORDER BY dl.dispatched_at DESC LIMIT 1) AS last_dispatch_status,
+                   (SELECT dl.error_details FROM reminder_dispatch_log dl
+                     WHERE dl.automation_id = r.id ORDER BY dl.dispatched_at DESC LIMIT 1) AS last_dispatch_error,
                    CASE WHEN tn.id IS NOT NULL THEN CONCAT(tn.name, ' ', tn.surname) ELSE r.tenant_name END AS tenant_name
             FROM reminders r
             $joins
@@ -246,6 +284,45 @@ function listContacts(PDO $db): void
     apiSuccess($db->query($sql)->fetchAll());
 }
 
+/**
+ * Vocabolario delle automazioni: token, eventi, strategie di destinatario.
+ *
+ * Serve al form, che altrimenti manterrebbe una copia di queste liste in JS —
+ * e le due copie divergerebbero al primo token aggiunto, con la UI che offre
+ * segnaposto che il motore non sa sostituire.
+ */
+function listAutomationVocabulary(): void
+{
+    apiSuccess([
+        'token_groups'    => AUTOMATION_TOKEN_GROUPS,
+        'event_token_group' => AUTOMATION_EVENT_TOKEN_GROUP,
+        'events'          => AUTOMATION_EVENT_CATALOGUE,
+        'recipient_rules' => AUTOMATION_RECIPIENT_RULES,
+    ]);
+}
+
+/**
+ * Storico invii di un'automazione — regola e tutte le sue occorrenze insieme,
+ * che è il modo in cui l'agente la pensa ("questa automazione ha consegnato?").
+ */
+function listDispatchLog(PDO $db, int $automationId): void
+{
+    try {
+        $stmt = $db->prepare(
+            "SELECT id, reminder_id, dispatched_at, recipient_type, recipient_email,
+                    rendered_subject, status, error_details
+             FROM reminder_dispatch_log
+             WHERE automation_id = :id
+             ORDER BY dispatched_at DESC
+             LIMIT 100"
+        );
+        $stmt->execute(['id' => $automationId]);
+        apiSuccess($stmt->fetchAll());
+    } catch (PDOException $e) {
+        apiSuccess([]); // tabella non ancora migrata: nessuno storico, non un errore
+    }
+}
+
 /** Agenti assegnabili — stessa whitelist di ruoli usata da api/leads.php. */
 function listAgents(PDO $db): void
 {
@@ -265,11 +342,13 @@ function createReminder(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO reminders
-            (title, description, reminder_date, end_date, frequency, status,
+            (title, description, reminder_date, end_date, frequency, schedule_time, day_rule,
+             trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, status,
              client_id, lead_id, property_id, tenant_id, assigned_agent_id,
              notify_admin, notify_client, email_subject, email_body)
          VALUES
-            (:title, :description, :reminder_date, :end_date, :frequency, :status,
+            (:title, :description, :reminder_date, :end_date, :frequency, :schedule_time, :day_rule,
+             :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :status,
              :client_id, :lead_id, :property_id, :tenant_id, :assigned_agent_id,
              :notify_admin, :notify_client, :email_subject, :email_body)"
     );
@@ -294,6 +373,9 @@ function updateReminder(PDO $db, int $id): void
         "UPDATE reminders
          SET title = :title, description = :description, reminder_date = :reminder_date,
              end_date = :end_date, frequency = :frequency, status = :status,
+             schedule_time = :schedule_time, day_rule = :day_rule,
+             trigger_type = :trigger_type, trigger_event = :trigger_event,
+             trigger_delay_minutes = :trigger_delay_minutes, recipient_rule = :recipient_rule,
              client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
              tenant_id = :tenant_id, assigned_agent_id = :assigned_agent_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
@@ -424,6 +506,51 @@ function validateReminderInput(PDO $db, array $data): array
     $endDate      = ($endDateRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}/', $endDateRaw))
                     ? substr($endDateRaw, 0, 10) : null;
 
+    // --- Programmazione fine (phase66) -------------------------------------
+    $scheduleTime = trim($data['schedule_time'] ?? '');
+    if ($scheduleTime !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/', $scheduleTime)) {
+        apiError('Ora di invio non valida.');
+    }
+    $scheduleTime = $scheduleTime !== '' ? substr($scheduleTime, 0, 5) : null;
+
+    $dayRule = trim($data['day_rule'] ?? '');
+    if ($dayRule !== '' && !preg_match(REMINDER_DAY_RULE_PATTERN, $dayRule)) {
+        apiError('Regola del giorno non valida.');
+    }
+    $dayRule = $dayRule !== '' ? $dayRule : null;
+
+    // --- Trigger a evento ---------------------------------------------------
+    $triggerType = trim($data['trigger_type'] ?? 'scheduled');
+    if (!in_array($triggerType, ['scheduled', 'event'], true)) {
+        apiError('Tipo di attivazione non valido.');
+    }
+
+    $triggerEvent  = trim($data['trigger_event'] ?? '') ?: null;
+    $recipientRule = trim($data['recipient_rule'] ?? '') ?: null;
+    $triggerDelay  = max(0, (int) ($data['trigger_delay_minutes'] ?? 0));
+
+    if ($triggerType === 'event') {
+        if (!isset(AUTOMATION_EVENT_CATALOGUE[$triggerEvent])) {
+            apiError('Evento non valido.');
+        }
+        $allowed = AUTOMATION_EVENT_CATALOGUE[$triggerEvent]['recipients'];
+        if (!in_array($recipientRule, $allowed, true)) {
+            apiError('Destinatario non compatibile con l\'evento scelto.');
+        }
+        // Una regola a evento non ha una cadenza: la data serve solo perché la
+        // colonna è NOT NULL, e la frequenza resta 'once' per non farla entrare
+        // nel materializzatore di serie.
+        $frequency    = 'once';
+        $reminderDate = $reminderDate !== '' ? $reminderDate : date('Y-m-d H:i:s');
+        $endDate      = null;
+        $dayRule      = null;
+        $scheduleTime = null;
+    } else {
+        $triggerEvent  = null;
+        $recipientRule = null;
+        $triggerDelay  = 0;
+    }
+
     if ($title === '') {
         apiError('Il titolo è obbligatorio.');
     }
@@ -431,13 +558,24 @@ function validateReminderInput(PDO $db, array $data): array
         apiError('La data del promemoria è obbligatoria.');
     }
 
+    // Il '!' azzera i campi non presenti nel formato. Senza, una data senza ora
+    // ('2026-08-26') eredita l'OROLOGIO CORRENTE: l'automazione partiva ogni
+    // mese all'ora in cui l'agente aveva premuto Salva. Con schedule_time
+    // valorizzata l'orario viene poi imposto da normalizeReminderAnchor().
     $parsed = DateTime::createFromFormat('Y-m-d\TH:i', $reminderDate)
         ?: DateTime::createFromFormat('Y-m-d H:i:s', $reminderDate)
-        ?: DateTime::createFromFormat('Y-m-d', $reminderDate);
+        ?: DateTime::createFromFormat('!Y-m-d', $reminderDate);
 
     if (!$parsed) {
         apiError('Formato data non valido.');
     }
+
+    $anchor = normalizeReminderAnchor(
+        $parsed->format('Y-m-d H:i:s'),
+        $frequency,
+        $dayRule,
+        $scheduleTime
+    );
 
     if (!in_array($frequency, REMINDER_FREQUENCIES, true)) {
         apiError('Frequenza non valida.');
@@ -483,9 +621,15 @@ function validateReminderInput(PDO $db, array $data): array
     return [
         'title'             => $title,
         'description'       => $description,
-        'reminder_date'     => $parsed->format('Y-m-d H:i:s'),
+        'reminder_date'     => $anchor,
         'end_date'          => $endDate,
         'frequency'         => $frequency,
+        'schedule_time'     => $scheduleTime,
+        'day_rule'          => $dayRule,
+        'trigger_type'      => $triggerType,
+        'trigger_event'     => $triggerEvent,
+        'trigger_delay_minutes' => $triggerDelay,
+        'recipient_rule'    => $recipientRule,
         'status'            => $status,
         'client_id'         => $clientId,
         'lead_id'           => $leadId,

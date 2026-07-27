@@ -13,6 +13,7 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/automation_events.php';
 
 apiHandleOptions();
 
@@ -169,7 +170,14 @@ function createLead(PDO $db): void
              :assigned_to, :notes)"
     );
     $stmt->execute($validated);
-    getLead($db, (int) $db->lastInsertId());
+    $newId = (int) $db->lastInsertId();
+
+    emitAutomationEvent($db, 'lead.created', 'lead', $newId, [
+        'lead_id'     => $newId,
+        'property_id' => $validated['preferred_property_id'] ?: null,
+    ]);
+
+    getLead($db, $newId);
 }
 
 function updateLead(PDO $db, int $id): void
