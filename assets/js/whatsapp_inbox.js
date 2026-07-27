@@ -3,7 +3,10 @@
 
     const INBOX_API = 'api/whatsapp_inbox.php';
     const SEND_API  = 'api/whatsapp_send.php';
-    const POLL_MS   = 30000;
+    // Un banco di triage a 30s è già "vecchio" quando l'agente lo guarda. Il
+    // polling però viene sospeso a scheda nascosta e ripreso subito al rientro
+    // (vedi bindVisibility), così il ritmo più stretto non costa nulla a vuoto.
+    const POLL_MS   = 15000;
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
@@ -35,13 +38,44 @@
         els.threadItems      = document.getElementById('wa-thread-items');
         els.threadSearch     = document.getElementById('wa-thread-search');
         els.threadTabs       = document.getElementById('wa-thread-tabs');
+        els.unknownBar       = document.getElementById('wa-unknown-bar');
+        els.leadModal        = document.getElementById('wa-lead-modal');
+        els.linkModal        = document.getElementById('wa-link-modal');
+        els.linkResults      = document.getElementById('wa-link-results');
+        els.linkSearch       = document.getElementById('wa-link-search');
 
         bindEvents();
+        bindTriageEvents();
+        bindVisibility();
         loadThreads();
         startPolling();
 
         // Stop polling when SPA navigates away
-        document.addEventListener('app-navigate', stopPolling, { once: true });
+        document.addEventListener('app-navigate', teardown, { once: true });
+    }
+
+    function teardown() {
+        stopPolling();
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+    }
+
+    /**
+     * A scheda nascosta il polling è puro spreco (e su Twilio nemmeno serve:
+     * i messaggi arrivano comunque al DB). Al rientro si ricarica subito, così
+     * l'agente non aspetta il prossimo tick per vedere cosa è successo.
+     */
+    function bindVisibility() {
+        document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+
+    function onVisibilityChange() {
+        if (document.hidden) {
+            stopPolling();
+        } else {
+            loadThreads(true);
+            if (activePhone) loadMessages(activePhone, true);
+            startPolling();
+        }
     }
 
     function bindEvents() {
@@ -104,6 +138,9 @@
             if (!json.success) throw new Error(json.error);
             threads = json.data || [];
             renderThreads();
+            // Il contesto può cambiare sotto i piedi (un collega associa il
+            // numero da un'altra postazione): l'intestazione va riallineata.
+            if (activePhone) renderChatHeader(activePhone);
         } catch (err) {
             if (!silent && els.threadItems) {
                 els.threadItems.innerHTML = `<div style="padding:1rem;color:var(--color-danger);font-size:0.85rem;">${esc(err.message)}</div>`;
@@ -142,6 +179,7 @@
                 <div class="wa-thread-info">
                     <div class="wa-thread-name">${esc(name)}</div>
                     ${t.contact_name ? `<div class="wa-thread-phone">${esc(t.phone)}</div>` : ''}
+                    ${contextChip(t)}
                     <div class="wa-thread-preview">${esc(preview)}</div>
                 </div>
                 <div class="wa-thread-meta">
@@ -157,6 +195,20 @@
         });
     }
 
+    /**
+     * Il tag di contesto sotto il nome: "Inquilino · Via Tortona 28, Milano".
+     * L'etichetta arriva già composta dall'API (contact_context) — il JS decide
+     * solo il colore, così lista e intestazione non possono divergere.
+     */
+    function contextChip(t) {
+        if (t.is_unknown) {
+            return '<span class="wa-thread-context wa-ctx--unknown">Non riconosciuto</span>';
+        }
+        if (!t.contact_context) return '';
+        const cls = `wa-ctx--${t.contact_type || 'unknown'}`;
+        return `<span class="wa-thread-context ${cls}" title="${esc(t.contact_context)}">${esc(t.contact_context)}</span>`;
+    }
+
     async function openThread(phone) {
         activePhone    = phone;
         msgPage        = 1;
@@ -167,16 +219,32 @@
         els.activeChat.style.display  = 'flex';
         els.loadEarlierBar.style.display = 'none';
 
+        renderChatHeader(phone);
+
+        await loadMessages(phone);
+        await markRead(phone);
+    }
+
+    /**
+     * Intestazione della chat + banner di triage. Estratta da openThread perché
+     * va rieseguita anche dopo un'associazione, senza ricaricare i messaggi.
+     */
+    function renderChatHeader(phone) {
         const thread   = threads.find(t => t.phone === phone);
         const name     = thread?.contact_name || phone;
         const initials = name.replace(/\s+/g, '').slice(0, 2).toUpperCase();
 
         els.chatName.textContent   = name;
-        els.chatSub.textContent    = thread?.contact_name ? phone : '';
         els.chatAvatar.textContent = initials;
 
-        await loadMessages(phone);
-        await markRead(phone);
+        // Sottotitolo: numero + ruolo/immobile. Se il contatto è ignoto resta
+        // solo il numero e compare il banner con le azioni di aggancio.
+        const parts = [];
+        if (thread?.contact_name) parts.push(phone);
+        if (thread?.contact_context) parts.push(thread.contact_context);
+        els.chatSub.textContent = parts.join('  ·  ');
+
+        els.unknownBar.style.display = thread && thread.is_unknown ? 'flex' : 'none';
     }
 
     function renderBubbles(messages) {
@@ -294,6 +362,139 @@
         }
     }
 
+    // ── Triage: numero sconosciuto → lead o contatto esistente ──────────────
+
+    function bindTriageEvents() {
+        document.getElementById('wa-create-lead-btn').addEventListener('click', openLeadModal);
+        document.getElementById('wa-link-contact-btn').addEventListener('click', openLinkModal);
+
+        document.getElementById('wa-lead-close').addEventListener('click', closeLeadModal);
+        document.getElementById('wa-lead-cancel').addEventListener('click', closeLeadModal);
+        document.getElementById('wa-lead-save').addEventListener('click', saveLead);
+        els.leadModal.addEventListener('click', e => { if (e.target === els.leadModal) closeLeadModal(); });
+
+        document.getElementById('wa-link-close').addEventListener('click', closeLinkModal);
+        document.getElementById('wa-link-cancel').addEventListener('click', closeLinkModal);
+        els.linkModal.addEventListener('click', e => { if (e.target === els.linkModal) closeLinkModal(); });
+
+        let searchTimer = null;
+        els.linkSearch.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(searchContacts, 220);
+        });
+    }
+
+    function openLeadModal() {
+        if (!activePhone) return;
+        document.getElementById('wa-lead-phone').textContent   = activePhone;
+        document.getElementById('wa-lead-name').value          = '';
+        document.getElementById('wa-lead-surname').value       = '';
+        document.getElementById('wa-lead-notes').value         = '';
+        document.getElementById('wa-lead-interest').value      = 'affitto';
+        els.leadModal.hidden = false;
+        document.getElementById('wa-lead-name').focus();
+    }
+
+    function closeLeadModal() { els.leadModal.hidden = true; }
+
+    async function saveLead() {
+        const name    = document.getElementById('wa-lead-name').value.trim();
+        const surname = document.getElementById('wa-lead-surname').value.trim();
+        if (!name || !surname) { showAlert('Nome e cognome sono obbligatori.', 'error'); return; }
+
+        const btn = document.getElementById('wa-lead-save');
+        btn.disabled = true; btn.textContent = 'Creazione…';
+
+        try {
+            const res = await fetch(`${INBOX_API}?action=create_lead`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone:         activePhone,
+                    name,
+                    surname,
+                    interest_type: document.getElementById('wa-lead-interest').value,
+                    notes:         document.getElementById('wa-lead-notes').value.trim(),
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            closeLeadModal();
+            showAlert(`Lead "${json.data.name}" creato — ${json.data.messages_linked} messaggi collegati.`, 'success');
+            await loadThreads();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Crea lead';
+        }
+    }
+
+    function openLinkModal() {
+        if (!activePhone) return;
+        document.getElementById('wa-link-phone').textContent = activePhone;
+        els.linkSearch.value    = '';
+        els.linkResults.innerHTML = '';
+        els.linkModal.hidden    = false;
+        els.linkSearch.focus();
+    }
+
+    function closeLinkModal() { els.linkModal.hidden = true; }
+
+    async function searchContacts() {
+        const q = els.linkSearch.value.trim();
+        if (q.length < 2) { els.linkResults.innerHTML = ''; return; }
+
+        try {
+            const res  = await fetch(`${INBOX_API}?action=search_contacts&q=${encodeURIComponent(q)}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            const rows = json.data || [];
+            if (!rows.length) {
+                els.linkResults.innerHTML = '<div style="padding:0.8rem;text-align:center;color:#999;font-size:0.82rem;">Nessun contatto trovato.</div>';
+                return;
+            }
+
+            const badgeClass = { client: 'wa-ctx--client', tenant: 'wa-ctx--tenant', lead: 'wa-ctx--lead' };
+
+            els.linkResults.innerHTML = rows.map(r => {
+                const meta = [r.phone, r.detail].filter(Boolean).join(' · ');
+                return `<div class="wa-contact-row" data-type="${esc(r.type)}" data-id="${esc(r.id)}">
+                    <div class="wa-contact-row__main">
+                        <div class="wa-contact-row__name">${esc(`${r.name} ${r.surname}`.trim())}</div>
+                        ${meta ? `<div class="wa-contact-row__meta">${esc(meta)}</div>` : ''}
+                    </div>
+                    <span class="wa-contact-row__badge ${badgeClass[r.type] || ''}">${esc(r.role)}</span>
+                </div>`;
+            }).join('');
+
+            els.linkResults.querySelectorAll('.wa-contact-row').forEach(row => {
+                row.addEventListener('click', () => linkContact(row.dataset.type, row.dataset.id));
+            });
+        } catch (err) {
+            els.linkResults.innerHTML = `<div style="padding:0.8rem;color:var(--color-danger);font-size:0.82rem;">${esc(err.message)}</div>`;
+        }
+    }
+
+    async function linkContact(type, id) {
+        try {
+            const res = await fetch(`${INBOX_API}?action=link`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: activePhone, type, id: parseInt(id, 10) }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            closeLinkModal();
+            showAlert(`Conversazione associata — ${json.data.messages_linked} messaggi collegati.`, 'success');
+            await loadThreads();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    }
+
     function openNewModal() {
         document.getElementById('wa-new-phone').value   = '';
         document.getElementById('wa-new-message').value = '';
@@ -323,12 +524,22 @@
             closeNewModal();
             showAlert('Messaggio inviato.', 'success');
             await loadThreads();
-            openThread(phone);
+            // Il backend normalizza il numero prima di salvarlo ("333 1234567"
+            // → "+393331234567"): aprire il thread con la stringa digitata
+            // mostrerebbe una chat vuota. Si cerca per cifre finali.
+            openThread(matchThreadPhone(phone) || phone);
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
             btn.disabled = false; btn.textContent = 'Invia';
         }
+    }
+
+    /** Ritrova nel thread list il numero equivalente a quello digitato. */
+    function matchThreadPhone(input) {
+        const tail = (input || '').replace(/\D/g, '').slice(-9);
+        if (tail.length < 6) return null;
+        return threads.find(t => (t.phone || '').replace(/\D/g, '').endsWith(tail))?.phone || null;
     }
 
     function isNearBottom() {

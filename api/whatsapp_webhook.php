@@ -56,32 +56,24 @@ if ($from === '' || $body === '') {
     exit;
 }
 
-$db    = getDB();
-$phone = '%' . substr(preg_replace('/\D/', '', $from), -9);
+$db = getDB();
 
-// Look up client by phone number
-$clientStmt = $db->prepare(
-    "SELECT id, email FROM clients WHERE phone LIKE :phone AND status = 'active' LIMIT 1"
-);
-$clientStmt->execute(['phone' => $phone]);
-$client = $clientStmt->fetch();
-
-// Look up tenant by phone number
-$tenantStmt = $db->prepare(
-    "SELECT id FROM tenants WHERE phone LIKE :phone AND status = 'active' LIMIT 1"
-);
-$tenantStmt->execute(['phone' => $phone]);
-$tenant = $tenantStmt->fetch();
-
-$clientId = $client ? (int) $client['id'] : null;
-$tenantId = $tenant ? (int) $tenant['id'] : null;
+// Risoluzione del mittente su proprietari / inquilini / lead. La logica è
+// condivisa con l'inbox (config/whatsapp.php) così un numero riconosciuto in
+// entrata è lo stesso che l'agente vede associato nella chat.
+// Anche qui l'aggancio manuale già presente sulla conversazione ha la
+// precedenza sulla ricerca per numero (vedi waExistingThreadContact).
+$contact  = waExistingThreadContact($db, $from) ?? resolveWhatsAppContact($db, $from);
+$clientId = $contact['client_id'];
+$tenantId = $contact['tenant_id'];
+$leadId   = $contact['lead_id'];
 
 // Save to whatsapp_messages table
 $msgInsert = $db->prepare(
     "INSERT INTO whatsapp_messages
-        (direction, from_number, to_number, body, media_url, twilio_sid, client_id, tenant_id, is_read, received_at)
+        (direction, from_number, to_number, body, media_url, twilio_sid, client_id, tenant_id, lead_id, is_read, received_at)
      VALUES
-        ('inbound', :from_number, :to_number, :body, :media_url, :twilio_sid, :client_id, :tenant_id, 0, NOW())"
+        ('inbound', :from_number, :to_number, :body, :media_url, :twilio_sid, :client_id, :tenant_id, :lead_id, 0, NOW())"
 );
 $msgInsert->execute([
     'from_number' => $from,
@@ -91,6 +83,7 @@ $msgInsert->execute([
     'twilio_sid'  => $twilioSid,
     'client_id'   => $clientId,
     'tenant_id'   => $tenantId,
+    'lead_id'     => $leadId,
 ]);
 $messageId = (int) $db->lastInsertId();
 
@@ -110,13 +103,11 @@ if ($clientId !== null) {
     ]);
 }
 
-// Create a notification for admin users about the new inbound message
-$senderLabel = 'Sconosciuto (' . $from . ')';
-if ($clientId !== null) {
-    $senderLabel = trim(($client['name'] ?? '') . ' ' . ($client['surname'] ?? '')) ?: $from;
-} elseif ($tenantId !== null && $tenant) {
-    $senderLabel = $from;
-}
+// Create a notification for admin users about the new inbound message.
+// Il nome arriva dal resolver: la query di lookup precedente selezionava solo
+// id/email, quindi il nominativo era sempre vuoto e ogni notifica mostrava il
+// numero grezzo anche per un proprietario perfettamente riconosciuto.
+$senderLabel = $contact['name'] ?? ('Sconosciuto (' . $from . ')');
 
 try {
     $notifInsert = $db->prepare(

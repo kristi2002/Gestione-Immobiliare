@@ -32,7 +32,52 @@ if (!$result['success']) {
 $tenantId = isset($data['tenant_id']) ? (int)$data['tenant_id'] : null;
 $clientId = isset($data['client_id']) ? (int)$data['client_id'] : null;
 
-if ($tenantId || $clientId) {
+// ── Traccia in whatsapp_messages ────────────────────────────────────────────
+// Senza questa INSERT il messaggio partiva davvero ma non esisteva da nessuna
+// parte: l'agente rispondeva dall'inbox, la chat si ricaricava e la sua stessa
+// risposta non c'era. Il thread mostrava solo i messaggi in arrivo.
+// Il numero viene normalizzato come lo scrive Twilio in entrata, altrimenti
+// "333 1234567" e "+393331234567" diventerebbero due conversazioni distinte.
+try {
+    $db     = getDB();
+    $toNorm = normalizeWhatsAppNumber($phone);
+
+    // Se il chiamante non ha passato un contesto, lo si risolve dal numero:
+    // così anche una risposta scritta dall'inbox resta agganciata alla persona.
+    $leadId = null;
+    if (!$tenantId && !$clientId) {
+        // L'associazione già decisa per questa conversazione batte la ricerca
+        // per numero: altrimenti una chat agganciata a mano si spaccherebbe fra
+        // due contatti al primo messaggio in uscita.
+        $contact  = waExistingThreadContact($db, $toNorm) ?? resolveWhatsAppContact($db, $toNorm);
+        $clientId = $contact['client_id'];
+        $tenantId = $contact['tenant_id'];
+        $leadId   = $contact['lead_id'];
+    }
+
+    $db->prepare(
+        "INSERT INTO whatsapp_messages
+            (direction, from_number, to_number, body, twilio_sid, client_id, tenant_id, lead_id, status, is_read, received_at)
+         VALUES
+            ('outbound', :from_number, :to_number, :body, :sid, :client_id, :tenant_id, :lead_id, :status, 1, NOW())"
+    )->execute([
+        'from_number' => preg_replace('/^whatsapp:/', '', (string) (getWhatsAppConfig()['from'] ?? '')),
+        'to_number'   => $toNorm,
+        'body'        => $message,
+        'sid'         => $result['external_id'],
+        'client_id'   => $clientId ?: null,
+        'tenant_id'   => $tenantId ?: null,
+        'lead_id'     => $leadId,
+        'status'      => $result['status'],
+    ]);
+} catch (PDOException) {
+    // Non-fatal — il messaggio è già partito, non si può disfare.
+}
+
+// Il thread di Comunicazioni è indicizzato sul proprietario: senza client_id la
+// riga non sarebbe raggiungibile da nessuna schermata (e con lo schema originale
+// nemmeno inseribile). Un inquilino/lead resta tracciato in whatsapp_messages.
+if ($clientId) {
     try {
         $db = getDB();
         // external_id: senza il SID Twilio lo status callback non ha modo di

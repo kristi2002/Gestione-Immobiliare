@@ -156,6 +156,110 @@ function verifyTwilioRequest(string $endpointPath, array $post): string
     return hash_equals($expected, $signature) ? 'ok' : 'invalid';
 }
 
+/**
+ * Suffisso LIKE per confrontare due numeri scritti in modo diverso.
+ *
+ * In anagrafica lo stesso numero compare come "+39 333 1234567", "3331234567",
+ * "0039 333 1234567"; Twilio lo consegna sempre come "+393331234567". Le ultime
+ * 9 cifre sono la parte che non cambia mai (prefisso internazionale e zero
+ * iniziale a parte), quindi sono la chiave di riconoscimento.
+ *
+ * Ritorna null se il numero non ha abbastanza cifre per essere confrontato:
+ * un LIKE '%' senza suffisso aggancerebbe il primo contatto qualsiasi.
+ */
+function whatsAppPhoneSuffix(string $phone): ?string
+{
+    $digits = preg_replace('/\D+/', '', $phone);
+    if (strlen($digits) < 6) {
+        return null;
+    }
+    return '%' . substr($digits, -9);
+}
+
+/**
+ * Associazione già decisa per questa conversazione, se esiste.
+ *
+ * Va interrogata PRIMA di risolvere il numero sull'anagrafica: se un agente ha
+ * agganciato a mano la chat a un contatto, quella è una decisione umana e deve
+ * valere anche per i messaggi successivi. Risolvere di nuovo dal numero
+ * spaccherebbe la conversazione in due contatti diversi — metà a chi ha quel
+ * numero in scheda, metà a chi l'agente ha scelto.
+ *
+ * Stessa forma di resolveWhatsAppContact() così i due sono intercambiabili con
+ * un `??`.
+ *
+ * @return array{client_id:?int, tenant_id:?int, lead_id:?int, name:?string}|null
+ */
+function waExistingThreadContact(PDO $db, string $phone): ?array
+{
+    $stmt = $db->prepare(
+        "SELECT wm.client_id, wm.tenant_id, wm.lead_id,
+                COALESCE(CONCAT(c.name, ' ', c.surname),
+                         CONCAT(t.name, ' ', t.surname),
+                         CONCAT(l.name, ' ', l.surname)) AS contact_name
+           FROM whatsapp_messages wm
+           LEFT JOIN clients c ON c.id = wm.client_id
+           LEFT JOIN tenants t ON t.id = wm.tenant_id
+           LEFT JOIN leads   l ON l.id = wm.lead_id
+          WHERE IF(wm.direction = 'inbound', wm.from_number, wm.to_number) = :phone
+            AND (wm.client_id IS NOT NULL OR wm.tenant_id IS NOT NULL OR wm.lead_id IS NOT NULL)
+          ORDER BY wm.received_at DESC, wm.id DESC
+          LIMIT 1"
+    );
+    $stmt->execute(['phone' => $phone]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        return null;
+    }
+
+    return [
+        'client_id' => $row['client_id'] !== null ? (int) $row['client_id'] : null,
+        'tenant_id' => $row['tenant_id'] !== null ? (int) $row['tenant_id'] : null,
+        'lead_id'   => $row['lead_id']   !== null ? (int) $row['lead_id']   : null,
+        'name'      => trim((string) $row['contact_name']) ?: null,
+    ];
+}
+
+/**
+ * Risolve un numero sull'anagrafica: proprietario, inquilino o lead.
+ *
+ * Un numero può in teoria comparire in più tabelle (un inquilino che diventa
+ * acquirente): l'ordine di precedenza è clients → tenants → leads, cioè dal
+ * rapporto più formale al più provvisorio.
+ *
+ * @return array{client_id:?int, tenant_id:?int, lead_id:?int, name:?string}
+ */
+function resolveWhatsAppContact(PDO $db, string $phone): array
+{
+    $out = ['client_id' => null, 'tenant_id' => null, 'lead_id' => null, 'name' => null];
+
+    $suffix = whatsAppPhoneSuffix($phone);
+    if ($suffix === null) {
+        return $out;
+    }
+
+    $lookups = [
+        'client_id' => "SELECT id, name, surname FROM clients WHERE phone LIKE :p AND status = 'active' LIMIT 1",
+        'tenant_id' => "SELECT id, name, surname FROM tenants WHERE phone LIKE :p AND status = 'active' LIMIT 1",
+        'lead_id'   => "SELECT id, name, surname FROM leads   WHERE phone LIKE :p AND status <> 'lost'  LIMIT 1",
+    ];
+
+    foreach ($lookups as $key => $sql) {
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['p' => $suffix]);
+        $row = $stmt->fetch();
+        if ($row) {
+            $out[$key] = (int) $row['id'];
+            if ($out['name'] === null) {
+                $out['name'] = trim(($row['name'] ?? '') . ' ' . ($row['surname'] ?? '')) ?: null;
+            }
+        }
+    }
+
+    return $out;
+}
+
 function normalizeWhatsAppNumber(string $phone): string
 {
     $digits = preg_replace('/\D+/', '', $phone);

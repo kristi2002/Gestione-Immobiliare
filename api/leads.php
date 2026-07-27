@@ -19,7 +19,10 @@ apiHandleOptions();
 
 const LEAD_STATUSES   = ['new', 'contacted', 'interested', 'negotiating', 'converted', 'lost'];
 const LEAD_INTERESTS  = ['affitto', 'acquisto', 'entrambi'];
-const LEAD_SOURCES    = ['telefono', 'email', 'web', 'passaparola', 'social', 'immobiliare', 'idealista', 'casa', 'subito', 'altro'];
+// Allineato all'enum leads.source (migrazione phase68): una sorgente presente
+// qui ma non nell'enum viene rifiutata dal DB, una nell'enum ma non qui viene
+// rifiutata dall'API — e il form mostrerebbe un'opzione che non si può salvare.
+const LEAD_SOURCES    = ['telefono', 'email', 'web', 'passaparola', 'social', 'immobiliare', 'idealista', 'casa', 'subito', 'whatsapp', 'altro'];
 const LEAD_PROP_TYPES = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
 
 try {

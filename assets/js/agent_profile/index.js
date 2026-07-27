@@ -11,7 +11,7 @@ const LEAD_STATUS = {
     negotiating: 'In trattativa', converted: 'Convertito', lost: 'Perso',
 };
 const INTEREST_LABELS = { affitto: 'Affitto', acquisto: 'Acquisto', entrambi: 'Entrambi' };
-const SOURCE_LABELS = { telefono: 'Telefono', email: 'Email', web: 'Web', passaparola: 'Passaparola', social: 'Social', immobiliare: 'Immobiliare.it', idealista: 'Idealista', casa: 'Casa.it', subito: 'Subito', altro: 'Altro' };
+const SOURCE_LABELS = { telefono: 'Telefono', email: 'Email', web: 'Web', passaparola: 'Passaparola', social: 'Social', immobiliare: 'Immobiliare.it', idealista: 'Idealista', casa: 'Casa.it', subito: 'Subito', whatsapp: 'WhatsApp', altro: 'Altro' };
 const APPT_STATUS = { scheduled: 'Programmato', completed: 'Completato', cancelled: 'Annullato', no_show: 'Non presentato' };
 const COMM_STATUS = { pending: 'Da incassare', paid: 'Incassata' };
 

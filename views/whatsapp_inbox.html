@@ -82,6 +82,54 @@
     text-overflow: ellipsis;
     margin-top: 2px;
 }
+/* Contesto anagrafico: chi è e a proposito di cosa, senza aprire la scheda. */
+.wa-thread-context {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    max-width: 100%;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wa-ctx--client  { background: #e8f1ff; color: #1d4ed8; }
+.wa-ctx--tenant  { background: #e9f8ef; color: #16794a; }
+.wa-ctx--lead    { background: #fff3e0; color: #a15c00; }
+.wa-ctx--unknown { background: #fdecec; color: #b4232a; }
+
+/* Banner di triage per un numero mai visto prima. */
+.wa-unknown-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 1rem;
+    background: #fff8e6;
+    border-bottom: 1px solid #f2dfae;
+    font-size: 0.82rem;
+    color: #7a5a10;
+    flex-shrink: 0;
+}
+.wa-unknown-bar__text { flex: 1; min-width: 180px; }
+.wa-unknown-bar .btn { flex-shrink: 0; }
+
+/* Risultati ricerca contatti nel modale "Associa". */
+.wa-contact-results { max-height: 260px; overflow-y: auto; margin-top: 0.5rem; border: 1px solid var(--color-border, #e0e0e0); border-radius: 8px; }
+.wa-contact-results:empty { display: none; }
+.wa-contact-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.75rem; cursor: pointer; border-bottom: 1px solid #f2f2f2; }
+.wa-contact-row:last-child { border-bottom: none; }
+.wa-contact-row:hover { background: #f4fbf7; }
+.wa-contact-row__main { flex: 1; min-width: 0; }
+.wa-contact-row__name { font-weight: 600; font-size: 0.85rem; }
+.wa-contact-row__meta { font-size: 0.73rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-contact-row__badge { font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; flex-shrink: 0; }
+
 .wa-thread-meta {
     display: flex;
     flex-direction: column;
@@ -276,6 +324,11 @@
                         <div class="wa-chat-header-sub" id="wa-chat-sub"></div>
                     </div>
                 </div>
+                <div class="wa-unknown-bar" id="wa-unknown-bar" style="display:none;">
+                    <span class="wa-unknown-bar__text"><strong>Numero non riconosciuto.</strong> Non è collegato a nessun proprietario, inquilino o lead.</span>
+                    <button type="button" class="btn btn--primary btn--sm" id="wa-create-lead-btn">Crea lead</button>
+                    <button type="button" class="btn btn--ghost btn--sm" id="wa-link-contact-btn">Associa a contatto</button>
+                </div>
                 <div id="wa-load-earlier-bar" style="display:none;text-align:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
                     <button id="wa-load-earlier-btn" class="btn btn--ghost btn--sm" style="font-size:0.8rem;"><i data-lucide="upload"></i> Carica messaggi precedenti</button>
                 </div>
@@ -309,6 +362,69 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="wa-new-cancel">Annulla</button>
             <button type="button" class="btn btn--primary" id="wa-new-send">Invia</button>
+        </div>
+    </div>
+</div>
+
+<!-- Crea lead dal numero sconosciuto -->
+<div class="modal-overlay" id="wa-lead-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="wa-lead-title">
+        <div class="modal-header">
+            <h3 id="wa-lead-title">Crea lead da questa conversazione</h3>
+            <button class="modal-close" id="wa-lead-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.82rem;color:#777;margin:0 0 0.9rem;">
+                Numero: <strong id="wa-lead-phone">—</strong><br>
+                Il lead verrà creato con sorgente <em>WhatsApp</em> e tutta la conversazione gli sarà collegata.
+            </p>
+            <div class="form-group">
+                <label for="wa-lead-name">Nome <span class="required">*</span></label>
+                <input type="text" id="wa-lead-name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="wa-lead-surname">Cognome <span class="required">*</span></label>
+                <input type="text" id="wa-lead-surname" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="wa-lead-interest">Interesse</label>
+                <select id="wa-lead-interest" class="form-select">
+                    <option value="affitto">Affitto</option>
+                    <option value="acquisto">Acquisto</option>
+                    <option value="entrambi">Entrambi</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="wa-lead-notes">Note</label>
+                <textarea id="wa-lead-notes" class="form-textarea" rows="2" placeholder="Cosa ha chiesto…"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="wa-lead-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="wa-lead-save">Crea lead</button>
+        </div>
+    </div>
+</div>
+
+<!-- Associa a un contatto già in anagrafica -->
+<div class="modal-overlay" id="wa-link-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="wa-link-title">
+        <div class="modal-header">
+            <h3 id="wa-link-title">Associa a contatto esistente</h3>
+            <button class="modal-close" id="wa-link-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.82rem;color:#777;margin:0 0 0.9rem;">
+                Numero: <strong id="wa-link-phone">—</strong>
+            </p>
+            <div class="form-group">
+                <label for="wa-link-search">Cerca proprietario, inquilino o lead</label>
+                <input type="search" id="wa-link-search" class="form-input" placeholder="Nome, cognome, telefono o email…" autocomplete="off">
+            </div>
+            <div class="wa-contact-results" id="wa-link-results"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="wa-link-cancel">Annulla</button>
         </div>
     </div>
 </div>
