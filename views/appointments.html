@@ -1,11 +1,11 @@
 <div class="appointments-view">
     <div class="view-header">
         <div class="view-header__text">
-            <h2>Visite</h2>
-            <p>Pianifica e gestisci gli appuntamenti per i sopralluoghi.</p>
+            <h2>Appuntamenti</h2>
+            <p>Pianifica e gestisci visite, acquisizioni, atti e chiamate.</p>
         </div>
         <div class="view-header__actions">
-            <button class="btn btn--primary" id="btn-new-appointment">+ Nuova Visita</button>
+            <button class="btn btn--primary" id="btn-new-appointment">+ Nuovo Appuntamento</button>
         </div>
     </div>
 
@@ -14,7 +14,7 @@
     <div class="db-stats">
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="calendar"></i></div>
-            <div class="db-stat__label">Visite Oggi</div>
+            <div class="db-stat__label">Appuntamenti Oggi</div>
             <div class="db-stat__value" id="astat-today">—</div>
         </div>
         <div class="db-stat">
@@ -24,12 +24,12 @@
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="clock"></i></div>
-            <div class="db-stat__label">Programmate</div>
+            <div class="db-stat__label">Programmati</div>
             <div class="db-stat__value" id="astat-scheduled">—</div>
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="check-circle-2"></i></div>
-            <div class="db-stat__label">Completate (mese)</div>
+            <div class="db-stat__label">Completati (mese)</div>
             <div class="db-stat__value" id="astat-done">—</div>
         </div>
     </div>
@@ -45,11 +45,18 @@
     </script>
 
     <div class="toolbar">
+        <select id="appt-type-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <option value="visita">Visita</option>
+            <option value="acquisizione">Acquisizione</option>
+            <option value="atto">Atto</option>
+            <option value="chiamata">Chiamata</option>
+        </select>
         <select id="appt-status-filter" class="form-select">
             <option value="">Tutti gli stati</option>
-            <option value="scheduled">Programmata</option>
-            <option value="completed">Completata</option>
-            <option value="cancelled">Annullata</option>
+            <option value="scheduled">Programmato</option>
+            <option value="completed">Completato</option>
+            <option value="cancelled">Annullato</option>
             <option value="no_show">Mancata presentazione</option>
         </select>
         <input type="date" id="appt-from" class="form-input" title="Da">
@@ -62,24 +69,7 @@
     <div id="appointments-pagination" class="pagination-container"></div>
 </div>
 
-<!-- Scheda Visita quick-view -->
-<div class="modal-overlay" id="appointment-scheda-modal" hidden>
-    <div class="modal" role="dialog">
-        <div class="modal-header">
-            <div>
-                <h3 id="scheda-appt-property" style="font-size: 1rem; font-weight: 700;"></h3>
-                <div id="scheda-appt-badge" class="scheda-modal-badges"></div>
-            </div>
-            <button class="modal-close" id="appointment-scheda-close" aria-label="Chiudi">&times;</button>
-        </div>
-        <div class="modal-body" id="scheda-appt-body"></div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn--primary btn--sm" id="scheda-appt-complete" hidden><i data-lucide="check"></i> Completa</button>
-            <button type="button" class="btn btn--ghost btn--sm" id="scheda-appt-cancel" hidden><i data-lucide="x"></i> Annulla visita</button>
-            <button type="button" class="btn btn--ghost btn--sm" id="scheda-appt-edit"><i data-lucide="pencil"></i> Modifica</button>
-            <button type="button" class="btn btn--ghost" id="scheda-appt-close2">Chiudi</button>
-        </div>
-    </div>
-</div>
+<!-- The old quick-view modal was replaced by the full scheda page
+     (views/appointment_profile.html); cards now navigate there. -->
 
-<script src="assets/js/appointments.js"></script>
+<script src="assets/js/appointments.js?v=2"></script>

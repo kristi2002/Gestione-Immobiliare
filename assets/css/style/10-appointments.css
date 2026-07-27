@@ -1,0 +1,301 @@
+/* ===================================================================
+   Appuntamenti — form controls (tipo, durata, luogo, promemoria)
+   and the scheda appuntamento page.
+   =================================================================== */
+
+/* ---- Read-only owner badge, derived from the selected property ---- */
+
+.ape-owner-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg, #f8fafc);
+    font-size: 0.87rem;
+    color: var(--color-text-muted, #64748b);
+}
+.ape-owner-hint svg { width: 16px; height: 16px; flex: none; }
+.ape-owner-hint strong { color: var(--color-text, #0f172a); font-weight: 600; }
+.ape-owner-hint.is-filled {
+    border-style: solid;
+    border-color: var(--color-primary, #2563eb);
+    background: rgba(37, 99, 235, 0.06);
+    color: var(--color-primary, #2563eb);
+}
+
+/* ---- Tipo di appuntamento: card radios ---- */
+
+.appt-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+}
+.appt-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface, #fff);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.appt-type-card:hover { border-color: var(--color-primary, #2563eb); }
+.appt-type-card svg { width: 20px; height: 20px; color: var(--color-text-muted, #64748b); }
+.appt-type-card__label { font-weight: 650; font-size: 0.95rem; color: var(--color-text, #0f172a); }
+.appt-type-card__hint { font-size: 0.78rem; color: var(--color-text-muted, #64748b); line-height: 1.3; }
+.appt-type-card.is-active {
+    border-color: var(--color-primary, #2563eb);
+    background: rgba(37, 99, 235, 0.06);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+.appt-type-card.is-active svg,
+.appt-type-card.is-active .appt-type-card__label { color: var(--color-primary, #2563eb); }
+
+/* ---- Durata: quick chips + custom minutes ---- */
+
+.appt-duration { display: flex; flex-direction: column; gap: 8px; }
+.appt-duration__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.appt-chip {
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface, #fff);
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+    transition: all .15s;
+}
+.appt-chip:hover { border-color: var(--color-primary, #2563eb); color: var(--color-primary, #2563eb); }
+.appt-chip.is-active {
+    background: var(--color-primary, #2563eb);
+    border-color: var(--color-primary, #2563eb);
+    color: #fff;
+}
+.appt-duration__custom { display: flex; align-items: center; gap: 8px; }
+.appt-duration__custom label { font-size: 0.82rem; color: var(--color-text-muted, #64748b); margin: 0; }
+.appt-duration__custom .form-input { width: 92px; }
+
+/* ---- Luogo: segmented control ---- */
+
+.appt-segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 3px;
+    background: var(--color-bg, #f1f5f9);
+}
+.appt-seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    font-size: 0.87rem;
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.appt-seg svg { width: 15px; height: 15px; }
+.appt-seg:hover { color: var(--color-text, #0f172a); }
+.appt-seg.is-active {
+    background: var(--color-surface, #fff);
+    color: var(--color-primary, #2563eb);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
+}
+.ape-location-note {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 10px 0 0;
+    font-size: 0.84rem;
+    color: var(--color-text-muted, #64748b);
+}
+.ape-location-note svg { width: 15px; height: 15px; flex: none; }
+
+/* ---- Promemoria: switch ---- */
+
+.appt-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+.appt-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.appt-switch__track {
+    position: relative;
+    flex: none;
+    width: 42px;
+    height: 24px;
+    margin-top: 2px;
+    border-radius: 999px;
+    background: var(--color-border, #cbd5e1);
+    transition: background .18s;
+}
+.appt-switch__thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .3);
+    transition: transform .18s;
+}
+.appt-switch input:checked + .appt-switch__track { background: var(--color-primary, #2563eb); }
+.appt-switch input:checked + .appt-switch__track .appt-switch__thumb { transform: translateX(18px); }
+.appt-switch input:focus-visible + .appt-switch__track { outline: 2px solid var(--color-primary, #2563eb); outline-offset: 2px; }
+.appt-switch__text { display: flex; flex-direction: column; gap: 2px; }
+.appt-switch__text strong { font-size: 0.92rem; color: var(--color-text, #0f172a); }
+.appt-switch__text small { font-size: 0.8rem; color: var(--color-text-muted, #64748b); }
+.ape-notify-warning { margin: 10px 0 0; font-size: 0.85rem; }
+
+/* ===================================================================
+   Scheda appuntamento
+   =================================================================== */
+
+.appt-hero {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+.appt-hero__date {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 78px;
+    padding: 10px 0;
+    border-radius: 12px;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    line-height: 1.1;
+}
+.appt-hero__dow   { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .06em; opacity: .85; }
+.appt-hero__day   { font-size: 1.85rem; font-weight: 700; }
+.appt-hero__month { font-size: 0.78rem; text-transform: uppercase; opacity: .85; }
+.appt-hero__info { flex: 1; min-width: 0; }
+.appt-hero__info h2 { margin: 6px 0 4px; font-size: 1.25rem; }
+.appt-hero__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.appt-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 0.86rem;
+    color: var(--color-text-muted, #64748b);
+}
+.appt-hero__meta span { display: inline-flex; align-items: center; gap: 5px; }
+.appt-hero__meta svg { width: 15px; height: 15px; }
+.appt-hero__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+
+.badge--appt-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(37, 99, 235, .10);
+    color: var(--color-primary, #2563eb);
+    border: 1px solid rgba(37, 99, 235, .25);
+}
+.badge--appt-type svg { width: 13px; height: 13px; }
+.badge--soft {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--color-bg, #f1f5f9);
+    color: var(--color-text-muted, #64748b);
+    border: 1px solid var(--color-border);
+}
+.badge--soft svg { width: 13px; height: 13px; }
+.appointment-card__tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+
+.appt-scheda-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+.appt-card { padding: 18px 20px; }
+.appt-card--wide { grid-column: 1 / -1; }
+.appt-card__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+.appt-card__header svg { width: 17px; height: 17px; color: var(--color-primary, #2563eb); }
+.appt-card__header h3 { margin: 0; font-size: 0.97rem; font-weight: 650; }
+.appt-card__cta { margin-top: 12px; }
+.appt-notes { margin: 0; white-space: pre-wrap; line-height: 1.55; }
+
+/* People cards inside the scheda */
+.appt-people { display: flex; flex-direction: column; gap: 10px; }
+.appt-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+}
+.appt-person--clickable { cursor: pointer; transition: border-color .15s, background .15s; }
+.appt-person--clickable:hover { border-color: var(--color-primary, #2563eb); background: rgba(37, 99, 235, .04); }
+.appt-person__avatar {
+    flex: none;
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--color-bg, #e2e8f0);
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #475569);
+}
+.appt-person__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.appt-person__role {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--color-text-muted, #94a3b8);
+    font-weight: 600;
+}
+.appt-person__name { font-size: 0.93rem; }
+.appt-person__contacts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2px; }
+.appt-person__contacts a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #64748b);
+    text-decoration: none;
+}
+.appt-person__contacts a:hover { color: var(--color-primary, #2563eb); text-decoration: underline; }
+.appt-person__contacts svg { width: 13px; height: 13px; }
+
+.appt-footnote {
+    margin: 18px 0 0;
+    font-size: 0.79rem;
+    color: var(--color-text-muted, #94a3b8);
+}
+
+@media (max-width: 720px) {
+    .appt-hero { flex-wrap: wrap; }
+    .appt-hero__actions { width: 100%; justify-content: flex-start; }
+    .appt-type-grid { grid-template-columns: 1fr 1fr; }
+    .appt-segmented { width: 100%; }
+    .appt-seg { flex: 1; justify-content: center; }
+}

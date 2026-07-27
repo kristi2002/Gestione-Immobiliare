@@ -13,7 +13,8 @@
         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
     const REM_STATUS_LABELS = { pending: 'In sospeso', completed: 'Completato', cancelled: 'Annullato' };
-    const APPT_STATUS_LABELS = { scheduled: 'Programmata', completed: 'Completata', cancelled: 'Annullata', no_show: 'Mancata presentazione' };
+    const APPT_STATUS_LABELS = { scheduled: 'Programmato', completed: 'Completato', cancelled: 'Annullato', no_show: 'Mancata presentazione' };
+    const APPT_TYPE_LABELS   = { visita: 'Visita', acquisizione: 'Acquisizione', atto: 'Atto', chiamata: 'Chiamata' };
 
     let viewYear, viewMonth;     // month currently displayed (0-based month)
     let events = [];             // merged reminders + appointments for the displayed range
@@ -84,9 +85,10 @@
                 const who = [a.lead_name, a.lead_surname].filter(Boolean).join(' ')
                     || [a.client_name, a.client_surname].filter(Boolean).join(' ');
                 const where = [a.property_address, a.property_city].filter(Boolean).join(', ');
+                const kind = APPT_TYPE_LABELS[a.appointment_type] || 'Appuntamento';
                 return {
                     type: 'appointment', id: a.id, date: a.appointment_date, status: a.status,
-                    title: where || 'Visita', subtitle: who, raw: a,
+                    title: where || kind, subtitle: [kind, who].filter(Boolean).join(' · '), raw: a,
                 };
             });
             events = [...reminders, ...appointments];
@@ -195,7 +197,7 @@
         els.sideBody.querySelectorAll('.cal-side-item').forEach(item => {
             item.addEventListener('click', () => {
                 if (!window.App) return;
-                if (item.dataset.type === 'appointment') window.App.navigateTo('appointment_edit', { appointmentId: Number(item.dataset.id) });
+                if (item.dataset.type === 'appointment') window.App.navigateTo('appointment_profile', { appointmentId: Number(item.dataset.id) });
                 else window.App.navigateTo('reminders');
             });
         });

@@ -17,11 +17,20 @@ const REMINDER_FREQUENCIES = ['once', 'weekly', 'biweekly', 'monthly', 'quarterl
  */
 function processDueReminders(PDO $db): array
 {
+    // The recipient of a "notify client" reminder is not always a `clients`
+    // row: an appointment reminder usually targets a LEAD, and maintenance
+    // reminders target a TENANT. Resolve all three and let
+    // reminderRecipient() pick, otherwise those reminders silently end up
+    // as 'skipped_no_email'.
     $stmt = $db->prepare(
         "SELECT r.*, c.name AS client_name, c.surname AS client_surname, c.email AS client_email,
+                l.name AS lead_name, l.surname AS lead_surname, l.email AS lead_email,
+                t.name AS tenant_first_name, t.surname AS tenant_surname, t.email AS tenant_email,
                 p.address AS property_address, p.city AS property_city
          FROM reminders r
          LEFT JOIN clients c ON c.id = r.client_id
+         LEFT JOIN leads l ON l.id = r.lead_id
+         LEFT JOIN tenants t ON t.id = r.tenant_id
          LEFT JOIN properties p ON p.id = r.property_id
          WHERE r.status = 'pending' AND r.reminder_date <= NOW()
          ORDER BY r.reminder_date ASC"
@@ -53,13 +62,15 @@ function processSingleReminder(PDO $db, array $reminder): array
         $actions['admin'] = $result['success'] ? 'sent' : 'failed';
     }
 
-    if ($reminder['notify_client'] && !empty($reminder['client_email'])) {
+    $recipient = reminderRecipient($reminder);
+
+    if ($reminder['notify_client'] && $recipient['email'] !== '') {
         $subject = $reminder['email_subject'] ?: $reminder['title'];
         $body    = $reminder['email_body'] ?: buildDefaultClientEmailBody($reminder);
-        $result  = sendHtmlEmail($reminder['client_email'], $subject, $body);
+        $result  = sendHtmlEmail($recipient['email'], $subject, $body);
 
         if ($result['success']) {
-            logClientNotification($db, $reminder, $subject, $body);
+            logClientNotification($db, $reminder, $subject, $body, $recipient['email']);
             $actions['client'] = 'sent';
         } else {
             $actions['client'] = 'failed';
@@ -102,6 +113,32 @@ function processSingleReminder(PDO $db, array $reminder): array
     ];
 }
 
+/**
+ * Resolve who a "notify client" reminder is actually addressed to.
+ *
+ * A reminder can hang off a client, a lead or a tenant. Only one of the three
+ * is set in practice; when more than one is, the client wins because that is
+ * the historical behaviour this function replaced.
+ *
+ * @return array{email: string, name: string}
+ */
+function reminderRecipient(array $reminder): array
+{
+    $candidates = [
+        [$reminder['client_email'] ?? '', ($reminder['client_name'] ?? '') . ' ' . ($reminder['client_surname'] ?? '')],
+        [$reminder['lead_email'] ?? '', ($reminder['lead_name'] ?? '') . ' ' . ($reminder['lead_surname'] ?? '')],
+        [$reminder['tenant_email'] ?? '', ($reminder['tenant_first_name'] ?? '') . ' ' . ($reminder['tenant_surname'] ?? '')],
+    ];
+
+    foreach ($candidates as [$email, $name]) {
+        if (!empty($email)) {
+            return ['email' => trim($email), 'name' => trim($name)];
+        }
+    }
+
+    return ['email' => '', 'name' => ''];
+}
+
 function buildAdminNotificationBody(array $reminder): string
 {
     $lines = [
@@ -131,7 +168,7 @@ function buildAdminNotificationBody(array $reminder): string
 
 function buildDefaultClientEmailBody(array $reminder): string
 {
-    $name = trim(($reminder['client_name'] ?? '') . ' ' . ($reminder['client_surname'] ?? ''));
+    $name = reminderRecipient($reminder)['name'];
 
     $lines = [
         'Gentile ' . ($name ?: 'Cliente') . ',',
@@ -151,8 +188,10 @@ function buildDefaultClientEmailBody(array $reminder): string
     return implode("\n", $lines);
 }
 
-function logClientNotification(PDO $db, array $reminder, string $subject, string $body): void
+function logClientNotification(PDO $db, array $reminder, string $subject, string $body, ?string $toEmail = null): void
 {
+    // communications.client_id is NOT NULL, so a lead/tenant-addressed
+    // reminder has nowhere to log — skip rather than blow up the cron run.
     if (empty($reminder['client_id'])) {
         return;
     }
@@ -168,7 +207,7 @@ function logClientNotification(PDO $db, array $reminder, string $subject, string
         'subject'    => $subject,
         'body'       => $body,
         'from_email' => getMailConfig()['agency_email'],
-        'to_email'   => $reminder['client_email'],
+        'to_email'   => $toEmail ?: $reminder['client_email'],
     ]);
 }
 

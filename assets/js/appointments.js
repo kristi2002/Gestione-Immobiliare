@@ -1,5 +1,6 @@
 /**
- * Appointments (Visite) — CRUD (Phase 11)
+ * Appuntamenti — list + CRUD. Opening a card lands on the scheda page
+ * (views/appointment_profile.html), which replaced the old quick-view modal.
  */
 (function () {
     'use strict';
@@ -7,18 +8,27 @@
     const API        = 'api/appointments.php';
 
     const STATUS_LABELS = {
-        scheduled: 'Programmata', completed: 'Completata',
-        cancelled: 'Annullata', no_show: 'Mancata presentazione',
+        scheduled: 'Programmato', completed: 'Completato',
+        cancelled: 'Annullato', no_show: 'Mancata presentazione',
+    };
+    const TYPE_LABELS = {
+        visita: 'Visita', acquisizione: 'Acquisizione', atto: 'Atto', chiamata: 'Chiamata',
+    };
+    const TYPE_ICONS = {
+        visita: 'home', acquisizione: 'handshake', atto: 'file-signature', chiamata: 'phone',
+    };
+    const LOCATION_LABELS = {
+        immobile: 'Presso immobile', agenzia: 'In agenzia', virtuale: 'Videochiamata',
     };
 
     let appointments = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
-    let schedaAppointmentId = null;
     const els = {};
 
     function init() {
         els.grid         = document.getElementById('appointments-grid');
+        els.typeFilter   = document.getElementById('appt-type-filter');
         els.statusFilter = document.getElementById('appt-status-filter');
         els.from         = document.getElementById('appt-from');
         els.to           = document.getElementById('appt-to');
@@ -33,32 +43,13 @@
         document.getElementById('btn-new-appointment').addEventListener('click', () => {
             if (window.App) window.App.navigateTo('appointment_edit');
         });
-        [els.statusFilter, els.from, els.to].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
-
-        // Scheda quick-view
-        const schedaModal = document.getElementById('appointment-scheda-modal');
-        document.getElementById('appointment-scheda-close').addEventListener('click', closeSchedaModal);
-        document.getElementById('scheda-appt-close2').addEventListener('click', closeSchedaModal);
-        schedaModal.addEventListener('click', (e) => { if (e.target === schedaModal) closeSchedaModal(); });
-        document.getElementById('scheda-appt-edit').addEventListener('click', () => {
-            const id = schedaAppointmentId;
-            closeSchedaModal();
-            if (window.App) window.App.navigateTo('appointment_edit', { appointmentId: id });
-        });
-        document.getElementById('scheda-appt-complete').addEventListener('click', () => {
-            const id = schedaAppointmentId;
-            closeSchedaModal();
-            quickStatus(id, 'completed');
-        });
-        document.getElementById('scheda-appt-cancel').addEventListener('click', () => {
-            const id = schedaAppointmentId;
-            closeSchedaModal();
-            quickStatus(id, 'cancelled');
-        });
+        [els.typeFilter, els.statusFilter, els.from, els.to].forEach(el =>
+            el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
     }
 
     async function loadAppointments() {
         const params = new URLSearchParams();
+        if (els.typeFilter.value) params.set('type', els.typeFilter.value);
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.from.value) params.set('from', els.from.value);
         if (els.to.value) params.set('to', els.to.value);
@@ -83,12 +74,14 @@
     function renderCards() {
         els.grid.classList.remove('is-loading');
         if (appointments.length === 0) {
-            els.grid.innerHTML = '<div class="entity-empty">Nessuna visita trovata.</div>';
+            els.grid.innerHTML = '<div class="entity-empty">Nessun appuntamento trovato.</div>';
             return;
         }
         els.grid.innerHTML = appointments.map(a => {
             const who = a.lead_id ? `${a.lead_surname} ${a.lead_name}` :
                         (a.client_id ? `${a.client_surname} ${a.client_name}` : '—');
+            const type = a.appointment_type || 'visita';
+            const owner = `${a.owner_surname || ''} ${a.owner_name || ''}`.trim();
             return `
             <div class="entity-card appointment-card appointment-card--${a.status} entity-card--clickable" data-id="${a.id}">
                 <div class="appointment-card__header">
@@ -96,8 +89,14 @@
                     <span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
                 </div>
                 <div class="entity-card__body">
+                    <div class="appointment-card__tags">
+                        <span class="badge badge--appt-type"><i data-lucide="${TYPE_ICONS[type] || 'calendar'}"></i> ${TYPE_LABELS[type] || type}</span>
+                        <span class="badge badge--soft">${LOCATION_LABELS[a.location_type] || LOCATION_LABELS.immobile}</span>
+                        ${String(a.notify_client) === '1' ? '<span class="badge badge--soft" title="Promemoria al cliente attivo"><i data-lucide="bell"></i></span>' : ''}
+                    </div>
                     <div class="entity-card__info"><i data-lucide="calendar"></i> ${formatDateTime(a.appointment_date)} · ${a.duration_minutes} min</div>
                     <div class="entity-card__info"><i data-lucide="user"></i> ${escapeHtml(who)}</div>
+                    ${owner ? `<div class="entity-card__info text-muted">Proprietario: ${escapeHtml(owner)}</div>` : ''}
                     ${a.agent_name ? `<div class="entity-card__info text-muted">Agente: ${escapeHtml(a.agent_name)}</div>` : ''}
                     ${a.notes ? `<div class="entity-card__info text-muted">${escapeHtml(a.notes)}</div>` : ''}
                 </div>
@@ -123,42 +122,11 @@
         els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('button, a, input')) return;
-                const a = appointments.find(x => x.id == card.dataset.id);
-                if (a) openSchedaModal(a);
+                if (window.App) window.App.navigateTo('appointment_profile', { appointmentId: Number(card.dataset.id) });
             });
         });
-    }
 
-    function openSchedaModal(a) {
-        schedaAppointmentId = a.id;
-        const who = a.lead_id
-            ? `${a.lead_surname} ${a.lead_name}`
-            : (a.client_id ? `${a.client_surname} ${a.client_name}` : '—');
-
-        document.getElementById('scheda-appt-property').textContent =
-            a.property_address ? `${a.property_address}, ${a.property_city}` : 'Immobile eliminato';
-        document.getElementById('scheda-appt-badge').innerHTML =
-            `<span class="badge badge--appt-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>`;
-
-        document.getElementById('scheda-appt-body').innerHTML = `
-            <div class="scheda-rows">
-                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Data e ora</span><span class="scheda-row__value">${formatDateTime(a.appointment_date)}</span></div>
-                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="timer"></i> Durata</span><span class="scheda-row__value">${a.duration_minutes} minuti</span></div>
-                <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="user"></i> Visitatore</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
-                ${a.agent_name ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="briefcase"></i> Agente</span><span class="scheda-row__value">${escapeHtml(a.agent_name)}</span></div>` : ''}
-                ${a.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Note</span><span class="scheda-row__value">${escapeHtml(a.notes)}</span></div>` : ''}
-            </div>`;
-
-        const isScheduled = a.status === 'scheduled';
-        document.getElementById('scheda-appt-complete').hidden = !isScheduled;
-        document.getElementById('scheda-appt-cancel').hidden = !isScheduled;
-
-        document.getElementById('appointment-scheda-modal').hidden = false;
-    }
-
-    function closeSchedaModal() {
-        schedaAppointmentId = null;
-        document.getElementById('appointment-scheda-modal').hidden = true;
+        if (window.lucide) window.lucide.createIcons();
     }
 
     async function quickStatus(id, status) {
@@ -168,26 +136,30 @@
             const res = await fetch(`${API}?id=${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
+                // PUT is a full overwrite: every column has to be echoed back or
+                // the API's defaults silently reset type/luogo/promemoria.
                 body: JSON.stringify({
                     property_id: a.property_id, lead_id: a.lead_id, client_id: a.client_id,
-                    agent_id: a.agent_id, appointment_date: a.appointment_date,
-                    duration_minutes: a.duration_minutes, status, notes: a.notes,
+                    agent_id: a.agent_id, appointment_type: a.appointment_type,
+                    appointment_date: a.appointment_date, duration_minutes: a.duration_minutes,
+                    location_type: a.location_type, location_detail: a.location_detail,
+                    notify_client: a.notify_client, status, notes: a.notes,
                 }),
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            showAlert('Visita aggiornata.', 'success');
+            showAlert('Appuntamento aggiornato.', 'success');
             loadAppointments();
         } catch (err) { showAlert(err.message, 'error'); }
     }
 
     async function deleteAppointment(id) {
-        if (!await confirmDialog('Vuoi eliminare questa visita?', { title: 'Elimina visita' })) return;
+        if (!await confirmDialog('Vuoi eliminare questo appuntamento?', { title: 'Elimina appuntamento' })) return;
         try {
             const res = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            showAlert('Visita eliminata.', 'success');
+            showAlert('Appuntamento eliminato.', 'success');
             loadAppointments();
         } catch (err) { showAlert(err.message, 'error'); }
     }

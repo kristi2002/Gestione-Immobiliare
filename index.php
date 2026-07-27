@@ -204,7 +204,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                     <summary><span class="nav-group-label">Agenda</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('appointments')): ?>
-                        <li><a href="view.php?name=appointments" class="nav-link" data-view="appointments"><i class="nav-icon" data-lucide="calendar-check"></i><span class="nav-label">Visite</span></a></li>
+                        <li><a href="view.php?name=appointments" class="nav-link" data-view="appointments"><i class="nav-icon" data-lucide="calendar-check"></i><span class="nav-label">Appuntamenti</span></a></li>
                         <?php endif; ?>
                         <?php if (canAccessView('calendar')): ?>
                         <li><a href="view.php?name=calendar" class="nav-link" data-view="calendar"><i class="nav-icon" data-lucide="calendar"></i><span class="nav-label">Calendario</span></a></li>

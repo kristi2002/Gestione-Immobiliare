@@ -1,0 +1,74 @@
+<div class="appointment-profile-view">
+
+    <!-- Back nav -->
+    <div class="profile-topbar">
+        <button class="btn btn--ghost" id="apr-back">← Appuntamenti</button>
+    </div>
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Scheda appuntamento</h2>
+            <p>Tutto ciò che serve all'agente prima di presentarsi: quando, dove, con chi.</p>
+        </div>
+    </div>
+
+    <div id="apr-alert" class="alert" style="display:none;"></div>
+
+    <!-- Hero: type + when + status -->
+    <div class="appt-hero card" id="apr-hero">
+        <div class="appt-hero__date">
+            <span class="appt-hero__dow" id="apr-dow">—</span>
+            <span class="appt-hero__day" id="apr-day">—</span>
+            <span class="appt-hero__month" id="apr-month">—</span>
+        </div>
+        <div class="appt-hero__info">
+            <div class="appt-hero__badges" id="apr-badges"></div>
+            <h2 id="apr-title">Caricamento…</h2>
+            <div class="appt-hero__meta" id="apr-meta"></div>
+        </div>
+        <div class="appt-hero__actions">
+            <button class="btn btn--primary btn--sm" id="apr-complete" hidden><i data-lucide="check"></i> Completa</button>
+            <button class="btn btn--ghost btn--sm" id="apr-cancel" hidden><i data-lucide="x"></i> Annulla</button>
+            <button class="btn btn--ghost btn--sm" id="apr-edit"><i data-lucide="pencil"></i> Modifica</button>
+            <button class="btn btn--ghost btn--sm btn--danger" id="apr-delete"><i data-lucide="trash-2"></i> Elimina</button>
+        </div>
+    </div>
+
+    <div class="appt-scheda-grid">
+
+        <!-- Quando e dove -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="calendar-clock"></i><h3>Quando e dove</h3></div>
+            <div class="scheda-rows" id="apr-when"></div>
+        </div>
+
+        <!-- Parti coinvolte -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="users"></i><h3>Parti coinvolte</h3></div>
+            <div class="appt-people" id="apr-people"></div>
+        </div>
+
+        <!-- Immobile -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="home"></i><h3>Immobile</h3></div>
+            <div id="apr-property"></div>
+        </div>
+
+        <!-- Promemoria -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="bell"></i><h3>Promemoria al cliente</h3></div>
+            <div id="apr-reminder"></div>
+        </div>
+
+        <!-- Note -->
+        <div class="card appt-card appt-card--wide">
+            <div class="appt-card__header"><i data-lucide="file-pen"></i><h3>Note interne</h3></div>
+            <div id="apr-notes"></div>
+        </div>
+
+    </div>
+
+    <p class="appt-footnote" id="apr-footnote"></p>
+</div>
+
+<script src="assets/js/appointment_profile.js?v=1"></script>

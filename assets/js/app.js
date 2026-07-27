@@ -85,7 +85,7 @@
             expenses:       'Spese',
             invoices:       'Fatture',
             communications: 'Comunicazioni',
-            appointments:   'Visite',
+            appointments:   'Appuntamenti',
             calendar:       'Calendario',
             map:            'Mappa',
             reminders:      'Promemoria',
@@ -107,6 +107,7 @@
             tenant_edit:           'Inquilino',
             tenant_profile:        'Scheda Inquilino',
             appointment_edit:      'Appuntamento',
+            appointment_profile:   'Scheda Appuntamento',
             expense_edit:          'Spesa',
             payment_edit:          'Pagamento',
             automations:           'Automazioni Clienti',
@@ -132,8 +133,9 @@
         // ("Modifica …") is wrong in create mode. Pick by presence of the id param
         // (absent => create), matching the in-card h2 set by the view script.
         editTitles: {
-            client_edit:   { create: 'Nuovo Proprietario', edit: 'Modifica Proprietario', idKey: 'clientId' },
-            property_edit: { create: 'Nuovo Immobile',      edit: 'Modifica Immobile',     idKey: 'propertyId' },
+            client_edit:      { create: 'Nuovo Proprietario',  edit: 'Modifica Proprietario',  idKey: 'clientId' },
+            property_edit:    { create: 'Nuovo Immobile',      edit: 'Modifica Immobile',      idKey: 'propertyId' },
+            appointment_edit: { create: 'Nuovo Appuntamento',  edit: 'Modifica Appuntamento',  idKey: 'appointmentId' },
         },
 
         resolveTitle(viewKey) {

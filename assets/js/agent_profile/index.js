@@ -12,14 +12,14 @@ const LEAD_STATUS = {
 };
 const INTEREST_LABELS = { affitto: 'Affitto', acquisto: 'Acquisto', entrambi: 'Entrambi' };
 const SOURCE_LABELS = { telefono: 'Telefono', email: 'Email', web: 'Web', passaparola: 'Passaparola', social: 'Social', immobiliare: 'Immobiliare.it', idealista: 'Idealista', casa: 'Casa.it', subito: 'Subito', altro: 'Altro' };
-const APPT_STATUS = { scheduled: 'Programmata', completed: 'Completata', cancelled: 'Annullata', no_show: 'Non presentato' };
+const APPT_STATUS = { scheduled: 'Programmato', completed: 'Completato', cancelled: 'Annullato', no_show: 'Non presentato' };
 const COMM_STATUS = { pending: 'Da incassare', paid: 'Incassata' };
 
 // KPI cards. `filter` makes a card filter the leads table; `tab` switches tab.
 const KPI_ITEMS = [
     { key: 'leads_total',     label: 'Lead totali',  icon: 'clipboard-list' },
     { key: 'leads_converted', label: 'Convertiti',   icon: 'check-circle' },
-    { key: 'appointments',    label: 'Visite',       icon: 'calendar', tab: 'appointments' },
+    { key: 'appointments',    label: 'Appuntamenti', icon: 'calendar', tab: 'appointments' },
     { key: 'properties',      label: 'Immobili',     icon: 'building-2' },
     { key: 'keys_out',        label: 'Chiavi fuori', icon: 'key' },
     { key: 'leads_new',       label: 'Nuovi lead',   icon: 'badge-plus', filter: 'new' },

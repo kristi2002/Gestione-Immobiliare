@@ -1,5 +1,5 @@
 /**
- * Appointment (visita) create / edit — dedicated page (replaces the old modal).
+ * Appointment create / edit — dedicated page.
  * viewParams: { appointmentId } for edit; { propertyId } / { leadId } / { clientId } to preselect on create.
  */
 (function () {
@@ -14,6 +14,25 @@
     const appointmentId = vp.appointmentId || null;
     const isEdit        = !!appointmentId;
 
+    /** property id -> { owner, address, city } — powers the read-only owner badge. */
+    const propertyIndex = new Map();
+
+    const LOCATION_COPY = {
+        immobile: {
+            note: "L'appuntamento si svolge all'indirizzo dell'immobile selezionato.",
+        },
+        agenzia: {
+            label: 'Indirizzo / sede',
+            hint: 'Lascia vuoto per la sede principale dell\'agenzia.',
+            placeholder: 'Es. Corso Umberto I 12, Civitanova Marche',
+        },
+        virtuale: {
+            label: 'Link alla videochiamata',
+            hint: 'Verrà incluso nel promemoria inviato al cliente.',
+            placeholder: 'https://meet.google.com/...',
+        },
+    };
+
     function $(id) { return document.getElementById(id); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
@@ -27,7 +46,8 @@
 
     function goBack() {
         if (!window.App) return;
-        if (vp.leadId) window.App.navigateTo('lead_edit', { leadId: vp.leadId });
+        if (isEdit) window.App.navigateTo('appointment_profile', { appointmentId });
+        else if (vp.leadId) window.App.navigateTo('lead_edit', { leadId: vp.leadId });
         else if (vp.propertyId) window.App.navigateTo('property_profile', { propertyId: vp.propertyId });
         else if (vp.clientId) window.App.navigateTo('client_profile', { clientId: vp.clientId });
         else window.App.navigateTo('appointments');
@@ -55,6 +75,14 @@
             fetchList(CLIENTS_API, { status: 'active' }).catch(() => []),
             fetch(`${LEADS_API}?action=agents`).then(r => r.json()).catch(() => ({})),
         ]);
+
+        propertyIndex.clear();
+        props.forEach(p => propertyIndex.set(String(p.id), {
+            owner: `${p.client_surname || ''} ${p.client_name || ''}`.trim(),
+            address: p.address || '',
+            city: p.city || '',
+        }));
+
         $('ape-property').innerHTML = '<option value="">— Seleziona immobile —</option>' +
             props.map(p => `<option value="${p.id}">${esc(p.address)}, ${esc(p.city)}</option>`).join('');
         $('ape-lead').innerHTML = '<option value="">— Nessuno —</option>' +
@@ -63,6 +91,100 @@
             clients.map(c => `<option value="${c.id}">${esc(c.surname)} ${esc(c.name)}</option>`).join('');
         $('ape-agent').innerHTML = '<option value="">— Nessuno —</option>' +
             (agentsJson.data || []).map(a => `<option value="${a.id}">${esc(a.username)}</option>`).join('');
+    }
+
+    // ---- Owner badge: derived from the property, never typed by the agent ----
+
+    function refreshOwner() {
+        const info = propertyIndex.get($('ape-property').value);
+        const el = $('ape-owner-name');
+        const wrap = $('ape-owner-hint');
+        if (!info) {
+            el.textContent = '— seleziona prima un immobile —';
+            wrap.classList.remove('is-filled');
+            return;
+        }
+        el.textContent = info.owner || 'Proprietario non disponibile';
+        wrap.classList.add('is-filled');
+    }
+
+    // ---- Type cards ----
+
+    function setType(type) {
+        $('ape-type').value = type;
+        document.querySelectorAll('#ape-type-grid .appt-type-card').forEach(b => {
+            const on = b.dataset.type === type;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+    }
+
+    // ---- Duration: chips drive the number input, and vice versa ----
+
+    function setDuration(min) {
+        $('ape-duration').value = min;
+        syncDurationChips();
+    }
+
+    function syncDurationChips() {
+        const current = String($('ape-duration').value);
+        document.querySelectorAll('#ape-duration-chips .appt-chip').forEach(c => {
+            c.classList.toggle('is-active', c.dataset.min === current);
+        });
+    }
+
+    // ---- Location ----
+
+    function setLocation(loc) {
+        $('ape-location-type').value = loc;
+        document.querySelectorAll('#ape-location-seg .appt-seg').forEach(b => {
+            const on = b.dataset.loc === loc;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+
+        const wrap = $('ape-location-detail-wrap');
+        const note = $('ape-location-note');
+        const copy = LOCATION_COPY[loc];
+
+        if (loc === 'immobile') {
+            wrap.hidden = true;
+            note.hidden = false;
+            $('ape-location-detail').value = '';
+        } else {
+            wrap.hidden = false;
+            note.hidden = true;
+            $('ape-location-detail-label').textContent = copy.label;
+            $('ape-location-detail-hint').textContent = copy.hint;
+            $('ape-location-detail').placeholder = copy.placeholder;
+            $('ape-location-detail').type = loc === 'virtuale' ? 'url' : 'text';
+        }
+    }
+
+    // ---- Reminder toggle ----
+
+    /**
+     * The reminder is delivered by the cron engine to the lead or client on the
+     * appointment. With neither set there is no address to write to, and a
+     * non-scheduled appointment must never email anyone — say so instead of
+     * letting the agent believe a message will go out.
+     */
+    function refreshNotifyWarning() {
+        const box = $('ape-notify-warning');
+        if (!$('ape-notify').checked) { box.hidden = true; return; }
+
+        const hasCounterpart = $('ape-lead').value || $('ape-client').value;
+        const status = $('ape-status').value;
+
+        if (!hasCounterpart) {
+            box.textContent = 'Nessun promemoria verrà inviato: seleziona un lead o un cliente a cui scrivere.';
+            box.hidden = false;
+        } else if (status !== 'scheduled') {
+            box.textContent = 'Nessun promemoria verrà inviato: l\'appuntamento non è in stato "Programmato".';
+            box.hidden = false;
+        } else {
+            box.hidden = true;
+        }
     }
 
     async function loadAppointment() {
@@ -78,6 +200,14 @@
         $('ape-duration').value = a.duration_minutes ?? 60;
         $('ape-status').value = a.status || 'scheduled';
         $('ape-notes').value = a.notes || '';
+        $('ape-notify').checked = String(a.notify_client) === '1';
+
+        setType(a.appointment_type || 'visita');
+        setLocation(a.location_type || 'immobile');
+        if (a.location_detail) $('ape-location-detail').value = a.location_detail;
+        syncDurationChips();
+        refreshOwner();
+        refreshNotifyWarning();
     }
 
     function collect() {
@@ -86,8 +216,12 @@
             lead_id:          $('ape-lead').value || null,
             client_id:        $('ape-client').value || null,
             agent_id:         $('ape-agent').value || null,
+            appointment_type: $('ape-type').value,
             appointment_date: $('ape-date').value,
             duration_minutes: $('ape-duration').value,
+            location_type:    $('ape-location-type').value,
+            location_detail:  $('ape-location-detail').value.trim(),
+            notify_client:    $('ape-notify').checked ? 1 : 0,
             status:           $('ape-status').value,
             notes:            $('ape-notes').value.trim(),
         };
@@ -107,7 +241,9 @@
             });
             const j = await res.json();
             if (!j.success) throw new Error(j.error);
-            goBack();
+            // Land on the scheda of the appointment that was just saved.
+            if (window.App && j.data?.id) window.App.navigateTo('appointment_profile', { appointmentId: j.data.id });
+            else goBack();
         } catch (err) {
             showError(err.message);
             btn.disabled = false; btn.textContent = 'Salva';
@@ -119,21 +255,41 @@
         $('ape-cancel').addEventListener('click', goBack);
         $('ape-form').addEventListener('submit', save);
 
+        $('ape-property').addEventListener('change', refreshOwner);
+
+        document.querySelectorAll('#ape-type-grid .appt-type-card').forEach(b => {
+            b.addEventListener('click', () => setType(b.dataset.type));
+        });
+        document.querySelectorAll('#ape-duration-chips .appt-chip').forEach(c => {
+            c.addEventListener('click', () => setDuration(Number(c.dataset.min)));
+        });
+        $('ape-duration').addEventListener('input', syncDurationChips);
+        document.querySelectorAll('#ape-location-seg .appt-seg').forEach(b => {
+            b.addEventListener('click', () => setLocation(b.dataset.loc));
+        });
+
+        ['ape-notify', 'ape-lead', 'ape-client', 'ape-status'].forEach(id => {
+            $(id).addEventListener('change', refreshNotifyWarning);
+        });
+
         try { await loadDropdowns(); }
         catch (err) { showAlert('Errore caricamento elenchi: ' + err.message, 'error'); }
 
         if (isEdit) {
-            $('ape-title').textContent = 'Modifica Visita';
+            $('ape-title').textContent = 'Modifica Appuntamento';
             try { await loadAppointment(); }
-            catch (err) { showAlert('Impossibile caricare la visita: ' + err.message, 'error'); }
+            catch (err) { showAlert('Impossibile caricare l\'appuntamento: ' + err.message, 'error'); }
         } else {
-            $('ape-title').textContent = 'Nuova Visita';
+            $('ape-title').textContent = 'Nuovo Appuntamento';
             const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0);
             $('ape-date').value = toLocal(d.toISOString());
             if (vp.propertyId) $('ape-property').value = String(vp.propertyId);
             if (vp.leadId) $('ape-lead').value = String(vp.leadId);
             if (vp.clientId) $('ape-client').value = String(vp.clientId);
+            refreshOwner();
         }
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     init();
