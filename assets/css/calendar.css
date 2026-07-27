@@ -360,9 +360,15 @@
     cursor: default;
 }
 
-.calendar-view .cal-side-item__done i {
+/* Lucide swaps the <i data-lucide> for an <svg>, so an `i` selector stops
+   matching the moment the icons hydrate — hence the 24px default check.
+   Named icons elsewhere in this file survive because lucide copies their
+   class onto the svg; this one is unclassed, so match both elements. */
+.calendar-view .cal-side-item__done i,
+.calendar-view .cal-side-item__done svg {
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
