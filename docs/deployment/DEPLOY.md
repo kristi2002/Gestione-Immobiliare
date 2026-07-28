@@ -178,34 +178,58 @@ The `docker-entrypoint.sh` script reads `$PORT` and updates Apache's Listen dire
 
 ---
 
-## Cron jobs (⚠️ NOT YET CONFIGURED)
+## Cron jobs (installed on the Hetzner host — 2026-07-28)
 
-These cron jobs need to be set up on the Hetzner server. Run them via `docker exec` or set up a host crontab:
+**Do not hardcode the container name.** Coolify appends a fresh timestamp suffix on
+every deploy (`<appUuid>-053929452837`), so a literal name goes stale at the next
+push and the job silently stops. Filter on the **application UUID prefix**, which is
+stable, and always `| head -n1`:
 
 ```bash
-# On the VPS host, add to crontab (crontab -e):
-CONTAINER="<app-container-name>"
-
-# Process reminders and send notifications - every 15 min
-*/15 * * * * docker exec $CONTAINER php /var/www/html/cron/process_reminders.php
-
-# Send payment reminders - daily at 8am
-0 8 * * * docker exec $CONTAINER php /var/www/html/cron/send_payment_reminders.php
-
-# Publish scheduled social posts - every 5 min
-*/5 * * * * docker exec $CONTAINER php /var/www/html/cron/publish_social_posts.php
-
-# Contract expiration checks - daily at 9am
-0 9 * * * docker exec $CONTAINER php /var/www/html/cron/process_contract_expirations.php
-
-# Overdue key returns - daily at 8:30am
-30 8 * * * docker exec $CONTAINER php /var/www/html/cron/process_key_returns.php
-
-# Database backup - daily at 2am
-0 2 * * * docker exec $CONTAINER php /var/www/html/cron/backup_database.php
+docker ps -qf name=bs555w5mvdeffngi7vxab4qo | head -n1
 ```
 
-All cron endpoints require the `X-Cron-Secret: <CRON_SECRET>` header (or pass as query param). Set `CRON_SECRET` to a strong random value in Coolify env vars.
+> A previous crontab used `docker ps -qf "name=gestione"`, which matches nothing —
+> the command collapsed to `docker exec php …` and every job failed nightly with
+> `No such container: php` for months. The scripts also live in `cron/`, not
+> `config/`. Both mistakes were invisible because nothing checks a cron's *output*.
+> After any change, verify with the heartbeat (below), never by reading the crontab.
+
+```bash
+# On the VPS host (crontab -e). APP=Coolify application UUID prefix.
+APP=bs555w5mvdeffngi7vxab4qo
+
+# Process reminders and send notifications - hourly
+0 * * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/process_reminders.php >> /var/log/gestione-cron.log 2>&1
+
+# Send payment reminders - daily at 8am
+0 8 * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/send_payment_reminders.php >> /var/log/gestione-cron.log 2>&1
+
+# Publish scheduled social posts - every 15 min
+*/15 * * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/publish_social_posts.php >> /var/log/gestione-cron.log 2>&1
+
+# Overdue key returns - daily at 8:30am
+30 8 * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/process_key_returns.php >> /var/log/gestione-cron.log 2>&1
+
+# Database backup - daily at 2am
+0 2 * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/backup_database.php >> /var/log/gestione-cron.log 2>&1
+```
+
+**Not yet scheduled** (scripts exist, `api/readiness.php` expects them):
+`process_contract_expirations.php` and `gdpr_retention.php`.
+
+`CRON_SECRET` gates only the **HTTP** entry points: every `cron/*.php` skips the
+check under `PHP_SAPI === 'cli'`. Do not pass the secret as a command-line argument
+— it is ignored there and shows up in `ps` for any user on the box.
+
+### Verifying a cron actually runs
+
+Script on disk ≠ job executing. Each job writes `cron_last_<job>` into
+`app_settings` on success, and `api/readiness.php` flags stale ones:
+
+```bash
+docker exec $(docker ps -qf name=$APP | head -n1) php -r 'require "/var/www/html/config/env.php"; loadEnv("/var/www/html/.env"); require "/var/www/html/config/db.php"; $s=getDB()->prepare("SELECT setting_key k, setting_value v FROM app_settings WHERE setting_key LIKE ? ORDER BY setting_key"); $s->execute(["cron_last_%"]); foreach($s->fetchAll() as $r) echo str_pad($r["k"],30).$r["v"].PHP_EOL;'
+```
 
 ---
 
