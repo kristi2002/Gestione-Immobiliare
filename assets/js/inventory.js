@@ -768,7 +768,7 @@
                 @media print { button { display: none; } }
             </style></head><body>
             <h1>Report Check-in Inventario</h1>
-            <p>Immobile: <strong>${propLabel}</strong> &mdash; Data: ${new Date().toLocaleDateString('it-IT')}</p>
+            <p>Immobile: <strong>${propLabel}</strong> &mdash; Data: ${window.Fmt.date(new Date())}</p>
             <table>
                 <thead><tr><th>Articolo</th><th>Categoria</th><th>Marca/Modello</th><th>Valore</th><th>Qtà</th><th>Condizione</th><th>Note</th></tr></thead>
                 <tbody>${rows.map(r => `<tr>
