@@ -259,38 +259,52 @@ function deleteContract(PDO $db, int $id): void
         apiError('Contratto non trovato.', 404);
     }
 
-    // A rent schedule is not financial history until money actually moves: an
-    // untouched 'pending' row is a projection, and since contracts now generate
-    // one automatically on save, refusing to delete a lease because of rows the
-    // app itself created would be absurd. A SETTLED payment is different — that
-    // is accounting history, and phase25/phase48 set the house rule that an
-    // entity must never be hard-deleted out from under it.
-    $stmt = $db->prepare(
-        "SELECT
-            SUM(status = 'paid' OR paid_date IS NOT NULL) AS settled,
-            SUM(NOT (status = 'paid' OR paid_date IS NOT NULL)) AS unsettled
-         FROM payments WHERE contract_id = :cid"
-    );
-    $stmt->execute(['cid' => $id]);
-    $counts    = $stmt->fetch() ?: [];
-    $settled   = (int) ($counts['settled'] ?? 0);
-    $unsettled = (int) ($counts['unsettled'] ?? 0);
+    $rel = contractRelatedRecords($db, $id);
 
-    if ($settled > 0) {
+    // Anything already "settled" is history and blocks the delete outright:
+    // collected rent, paid commissions, a completed signature. phase25/phase48
+    // set the house rule — an entity is never hard-deleted out from under its
+    // financial or legal record.
+    $blockers = [];
+    if ($rel['payments']['settled'] > 0) {
+        $n = $rel['payments']['settled'];
+        $blockers[] = "$n pagament" . ($n === 1 ? 'o incassato' : 'i incassati');
+    }
+    if ($rel['commissions']['settled'] > 0) {
+        $n = $rel['commissions']['settled'];
+        $blockers[] = "$n provvigion" . ($n === 1 ? 'e liquidata' : 'i liquidate');
+    }
+    if ($rel['esign']['settled'] > 0) {
+        $n = $rel['esign']['settled'];
+        $blockers[] = "$n firm" . ($n === 1 ? 'a elettronica raccolta' : 'e elettroniche raccolte');
+    }
+    // Documents are never auto-deleted: the row owns a FILE on disk, which may be
+    // a signed contract scan or an identity document under legal retention. We
+    // will not unlink one as a side effect of deleting a contract — the agent has
+    // to decide about each file explicitly.
+    if ($rel['documents']['total'] > 0) {
+        $n = $rel['documents']['total'];
+        $blockers[] = "$n document" . ($n === 1 ? 'o allegato' : 'i allegati');
+    }
+
+    if ($blockers) {
         apiError(
-            "Impossibile eliminare: il contratto ha $settled pagament" . ($settled === 1 ? 'o incassato' : 'i incassati')
-            . '. Lo storico contabile non può essere cancellato — annulla il contratto invece di eliminarlo.',
+            'Impossibile eliminare: il contratto ha ' . implode(', ', $blockers)
+            . '. Questi record non possono essere cancellati insieme al contratto — '
+            . 'scollegali o annulla il contratto invece di eliminarlo.',
             409
         );
     }
 
-    // fk_payments_contract is RESTRICT (phase70), so the schedule must go first
-    // or the contract delete is refused. Both in one transaction: never leave a
-    // contract whose schedule has already been removed.
+    // What remains is forecast, not history: an unpaid rent schedule, a commission
+    // still pending, an unsigned/expired signature request. Those go with the
+    // contract. The FKs are RESTRICT (phase70/phase71) so children must be removed
+    // first, and it all happens in one transaction — never a contract whose
+    // schedule has already been deleted.
     $db->beginTransaction();
     try {
-        if ($unsettled > 0) {
-            $del = $db->prepare("DELETE FROM payments WHERE contract_id = :cid");
+        foreach (['payments', 'agent_commissions', 'esign_requests'] as $table) {
+            $del = $db->prepare("DELETE FROM $table WHERE contract_id = :cid");
             $del->execute(['cid' => $id]);
         }
 
@@ -305,15 +319,72 @@ function deleteContract(PDO $db, int $id): void
         throw $e;
     }
 
-    $detail = 'Contratto eliminato #' . $id
-        . ($unsettled > 0 ? " (rimosse $unsettled rate non incassate)" : '');
-    logActivity('delete', 'contract', $id, $detail);
+    $removed = [
+        'payments'    => $rel['payments']['unsettled'],
+        'commissions' => $rel['commissions']['unsettled'],
+        'esign'       => $rel['esign']['unsettled'],
+    ];
+    $plural = static fn(int $n, string $one, string $many): string => "$n " . ($n === 1 ? $one : $many);
+
+    $parts = [];
+    if ($removed['payments'])    $parts[] = $plural($removed['payments'], 'rata non incassata', 'rate non incassate');
+    if ($removed['commissions']) $parts[] = $plural($removed['commissions'], 'provvigione non liquidata', 'provvigioni non liquidate');
+    if ($removed['esign'])       $parts[] = $plural($removed['esign'], 'richiesta di firma non completata', 'richieste di firma non completate');
+
+    logActivity('delete', 'contract', $id, 'Contratto eliminato #' . $id
+        . ($parts ? ' (rimosse: ' . implode(', ', $parts) . ')' : ''));
+
     apiSuccess([
-        'id'               => $id,
-        'payments_deleted' => $unsettled,
-        'message'          => 'Contratto eliminato.'
-            . ($unsettled > 0 ? " Rimosse $unsettled rate non incassate dallo scadenzario." : ''),
+        'id'      => $id,
+        'removed' => $removed,
+        'message' => 'Contratto eliminato.'
+            . ($parts ? ' Rimosse anche ' . implode(', ', $parts) . '.' : ''),
     ]);
+}
+
+/**
+ * Records hanging off a contract, split into settled (history — blocks deletion)
+ * and unsettled (forecast — removed with the contract).
+ *
+ * Documents are counted whole: they own a file on disk and are never removed
+ * automatically, so the settled/unsettled split does not apply to them.
+ */
+function contractRelatedRecords(PDO $db, int $id): array
+{
+    $count = function (string $sql) use ($db, $id): array {
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['cid' => $id]);
+        $row = $stmt->fetch() ?: [];
+        return [
+            'settled'   => (int) ($row['settled'] ?? 0),
+            'unsettled' => (int) ($row['unsettled'] ?? 0),
+        ];
+    };
+
+    return [
+        'payments' => $count(
+            "SELECT SUM(status = 'paid' OR paid_date IS NOT NULL)      AS settled,
+                    SUM(NOT (status = 'paid' OR paid_date IS NOT NULL)) AS unsettled
+             FROM payments WHERE contract_id = :cid"
+        ),
+        'commissions' => $count(
+            "SELECT SUM(status = 'paid' OR paid_at IS NOT NULL)      AS settled,
+                    SUM(NOT (status = 'paid' OR paid_at IS NOT NULL)) AS unsettled
+             FROM agent_commissions WHERE contract_id = :cid"
+        ),
+        // A signed request is evidence of a signature ceremony (it stores signer,
+        // timestamp and IP). Pending/expired ones prove nothing.
+        'esign' => $count(
+            "SELECT SUM(status = 'signed' OR signed_at IS NOT NULL)      AS settled,
+                    SUM(NOT (status = 'signed' OR signed_at IS NOT NULL)) AS unsettled
+             FROM esign_requests WHERE contract_id = :cid"
+        ),
+        'documents' => ['total' => (int) (function () use ($db, $id) {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM documents WHERE contract_id = :cid");
+            $stmt->execute(['cid' => $id]);
+            return $stmt->fetchColumn();
+        })()],
+    ];
 }
 
 // ---------------------------------------------------------------------------
