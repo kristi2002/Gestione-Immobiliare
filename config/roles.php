@@ -13,9 +13,10 @@ const ROLE_PERMISSIONS = [
 ];
 
 // Features present in code but intentionally turned off — no working backend
-// behind them yet (portal_sync only tracks status; there's no real feed/API
-// push). Blocked unconditionally for every role until re-enabled here.
-const DISABLED_VIEWS = ['portal_sync'];
+// behind them yet. Blocked unconditionally for every role until re-enabled here.
+// (portal_sync lives here no longer: it is a manual publish-state tracker, which
+// works standalone; the automatic feed push to each portal stays out of scope.)
+const DISABLED_VIEWS = [];
 
 function isViewDisabled(string $view): bool
 {

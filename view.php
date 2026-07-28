@@ -39,8 +39,7 @@ if (isViewDisabled($name)) {
     echo '<div class="placeholder-view">'
         . '<div class="placeholder-icon"><i data-lucide="lock"></i></div>'
         . '<h2>Funzionalità in fase di attivazione</h2>'
-        . '<p>La pubblicazione sui portali immobiliari richiede un feed/API a pagamento non ancora configurato. '
-        . 'Questa sezione è disattivata in attesa dell\'attivazione.</p>'
+        . '<p>Questa sezione è disattivata in attesa dell\'attivazione del servizio su cui si appoggia.</p>'
         . '</div>';
     exit;
 }
