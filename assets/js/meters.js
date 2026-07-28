@@ -3,7 +3,16 @@
 
     const API      = 'api/meter_readings.php';
     const PROP_API = 'api/properties.php';
-    const DOC_API  = 'api/documents.php';
+    const DOC_API   = 'api/documents.php';
+    const METER_API = 'api/meters.php';
+
+    // Valore sentinella della select contatore: apre il censimento inline.
+    const NEW_METER = '__new__';
+
+    // Il codice ha un nome diverso per tipo — luce = POD, gas = PDR, il resto
+    // matricola. Stessa mappa del server (decorateMeter): qui serve solo come
+    // suggerimento mentre si digita, la verita' resta quella dell'API.
+    const CODE_LABELS = { electricity: 'POD', gas: 'PDR', water: 'Matricola', heating: 'Matricola' };
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
@@ -33,6 +42,9 @@
         els.modal      = document.getElementById('meters-modal');
         els.form       = document.getElementById('meters-form');
         els.delModal   = document.getElementById('meters-delete-modal');
+        els.propSelect = document.getElementById('meters-property-id');
+        els.meterSel   = document.getElementById('meters-meter-id');
+        els.newMeter   = document.getElementById('meters-new-meter');
 
         bindEvents();
         loadProperties();
@@ -53,6 +65,65 @@
 
         els.propFilter.addEventListener('change', () => { currentPage = 1; loadReadings(); });
         els.typeFilter.addEventListener('change', () => { currentPage = 1; loadReadings(); });
+
+        els.propSelect.addEventListener('change', () => loadMetersFor(els.propSelect.value));
+        els.meterSel.addEventListener('change', syncNewMeterFields);
+        document.getElementById('meters-type').addEventListener('change', syncCodeHint);
+    }
+
+    // I contatori dipendono dall'immobile scelto: finche' non c'e' un immobile la
+    // select resta vuota, e non elencare mai i contatori di un altro immobile.
+    async function loadMetersFor(propertyId, selectedId) {
+        els.meterSel.innerHTML = '';
+
+        if (!propertyId) {
+            els.meterSel.appendChild(new Option('— Seleziona prima l\'immobile —', ''));
+            syncNewMeterFields();
+            return;
+        }
+
+        els.meterSel.appendChild(new Option('Caricamento…', ''));
+
+        try {
+            const res  = await fetch(`${METER_API}?property_id=${encodeURIComponent(propertyId)}&active=1&limit=200`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            const items = window.Pagination.parseResponse(json).items;
+            els.meterSel.innerHTML = '';
+            els.meterSel.appendChild(new Option(items.length ? '— Seleziona contatore —' : '— Nessun contatore censito —', ''));
+
+            items.forEach(m => {
+                const bits = [TYPE_LABELS[m.meter_type] || m.meter_type];
+                if (m.code) bits.push(`${m.code_label} ${m.code}`);
+                if (m.location) bits.push(m.location);
+                els.meterSel.appendChild(new Option(bits.join(' · '), m.id));
+            });
+
+            els.meterSel.appendChild(new Option('＋ Registra nuovo contatore', NEW_METER));
+            if (selectedId) els.meterSel.value = String(selectedId);
+        } catch (e) {
+            els.meterSel.innerHTML = '';
+            els.meterSel.appendChild(new Option('Errore nel caricamento', ''));
+            els.meterSel.appendChild(new Option('＋ Registra nuovo contatore', NEW_METER));
+        }
+
+        syncNewMeterFields();
+    }
+
+    function syncNewMeterFields() {
+        const creating = els.meterSel.value === NEW_METER;
+        els.newMeter.hidden = !creating;
+        // `required` va tolto quando il fieldset e' nascosto, altrimenti il
+        // browser blocca l'invio su un campo che nessuno puo' vedere.
+        document.getElementById('meters-type').required = creating;
+        syncCodeHint();
+    }
+
+    function syncCodeHint() {
+        const type = document.getElementById('meters-type').value;
+        const hint = document.getElementById('meters-code-hint');
+        if (hint) hint.textContent = CODE_LABELS[type] ? `(${CODE_LABELS[type]})` : '';
     }
 
     async function loadProperties() {
@@ -145,13 +216,17 @@
 
         els.tbody.innerHTML = items.map(r => {
             const typeLabel = TYPE_LABELS[r.meter_type] || r.meter_type || '—';
+            const meterBits = [r.meter_code, r.meter_location].filter(Boolean).join(' · ');
             const unit      = TYPE_UNITS[r.meter_type] || '';
             const reading   = r.reading_value != null ? `${r.reading_value} ${unit}` : '—';
             const deltaHtml = renderConsumption(r.consumption, unit);
 
             return `<tr>
                 <td data-label="Immobile">${esc(r.property_address || r.property_title || `#${r.property_id}`)}</td>
-                <td data-label="Tipo"><span class="badge">${esc(typeLabel)}</span></td>
+                <td data-label="Contatore">
+                    <span class="badge">${esc(typeLabel)}</span>
+                    ${meterBits ? `<div class="text-muted"><small>${esc(meterBits)}</small></div>` : ''}
+                </td>
                 <td data-label="Lettura">${esc(reading)}</td>
                 <td data-label="Consumo">${deltaHtml}</td>
                 <td data-label="Data">${formatDate(r.reading_date)}</td>
@@ -201,12 +276,14 @@
         if (item) {
             document.getElementById('meters-id').value              = item.id;
             document.getElementById('meters-property-id').value     = item.property_id || '';
-            document.getElementById('meters-type').value            = item.meter_type || '';
             document.getElementById('meters-reading-value').value   = item.reading_value || '';
             document.getElementById('meters-reading-date').value    = item.reading_date ? item.reading_date.substring(0, 10) : '';
             document.getElementById('meters-notes').value           = item.notes || '';
         }
 
+        // Non atteso di proposito: la scheda si apre subito e la select dei
+        // contatori si popola appena la risposta arriva.
+        loadMetersFor(item ? item.property_id : '', item ? item.meter_id : null);
         renderExistingPhotos(item ? item.photos : []);
 
         els.modal.hidden = false;
@@ -225,6 +302,28 @@
         box.innerHTML = 'Già allegate: ' + photos.map(p =>
             `<a href="${esc(p.download_url)}" target="_blank" rel="noopener">${esc(p.original_name)}</a>`
         ).join(', ');
+    }
+
+    async function createMeterInline(propertyId) {
+        const payload = {
+            property_id:   propertyId,
+            meter_type:    document.getElementById('meters-type').value,
+            code:          document.getElementById('meters-code').value.trim(),
+            supplier_name: document.getElementById('meters-supplier').value.trim(),
+            location:      document.getElementById('meters-location').value.trim(),
+        };
+
+        if (!payload.meter_type) throw new Error('Seleziona il tipo del nuovo contatore.');
+
+        const res  = await fetch(METER_API, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        return json.data.id;
     }
 
     // L'upload avviene DOPO il salvataggio perche' la foto si lega all'id della
@@ -263,15 +362,23 @@
         const btn = document.getElementById('meters-modal-save');
         btn.disabled = true; btn.textContent = 'Salvataggio…';
 
+        const propertyId = els.propSelect.value;
         const data = {
-            property_id:   document.getElementById('meters-property-id').value,
-            meter_type:    document.getElementById('meters-type').value,
+            property_id:   propertyId,
+            meter_id:      els.meterSel.value,
             reading_value: document.getElementById('meters-reading-value').value,
             reading_date:  document.getElementById('meters-reading-date').value,
             notes:         document.getElementById('meters-notes').value.trim(),
         };
 
         try {
+            // Il contatore nuovo va creato prima: la lettura si appende al suo id.
+            // Se il censimento fallisce ci si ferma qui, senza salvare una lettura
+            // agganciata al contatore sbagliato.
+            if (data.meter_id === NEW_METER) {
+                data.meter_id = await createMeterInline(propertyId);
+            }
+
             const res  = await fetch(id ? `${API}?id=${id}` : API, {
                 method: id ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
