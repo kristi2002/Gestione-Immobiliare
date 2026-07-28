@@ -19,7 +19,10 @@ apiHandleOptions();
 // momento della lettura. Sta qui e non in una cartella propria perche' questo e'
 // l'unico ramo di uploads/ con deny totale di Apache, streamer autenticato e log
 // GDPR — vedi la migrazione per il ragionamento completo.
-const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'preventivo', 'regolamento', 'planimetria', 'verbale', 'lettura_contatore', 'other'];
+// 'inventario' (phase78): le foto dei beni (il tavolo graffiato, il forno
+// intatto) e i verbali di consegna generati. Stesso ramo protetto, stesso
+// motivo: sono la prova su cui si decide una cauzione.
+const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'preventivo', 'regolamento', 'planimetria', 'verbale', 'lettura_contatore', 'inventario', 'other'];
 
 // Una prova fotografica e' un'immagine o la scansione di una bolletta. Accettare
 // qui un .docx significherebbe accettare come "prova" un documento modificabile.
@@ -85,6 +88,7 @@ function listDocuments(PDO $db): void
     $contractId = isset($_GET['contract_id']) ? (int) $_GET['contract_id'] : null;
     $buildingId = isset($_GET['building_id']) ? (int) $_GET['building_id'] : null;
     $readingId  = isset($_GET['meter_reading_id']) ? (int) $_GET['meter_reading_id'] : null;
+    $inventoryItemId = isset($_GET['inventory_item_id']) ? (int) $_GET['inventory_item_id'] : null;
 
     // Ereditarieta' condominiale (phase74): chiedendo i documenti di un immobile
     // si ricevono anche quelli caricati sull'edificio che lo contiene —
@@ -140,10 +144,14 @@ function listDocuments(PDO $db): void
             $dWhere .= ' AND d.meter_reading_id = :meter_reading_id';
             $dParams['meter_reading_id'] = $readingId;
         }
+        if ($inventoryItemId) {
+            $dWhere .= ' AND d.inventory_item_id = :inventory_item_id';
+            $dParams['inventory_item_id'] = $inventoryItemId;
+        }
 
         $stmt = $db->prepare(
             "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id, d.contract_id, d.building_id,
-                    d.meter_reading_id,
+                    d.meter_reading_id, d.inventory_item_id,
                     d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
                     c.name AS client_name, c.surname AS client_surname,
                     p.address AS property_address, p.city AS property_city,
@@ -264,14 +272,15 @@ function uploadDocument(PDO $db): void
     $contractId = !empty($_POST['contract_id']) ? (int) $_POST['contract_id'] : null;
     $buildingId = !empty($_POST['building_id']) ? (int) $_POST['building_id'] : null;
     $readingId  = !empty($_POST['meter_reading_id']) ? (int) $_POST['meter_reading_id'] : null;
+    $inventoryItemId = !empty($_POST['inventory_item_id']) ? (int) $_POST['inventory_item_id'] : null;
     $notes      = trim($_POST['notes'] ?? '') ?: null;
 
     if (!in_array($docType, DOC_TYPES, true)) {
         apiError('Tipo documento non valido.');
     }
 
-    if (!$clientId && !$propertyId && !$contractId && !$buildingId && !$readingId) {
-        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto, un edificio o una lettura.');
+    if (!$clientId && !$propertyId && !$contractId && !$buildingId && !$readingId && !$inventoryItemId) {
+        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto, un edificio, una lettura o un articolo di inventario.');
     }
 
     if ($clientId && !clientExists($db, $clientId)) {
@@ -292,6 +301,10 @@ function uploadDocument(PDO $db): void
 
     if ($readingId && !meterReadingExists($db, $readingId)) {
         apiError('Lettura contatore non trovata.');
+    }
+
+    if ($inventoryItemId && !inventoryItemExists($db, $inventoryItemId)) {
+        apiError('Articolo di inventario non trovato.');
     }
 
     // Un documento legato all'edificio E a una sua unita' non verrebbe ereditato
@@ -329,6 +342,12 @@ function uploadDocument(PDO $db): void
         apiError('La prova della lettura deve essere una foto (JPG, PNG, WEBP) o un PDF.');
     }
 
+    // Stesso criterio per lo stato di un bene: si fotografa, non si descrive in
+    // un .docx che chiunque può riscrivere dopo la contestazione.
+    if ($inventoryItemId && !in_array($mime, METER_PHOTO_MIMES, true)) {
+        apiError('La foto del bene deve essere un\'immagine (JPG, PNG, WEBP) o un PDF.');
+    }
+
     $subdir = date('Y/m');
     $uploadDir = __DIR__ . '/../uploads/documents/' . $subdir;
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
@@ -348,10 +367,12 @@ function uploadDocument(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO documents
-            (doc_type, title, client_id, property_id, contract_id, building_id, meter_reading_id, file_path,
+            (doc_type, title, client_id, property_id, contract_id, building_id, meter_reading_id,
+             inventory_item_id, file_path,
              original_name, mime_type, file_size, notes)
          VALUES
-            (:doc_type, :title, :client_id, :property_id, :contract_id, :building_id, :meter_reading_id, :file_path,
+            (:doc_type, :title, :client_id, :property_id, :contract_id, :building_id, :meter_reading_id,
+             :inventory_item_id, :file_path,
              :original_name, :mime_type, :file_size, :notes)"
     );
     $stmt->execute([
@@ -362,6 +383,7 @@ function uploadDocument(PDO $db): void
         'contract_id'      => $contractId,
         'building_id'      => $buildingId,
         'meter_reading_id' => $readingId,
+        'inventory_item_id' => $inventoryItemId,
         'file_path'     => $relativePath,
         'original_name' => $file['name'],
         'mime_type'     => $mime,
@@ -427,6 +449,13 @@ function buildingExists(PDO $db, int $id): bool
 function meterReadingExists(PDO $db, int $id): bool
 {
     $stmt = $db->prepare("SELECT id FROM meter_readings WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
+}
+
+function inventoryItemExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM property_inventory WHERE id = :id");
     $stmt->execute(['id' => $id]);
     return (bool) $stmt->fetch();
 }

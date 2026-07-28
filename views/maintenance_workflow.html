@@ -43,6 +43,7 @@
                         <th>Inquilino</th>
                         <th>Immobile</th>
                         <th>Titolo</th>
+                        <th>Bene</th>
                         <th>Tipo</th>
                         <th>Priorità</th>
                         <th>Stato</th>
@@ -52,7 +53,7 @@
                     </tr>
                 </thead>
                 <tbody id="mw-tbody">
-                    <tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                    <tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -135,6 +136,31 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="mw-status-cancel">Annulla</button>
             <button type="button" class="btn btn--primary" id="mw-status-confirm">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bene coinvolto: è ciò che trasforma "la lavatrice non parte" in una scheda
+     che il tecnico può usare (marca, modello, matricola, garanzia). -->
+<div class="modal-overlay" id="mw-asset-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="mw-asset-title">
+        <div class="modal-header">
+            <h3 id="mw-asset-title">Bene coinvolto</h3>
+            <button class="modal-close" id="mw-asset-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="mw-asset-request-id">
+            <div class="form-group">
+                <label for="mw-asset-select">Articolo di inventario</label>
+                <select id="mw-asset-select" class="form-select">
+                    <option value="">— Nessun bene collegato —</option>
+                </select>
+            </div>
+            <div id="mw-asset-detail" class="text-muted" style="font-size:0.85rem;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="mw-asset-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="mw-asset-confirm">Collega</button>
         </div>
     </div>
 </div>

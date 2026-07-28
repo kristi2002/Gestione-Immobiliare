@@ -5,6 +5,9 @@
     const API           = 'api/reminders.php';
     const SUPPLIERS_API = 'api/suppliers.php';
     const PROP_API      = 'api/properties.php';
+    const INVENTORY_API = 'api/inventory.php';
+
+    const CONDITION_LABELS = { 1: 'Pessima', 2: 'Scarsa', 3: 'Discreta', 4: 'Buona', 5: 'Ottima' };
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
@@ -46,6 +49,7 @@
         els.kanbanView     = document.getElementById('mw-kanban-view');
         els.supplierModal  = document.getElementById('mw-supplier-modal');
         els.statusModal    = document.getElementById('mw-status-modal');
+        els.assetModal     = document.getElementById('mw-asset-modal');
 
         bindEvents();
         loadProperties();
@@ -80,6 +84,13 @@
         document.getElementById('mw-status-cancel').addEventListener('click', closeStatusModal);
         els.statusModal.addEventListener('click', e => { if (e.target === els.statusModal) closeStatusModal(); });
         document.getElementById('mw-status-confirm').addEventListener('click', confirmChangeStatus);
+
+        // Asset modal
+        document.getElementById('mw-asset-close').addEventListener('click', closeAssetModal);
+        document.getElementById('mw-asset-cancel').addEventListener('click', closeAssetModal);
+        els.assetModal.addEventListener('click', e => { if (e.target === els.assetModal) closeAssetModal(); });
+        document.getElementById('mw-asset-confirm').addEventListener('click', confirmLinkAsset);
+        document.getElementById('mw-asset-select').addEventListener('change', renderAssetDetail);
     }
 
     async function loadProperties() {
@@ -121,7 +132,7 @@
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
-        softLoad(els.tbody, '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
+        softLoad(els.tbody, '<tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -140,14 +151,14 @@
             }
         } catch (err) {
             els.tbody.classList.remove('is-loading');
-            els.tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
+            els.tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
         }
     }
 
     function renderTable(items) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
-            els.tbody.innerHTML = '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Nessuna richiesta di manutenzione trovata.</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Nessuna richiesta di manutenzione trovata.</td></tr>';
             return;
         }
 
@@ -164,6 +175,7 @@
                 <td data-label="Inquilino">${esc(tenantName)}</td>
                 <td data-label="Immobile">${esc(r.property_address || `#${r.property_id}` || '—')}</td>
                 <td data-label="Descrizione" title="${esc(r.note || '')}">${esc(r.title || (r.note ? r.note.substring(0, 50) : '—'))}</td>
+                <td data-label="Bene">${assetCellHtml(r)}</td>
                 <td data-label="Tipo">${esc(r.request_type || r.category || '—')}</td>
                 <td data-label="Priorità"><span style="color:${priorityColor};font-weight:600;">${esc(priority)}</span></td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
@@ -172,11 +184,14 @@
                     : '<span class="text-muted">—</span>'}</td>
                 <td data-label="Data">${formatDate(r.created_at || r.due_date)}</td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
+                    <button class="btn btn--sm btn--ghost btn-mw-asset" data-id="${r.id}" data-property="${esc(r.property_id || '')}" data-asset="${esc(r.inventory_item_id || '')}" title="Collega il bene coinvolto"><i data-lucide="package"></i> Bene</button>
                     <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore"><i data-lucide="wrench"></i> Fornitore</button>
                     <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" title="Cambia stato">↻ Stato</button>
                 </td>
             </tr>`;
         }).join('');
+
+        if (window.lucide) window.lucide.createIcons();
 
         els.tbody.querySelectorAll('.btn-mw-supplier').forEach(btn => {
             btn.addEventListener('click', () => openSupplierModal(btn.dataset.id, btn.dataset.supplier));
@@ -185,6 +200,39 @@
         els.tbody.querySelectorAll('.btn-mw-status').forEach(btn => {
             btn.addEventListener('click', () => openStatusModal(btn.dataset.id, btn.dataset.status));
         });
+
+        els.tbody.querySelectorAll('.btn-mw-asset').forEach(btn => {
+            btn.addEventListener('click', () => openAssetModal(btn.dataset.id, btn.dataset.property, btn.dataset.asset));
+        });
+    }
+
+    /**
+     * La colonna che l'idraulico legge. Senza bene collegato resta un trattino —
+     * meglio di un dato inventato: dice all'agente che manca ancora un pezzo.
+     */
+    function assetCellHtml(r) {
+        if (!r.inventory_item_id || !r.asset_name) {
+            return '<span class="text-muted">—</span>';
+        }
+
+        const makeModel = [r.asset_brand, r.asset_model].filter(Boolean).join(' ');
+        // La condizione che conta è quella di consegna (verbale di check-in):
+        // è la baseline contro cui si discute chi paga.
+        const cond = r.asset_checkin_condition ?? r.asset_condition;
+        const bits = [];
+
+        if (makeModel) bits.push(esc(makeModel));
+        if (r.asset_serial) bits.push('S/N ' + esc(r.asset_serial));
+        if (cond) bits.push(`consegna: ${cond}/5 ${CONDITION_LABELS[cond] || ''}`);
+        if (r.asset_warranty_until) {
+            const inWarranty = new Date(r.asset_warranty_until) >= new Date();
+            bits.push(inWarranty
+                ? `<strong style="color:var(--color-success,#22c55e);">in garanzia fino al ${formatDate(r.asset_warranty_until)}</strong>`
+                : `garanzia scaduta il ${formatDate(r.asset_warranty_until)}`);
+        }
+
+        return `<strong>${esc(r.asset_name)}</strong>`
+             + (bits.length ? `<div class="text-muted" style="font-size:0.75rem;">${bits.join(' · ')}</div>` : '');
     }
 
     function renderKanban(items) {
@@ -210,6 +258,7 @@
 
                 return `<div class="card" style="padding:0.75rem;font-size:0.85rem;cursor:default;" data-id="${r.id}">
                     <div style="font-weight:600;margin-bottom:4px;">${esc(title)}</div>
+                    ${r.asset_name ? `<div class="text-muted" style="margin-bottom:6px;"><i data-lucide="package"></i> ${esc([r.asset_name, r.asset_brand, r.asset_model].filter(Boolean).join(' '))}</div>` : ''}
                     <div class="text-muted" style="margin-bottom:6px;"><i data-lucide="user"></i> ${esc(tenantName)}</div>
                     ${r.property_address ? `<div class="text-muted" style="margin-bottom:6px;"><i data-lucide="home"></i> ${esc(r.property_address)}</div>` : ''}
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
@@ -304,6 +353,83 @@
             showAlert(err.message, 'error');
         } finally {
             btn.disabled = false; btn.textContent = 'Salva';
+        }
+    }
+
+    // ---- Bene coinvolto ----------------------------------------------------
+    let assetItems = [];
+
+    async function openAssetModal(requestId, propertyId, currentAssetId) {
+        document.getElementById('mw-asset-request-id').value = requestId;
+
+        const sel = document.getElementById('mw-asset-select');
+        sel.innerHTML = '<option value="">— Nessun bene collegato —</option>';
+        document.getElementById('mw-asset-detail').innerHTML = '';
+        els.assetModal.hidden = false;
+
+        if (!propertyId) {
+            document.getElementById('mw-asset-detail').textContent =
+                'La richiesta non è collegata a un immobile: senza immobile non c\'è un inventario da cui scegliere.';
+            return;
+        }
+
+        try {
+            // Solo l'inventario di QUESTO immobile: è anche il vincolo che l'API
+            // rifà lato server, così un id manipolato non passa comunque.
+            const items = await window.Pagination.fetchList(`${INVENTORY_API}?property_id=${propertyId}`);
+            assetItems = items;
+            items.forEach(i => {
+                const label = [i.item_name, [i.brand, i.model].filter(Boolean).join(' ')].filter(Boolean).join(' — ');
+                sel.appendChild(new Option(label, i.id));
+            });
+            sel.value = currentAssetId || '';
+            renderAssetDetail();
+        } catch (e) {
+            document.getElementById('mw-asset-detail').textContent = 'Impossibile caricare l\'inventario: ' + e.message;
+        }
+    }
+
+    function renderAssetDetail() {
+        const id   = document.getElementById('mw-asset-select').value;
+        const item = assetItems.find(i => String(i.id) === String(id));
+        const box  = document.getElementById('mw-asset-detail');
+
+        if (!item) { box.innerHTML = ''; return; }
+
+        const rows = [
+            ['Marca', item.brand], ['Modello', item.model], ['Matricola', item.serial_number],
+            ['Condizione attuale', item.condition_rating ? `${item.condition_rating}/5 ${CONDITION_LABELS[item.condition_rating] || ''}` : null],
+            ['Garanzia', item.warranty_until ? formatDate(item.warranty_until) : null],
+        ].filter(([, v]) => v);
+
+        box.innerHTML = rows.length
+            ? rows.map(([k, v]) => `<div><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('')
+            : '<em>Nessun dato tecnico su questo articolo: compilalo in Inventario per darlo al tecnico.</em>';
+    }
+
+    function closeAssetModal() { els.assetModal.hidden = true; }
+
+    async function confirmLinkAsset() {
+        const requestId = document.getElementById('mw-asset-request-id').value;
+        const assetId   = document.getElementById('mw-asset-select').value;
+        const btn = document.getElementById('mw-asset-confirm');
+        btn.disabled = true; btn.textContent = 'Salvataggio…';
+
+        try {
+            const res  = await fetch(`${API}?id=${requestId}&action=link_asset`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inventory_item_id: assetId || null }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            closeAssetModal();
+            showAlert(assetId ? 'Bene collegato alla richiesta.' : 'Collegamento rimosso.', 'success');
+            loadRequests();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Collega';
         }
     }
 

@@ -21,13 +21,10 @@
         </div>
         <div class="form-group" style="margin:0;max-width:220px;">
             <label for="inventory-category-filter" style="font-weight:600;">Categoria</label>
+            <!-- Le opzioni arrivano da api/inventory.php?action=categories: la
+                 lista sta nel database, non qui. -->
             <select id="inventory-category-filter" class="form-select">
                 <option value="">Tutte le categorie</option>
-                <option value="mobile">Mobile / Arredo</option>
-                <option value="arredamento">Arredamento</option>
-                <option value="elettrodomestico">Elettrodomestico</option>
-                <option value="impianto">Impianto</option>
-                <option value="altro">Altro</option>
             </select>
         </div>
         <div class="form-group" style="margin:0;max-width:220px;">
@@ -54,18 +51,49 @@
                     <tr>
                         <th>Articolo</th>
                         <th>Categoria</th>
+                        <th>Marca / Modello</th>
+                        <th>Valore</th>
                         <th>Quantità</th>
                         <th>Condizione</th>
+                        <th>Foto</th>
                         <th>Note</th>
                         <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody id="inventory-tbody">
-                    <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                    <tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
                 </tbody>
             </table>
         </div>
         <div id="inventory-pagination" class="pagination-container"></div>
+
+        <!-- Verbali di consegna: l'inventario è dell'immobile, la contestazione
+             è del contratto. Qui si passa dall'uno all'altra. -->
+        <section id="inventory-snapshots" style="margin-top:2rem;">
+            <div class="view-header" style="margin-bottom:0.75rem;">
+                <div class="view-header__text">
+                    <h3 style="margin:0;">Verbali di consegna</h3>
+                    <p style="margin:0;">Foto e condizioni congelate per ogni locazione: è ciò che regge in una contestazione sulla cauzione.</p>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Contratto</th>
+                            <th>Inquilino</th>
+                            <th>Periodo</th>
+                            <th>Check-in</th>
+                            <th>Check-out</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-contracts-tbody">
+                        <tr><td colspan="6" class="text-muted" style="text-align:center;padding:1.5rem;">Caricamento…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
 </div>
 
@@ -87,11 +115,6 @@
                     <label for="inventory-category">Categoria</label>
                     <select id="inventory-category" name="category" class="form-select">
                         <option value="">— Seleziona —</option>
-                        <option value="mobile">Mobile / Arredo</option>
-                        <option value="arredamento">Arredamento</option>
-                        <option value="elettrodomestico">Elettrodomestico</option>
-                        <option value="impianto">Impianto</option>
-                        <option value="altro">Altro</option>
                     </select>
                 </div>
             </div>
@@ -105,6 +128,55 @@
                     <input type="date" id="inventory-check-in-date" name="check_in_date" class="form-input">
                 </div>
             </div>
+
+            <fieldset>
+                <legend>Dati del bene</legend>
+                <p class="text-muted" style="margin:0 0 0.75rem;font-size:0.85rem;">
+                    Marca, modello e matricola sono ciò che il tecnico riceve insieme al ticket di manutenzione;
+                    il valore è la base della trattenuta se il bene sparisce o si rompe.
+                </p>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="inventory-brand">Marca</label>
+                        <input type="text" id="inventory-brand" name="brand" class="form-input" maxlength="100" placeholder="Es. Bosch">
+                    </div>
+                    <div class="form-group">
+                        <label for="inventory-model">Modello</label>
+                        <input type="text" id="inventory-model" name="model" class="form-input" maxlength="100" placeholder="Es. WAN28281">
+                    </div>
+                    <div class="form-group">
+                        <label for="inventory-serial">Matricola / Serial</label>
+                        <input type="text" id="inventory-serial" name="serial_number" class="form-input" maxlength="100">
+                    </div>
+                </div>
+                <div class="form-row form-row--2">
+                    <div class="form-group">
+                        <label for="inventory-value">Valore stimato (€)</label>
+                        <input type="number" id="inventory-value" name="estimated_value" class="form-input" min="0" step="0.01" placeholder="0,00">
+                    </div>
+                    <div class="form-group">
+                        <label for="inventory-warranty">Garanzia fino al</label>
+                        <input type="date" id="inventory-warranty" name="warranty_until" class="form-input">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset id="inventory-photos-fieldset">
+                <legend>Prova fotografica</legend>
+                <p class="text-muted" style="margin:0 0 0.75rem;font-size:0.85rem;">
+                    Le foto restano protette: non sono pubbliche e passano dallo streamer autenticato, come le carte d'identità.
+                </p>
+                <div id="inventory-photos-empty" class="text-muted" style="font-size:0.85rem;">
+                    Salva l'articolo per poter allegare le foto.
+                </div>
+                <div id="inventory-photos-list" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;"></div>
+                <div id="inventory-photos-upload" style="display:none;">
+                    <input type="file" id="inventory-photo-file" class="form-input" accept="image/jpeg,image/png,image/webp,application/pdf">
+                    <button type="button" class="btn btn--ghost btn--sm" id="inventory-photo-upload-btn" style="margin-top:0.5rem;">
+                        <i data-lucide="upload"></i> Carica foto
+                    </button>
+                </div>
+            </fieldset>
             <div class="form-group">
                 <label>Condizione</label>
                 <div id="inventory-condition-stars" class="star-selector" style="display:flex;gap:6px;font-size:1.8rem;cursor:pointer;">
@@ -141,6 +213,110 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="inventory-delete-cancel">Annulla</button>
             <button type="button" class="btn btn--danger" id="inventory-delete-confirm">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<!-- Verbale: compilazione righe (check-in / check-out) -->
+<div class="modal-overlay" id="snapshot-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="snapshot-modal-title">
+        <div class="modal-header">
+            <h3 id="snapshot-modal-title">Verbale</h3>
+            <button class="modal-close" id="snapshot-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="snapshot-meta" class="text-muted" style="margin-bottom:0.75rem;font-size:0.9rem;"></div>
+            <div id="snapshot-locked-banner" class="alert alert--info" style="display:none;"></div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Articolo</th>
+                            <th>Marca / Modello</th>
+                            <th>Qtà</th>
+                            <th>Condizione</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="snapshot-items-tbody"></tbody>
+                </table>
+            </div>
+            <p class="text-muted" style="font-size:0.85rem;margin-top:0.75rem;">
+                Quantità <strong>0</strong> = bene mancante alla riconsegna.
+            </p>
+        </div>
+        <div class="modal-footer" style="gap:0.5rem;">
+            <button type="button" class="btn btn--ghost" id="snapshot-modal-cancel">Chiudi</button>
+            <button type="button" class="btn btn--ghost" id="snapshot-download-btn" style="display:none;">
+                <i data-lucide="download"></i> Scarica PDF
+            </button>
+            <button type="button" class="btn btn--primary" id="snapshot-lock-btn">
+                <i data-lucide="lock"></i> Chiudi e firma
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chiusura verbale: firma opzionale -->
+<div class="modal-overlay" id="snapshot-lock-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="snapshot-lock-title">
+        <div class="modal-header">
+            <h3 id="snapshot-lock-title">Chiudi verbale</h3>
+            <button class="modal-close" id="snapshot-lock-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" style="font-size:0.9rem;">
+                Alla chiusura viene generato il PDF, ne viene calcolata l'impronta SHA-256 e le righe
+                diventano non modificabili. Con un indirizzo email parte anche la richiesta di firma.
+            </p>
+            <div class="form-group">
+                <label for="snapshot-signer-name">Firmatario</label>
+                <input type="text" id="snapshot-signer-name" class="form-input" maxlength="150">
+            </div>
+            <div class="form-group">
+                <label for="snapshot-signer-email">Email per la firma (facoltativa)</label>
+                <input type="email" id="snapshot-signer-email" class="form-input" maxlength="150">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="snapshot-lock-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="snapshot-lock-confirm">Chiudi verbale</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confronto check-in / check-out -->
+<div class="modal-overlay" id="comparison-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="comparison-title">
+        <div class="modal-header">
+            <h3 id="comparison-title">Confronto consegna / riconsegna</h3>
+            <button class="modal-close" id="comparison-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="comparison-summary" style="margin-bottom:1rem;"></div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Articolo</th>
+                            <th>Valore</th>
+                            <th>Ingresso</th>
+                            <th>Uscita</th>
+                            <th>Δ</th>
+                            <th>Stima danno</th>
+                            <th>Note uscita</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-tbody"></tbody>
+                </table>
+            </div>
+            <p class="text-muted" style="font-size:0.85rem;margin-top:0.75rem;">
+                Le stime sono proporzionali al valore dichiarato e al peggioramento rilevato: sono una base
+                di discussione tra le parti, non una perizia.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="comparison-cancel">Chiudi</button>
         </div>
     </div>
 </div>

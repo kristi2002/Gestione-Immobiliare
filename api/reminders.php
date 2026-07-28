@@ -196,7 +196,8 @@ function listReminders(PDO $db): void
               LEFT JOIN properties p ON p.id = r.property_id
               LEFT JOIN tenants tn ON tn.id = r.tenant_id
               LEFT JOIN leads ld ON ld.id = r.lead_id
-              LEFT JOIN admin_users au ON au.id = r.assigned_agent_id";
+              LEFT JOIN admin_users au ON au.id = r.assigned_agent_id
+              LEFT JOIN property_inventory pi ON pi.id = r.inventory_item_id";
 
     $countSql = "SELECT COUNT(*) FROM reminders r $joins $where";
 
@@ -223,6 +224,17 @@ function listReminders(PDO $db): void
                      WHERE dl.automation_id = r.id ORDER BY dl.dispatched_at DESC LIMIT 1) AS last_dispatch_status,
                    (SELECT dl.error_details FROM reminder_dispatch_log dl
                      WHERE dl.automation_id = r.id ORDER BY dl.dispatched_at DESC LIMIT 1) AS last_dispatch_error,
+                   pi.item_name AS asset_name, pi.brand AS asset_brand, pi.model AS asset_model,
+                   pi.serial_number AS asset_serial, pi.condition_rating AS asset_condition,
+                   pi.warranty_until AS asset_warranty_until,
+                   -- La condizione che conta in una contestazione non è quella di
+                   -- oggi: è quella con cui il bene fu consegnato, congelata nel
+                   -- verbale di check-in.
+                   (SELECT si.condition_rating
+                      FROM inventory_snapshot_items si
+                      JOIN inventory_snapshots s ON s.id = si.snapshot_id AND s.phase = 'check_in'
+                     WHERE si.inventory_item_id = r.inventory_item_id
+                  ORDER BY s.snapshot_date DESC LIMIT 1) AS asset_checkin_condition,
                    CASE WHEN tn.id IS NOT NULL THEN CONCAT(tn.name, ' ', tn.surname) ELSE r.tenant_name END AS tenant_name
             FROM reminders r
             $joins
@@ -241,6 +253,14 @@ function getReminder(PDO $db, int $id): void
                 tn.name AS tenant_contact_name, tn.surname AS tenant_contact_surname,
                 au.username AS agent_username,
                 p.address AS property_address, p.city AS property_city, p.client_id AS property_client_id,
+                pi.item_name AS asset_name, pi.brand AS asset_brand, pi.model AS asset_model,
+                pi.serial_number AS asset_serial, pi.condition_rating AS asset_condition,
+                pi.warranty_until AS asset_warranty_until,
+                (SELECT si.condition_rating
+                   FROM inventory_snapshot_items si
+                   JOIN inventory_snapshots s ON s.id = si.snapshot_id AND s.phase = 'check_in'
+                  WHERE si.inventory_item_id = r.inventory_item_id
+               ORDER BY s.snapshot_date DESC LIMIT 1) AS asset_checkin_condition,
                 (SELECT COUNT(*) FROM reminders o WHERE o.series_id = r.id) AS occurrence_count
          FROM reminders r
          LEFT JOIN clients c ON c.id = r.client_id
@@ -248,6 +268,7 @@ function getReminder(PDO $db, int $id): void
          LEFT JOIN tenants tn ON tn.id = r.tenant_id
          LEFT JOIN admin_users au ON au.id = r.assigned_agent_id
          LEFT JOIN properties p ON p.id = r.property_id
+         LEFT JOIN property_inventory pi ON pi.id = r.inventory_item_id
          WHERE r.id = :id"
     );
     $stmt->execute(['id' => $id]);
@@ -412,6 +433,36 @@ function patchReminder(PDO $db, int $id): void
         return;
     }
 
+    // Bene coinvolto (phase78). L'inquilino scrive "la lavatrice non parte";
+    // l'idraulico ha bisogno di marca, modello e matricola — e di sapere in che
+    // stato era stata consegnata. Collegare il ticket all'articolo di inventario
+    // è ciò che trasforma la prima frase nella seconda.
+    if ($action === 'link_asset') {
+        $data   = apiGetJsonBody();
+        $itemId = !empty($data['inventory_item_id']) ? (int) $data['inventory_item_id'] : null;
+
+        if ($itemId !== null) {
+            $chk = $db->prepare(
+                "SELECT pi.id
+                   FROM property_inventory pi
+                   JOIN reminders r ON r.id = :rid
+                  WHERE pi.id = :iid
+                    AND (r.property_id IS NULL OR pi.property_id = r.property_id)"
+            );
+            $chk->execute(['rid' => $id, 'iid' => $itemId]);
+            // Un bene di un altro immobile su questo ticket non è un errore di
+            // battitura: è un intervento fatturato all'immobile sbagliato.
+            if (!$chk->fetch()) {
+                apiError('Articolo non trovato o non appartenente all\'immobile della richiesta.');
+            }
+        }
+
+        $db->prepare("UPDATE reminders SET inventory_item_id = :iid WHERE id = :id")
+           ->execute(['iid' => $itemId, 'id' => $id]);
+        getReminder($db, $id);
+        return;
+    }
+
     // Maintenance status (aperta / in_lavorazione / completata / chiusa)
     if ($action === 'maintenance_status') {
         $data      = apiGetJsonBody();
@@ -427,7 +478,7 @@ function patchReminder(PDO $db, int $id): void
     }
 
     if (!isset($map[$action])) {
-        apiError('Azione non valida. Usa: complete, cancel, reopen, assign_supplier, maintenance_status.');
+        apiError('Azione non valida. Usa: complete, cancel, reopen, assign_supplier, maintenance_status, link_asset.');
     }
 
     $stmt = $db->prepare("UPDATE reminders SET status = :status WHERE id = :id");
