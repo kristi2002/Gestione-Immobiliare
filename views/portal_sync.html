@@ -5,6 +5,8 @@
             <p>Stato di pubblicazione di ogni immobile sui portali (Immobiliare.it, Idealista, Casa.it, sito agenzia).</p>
         </div>
         <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-portal-feeds"><i data-lucide="rss"></i> URL dei feed</button>
+            <button class="btn btn--ghost" id="btn-portal-feedback"><i data-lucide="download"></i> Importa esiti</button>
             <button class="btn btn--primary" id="btn-new-portal">+ Nuova pubblicazione</button>
         </div>
     </div>
@@ -139,6 +141,62 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn--ghost" id="portal-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="portal-modal-save">Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- URL da consegnare al portale in fase di onboarding: e' il portale che passa
+     a prendere il feed, non siamo noi a spingerlo. -->
+<div class="modal-overlay" id="portal-feeds-modal" hidden>
+    <div class="modal modal--md" role="dialog" aria-labelledby="portal-feeds-title">
+        <div class="modal-header">
+            <h3 id="portal-feeds-title">URL dei feed di sindacazione</h3>
+            <button class="modal-close" id="portal-feeds-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" style="font-size:.9em;">
+                Consegna questi indirizzi al portale durante l'attivazione: sarà lui a scaricarli
+                periodicamente. L'indirizzo contiene un token, quindi va trattato come una password.
+            </p>
+            <div id="portal-feeds-list">Caricamento…</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="portal-feeds-cancel">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Feed di ritorno: cosa il portale ha accettato e cosa ha scartato. -->
+<div class="modal-overlay" id="portal-feedback-modal" hidden>
+    <div class="modal modal--md" role="dialog" aria-labelledby="portal-feedback-title">
+        <div class="modal-header">
+            <h3 id="portal-feedback-title">Importa esiti dal portale</h3>
+            <button class="modal-close" id="portal-feedback-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="portal-feedback-form" class="modal-body">
+            <div class="form-group">
+                <label for="portal-feedback-portal">Portale <span class="required">*</span></label>
+                <select id="portal-feedback-portal" class="form-select" required>
+                    <option value="immobiliare">Immobiliare.it</option>
+                    <option value="idealista">Idealista</option>
+                    <option value="casa">Casa.it</option>
+                    <option value="subito">Subito</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="portal-feedback-payload">File di esito (XML o CSV) <span class="required">*</span></label>
+                <textarea id="portal-feedback-payload" class="form-textarea" rows="8" required
+                          placeholder="Incolla qui il contenuto del file di ritorno fornito dal portale…"></textarea>
+                <small class="text-muted">
+                    Gli annunci vengono riagganciati tramite il riferimento inviato nel feed.
+                    Un esito non riconosciuto viene registrato come errore, mai come pubblicato.
+                </small>
+            </div>
+            <div id="portal-feedback-result" class="alert" style="display:none;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="portal-feedback-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="portal-feedback-save">Importa</button>
             </div>
         </form>
     </div>

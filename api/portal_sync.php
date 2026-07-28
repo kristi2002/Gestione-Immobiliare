@@ -44,9 +44,17 @@ try {
                 preflightCheck($db);
                 break;
             }
+            if (($_GET['action'] ?? '') === 'feed_info') {
+                feedInfo($db);
+                break;
+            }
             $id ? getListing($db, $id) : listListings($db);
             break;
         case 'POST':
+            if (($_GET['action'] ?? '') === 'import_feedback') {
+                importFeedback($db);
+                break;
+            }
             createListing($db);
             break;
         case 'PUT':
@@ -105,6 +113,92 @@ function preflightCheck(PDO $db): void
         'portal'       => $portal,
         'publishable'  => $violations === [],
         'violations'   => $violations,
+    ]);
+}
+
+/**
+ * URL dei feed da consegnare ai portali in fase di onboarding, con il conteggio
+ * di cosa uscirebbe adesso. Il token e' visibile solo a chi ha gia' una sessione
+ * admin — e comunque protegge un catalogo di annunci destinati alla
+ * pubblicazione, non l'anagrafica (vedi lib/portal_feed.php).
+ */
+function feedInfo(PDO $db): void
+{
+    require_once __DIR__ . '/../lib/portal_feed.php';
+
+    $token = portalFeedToken();
+    $base  = portalFeedBaseUrl();
+
+    $feeds = [];
+    foreach (PORTAL_SPECS as $portal => $spec) {
+        // Il sito dell'agenzia e "altro" non sono destinazioni da sindacare.
+        if (in_array($portal, ['sito_agenzia', 'altro'], true)) {
+            continue;
+        }
+        try {
+            $built = portalFeedBuild($db, $portal);
+            $feeds[] = [
+                'portal'   => $portal,
+                'label'    => $spec['label'],
+                'url'      => $base . '/api/portal_feed.php?portal=' . $portal . '&token=' . $token,
+                'inclusi'  => count($built['included']),
+                'esclusi'  => $built['excluded'],
+            ];
+        } catch (Throwable $e) {
+            $feeds[] = [
+                'portal' => $portal, 'label' => $spec['label'],
+                'url' => null, 'inclusi' => 0, 'esclusi' => [], 'errore' => $e->getMessage(),
+            ];
+        }
+    }
+
+    apiSuccess(['feeds' => $feeds]);
+}
+
+/**
+ * Importa il feed di ritorno di un portale (XML o CSV incollato/caricato).
+ *
+ * Passa dal bootstrap normale, quindi eredita gia' CSRF e blocco sola-lettura.
+ * Non e' un webhook: e' l'agente (o un cron) che porta dentro un file che il
+ * portale ha messo a disposizione, quindi la sessione admin e' l'autenticazione
+ * giusta — nessun endpoint pubblico in piu' da difendere.
+ */
+function importFeedback(PDO $db): void
+{
+    require_once __DIR__ . '/../lib/portal_feedback.php';
+
+    $body   = apiGetJsonBody();
+    $portal = trim($body['portal'] ?? '');
+    if (!in_array($portal, PORTALS, true)) apiError('Portale non valido.');
+
+    $payload = (string) ($body['payload'] ?? '');
+    if (trim($payload) === '') apiError('Nessun contenuto da importare.');
+
+    try {
+        $parsed = portalFeedbackParse($payload);
+    } catch (Throwable $e) {
+        apiError('Impossibile leggere il feed di ritorno: ' . $e->getMessage());
+    }
+
+    if ($parsed['results'] === []) {
+        apiError('Nessuna riga riconosciuta nel feed di ritorno'
+            . ($parsed['unparsed'] > 0 ? ' (' . $parsed['unparsed'] . ' righe senza riferimento).' : '.'));
+    }
+
+    $outcome = portalFeedbackApply($db, $portal, $parsed['results']);
+
+    logActivity('update', 'portal_listing', 0,
+        'Import esiti ' . $portal . ': ' . $outcome['published'] . ' pubblicati, ' . $outcome['errors'] . ' errori');
+
+    apiSuccess([
+        'portal'         => $portal,
+        'lette'          => count($parsed['results']),
+        'senza_riferimento' => $parsed['unparsed'],
+        'aggiornate'     => $outcome['applied'],
+        'pubblicate'     => $outcome['published'],
+        'in_errore'      => $outcome['errors'],
+        'non_agganciate' => $outcome['unmatched'],
+        'message'        => $outcome['applied'] . ' pubblicazioni aggiornate dal feed di ritorno.',
     ]);
 }
 

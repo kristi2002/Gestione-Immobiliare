@@ -5,7 +5,7 @@
     const PROP_API = 'api/properties.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
-    function fmtDateTime(str) { return str ? new Date(str.replace(' ', 'T')).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'; }
+    function fmtDateTime(str) { return window.Fmt.dateTime(str); }
 
     const PORTAL_LABEL = { immobiliare: 'Immobiliare.it', idealista: 'Idealista', casa: 'Casa.it', subito: 'Subito', sito_agenzia: 'Sito agenzia', altro: 'Altro' };
     const STATUS_LABEL = { draft: 'Bozza', publishing: 'In pubblicazione', published: 'Pubblicato', error: 'Errore', removed: 'Rimosso' };
@@ -36,6 +36,8 @@
         els.preTitle   = document.getElementById('portal-preflight-title');
         els.preList    = document.getElementById('portal-preflight-list');
         els.feedNote   = document.getElementById('portal-feed-note');
+        els.feedsModal = document.getElementById('portal-feeds-modal');
+        els.fbModal    = document.getElementById('portal-feedback-modal');
 
         bindEvents();
         loadProperties();
@@ -62,6 +64,91 @@
         ['portal-property', 'portal-portal', 'portal-status'].forEach(id => {
             document.getElementById(id).addEventListener('change', runPreflight);
         });
+
+        document.getElementById('btn-portal-feeds').addEventListener('click', openFeedsModal);
+        document.getElementById('portal-feeds-close').addEventListener('click', () => { els.feedsModal.hidden = true; });
+        document.getElementById('portal-feeds-cancel').addEventListener('click', () => { els.feedsModal.hidden = true; });
+
+        document.getElementById('btn-portal-feedback').addEventListener('click', openFeedbackModal);
+        document.getElementById('portal-feedback-close').addEventListener('click', () => { els.fbModal.hidden = true; });
+        document.getElementById('portal-feedback-cancel').addEventListener('click', () => { els.fbModal.hidden = true; });
+        document.getElementById('portal-feedback-form').addEventListener('submit', handleFeedbackImport);
+    }
+
+    // --- Feed di sindacazione ----------------------------------------------
+
+    async function openFeedsModal() {
+        els.feedsModal.hidden = false;
+        const box = document.getElementById('portal-feeds-list');
+        box.textContent = 'Caricamento…';
+        try {
+            const res  = await fetch(`${API}?action=feed_info`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            box.innerHTML = json.data.feeds.map(f => {
+                // Gli esclusi sono la parte che conta: un feed che dimagrisce in
+                // silenzio è il modo migliore per non accorgersi che metà
+                // portafoglio non è più pubblicato.
+                const excl = (f.esclusi || []).length
+                    ? `<details style="margin-top:4px;"><summary class="text-muted" style="cursor:pointer;">${f.esclusi.length} immobili esclusi dal feed</summary>
+                         <ul style="margin:6px 0 0;padding-left:18px;">${f.esclusi.map(e =>
+                           `<li><strong>${esc(e.reference)}</strong>: ${esc((e.reasons || []).join(' · '))}</li>`).join('')}</ul>
+                       </details>`
+                    : '';
+                return `<div class="form-group">
+                    <label>${esc(f.label)} — <span class="badge badge--success">${f.inclusi} inclusi</span></label>
+                    ${f.url ? `<input type="text" class="form-input" readonly value="${esc(f.url)}" onclick="this.select()">` : `<em class="text-muted">${esc(f.errore || 'non disponibile')}</em>`}
+                    ${excl}
+                </div>`;
+            }).join('');
+        } catch (err) {
+            box.innerHTML = `<div class="alert alert--error">${esc(err.message)}</div>`;
+        }
+    }
+
+    // --- Esiti dal portale --------------------------------------------------
+
+    function openFeedbackModal() {
+        document.getElementById('portal-feedback-form').reset();
+        document.getElementById('portal-feedback-result').style.display = 'none';
+        els.fbModal.hidden = false;
+    }
+
+    async function handleFeedbackImport(e) {
+        e.preventDefault();
+        const btn = document.getElementById('portal-feedback-save');
+        const out = document.getElementById('portal-feedback-result');
+        btn.disabled = true; btn.textContent = 'Importazione…';
+        try {
+            const res = await fetch(`${API}?action=import_feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    portal:  document.getElementById('portal-feedback-portal').value,
+                    payload: document.getElementById('portal-feedback-payload').value,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            const d = json.data;
+            const notes = [];
+            if (d.senza_riferimento > 0) notes.push(`${d.senza_riferimento} righe senza riferimento (tracciato cambiato?)`);
+            if ((d.non_agganciate || []).length) notes.push(`non agganciate: ${d.non_agganciate.join(', ')}`);
+
+            out.className = 'alert alert--success';
+            out.innerHTML = `${d.aggiornate} pubblicazioni aggiornate — ${d.pubblicate} confermate, ${d.in_errore} in errore.`
+                + (notes.length ? `<br><small>${esc(notes.join(' · '))}</small>` : '');
+            out.style.display = 'block';
+            loadList();
+        } catch (err) {
+            out.className = 'alert alert--error';
+            out.textContent = err.message;
+            out.style.display = 'block';
+        } finally {
+            btn.disabled = false; btn.textContent = 'Importa';
+        }
     }
 
     async function loadProperties() {

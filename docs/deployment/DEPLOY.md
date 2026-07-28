@@ -213,10 +213,24 @@ APP=bs555w5mvdeffngi7vxab4qo
 
 # Database backup - daily at 2am
 0 2 * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/backup_database.php >> /var/log/gestione-cron.log 2>&1
+
+# Contract expirations + draft check-out reports - daily at 9am
+0 9 * * * docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/process_contract_expirations.php >> /var/log/gestione-cron.log 2>&1
+
+# GDPR retention purge - weekly, Sunday 03:30
+30 3 * * 0 docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/cron/gdpr_retention.php >> /var/log/gestione-cron.log 2>&1
 ```
 
-**Not yet scheduled** (scripts exist, `api/readiness.php` expects them):
-`process_contract_expirations.php` and `gdpr_retention.php`.
+All seven jobs are scheduled and have produced a heartbeat. `gdpr_retention` is the only
+one that deletes: it purges `data_processing_log`, `communications`, `whatsapp_messages`,
+`activity_log`, `login_attempts` and `api_rate_limits` past their `retention_*` window in
+`app_settings` (`0` = keep forever). Documents are **reported, never auto-deleted** —
+fiscal law requires ~10 years and the deletion is irreversible. Count the damage before
+changing a retention setting:
+
+```sql
+SELECT COUNT(*) FROM communications WHERE created_at < DATE_SUB(NOW(), INTERVAL 36 MONTH);
+```
 
 `CRON_SECRET` gates only the **HTTP** entry points: every `cron/*.php` skips the
 check under `PHP_SAPI === 'cli'`. Do not pass the secret as a command-line argument
