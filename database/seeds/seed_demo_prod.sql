@@ -29,6 +29,7 @@ TRUNCATE TABLE esign_requests;
 TRUNCATE TABLE tenant_surveys;
 TRUNCATE TABLE buildings;
 TRUNCATE TABLE meter_readings;
+TRUNCATE TABLE meters;
 TRUNCATE TABLE property_insurance;
 TRUNCATE TABLE property_appraisals;
 TRUNCATE TABLE property_inventory;
@@ -850,3 +851,25 @@ SELECT CONCAT(
   'Contratti: 5 | Comunicazioni: 13 | Lead: 5 | Promemoria: 10'
 ) AS status;
 -- ════════════════════════════════════════════════════════════
+SELECT 'Seed completato' AS status;
+
+-- ════════════════════════════════════════════════════════════
+-- CONTATORI (phase76)
+-- Le letture qui sopra sono inserite per (immobile, tipo), ma dal phase76 una
+-- lettura appartiene a un CONTATORE censito. Senza questo blocco resterebbero
+-- orfane: registro contatori vuoto e consumo sempre nullo, perche' la serie si
+-- calcola per meter_id. Idempotente: crea solo i contatori mancanti.
+-- ════════════════════════════════════════════════════════════
+INSERT INTO meters (property_id, meter_type, notes)
+SELECT mr.property_id, mr.meter_type, 'Creato dal seed.'
+  FROM meter_readings mr
+  LEFT JOIN meters m ON m.property_id = mr.property_id AND m.meter_type = mr.meter_type
+ WHERE mr.meter_id IS NULL AND m.id IS NULL
+ GROUP BY mr.property_id, mr.meter_type;
+
+UPDATE meter_readings mr
+  JOIN (SELECT property_id, meter_type, MIN(id) AS meter_id
+          FROM meters GROUP BY property_id, meter_type) m
+    ON m.property_id = mr.property_id AND m.meter_type = mr.meter_type
+   SET mr.meter_id = m.meter_id
+ WHERE mr.meter_id IS NULL;

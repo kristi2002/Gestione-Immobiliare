@@ -602,38 +602,107 @@ if (tableExists($db, 'property_insurance')) {
 }
 
 if (tableExists($db, 'meter_readings')) {
+    // Dal phase76 la lettura appartiene a un contatore censito, non alla coppia
+    // (immobile, tipo): prima si crea il contatore, poi le sue letture. Due
+    // letture per contatore, cosi' la demo mostra un consumo vero invece di
+    // "prima lettura" su ogni riga.
+    $hasMeters = tableExists($db, 'meters');
+
+    $insMeterDevice = $hasMeters ? $db->prepare(
+        'INSERT INTO meters (property_id, meter_type, code, supplier_name, location, notes)
+         VALUES (:pid, :type, :code, :supplier, :location, :notes)'
+    ) : null;
+
     $insMeter = $db->prepare(
-        'INSERT INTO meter_readings (property_id, meter_type, reading_value, reading_date, notes)
-         VALUES (:pid, :type, :val, :date, :notes)'
+        'INSERT INTO meter_readings (property_id, meter_id, meter_type, reading_value, reading_date, notes)
+         VALUES (:pid, :mid, :type, :val, :date, :notes)'
     );
+
+    $codePrefix = ['gas' => 'PDR', 'electricity' => 'IT001E', 'water' => 'MAT'];
+    $suppliers  = ['Enel Energia', 'Eni Plenitude', 'Hera Comm', 'A2A Energia', 'Iren Mercato'];
+    $locations  = ['Vano scala', 'Cortile interno', 'Piano interrato', 'Nicchia esterna', 'Locale tecnico'];
+
     foreach (array_slice($propertyIds, 0, 25 * $scale) as $pid) {
         foreach (['gas', 'electricity', 'water'] as $mtype) {
-            $insMeter->execute([
-                'pid'  => $pid,
-                'type' => $mtype,
-                'val'  => random_int(100, 9999) + random_int(0, 99) / 100,
-                'date' => randDate(180, 0),
-                'notes'=> '[DEMO]',
-            ]);
+            $meterId = null;
+
+            if ($insMeterDevice) {
+                $insMeterDevice->execute([
+                    'pid'      => $pid,
+                    'type'     => $mtype,
+                    // Il codice e' UNIQUE: pid+tipo lo rende irripetibile senza
+                    // dover ricontrollare niente.
+                    'code'     => $codePrefix[$mtype] . '-' . str_pad((string) $pid, 6, '0', STR_PAD_LEFT) . strtoupper(substr($mtype, 0, 1)),
+                    'supplier' => $suppliers[array_rand($suppliers)],
+                    'location' => $locations[array_rand($locations)],
+                    'notes'    => '[DEMO]',
+                ]);
+                $meterId = (int) $db->lastInsertId();
+            }
+
+            // Lettura vecchia e lettura recente: la seconda ha un consumo
+            // calcolabile, che e' il punto della pagina.
+            $base = random_int(100, 9999) + random_int(0, 99) / 100;
+            foreach ([[180, 90, $base], [89, 0, $base + random_int(20, 400)]] as [$from, $to, $value]) {
+                $insMeter->execute([
+                    'pid'  => $pid,
+                    'mid'  => $meterId,
+                    'type' => $mtype,
+                    'val'  => $value,
+                    'date' => randDate($from, $to),
+                    'notes'=> '[DEMO]',
+                ]);
+            }
         }
     }
 }
 
 if (tableExists($db, 'property_inventory')) {
-    $items = ['Frigorifero', 'Lavatrice', 'Divano', 'Armadio', 'Caldaia', 'Condizionatore', 'Forno', 'Tavolo cucina'];
+    // Nome e categoria erano estratti da due liste indipendenti: usciva "Armadio"
+    // fra gli elettrodomestici e "Caldaia" fra gli arredi. In demo davanti a un
+    // agente immobiliare quella riga non sembra un dato finto: sembra un
+    // gestionale che classifica a caso. Ogni articolo porta con sé la sua
+    // categoria — e, dove ha senso, marca/modello/valore, che sono i campi su
+    // cui poggiano il ticket di manutenzione e il verbale di riconsegna.
+    $catalogue = [
+        ['Frigorifero',    'elettrodomestico', ['Bosch', 'Whirlpool', 'Samsung'],   ['KGN39VLEB', 'W7X 82O OX'],      [400, 900]],
+        ['Lavatrice',      'elettrodomestico', ['Bosch', 'Candy', 'LG'],            ['WAN28281', 'CS4 1272D3'],       [350, 800]],
+        ['Forno',          'elettrodomestico', ['Whirlpool', 'Electrolux'],         ['AKZ9 6230', 'KOFEH40X'],        [300, 700]],
+        ['Condizionatore', 'impianto',         ['Daikin', 'Mitsubishi'],            ['FTXM35N', 'MSZ-AP25VG'],        [600, 1400]],
+        ['Caldaia',        'impianto',         ['Vaillant', 'Baxi', 'Immergas'],    ['ecoTEC plus', 'Luna Duo-tec'],  [900, 2200]],
+        ['Divano',         'arredamento',      ['Poltronesofà', 'Ikea'],            [null],                            [400, 1500]],
+        ['Armadio',        'mobile',           ['Ikea', null],                      ['PAX'],                           [200, 800]],
+        ['Tavolo cucina',  'mobile',           ['Ikea', null],                      [null],                            [120, 500]],
+        ['Set lenzuola',   'biancheria',       [null],                              [null],                            [30, 90]],
+    ];
+
     $insInv = $db->prepare(
-        'INSERT INTO property_inventory (property_id, item_name, category, quantity, condition_rating, check_in_date)
-         VALUES (:pid, :item, :cat, :qty, :cond, :date)'
+        'INSERT INTO property_inventory
+            (property_id, item_name, category, quantity, condition_rating, check_in_date,
+             brand, model, serial_number, estimated_value)
+         VALUES (:pid, :item, :cat, :qty, :cond, :date, :brand, :model, :serial, :value)'
     );
+
     foreach (array_slice($propertyIds, 0, 20 * $scale) as $pid) {
         for ($k = 0; $k < random_int(3, 7); $k++) {
+            [$name, $cat, $brands, $models, $range] = pick($catalogue);
+            $brand = pick($brands);
+            $model = pick($models);
+
             $insInv->execute([
-                'pid'  => $pid,
-                'item' => pick($items),
-                'cat'  => pick(['elettrodomestico', 'arredamento', 'impianto', 'mobile']),
-                'qty'  => random_int(1, 2),
-                'cond' => random_int(2, 5),
-                'date' => randDate(400, 0),
+                'pid'    => $pid,
+                'item'   => $name,
+                'cat'    => $cat,
+                'qty'    => random_int(1, 2),
+                'cond'   => random_int(2, 5),
+                'date'   => randDate(400, 0),
+                'brand'  => $brand,
+                'model'  => $brand ? $model : null,
+                // La matricola esiste solo dove esiste davvero: un divano non ne ha una.
+                'serial' => $cat === 'elettrodomestico' || $cat === 'impianto'
+                    ? strtoupper(bin2hex(random_bytes(4)))
+                    : null,
+                'value'  => random_int($range[0], $range[1]),
             ]);
         }
     }
