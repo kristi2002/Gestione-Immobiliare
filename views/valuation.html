@@ -5,6 +5,7 @@
             <p>Stima automatica del valore di un immobile da quotazioni OMI e comparabili interni.</p>
         </div>
         <div class="view-header__actions">
+            <button class="btn btn--secondary" id="btn-import-omi"><i data-lucide="upload"></i> Importa listino</button>
             <button class="btn btn--primary" id="btn-new-omi">+ Quotazione OMI</button>
         </div>
     </div>
@@ -24,7 +25,12 @@
         <div id="val-estimate-result" style="margin-top:14px;"></div>
     </div>
 
-    <h3>Quotazioni OMI inserite</h3>
+    <h3>Quotazioni OMI</h3>
+    <p class="text-muted" style="margin-top:-6px;">
+        Il listino ufficiale si carica con <strong>Importa listino</strong>. L'inserimento manuale serve per le
+        microzone non coperte e per correggere un valore: le righe toccate a mano diventano
+        <em>override</em> e l'import del semestre successivo non le sovrascrive.
+    </p>
     <div class="toolbar">
         <div class="search-box">
             <input type="search" id="omi-search" class="form-input" placeholder="Cerca per comune, zona o tipologia…" autocomplete="off">
@@ -33,10 +39,10 @@
     <div class="table-wrapper">
         <table class="data-table" id="omi-table">
             <thead>
-                <tr><th>Comune</th><th>Zona</th><th>Tipologia</th><th>Vendita €/m²</th><th>Affitto €/m²</th><th>Periodo</th><th>Azioni</th></tr>
+                <tr><th>Comune</th><th>Zona</th><th>Tipologia</th><th>Vendita €/m²</th><th>Affitto €/m²</th><th>Periodo</th><th>Origine</th><th>Azioni</th></tr>
             </thead>
             <tbody id="omi-tbody">
-                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                <tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
             </tbody>
         </table>
     </div>
@@ -90,6 +96,41 @@
                 <button type="submit" class="btn btn--primary" id="omi-modal-save">Salva</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="omi-import-modal" hidden>
+    <div class="modal modal--md" role="dialog" aria-labelledby="omi-import-title">
+        <div class="modal-header">
+            <h3 id="omi-import-title">Importa listino OMI</h3>
+            <button class="modal-close" id="omi-import-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted" style="margin-top:0;">
+                Carica il CSV delle quotazioni pubblicato dall'Agenzia delle Entrate
+                (<em>Banca dati quotazioni immobiliari → Zone OMI e valori</em>). Scarica l'estratto
+                della <strong>provincia</strong>, non il listino nazionale.
+            </p>
+
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="omi-import-file">File CSV <span class="required">*</span></label>
+                    <input type="file" id="omi-import-file" class="form-input" accept=".csv,text/csv,text/plain">
+                </div>
+                <div class="form-group">
+                    <label for="omi-import-period">Semestre di riferimento <span class="required">*</span></label>
+                    <input type="text" id="omi-import-period" class="form-input" maxlength="10" placeholder="2026-S1">
+                    <small class="text-muted">Il semestre a cui si riferiscono i valori del file.</small>
+                </div>
+            </div>
+
+            <div id="omi-import-report" style="margin-top:6px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="omi-import-cancel">Annulla</button>
+            <button type="button" class="btn btn--secondary" id="omi-import-preview">Anteprima</button>
+            <button type="button" class="btn btn--primary" id="omi-import-confirm" disabled>Importa</button>
+        </div>
     </div>
 </div>
 
