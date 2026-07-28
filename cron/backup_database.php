@@ -31,25 +31,49 @@ $filepath  = $backupDir . '/' . $filename;
 $mysqldump = getenv('MYSQLDUMP_PATH') ?: 'mysqldump';
 $portArg   = $port !== '' ? ' -P ' . escapeshellarg($port) : '';
 
+// L'utente applicativo NON è root e non deve diventarlo per fare un backup:
+//   --no-tablespaces  evita il privilegio globale PROCESS (mysqldump lo chiede
+//                     per "dump tablespaces" anche su un singolo schema);
+//   niente --routines perché leggere le stored procedure richiede altri
+//                     privilegi, e le uniche routine dello schema sono gli
+//                     helper di migrazione (migration_add_column/_add_index),
+//                     ricreati in modo idempotente da 000_helpers.sql al primo
+//                     `migrate.php` dopo un restore.
+// Con --routines e senza --no-tablespaces mysqldump usciva con codice 2 e
+// questo job falliva ogni notte in silenzio (vedi sotto).
+$errFile = $filepath . '.err';
 $command = sprintf(
-    '%s -h %s%s -u %s %s --single-transaction --routines --triggers %s > %s 2>&1',
+    '%s -h %s%s -u %s %s --single-transaction --no-tablespaces --triggers %s > %s 2> %s',
     escapeshellcmd($mysqldump),
     escapeshellarg($host),
     $portArg,
     escapeshellarg($dbUser),
     $dbPass !== '' ? '-p' . escapeshellarg($dbPass) : '',
     escapeshellarg($dbName),
-    escapeshellarg($filepath)
+    escapeshellarg($filepath),
+    escapeshellarg($errFile)
 );
 
 exec($command, $output, $exitCode);
 
+// stderr va in un file SEPARATO, non dentro il dump: prima finiva in coda al
+// .sql con `2>&1`, e il ramo di errore cancellava quel file — cioè cancellava
+// l'unica copia del messaggio, lasciando "Backup failed (exit 2):" senza causa.
+$stderr = is_file($errFile) ? trim((string) file_get_contents($errFile)) : '';
+@unlink($errFile);
+
 if ($exitCode !== 0 || !file_exists($filepath) || filesize($filepath) === 0) {
-    fwrite(STDERR, "Backup failed (exit {$exitCode}): " . implode("\n", $output) . "\n");
+    fwrite(STDERR, "Backup failed (exit {$exitCode}): " . ($stderr !== '' ? $stderr : implode("\n", $output)) . "\n");
     if (file_exists($filepath)) {
         unlink($filepath);
     }
     exit(1);
+}
+
+// Un warning non fatale (es. una tabella saltata) non deve passare inosservato
+// solo perché il dump è stato prodotto.
+if ($stderr !== '') {
+    fwrite(STDERR, "Backup completato con avvisi: {$stderr}\n");
 }
 
 // Keep last 14 backups
