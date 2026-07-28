@@ -12,7 +12,15 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 
 apiHandleOptions();
 
-const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'preventivo', 'other'];
+// 'lettura_contatore' (phase75): la foto del quadrante scattata dall'agente al
+// momento della lettura. Sta qui e non in una cartella propria perche' questo e'
+// l'unico ramo di uploads/ con deny totale di Apache, streamer autenticato e log
+// GDPR — vedi la migrazione per il ragionamento completo.
+const DOC_TYPES = ['invoice', 'contract', 'id', 'id_front', 'id_back', 'preventivo', 'lettura_contatore', 'other'];
+
+// Una prova fotografica e' un'immagine o la scansione di una bolletta. Accettare
+// qui un .docx significherebbe accettare come "prova" un documento modificabile.
+const METER_PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
 const ALLOWED_MIMES = [
     'application/pdf',
@@ -72,6 +80,7 @@ function listDocuments(PDO $db): void
     $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $contractId = isset($_GET['contract_id']) ? (int) $_GET['contract_id'] : null;
+    $readingId  = isset($_GET['meter_reading_id']) ? (int) $_GET['meter_reading_id'] : null;
 
     // ── Part 1: real documents ────────────────────────────────────────────
     $docItems = [];
@@ -99,9 +108,14 @@ function listDocuments(PDO $db): void
             $dWhere .= ' AND d.contract_id = :contract_id';
             $dParams['contract_id'] = $contractId;
         }
+        if ($readingId) {
+            $dWhere .= ' AND d.meter_reading_id = :meter_reading_id';
+            $dParams['meter_reading_id'] = $readingId;
+        }
 
         $stmt = $db->prepare(
             "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id, d.contract_id,
+                    d.meter_reading_id,
                     d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
                     c.name AS client_name, c.surname AS client_surname,
                     p.address AS property_address, p.city AS property_city,
@@ -211,14 +225,15 @@ function uploadDocument(PDO $db): void
     $clientId   = !empty($_POST['client_id']) ? (int) $_POST['client_id'] : null;
     $propertyId = !empty($_POST['property_id']) ? (int) $_POST['property_id'] : null;
     $contractId = !empty($_POST['contract_id']) ? (int) $_POST['contract_id'] : null;
+    $readingId  = !empty($_POST['meter_reading_id']) ? (int) $_POST['meter_reading_id'] : null;
     $notes      = trim($_POST['notes'] ?? '') ?: null;
 
     if (!in_array($docType, DOC_TYPES, true)) {
         apiError('Tipo documento non valido.');
     }
 
-    if (!$clientId && !$propertyId && !$contractId) {
-        apiError('Associa il documento ad almeno un proprietario, un immobile o un contratto.');
+    if (!$clientId && !$propertyId && !$contractId && !$readingId) {
+        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto o una lettura.');
     }
 
     if ($clientId && !clientExists($db, $clientId)) {
@@ -231,6 +246,10 @@ function uploadDocument(PDO $db): void
 
     if ($contractId && !contractExists($db, $contractId)) {
         apiError('Contratto non trovato.');
+    }
+
+    if ($readingId && !meterReadingExists($db, $readingId)) {
+        apiError('Lettura contatore non trovata.');
     }
 
     if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
@@ -256,6 +275,11 @@ function uploadDocument(PDO $db): void
         apiError('Tipo di file non consentito. Formati: PDF, immagini, Word, testo.');
     }
 
+    // La prova di una lettura deve restare una prova: niente formati editabili.
+    if ($readingId && !in_array($mime, METER_PHOTO_MIMES, true)) {
+        apiError('La prova della lettura deve essere una foto (JPG, PNG, WEBP) o un PDF.');
+    }
+
     $subdir = date('Y/m');
     $uploadDir = __DIR__ . '/../uploads/documents/' . $subdir;
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
@@ -275,10 +299,10 @@ function uploadDocument(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO documents
-            (doc_type, title, client_id, property_id, contract_id, file_path,
+            (doc_type, title, client_id, property_id, contract_id, meter_reading_id, file_path,
              original_name, mime_type, file_size, notes)
          VALUES
-            (:doc_type, :title, :client_id, :property_id, :contract_id, :file_path,
+            (:doc_type, :title, :client_id, :property_id, :contract_id, :meter_reading_id, :file_path,
              :original_name, :mime_type, :file_size, :notes)"
     );
     $stmt->execute([
@@ -286,7 +310,8 @@ function uploadDocument(PDO $db): void
         'title'         => $title,
         'client_id'     => $clientId,
         'property_id'   => $propertyId,
-        'contract_id'   => $contractId,
+        'contract_id'      => $contractId,
+        'meter_reading_id' => $readingId,
         'file_path'     => $relativePath,
         'original_name' => $file['name'],
         'mime_type'     => $mime,
@@ -338,6 +363,13 @@ function clientExists(PDO $db, int $id): bool
 function propertyExists(PDO $db, int $id): bool
 {
     $stmt = $db->prepare("SELECT id FROM properties WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
+}
+
+function meterReadingExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM meter_readings WHERE id = :id");
     $stmt->execute(['id' => $id]);
     return (bool) $stmt->fetch();
 }

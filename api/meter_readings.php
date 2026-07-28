@@ -109,7 +109,7 @@ function listMeterReadings(PDO $db): void
             ORDER BY mr.reading_date DESC, mr.id DESC";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-    apiPaginatedSuccess($items, $total, $pagination);
+    apiPaginatedSuccess(attachPhotos($db, $items), $total, $pagination);
 }
 
 function getMeterReading(PDO $db, int $id): void
@@ -127,7 +127,7 @@ function getMeterReading(PDO $db, int $id): void
         apiError('Lettura contatore non trovata.', 404);
     }
 
-    apiSuccess($row);
+    apiSuccess(attachPhotos($db, [$row])[0]);
 }
 
 function getMeterSummary(PDO $db, int $propertyId): void
@@ -229,10 +229,79 @@ function deleteMeterReading(PDO $db, int $id): void
         apiError('Lettura non trovata.', 404);
     }
 
+    // La FK di phase75 e' CASCADE: cancellando la lettura sparirebbero anche le
+    // righe `documents` delle foto — ma NON i file su disco, che resterebbero
+    // orfani sotto uploads/documents/ per sempre (dati personali senza piu' un
+    // record che li giustifichi: esattamente cio' che la conservazione GDPR
+    // vieta). Quindi i file si cancellano qui, prima, in modo esplicito.
+    $photos = $db->prepare("SELECT id, file_path FROM documents WHERE meter_reading_id = :id");
+    $photos->execute(['id' => $id]);
+    $attached = $photos->fetchAll();
+
+    require_once __DIR__ . '/../config/upload_guard.php';
+    foreach ($attached as $photo) {
+        $fullPath = safeUploadRealPath((string) $photo['file_path']);
+        if ($fullPath !== null) {
+            @unlink($fullPath);
+        }
+    }
+
+    if ($attached) {
+        $db->prepare("DELETE FROM documents WHERE meter_reading_id = :id")->execute(['id' => $id]);
+    }
+
     $db->prepare("DELETE FROM meter_readings WHERE id = :id")->execute(['id' => $id]);
 
-    logActivity('delete', 'meter_reading', $id, 'Lettura eliminata #' . $id);
+    logActivity('delete', 'meter_reading', $id, 'Lettura eliminata #' . $id
+        . ($attached ? ' (con ' . count($attached) . ' foto)' : ''));
     apiSuccess(['id' => $id, 'message' => 'Lettura eliminata.']);
+}
+
+// ---------------------------------------------------------------------------
+// Prova fotografica
+// ---------------------------------------------------------------------------
+
+/**
+ * Allega a ogni lettura le foto del quadrante (phase75). Il file NON viene mai
+ * esposto come URL diretto: si passa sempre da api/download_document.php, che
+ * controlla chi sta chiedendo e scrive l'accesso nel log GDPR.
+ *
+ * Una query sola per l'intera pagina: con una query per riga la lista a 25
+ * elementi ne farebbe 26.
+ */
+function attachPhotos(PDO $db, array $rows): array
+{
+    if (!$rows) {
+        return $rows;
+    }
+
+    $ids = array_values(array_filter(array_map(static fn($r) => (int) ($r['id'] ?? 0), $rows)));
+    if (!$ids) {
+        return $rows;
+    }
+
+    $in   = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $db->prepare(
+        "SELECT id, meter_reading_id, original_name, mime_type, file_size, created_at
+           FROM documents
+          WHERE meter_reading_id IN ($in)
+       ORDER BY created_at ASC, id ASC"
+    );
+    $stmt->execute($ids);
+
+    $byReading = [];
+    foreach ($stmt->fetchAll() as $doc) {
+        $doc['download_url'] = 'api/download_document.php?id=' . $doc['id'];
+        $byReading[(int) $doc['meter_reading_id']][] = $doc;
+    }
+
+    foreach ($rows as &$row) {
+        $row['photos']      = $byReading[(int) $row['id']] ?? [];
+        $row['photo_count'] = count($row['photos']);
+    }
+    unset($row);
+
+    return $rows;
 }
 
 // ---------------------------------------------------------------------------

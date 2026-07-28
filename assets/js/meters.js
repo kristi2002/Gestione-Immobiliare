@@ -3,6 +3,7 @@
 
     const API      = 'api/meter_readings.php';
     const PROP_API = 'api/properties.php';
+    const DOC_API  = 'api/documents.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
@@ -79,7 +80,7 @@
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
-        softLoad(els.tbody, '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
+        softLoad(els.tbody, '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -91,7 +92,7 @@
             window.Pagination.render(els.pagination, parsed, p => { currentPage = p; loadReadings(); });
         } catch (err) {
             els.tbody.classList.remove('is-loading');
-            els.tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
+            els.tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
         }
     }
 
@@ -115,10 +116,30 @@
         return `<span style="color:var(--color-warning,#e67e22);">▲ ${esc(String(value))} ${esc(unit)}</span>`;
     }
 
+    // Una lettura senza foto non e' un errore, ma in una contestazione di fine
+    // locazione e' la parola dell'agente contro quella dell'inquilino: va vista
+    // a colpo d'occhio quali righe sono documentate e quali no.
+    function renderPhotoCell(r) {
+        const n = Number(r.photo_count || 0);
+        if (!n) {
+            return '<span class="text-muted" title="Nessuna prova fotografica allegata.">—</span>';
+        }
+
+        const first = (r.photos && r.photos[0]) || null;
+        const label = n > 1 ? ` ${n}` : '';
+        if (!first) return `<span class="badge">${esc(String(n))}</span>`;
+
+        return `<a href="${esc(first.download_url)}" target="_blank" rel="noopener"
+                   title="${esc(first.original_name)}${n > 1 ? ` (+${n - 1} altre)` : ''}"
+                   style="display:inline-flex;align-items:center;gap:.25rem;">
+                    <i data-lucide="camera"></i>${esc(label)}
+                </a>`;
+    }
+
     function renderRows(items) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
-            els.tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Nessuna lettura trovata.</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Nessuna lettura trovata.</td></tr>';
             return;
         }
 
@@ -134,6 +155,7 @@
                 <td data-label="Lettura">${esc(reading)}</td>
                 <td data-label="Consumo">${deltaHtml}</td>
                 <td data-label="Data">${formatDate(r.reading_date)}</td>
+                <td data-label="Prova">${renderPhotoCell(r)}</td>
                 <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
                     <button class="btn btn--sm btn--ghost btn-m-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
                     <button class="btn btn--sm btn--ghost btn-m-del" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
@@ -185,8 +207,51 @@
             document.getElementById('meters-notes').value           = item.notes || '';
         }
 
+        renderExistingPhotos(item ? item.photos : []);
+
         els.modal.hidden = false;
         document.getElementById('meters-reading-value').focus();
+    }
+
+    function renderExistingPhotos(photos) {
+        const box = document.getElementById('meters-photo-existing');
+        if (!box) return;
+
+        if (!photos || !photos.length) {
+            box.innerHTML = '';
+            return;
+        }
+
+        box.innerHTML = 'Già allegate: ' + photos.map(p =>
+            `<a href="${esc(p.download_url)}" target="_blank" rel="noopener">${esc(p.original_name)}</a>`
+        ).join(', ');
+    }
+
+    // L'upload avviene DOPO il salvataggio perche' la foto si lega all'id della
+    // lettura, che prima di salvare non esiste. Se il caricamento fallisce la
+    // lettura resta salvata: si dice quali file non sono passati invece di far
+    // credere che sia andato perso tutto.
+    async function uploadPhotos(readingId, propertyId, files) {
+        const failed = [];
+
+        for (const file of files) {
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('doc_type', 'lettura_contatore');
+            fd.append('meter_reading_id', readingId);
+            if (propertyId) fd.append('property_id', propertyId);
+            fd.append('title', `Foto contatore — lettura #${readingId}`);
+
+            try {
+                const res  = await fetch(DOC_API, { method: 'POST', body: fd });
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error || 'errore sconosciuto');
+            } catch (e) {
+                failed.push(`${file.name} (${e.message})`);
+            }
+        }
+
+        return failed;
     }
 
     function closeModal() { els.modal.hidden = true; }
@@ -214,8 +279,23 @@
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
+
+            const saved     = Array.isArray(json.data) ? json.data[0] : json.data;
+            const readingId = saved && saved.id ? saved.id : id;
+            const files     = Array.from(document.getElementById('meters-photo').files || []);
+
+            let failed = [];
+            if (readingId && files.length) {
+                btn.textContent = 'Caricamento foto…';
+                failed = await uploadPhotos(readingId, data.property_id, files);
+            }
+
             closeModal();
-            showAlert('Lettura salvata con successo.', 'success');
+            if (failed.length) {
+                showAlert(`Lettura salvata, ma non è stato possibile allegare: ${failed.join('; ')}`, 'error');
+            } else {
+                showAlert('Lettura salvata con successo.', 'success');
+            }
             loadReadings();
         } catch (err) {
             showAlert(err.message, 'error');

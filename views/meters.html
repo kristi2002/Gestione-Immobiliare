@@ -68,11 +68,12 @@
                     <th>Ultima lettura</th>
                     <th>Consumo stimato</th>
                     <th>Data lettura</th>
+                    <th>Prova</th>
                     <th>Azioni</th>
                 </tr>
             </thead>
             <tbody id="meters-tbody">
-                <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
             </tbody>
         </table>
     </div>
@@ -122,6 +123,18 @@
                 <label for="meters-notes">Note</label>
                 <textarea id="meters-notes" name="notes" class="form-textarea" rows="3"></textarea>
             </div>
+
+            <!-- Prova fotografica: un numero digitato a mano non si difende in una
+                 contestazione di fine locazione, la foto del quadrante si. Il file
+                 finisce in uploads/documents/ (ramo protetto) e si scarica solo
+                 tramite lo streamer autenticato. -->
+            <div class="form-group">
+                <label for="meters-photo">Foto del contatore</label>
+                <input type="file" id="meters-photo" name="photo" class="form-input"
+                       accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
+                <small class="text-muted">Foto del quadrante o PDF della bolletta. Max 25 MB per file.</small>
+                <div id="meters-photo-existing" class="text-muted" style="margin-top:.5rem;"></div>
+            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn--ghost" id="meters-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="meters-modal-save">Salva</button>
@@ -139,6 +152,7 @@
         </div>
         <div class="modal-body">
             <p>Sei sicuro di voler eliminare questa lettura?</p>
+            <p class="text-muted">Verranno eliminate anche le eventuali foto allegate.</p>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="meters-delete-cancel">Annulla</button>
