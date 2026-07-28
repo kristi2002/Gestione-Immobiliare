@@ -65,8 +65,11 @@ owner portals use separate session namespaces.
 - `PATCH ?action=set_cover` (body `property_id`, `media_id`); `DELETE ?id={id}` delete + file
 
 ### Property Keys (`property_keys.php`)
-- `GET` list (`property_id`, `status`); `?id={id}` single
-- `POST` create; `PUT ?id={id}` update; `DELETE ?id={id}` delete
+- `GET` list (`property_id`, `status`, `overdue=1`, `holder_type`, `supplier_id`/`tenant_id`/`client_id`/`lead_id`, `search` incl. `key_code`); `?id={id}` single
+- `GET ?id={id}&action=history` registro custodia; `?action=holder_options` rubriche detentore; `?action=context&property_id={id}` appuntamenti/interventi
+- `POST` create; `POST ?id={id}&action=return` rientro rapido; `PUT ?id={id}` update; `DELETE ?id={id}` delete
+- Detentore polimorfo: `holder_type` + `holder_ref_id` (o `holder_name` per `altro`). Ogni cambio di custodia scrive in `property_key_events` (append-only).
+- Cron `process_key_returns.php`: chiavi oltre `due_back_at` → promemoria interno all'agente (`request_type='key_overdue'`, non finisce nella bacheca manutenzione).
 
 ### Property Appraisals (`property_appraisals.php`)
 - `GET ?property_id={id}` list; `?id={id}` single; `POST`/`PUT ?id={id}`/`DELETE ?id={id}`

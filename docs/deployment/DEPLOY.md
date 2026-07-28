@@ -198,6 +198,9 @@ CONTAINER="<app-container-name>"
 # Contract expiration checks - daily at 9am
 0 9 * * * docker exec $CONTAINER php /var/www/html/cron/process_contract_expirations.php
 
+# Overdue key returns - daily at 8:30am
+30 8 * * * docker exec $CONTAINER php /var/www/html/cron/process_key_returns.php
+
 # Database backup - daily at 2am
 0 2 * * * docker exec $CONTAINER php /var/www/html/cron/backup_database.php
 ```

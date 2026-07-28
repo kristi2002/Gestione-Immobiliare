@@ -19,7 +19,7 @@
 | Tenants & Leases | tenants, tenant_users, tenant_surveys, property_applications |
 | Communications | communications, whatsapp_messages, whatsapp_templates, email_templates |
 | Operations | reminders, appointments, documents, pdf_documents, esign_requests |
-| Property Management | expenses, suppliers, property_insurance, property_inventory, property_keys, meter_readings, property_appraisals |
+| Property Management | expenses, suppliers, property_insurance, property_inventory, property_keys, property_key_events, meter_readings, property_appraisals |
 | Social & Config | social_posts, social_settings, leads, lead_property_matches, app_settings, payment_reminder_log |
 
 ---
@@ -366,11 +366,36 @@ erDiagram
     property_keys {
         int id PK
         int property_id FK
+        varchar key_type "portone|appartamento|cantina|box|cancello|altro"
+        int quantity
+        varchar key_code "etichetta portachiavi fisico"
+        varchar holder_type "agente|fornitore|inquilino|proprietario|lead|altro"
         int holder_id FK "admin_users"
-        varchar holder_name "external holder"
+        int holder_supplier_id FK
+        int holder_tenant_id FK
+        int holder_client_id FK
+        int holder_lead_id FK
+        varchar holder_name "solo per holder_type=altro"
         enum status "out|in_office|lost"
         date handed_at
+        date due_back_at "rientro previsto — sorvegliato dal cron"
         date returned_at
+        datetime overdue_notified_at
+    }
+
+    property_key_events {
+        int id PK
+        int key_id FK "SET NULL: il registro sopravvive alla scheda"
+        int property_id FK
+        varchar property_label "snapshot"
+        varchar event_type "created|handover|return|status_change|lost|overdue|deleted"
+        varchar holder_label "snapshot detentore"
+        varchar prev_holder_label
+        date event_date
+        int appointment_id FK
+        int reminder_id FK "intervento collegato"
+        int admin_user_id FK "chi ha autorizzato"
+        timestamp created_at
     }
 
     meter_readings {
@@ -458,6 +483,7 @@ erDiagram
     properties ||--o{ property_insurance : covered_by
     properties ||--o{ property_inventory : contains
     properties ||--o{ property_keys : has
+    property_keys ||--o{ property_key_events : logged_in
     properties ||--o{ meter_readings : tracked_by
     properties ||--o{ property_appraisals : appraised
     properties ||--o{ lead_property_matches : matched_to

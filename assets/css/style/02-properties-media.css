@@ -419,6 +419,89 @@
     color: var(--color-text-muted);
 }
 
+/* Chiave oltre il rientro previsto: deve saltare all'occhio nella griglia,
+   non essere un badge in più fra gli altri. */
+.key-card.is-overdue {
+    border-color: #dc2626;
+    box-shadow: inset 3px 0 0 #dc2626;
+}
+.badge--key-overdue {
+    background: #dc2626;
+    color: #fff;
+}
+.key-card__overdue {
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+/* Il pulsante di scansione vive dentro il campo codice. */
+.input-with-action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.input-with-action .form-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.key-scan__video {
+    width: 100%;
+    max-height: 320px;
+    background: #000;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+/* --------------------------------------------------------------------------
+   Storico custodia chiavi (timeline append-only)
+   -------------------------------------------------------------------------- */
+.key-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 18px;
+    border-left: 2px solid var(--color-border);
+}
+.key-timeline__item {
+    position: relative;
+    padding: 0 0 18px 12px;
+}
+.key-timeline__item::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-border);
+    border: 2px solid var(--color-surface, #fff);
+}
+.key-timeline__item--handover::before { background: #d97706; }
+.key-timeline__item--return::before    { background: #16a34a; }
+.key-timeline__item--lost::before,
+.key-timeline__item--overdue::before,
+.key-timeline__item--deleted::before   { background: #dc2626; }
+.key-timeline__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.key-timeline__title {
+    font-weight: 600;
+    font-size: 13.5px;
+}
+.key-timeline__date {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+.key-timeline__meta {
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
 /* --------------------------------------------------------------------------
    Confirmation dialog (custom, replaces native confirm())
    -------------------------------------------------------------------------- */

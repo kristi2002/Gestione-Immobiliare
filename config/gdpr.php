@@ -185,6 +185,10 @@ function gdprExportSubject(PDO $db, string $subjectType, int $subjectId): array
             'aml_records'         => ['SELECT id, subject_name, codice_fiscale, verification_type, verification_date, retention_until, status FROM aml_records WHERE client_id = :id', $byId],
             'payment_reminders'   => ['SELECT * FROM payment_reminder_log WHERE client_id = :id', $byId],
             'consent'             => ["SELECT * FROM consent_records WHERE subject_type='client' AND subject_id = :id", $byId],
+            // Chiavi consegnate all'interessato: da phase72 la custodia è una
+            // FK tipizzata, quindi è dato personale a tutti gli effetti.
+            'property_keys'       => ['SELECT * FROM property_keys WHERE holder_client_id = :id', $byId],
+            'property_key_events' => ['SELECT * FROM property_key_events WHERE holder_client_id = :id', $byId],
         ];
     } else {
         $related = [
@@ -197,6 +201,8 @@ function gdprExportSubject(PDO $db, string $subjectType, int $subjectId): array
             'whatsapp_messages'   => ['SELECT * FROM whatsapp_messages WHERE tenant_id = :id', $byId],
             'payment_reminders'   => ['SELECT * FROM payment_reminder_log WHERE tenant_id = :id', $byId],
             'consent'             => ["SELECT * FROM consent_records WHERE subject_type='tenant' AND subject_id = :id", $byId],
+            'property_keys'       => ['SELECT * FROM property_keys WHERE holder_tenant_id = :id', $byId],
+            'property_key_events' => ['SELECT * FROM property_key_events WHERE holder_tenant_id = :id', $byId],
         ];
     }
 
@@ -265,11 +271,14 @@ function gdprAnonymizeSubject(PDO $db, string $subjectType, int $subjectId): boo
         $assignments[] = 'portal_password_hash = NULL';
     }
 
-    // Read the subject's email BEFORE overwriting it — needed to reach records
-    // that link by email rather than by FK (e-sign requests).
-    $pre = $db->prepare("SELECT email FROM {$table} WHERE id = :id");
+    // Read the subject's email and display name BEFORE overwriting them —
+    // needed to reach records that link by email rather than by FK (e-sign
+    // requests) or that only kept a text snapshot (key custody ledger).
+    $pre = $db->prepare("SELECT name, surname, email FROM {$table} WHERE id = :id");
     $pre->execute(['id' => $subjectId]);
-    $subjectEmail = trim((string) ($pre->fetchColumn() ?: '')) ?: null;
+    $preRow = $pre->fetch() ?: [];
+    $subjectEmail = trim((string) ($preRow['email'] ?? '')) ?: null;
+    $subjectLabel = trim(($preRow['name'] ?? '') . ' ' . ($preRow['surname'] ?? '')) ?: null;
 
     $sql = "UPDATE {$table} SET " . implode(', ', $assignments) . ' WHERE id = :id';
     $params = $sets;
@@ -335,6 +344,26 @@ function gdprAnonymizeSubject(PDO $db, string $subjectType, int $subjectId): boo
         $scrub($db,
             "UPDATE tenant_users SET password_hash = '', last_login_at = NULL
               WHERE tenant_id = :id", ['id' => $subjectId]);
+    }
+
+    // Registro custodia chiavi: la riga resta (serve a provare chi aveva le
+    // chiavi di un immobile), ma le etichette con il nome della persona vanno
+    // ripulite — sono uno snapshot testuale che la FK annullata non porta via.
+    // È anche il motivo per cui il registro NON ha trigger anti-UPDATE: un
+    // append-only assoluto renderebbe questa cancellazione impossibile.
+    $keyColumn = $subjectType === 'client' ? 'holder_client_id' : 'holder_tenant_id';
+    $scrub($db,
+        "UPDATE property_key_events
+            SET holder_label = '[anonimizzato]'
+          WHERE $keyColumn = :id", ['id' => $subjectId]);
+    // prev_holder_label non ha FK: si può raggiungere solo per nome. Un omonimo
+    // verrebbe anonimizzato con lui — in una cancellazione è l'errore dal lato
+    // giusto, ma va saputo.
+    if ($subjectLabel !== null) {
+        $scrub($db,
+            "UPDATE property_key_events
+                SET prev_holder_label = '[anonimizzato]'
+              WHERE prev_holder_label = :name", ['name' => $subjectLabel]);
     }
 
     // E-sign requests link by signer_email, not by FK. signer_email is NOT NULL,

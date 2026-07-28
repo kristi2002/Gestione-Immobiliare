@@ -13,13 +13,18 @@
 
     <div class="toolbar">
         <div class="search-box">
-            <input type="search" id="key-search" class="form-input" placeholder="Cerca indirizzo o detentore…" autocomplete="off">
+            <input type="search" id="key-search" class="form-input" placeholder="Cerca indirizzo, detentore o codice portachiavi…" autocomplete="off">
         </div>
+        <!-- Mostrato solo dove il browser espone BarcodeDetector (vedi keys.js). -->
+        <button type="button" class="btn btn--ghost" id="btn-scan-key" hidden title="Inquadra il codice del portachiavi">
+            <i data-lucide="scan-line"></i> Scansiona
+        </button>
         <select id="key-status-filter" class="form-select">
             <option value="">Tutti gli stati</option>
             <option value="out">In possesso</option>
             <option value="in_office">In ufficio</option>
             <option value="lost">Smarrite</option>
+            <option value="overdue">Solo in ritardo</option>
         </select>
     </div>
 
@@ -63,7 +68,12 @@
                 </div>
                 <div class="form-group">
                     <label for="key-code">Codice portachiavi</label>
-                    <input type="text" id="key-code" class="form-input" maxlength="50" placeholder="es. A12 — etichetta fisica del portachiavi">
+                    <div class="input-with-action">
+                        <input type="text" id="key-code" class="form-input" maxlength="50" placeholder="es. A12 — etichetta fisica del portachiavi">
+                        <button type="button" class="btn btn--ghost btn--sm" id="btn-scan-code" hidden title="Scansiona il codice">
+                            <i data-lucide="scan-line"></i>
+                        </button>
+                    </div>
                 </div>
             </fieldset>
 
@@ -71,15 +81,35 @@
                 <legend>Detentore e stato</legend>
                 <div class="form-row form-row--2">
                     <div class="form-group">
-                        <label for="key-holder">Agente</label>
-                        <select id="key-holder" class="form-select">
-                            <option value="">— Nessuno —</option>
+                        <label for="key-holder-type">Tipo detentore</label>
+                        <select id="key-holder-type" class="form-select">
+                            <option value="">— Nessuno (in ufficio) —</option>
+                            <option value="agente">Agente</option>
+                            <option value="fornitore">Fornitore</option>
+                            <option value="inquilino">Inquilino</option>
+                            <option value="proprietario">Proprietario</option>
+                            <option value="lead">Cliente / lead</option>
+                            <option value="altro">Altro (occasionale)</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="key-holder-name">Altro detentore</label>
-                        <input type="text" id="key-holder-name" class="form-input" placeholder="Se non è un agente">
+                    <div class="form-group" id="key-holder-ref-group" hidden>
+                        <label for="key-holder-ref">Detentore</label>
+                        <input type="text" id="key-holder-ref" class="form-input" list="key-holder-options" autocomplete="off" placeholder="Cerca…">
+                        <datalist id="key-holder-options"></datalist>
+                        <input type="hidden" id="key-holder-ref-id">
+                        <small class="form-hint">La consegna resta agganciata alla scheda del soggetto.</small>
                     </div>
+                    <div class="form-group" id="key-holder-name-group" hidden>
+                        <label for="key-holder-name">Nome detentore</label>
+                        <input type="text" id="key-holder-name" class="form-input" maxlength="100" placeholder="Chi non è in anagrafica">
+                    </div>
+                </div>
+                <div class="form-group" id="key-context-group" hidden>
+                    <label for="key-context">Motivo della consegna</label>
+                    <select id="key-context" class="form-select">
+                        <option value="">— Non specificato —</option>
+                    </select>
+                    <small class="form-hint">Appuntamento o intervento sull'immobile: resta agganciato allo storico.</small>
                 </div>
                 <div class="form-row form-row--2">
                     <div class="form-group">
@@ -99,10 +129,15 @@
 
             <fieldset class="form-section">
                 <legend>Date</legend>
-                <div class="form-row form-row--2">
+                <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="key-handed">Consegnate il</label>
                         <input type="date" id="key-handed" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="key-due-back">Rientro previsto</label>
+                        <input type="date" id="key-due-back" class="form-input">
+                        <small class="form-hint">Superata questa data la scheda va in rosso e parte l'avviso all'agente.</small>
                     </div>
                     <div class="form-group">
                         <label for="key-returned">Restituite il</label>
@@ -123,6 +158,31 @@
                 <button type="submit" class="btn btn--primary">Salva</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="key-history-modal" hidden>
+    <div class="modal modal--md" role="dialog">
+        <div class="modal-header">
+            <h3 id="key-history-title">Storico custodia</h3>
+            <button class="modal-close" id="key-history-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="key-history-body"><div class="entity-loading">Caricamento…</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="key-scan-modal" hidden>
+    <div class="modal modal--sm" role="dialog">
+        <div class="modal-header">
+            <h3>Scansiona portachiavi</h3>
+            <button class="modal-close" id="key-scan-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <video id="key-scan-video" class="key-scan__video" playsinline muted></video>
+            <p class="form-hint" id="key-scan-hint">Inquadra il codice a barre o il QR sull'etichetta.</p>
+        </div>
     </div>
 </div>
 

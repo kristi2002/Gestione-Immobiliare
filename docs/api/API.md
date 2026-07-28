@@ -159,16 +159,33 @@ Body: `{ property_id, media_id }`
 ### Property Keys (Chiavi)
 
 **`GET /api/property_keys.php`** — list  
-Query params: `property_id`, `status` (out/in_office/lost)
+Query params: `property_id`, `status` (out/in_office/lost), `overdue=1`, `holder_type`,
+`supplier_id` / `tenant_id` / `client_id` / `lead_id`, `search` (indirizzo, detentore, `key_code`).  
+Ogni riga porta `holder_display` (etichetta risolta), `is_overdue` e `days_overdue` derivati.
 
 **`GET /api/property_keys.php?id={id}`** — single key record
 
+**`GET /api/property_keys.php?id={id}&action=history`** — registro custodia (append-only)
+
+**`GET /api/property_keys.php?action=holder_options`** — elenchi per il selettore detentore
+(agenti, fornitori, inquilini, proprietari, lead) in una sola risposta
+
+**`GET /api/property_keys.php?action=context&property_id={id}`** — appuntamenti e interventi
+dell'immobile, per agganciare la consegna al motivo che l'ha causata
+
 **`POST /api/property_keys.php`** — create key record  
-Body: `{ property_id, holder_id?, holder_name?, handed_at, status }`
+Body: `{ property_id, key_type?, quantity?, key_code?, holder_type?, holder_ref_id?,
+holder_name?, handed_at?, due_back_at?, returned_at?, status, appointment_id?, reminder_id? }`  
+`holder_type` ∈ agente | fornitore | inquilino | proprietario | lead | altro. Per i primi cinque
+serve `holder_ref_id`; solo `altro` usa `holder_name`. Uno stato `out` senza detentore è rifiutato.
 
-**`PUT /api/property_keys.php?id={id}`** — update (e.g. return key, mark lost)
+**`POST /api/property_keys.php?id={id}&action=return`** — rientro rapido: stato `in_office`,
+detentore azzerato, evento `return` nel registro. Body: `{ returned_at?, location?, notes? }`
 
-**`DELETE /api/property_keys.php?id={id}`** — delete key record
+**`PUT /api/property_keys.php?id={id}`** — update (e.g. cambio detentore, mark lost)
+
+**`DELETE /api/property_keys.php?id={id}`** — delete key record  
+Il registro eventi sopravvive alla cancellazione (FK `ON DELETE SET NULL` + etichette snapshot).
 
 ---
 

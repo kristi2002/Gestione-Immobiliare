@@ -128,6 +128,7 @@ $cronJobs = [
     'reminders'            => 2 * 3600,   // expected at least every ~2h
     'payment_reminders'    => 26 * 3600,  // daily
     'contract_expirations' => 26 * 3600,  // daily
+    'key_returns'          => 26 * 3600,  // daily
     'backup'               => 26 * 3600,  // daily
     'gdpr_retention'       => 8 * 86400,  // weekly-ish
 ];
