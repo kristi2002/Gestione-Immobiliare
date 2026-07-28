@@ -327,7 +327,10 @@
         padding    .3s  cubic-bezier(.4,0,.2,1),
         margin     .3s  cubic-bezier(.4,0,.2,1);
 }
-.toolbar:not(.is-open),
+/* `is-open` is added by filters.js. A bar that opts out of the filter-bar
+   treatment (data-no-filterbar) never gets it, so it must never collapse —
+   otherwise the page's only control is invisible. */
+.toolbar:not(.is-open):not([data-no-filterbar]),
 .reports-toolbar:not(.is-open),
 .filter-bar:not(.is-open) {
     max-height: 0;

@@ -417,7 +417,10 @@
         // "pick an entity first" selector that gates all page content. Reflowing
         // those into the collapsed "Filtri" popover hides the only control the
         // page has, breaking the primary interaction instead of just tidying it.
-        if (bar.hasAttribute('data-no-filterbar')) return;
+        // `is-open` still has to go on: the collapse CSS hides every .toolbar
+        // that lacks it, so returning without it would leave the bar at
+        // max-height:0 — invisible, which is the opposite of the intent here.
+        if (bar.hasAttribute('data-no-filterbar')) { bar.classList.add('is-open'); return; }
         if (!hasFilters(bar)) return;
         if (bar.dataset.filterBarBound === '1') return;
         bar.dataset.filterBarBound = '1';
@@ -488,6 +491,9 @@
      */
     function setupMergeToTopbar(bar) {
         if (bar._mergeBound) return;
+        // Same opt-out as setupBar: a "pick an entity first" gate is not a list
+        // filter, so it doesn't belong in the topbar's filter slot either.
+        if (bar.hasAttribute('data-no-filterbar')) return;
         // Skip toolbars nested in their own scroll context (modals, side panels)
         // or inside a card — those are inline form rows, not page-level filter bars.
         if (bar.closest('.modal, .modal-overlay, .chat-sidebar, .card, [data-no-sticky]')) return;
