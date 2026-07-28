@@ -3,6 +3,7 @@
  * Properties (Immobili) CRUD API.
  *
  * GET    /api/properties.php                  — list (search, status, client_id)
+ * GET    /api/properties.php?view=map         — slim payload for the map (no 500 cap)
  * GET    /api/properties.php?id={id}          — single property with media count
  * POST   /api/properties.php                  — create
  * PUT    /api/properties.php?id={id}          — update
@@ -17,6 +18,9 @@ apiHandleOptions();
 
 const PROPERTY_STATUSES = ['available', 'rented', 'sold', 'archived'];
 
+/** Runaway guard for ?view=map — see listPropertiesForMap(). Not a product limit. */
+const MAP_HARD_CEILING = 5000;
+
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];
@@ -30,6 +34,9 @@ try {
             if (($_GET['action'] ?? '') === 'matching_leads') {
                 if (!$id) apiError('ID immobile mancante.');
                 matchingLeads($db, $id);
+            }
+            if (($_GET['view'] ?? '') === 'map') {
+                listPropertiesForMap($db);
             }
             $id ? getProperty($db, $id) : listProperties($db);
             break;
@@ -168,6 +175,66 @@ function listProperties(PDO $db): void
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
     apiPaginatedSuccess($items, $total, $pagination);
+}
+
+/**
+ * Slim payload for the map view.
+ *
+ * The map used to reuse listProperties() through Pagination.fetchList(), which
+ * caps at limit=500 (apiGetPagination's $maxLimit). Past 500 properties the map
+ * silently dropped the rest — it looked complete and wasn't. This variant drops
+ * the pagination window and returns only the columns the map actually paints,
+ * skipping the property_media LEFT JOIN + GROUP BY and the monthly_rent
+ * correlated subquery that the map never reads.
+ *
+ * Archived properties are excluded (they are not shown on the map anyway).
+ * MAP_HARD_CEILING is a runaway guard, not a product limit: when it bites the
+ * response says so via `truncated` and the UI reports it instead of pretending
+ * the map is complete.
+ */
+function listPropertiesForMap(PDO $db): void
+{
+    $params = [];
+    $where  = "WHERE p.status != 'archived'";
+
+    $clientId = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
+    if ($clientId) {
+        $where .= ' AND p.client_id = :client_id';
+        $params['client_id'] = $clientId;
+    }
+
+    $total = (int) (function () use ($db, $where, $params) {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM properties p $where");
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
+    })();
+
+    $sql = "SELECT p.id, p.client_id, p.address, p.city, p.cap, p.province,
+                   p.status, p.price, p.price_type,
+                   p.latitude, p.longitude, p.geo_confidence,
+                   COALESCE(
+                       (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                       (SELECT fm.file_path FROM property_media fm
+                        WHERE fm.property_id = p.id
+                          AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
+                          AND fm.mime_type LIKE 'image/%'
+                        ORDER BY fm.sort_order ASC, fm.created_at ASC LIMIT 1)
+                   ) AS cover_url
+            FROM properties p
+            $where
+            ORDER BY p.city ASC, p.address ASC
+            LIMIT " . MAP_HARD_CEILING;
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $items = $stmt->fetchAll();
+
+    apiSuccess([
+        'items'     => $items,
+        'total'     => $total,
+        'returned'  => count($items),
+        'truncated' => $total > count($items),
+    ]);
 }
 
 function getProperty(PDO $db, int $id): void

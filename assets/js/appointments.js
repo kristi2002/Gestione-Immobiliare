@@ -45,6 +45,78 @@
         });
         [els.typeFilter, els.statusFilter, els.from, els.to].forEach(el =>
             el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
+
+        const routeBtn = document.getElementById('btn-appt-route');
+        if (routeBtn) routeBtn.addEventListener('click', planDay);
+    }
+
+    /**
+     * Itinerario della giornata.
+     *
+     * Prende la data dal filtro "Da" (altrimenti oggi) e ricarica gli
+     * appuntamenti di QUEL giorno, non quelli in pagina: la griglia è paginata a
+     * 25 e filtrabile, quindi ciò che si vede a schermo non è la giornata.
+     *
+     * Solo gli appuntamenti presso l'immobile hanno un indirizzo da raggiungere.
+     * Quelli in agenzia o in videochiamata restano visibili nell'elenco tappe ma
+     * disattivati: escluderli in silenzio darebbe un giro incompleto senza dirlo.
+     */
+    async function planDay() {
+        if (typeof RoutePlanner === 'undefined') {
+            showAlert('Pianificatore itinerario non disponibile.', 'error');
+            return;
+        }
+
+        const day = els.from.value || new Date().toISOString().slice(0, 10);
+        const params = new URLSearchParams({ from: day, to: day, limit: '100' });
+        if (els.typeFilter.value) params.set('type', els.typeFilter.value);
+
+        try {
+            const res = await fetch(`${API}?${params}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            const items = Pagination.parseResponse(json).items
+                .filter(a => a.status !== 'cancelled');
+
+            if (items.length < 2) {
+                showAlert(`Servono almeno due appuntamenti attivi il ${formatDay(day)} per calcolare un itinerario.`, 'info');
+                return;
+            }
+
+            const stops = items.map(a => {
+                const atProperty = (a.location_type || 'immobile') === 'immobile';
+                const lat = atProperty ? parseFloat(a.property_latitude) : NaN;
+                const lng = atProperty ? parseFloat(a.property_longitude) : NaN;
+                const who = a.lead_id ? `${a.lead_surname || ''} ${a.lead_name || ''}`.trim()
+                    : (a.client_id ? `${a.client_surname || ''} ${a.client_name || ''}`.trim() : '');
+                return {
+                    id: a.id,
+                    label: a.property_address
+                        ? `${a.property_address}, ${a.property_city || ''}`.replace(/,\s*$/, '')
+                        : (LOCATION_LABELS[a.location_type] || 'Appuntamento'),
+                    sublabel: [TYPE_LABELS[a.appointment_type] || a.appointment_type, who].filter(Boolean).join(' · '),
+                    lat: Number.isFinite(lat) ? lat : null,
+                    lng: Number.isFinite(lng) ? lng : null,
+                    time: new Date(a.appointment_date),
+                    durationMinutes: Number(a.duration_minutes) || null,
+                    flag: atProperty ? 'senza coordinate' : (LOCATION_LABELS[a.location_type] || '').toLowerCase(),
+                };
+            });
+
+            RoutePlanner.open({
+                title: `Itinerario ${formatDay(day)}`,
+                subtitle: 'Gli orari sono già presi con i clienti: l\'ordine resta cronologico e viene verificato che gli spostamenti ci stiano.',
+                stops,
+            });
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    }
+
+    function formatDay(iso) {
+        const d = new Date(`${iso}T00:00:00`);
+        return isNaN(d) ? iso : d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
     }
 
     async function loadAppointments() {

@@ -39,6 +39,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     <link rel="stylesheet" href="branding.css.php">
     <link rel="stylesheet" href="assets/css/theme-orlandi.css?v=<?= @filemtime(__DIR__ . '/assets/css/theme-orlandi.css') ?: time() ?>">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script>
         // Expose role + write permission to all view scripts.
@@ -268,6 +269,11 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- Raggruppamento marker. map.js degrada a layerGroup se questo script non
+         arriva, quindi la mappa resta utilizzabile anche senza CDN. Il tema
+         (assets/css/theme-orlandi.css) sostituisce le icone di default del
+         plugin, per questo NON carichiamo MarkerCluster.Default.css. -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
     <script src="assets/js/geocode.js"></script>
     <script src="assets/js/confirm.js?v=<?= @filemtime(__DIR__ . '/assets/js/confirm.js') ?: time() ?>"></script>
     <script src="assets/js/pagination.js?v=<?= @filemtime(__DIR__ . '/assets/js/pagination.js') ?: time() ?>"></script>

@@ -5,6 +5,7 @@
             <p>Visualizzazione geografica del portafoglio.</p>
         </div>
         <div class="view-header__actions">
+            <button class="btn btn--ghost btn--sm" id="btn-route" title="Seleziona più immobili e calcola il giro di visite"><i data-lucide="route"></i> Itinerario</button>
             <button class="btn btn--ghost btn--sm" id="btn-geocode" title="Geocodifica gli indirizzi mancanti"><i data-lucide="map-pin"></i> Geocodifica</button>
             <button class="btn btn--ghost btn--sm" id="btn-regeocode" title="Ricalcola coordinate per tutti gli immobili (sovrascrive quelle esistenti)"><i data-lucide="refresh-cw"></i> Rigeocodifica</button>
         </div>
@@ -28,9 +29,16 @@
                 <button type="button" class="map-chip" data-status="rented">Affittato</button>
                 <button type="button" class="map-chip" data-status="sold">Venduto</button>
             </div>
+            <div class="map-side__opts">
+                <label class="map-side__toggle" title="Mostra nell'elenco solo gli immobili inquadrati dalla mappa">
+                    <input type="checkbox" id="map-viewport-only"> Solo area visibile
+                </label>
+                <button type="button" class="btn btn--ghost btn--sm" id="map-fit" title="Inquadra tutti gli immobili filtrati"><i data-lucide="maximize"></i> Inquadra</button>
+            </div>
             <div class="map-list" id="map-list">
                 <div class="map-list__empty">Caricamento…</div>
             </div>
+            <div class="map-selection" id="map-selection" hidden></div>
         </aside>
 
         <div class="map-canvas">
@@ -44,4 +52,5 @@
     </div>
 </div>
 
+<script src="assets/js/route_planner.js"></script>
 <script src="assets/js/map.js"></script>

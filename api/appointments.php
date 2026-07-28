@@ -86,6 +86,7 @@ function listAppointments(PDO $db): void
     $countSql = "SELECT COUNT(*) FROM appointments a $where";
 
     $dataSql = "SELECT a.*, p.address AS property_address, p.city AS property_city,
+                   p.latitude AS property_latitude, p.longitude AS property_longitude,
                    l.name AS lead_name, l.surname AS lead_surname,
                    c.name AS client_name, c.surname AS client_surname,
                    po.id AS owner_id, po.name AS owner_name, po.surname AS owner_surname,
