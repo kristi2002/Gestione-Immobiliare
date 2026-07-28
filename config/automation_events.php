@@ -44,6 +44,13 @@ const AUTOMATION_EVENT_CATALOGUE = [
         'entity'      => 'appointment',
         'recipients'  => ['event_contact', 'property_owner'],
     ],
+    'property.status_changed' => [
+        'label'       => 'Stato immobile cambiato',
+        'description' => 'Scatta quando un immobile passa a venduto/affittato/archiviato o torna disponibile. '
+                       . 'Indipendentemente dalle regole configurate qui, il sistema ritira da solo le pubblicazioni attive sui portali.',
+        'entity'      => 'property',
+        'recipients'  => ['property_owner'],
+    ],
     'property.price_reduced' => [
         'label'       => 'Prezzo immobile ribassato',
         'description' => 'Scatta solo sui ribassi, non su ogni modifica di prezzo.',
@@ -122,6 +129,7 @@ function processPendingAutomationEvents(PDO $db): array
 
     foreach ($events as $event) {
         try {
+            runAutomationSystemReactions($db, $event);
             $written = dispatchAutomationEvent($db, $event);
             $occurrences += $written;
             markAutomationEvent($db, (int) $event['id'], 'processed', null);
@@ -140,6 +148,39 @@ function markAutomationEvent(PDO $db, int $id, string $status, ?string $error): 
 {
     $db->prepare("UPDATE automation_events SET status = :s, processed_at = NOW(), error = :e WHERE id = :id")
        ->execute(['s' => $status, 'e' => $error, 'id' => $id]);
+}
+
+/**
+ * Reazioni di SISTEMA a un evento: cose che devono accadere sempre, anche su
+ * un'installazione senza nemmeno un'automazione configurata.
+ *
+ * Distinzione da tenere ferma: le regole in `reminders` sono opzionali e
+ * mandano messaggi; queste sono comportamenti del prodotto. Se il ritiro dai
+ * portali fosse una regola configurabile, basterebbe che nessuno l'avesse
+ * creata perche' un venduto restasse in vetrina a pagamento.
+ *
+ * Non lancia: una reazione fallita non deve impedire alle regole utente di
+ * girare, ne' bloccare la coda dietro di se'.
+ */
+function runAutomationSystemReactions(PDO $db, array $event): void
+{
+    $payload = json_decode((string) ($event['payload'] ?? '{}'), true) ?: [];
+
+    try {
+        if ($event['event_type'] === 'property.status_changed') {
+            require_once __DIR__ . '/../lib/portal_lifecycle.php';
+            $retired = portalRetireListingsForProperty(
+                $db,
+                (int) $event['entity_id'],
+                (string) ($payload['new_status'] ?? '')
+            );
+            if ($retired > 0) {
+                error_log('[portali] ritirate ' . $retired . ' pubblicazioni per immobile #' . $event['entity_id']);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[automations] reazione di sistema fallita (' . $event['event_type'] . '): ' . $e->getMessage());
+    }
 }
 
 /** Materializza le occorrenze di tutte le regole che ascoltano questo evento. */

@@ -75,6 +75,22 @@
         </div>
         <form id="portal-form" class="modal-body">
             <input type="hidden" id="portal-id">
+
+            <!-- Esito del pre-flight: cosa manca per pubblicare su quel portale.
+                 Compilato da portal_sync.js, nascosto finché non c'è un esito. -->
+            <div id="portal-preflight" class="alert alert--warning" style="display:none;">
+                <strong id="portal-preflight-title"></strong>
+                <ul id="portal-preflight-list" style="margin:6px 0 0;padding-left:18px;"></ul>
+            </div>
+
+            <!-- Riga scritta dalla sindacazione: i campi che possiede il feed
+                 diventano sola lettura, così l'agente non sovrascrive a mano un
+                 dato che il prossimo giro di feed ribalterebbe comunque. -->
+            <p id="portal-feed-note" class="text-muted" style="display:none;font-size:.85em;">
+                <i data-lucide="lock"></i>
+                Riga gestita dalla sindacazione: ID, URL ed errore arrivano dal portale e non si modificano qui.
+            </p>
+
             <div class="form-row form-row--2">
                 <div class="form-group">
                     <label for="portal-property">Immobile <span class="required">*</span></label>

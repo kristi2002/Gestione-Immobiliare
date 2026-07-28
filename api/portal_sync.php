@@ -8,13 +8,22 @@
  * PUT    /api/portal_sync.php?id={id}         — update
  * DELETE /api/portal_sync.php?id={id}         — delete
  *
+ * GET    /api/portal_sync.php?action=preflight&property_id=X&portal=Y
+ *                                              — violazioni bloccanti, senza salvare
+ *
  * NOTE: this tracks WHERE each listing is published and its status. The actual
  * push to a portal requires that portal's feed/API credentials & terms and is
  * intentionally out of scope (transport is a stub). The immobiliare.it-compatible
  * feed already exists in api/property_export.php.
+ *
+ * Il pre-flight (lib/portal_validation.php) gira PRIMA di dichiarare un annuncio
+ * "in pubblicazione"/"pubblicato": e' l'unico pezzo della sindacazione che
+ * funziona senza contratto col portale, ed e' quello che evita il giro lungo
+ * "pubblico -> vengo scartato -> leggo il feed di ritorno -> correggo".
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../lib/portal_validation.php';
 apiHandleOptions();
 
 if (isViewDisabled('portal_sync')) {
@@ -31,6 +40,10 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (($_GET['action'] ?? '') === 'preflight') {
+                preflightCheck($db);
+                break;
+            }
             $id ? getListing($db, $id) : listListings($db);
             break;
         case 'POST':
@@ -52,6 +65,48 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * 422 con l'elenco delle violazioni. apiError() porta solo una stringa, e qui
+ * serve una lista strutturata: la modale evidenzia i campi mancanti uno per
+ * uno, e "non pubblicabile" senza dire cosa manca non aiuta nessuno.
+ * Helper locale di proposito — non tocca l'envelope condiviso.
+ */
+function apiPortalBlocked(array $violations): void
+{
+    apiDiscardBufferedOutput();
+    apiHeaders();
+    http_response_code(422);
+    echo json_encode([
+        'success'    => false,
+        'error'      => 'Pubblicazione bloccata: ' . count($violations) . ' requisito/i non soddisfatto/i.',
+        'violations' => array_values($violations),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * Pre-flight a sé stante: risponde 200 con l'esito, senza salvare nulla.
+ * Serve alla UI per mostrare i problemi PRIMA che l'agente scelga uno stato,
+ * invece di fargli scoprire il blocco solo al salvataggio.
+ */
+function preflightCheck(PDO $db): void
+{
+    $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : 0;
+    $portal     = trim($_GET['portal'] ?? '');
+
+    if ($propertyId <= 0) apiError('Seleziona un immobile.');
+    if (!in_array($portal, PORTALS, true)) apiError('Portale non valido.');
+
+    $violations = portalValidateProperty($db, $propertyId, $portal);
+
+    apiSuccess([
+        'property_id'  => $propertyId,
+        'portal'       => $portal,
+        'publishable'  => $violations === [],
+        'violations'   => $violations,
+    ]);
+}
 
 function listListings(PDO $db): void
 {
@@ -179,6 +234,16 @@ function validateListingInput(PDO $db, array $data): array
     $stmt = $db->prepare('SELECT id FROM properties WHERE id = :id');
     $stmt->execute(['id' => $propertyId]);
     if (!$stmt->fetch()) apiError('Immobile non trovato.');
+
+    // Pre-flight: si passa solo dichiarando l'annuncio vivo sul portale.
+    // La bozza resta libera, altrimenti non si potrebbe piu' parcheggiare un
+    // annuncio incompleto — che e' esattamente a cosa serve la bozza.
+    if (portalStatusRequiresPreflight($status)) {
+        $violations = portalValidateProperty($db, $propertyId, $portal);
+        if ($violations !== []) {
+            apiPortalBlocked($violations);
+        }
+    }
 
     $strOrNull  = static fn($v) => isset($v) && trim((string) $v) !== '' ? trim((string) $v) : null;
 

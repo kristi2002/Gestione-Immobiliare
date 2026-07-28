@@ -11,6 +11,12 @@
     const STATUS_LABEL = { draft: 'Bozza', publishing: 'In pubblicazione', published: 'Pubblicato', error: 'Errore', removed: 'Rimosso' };
     const STATUS_BADGE = { draft: 'badge', publishing: 'badge--warning', published: 'badge--success', error: 'badge--danger', removed: 'badge' };
 
+    // Stati che dichiarano l'annuncio vivo sul portale: solo questi passano dal
+    // pre-flight. Deve restare allineato a PORTAL_STATUSES_REQUIRING_PREFLIGHT
+    // in lib/portal_validation.php — il server e' comunque l'autorita', questo
+    // e' solo per non far scoprire il blocco al salvataggio.
+    const PREFLIGHT_STATUSES = ['publishing', 'published'];
+
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let deleteTargetId = null;
@@ -26,6 +32,10 @@
         els.modal      = document.getElementById('portal-modal');
         els.form       = document.getElementById('portal-form');
         els.delModal   = document.getElementById('portal-delete-modal');
+        els.preflight  = document.getElementById('portal-preflight');
+        els.preTitle   = document.getElementById('portal-preflight-title');
+        els.preList    = document.getElementById('portal-preflight-list');
+        els.feedNote   = document.getElementById('portal-feed-note');
 
         bindEvents();
         loadProperties();
@@ -46,6 +56,12 @@
 
         els.portalF.addEventListener('change', () => { currentPage = 1; loadList(); });
         els.statusF.addEventListener('change', () => { currentPage = 1; loadList(); });
+
+        // Il pre-flight dipende da (immobile, portale) e serve solo se lo stato
+        // dichiara l'annuncio vivo: qualunque di questi tre cambi lo rilancia.
+        ['portal-property', 'portal-portal', 'portal-status'].forEach(id => {
+            document.getElementById(id).addEventListener('change', runPreflight);
+        });
     }
 
     async function loadProperties() {
@@ -102,7 +118,7 @@
                 : esc(l.external_id || '—');
             return `<tr>
                 <td data-label="Immobile">${esc(l.property_address || `#${l.property_id}`)}<br><small class="text-muted">${esc(l.property_city || '')}</small></td>
-                <td data-label="Portale">${esc(PORTAL_LABEL[l.portal] || l.portal)}</td>
+                <td data-label="Portale">${esc(PORTAL_LABEL[l.portal] || l.portal)}${l.source === 'feed' ? '<br><small class="text-muted">da sindacazione</small>' : ''}</td>
                 <td data-label="Stato"><span class="badge ${STATUS_BADGE[l.status] || 'badge'}">${esc(STATUS_LABEL[l.status] || l.status)}</span>${l.status === 'error' && l.error_message ? `<br><small class="text-muted">${esc(l.error_message)}</small>` : ''}</td>
                 <td data-label="ID annuncio">${idCell}</td>
                 <td data-label="Ultimo sync">${fmtDateTime(l.last_synced_at)}</td>
@@ -130,9 +146,63 @@
 
     function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ''; }
 
+    // --- Pre-flight ---------------------------------------------------------
+
+    function hidePreflight() {
+        els.preflight.style.display = 'none';
+        els.preList.innerHTML = '';
+    }
+
+    /**
+     * `blocking` distingue i due momenti: prima del salvataggio è un avviso
+     * ("non potrai pubblicare finché…"), dopo un 422 è il motivo del rifiuto.
+     */
+    function renderViolations(violations, blocking) {
+        if (!violations || !violations.length) { hidePreflight(); return; }
+        els.preflight.className = blocking ? 'alert alert--error' : 'alert alert--warning';
+        els.preTitle.textContent = blocking
+            ? 'Pubblicazione bloccata: correggi questi punti'
+            : 'Non pubblicabile su questo portale finché mancano:';
+        els.preList.innerHTML = violations
+            .map(v => `<li>${esc(v.message)}</li>`)
+            .join('');
+        els.preflight.style.display = 'block';
+    }
+
+    async function runPreflight() {
+        const propertyId = document.getElementById('portal-property').value;
+        const portal     = document.getElementById('portal-portal').value;
+        const status     = document.getElementById('portal-status').value;
+
+        // Su bozza non si controlla nulla: parcheggiare un annuncio incompleto
+        // è proprio ciò a cui serve la bozza.
+        if (!propertyId || !portal || !PREFLIGHT_STATUSES.includes(status)) {
+            hidePreflight();
+            return;
+        }
+        try {
+            const res  = await fetch(`${API}?action=preflight&property_id=${encodeURIComponent(propertyId)}&portal=${encodeURIComponent(portal)}`);
+            const json = await res.json();
+            if (!json.success) return;         // silenzioso: è un aiuto, non un blocco
+            renderViolations(json.data.violations, false);
+        } catch (e) { /* la validazione vera resta comunque server-side */ }
+    }
+
+    // Campi che, su una riga scritta dal feed, appartengono al portale.
+    const FEED_OWNED_FIELDS = ['portal-external-id', 'portal-external-url', 'portal-error'];
+
+    function applyFeedOwnership(isFeed) {
+        FEED_OWNED_FIELDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.readOnly = isFeed;
+        });
+        els.feedNote.style.display = isFeed ? 'block' : 'none';
+    }
+
     function openModal(item = null) {
         els.form.reset();
         setVal('portal-id', '');
+        hidePreflight();
         document.getElementById('portal-modal-title').textContent = item ? 'Modifica pubblicazione' : 'Nuova pubblicazione';
         if (item) {
             setVal('portal-id', item.id);
@@ -144,7 +214,9 @@
             setVal('portal-error', item.error_message);
             setVal('portal-notes', item.notes);
         }
+        applyFeedOwnership(!!item && item.source === 'feed');
         els.modal.hidden = false;
+        if (item) runPreflight();
     }
 
     function closeModal() { els.modal.hidden = true; }
@@ -171,8 +243,17 @@
                 body: JSON.stringify(data),
             });
             const json = await res.json();
-            if (!json.success) throw new Error(json.error);
+            if (!json.success) {
+                // 422 dal pre-flight: la modale resta aperta con l'elenco di
+                // cosa correggere. Chiuderla perderebbe l'unica spiegazione.
+                if (json.violations) {
+                    renderViolations(json.violations, true);
+                    return;
+                }
+                throw new Error(json.error);
+            }
             closeModal();
+            hidePreflight();
             showAlert('Pubblicazione salvata.', 'success');
             loadList();
         } catch (err) {

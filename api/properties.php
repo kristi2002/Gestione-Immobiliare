@@ -499,6 +499,20 @@ function updateProperty(PDO $db, int $id): void
         ]);
     }
 
+    // Stesso principio del ribasso: solo a commit avvenuto, e solo se lo stato
+    // e' davvero cambiato. Chi ascolta se ne serve per ritirare le pubblicazioni
+    // attive sui portali (lib/portal_lifecycle.php), cosi' un venduto smette di
+    // occupare uno slot a pagamento senza che nessuno debba ricordarsene.
+    $oldStatus = (string) ($existing['status'] ?? '');
+    $newStatus = (string) ($validated['status'] ?? '');
+    if ($newStatus !== '' && $oldStatus !== $newStatus) {
+        emitAutomationEvent($db, 'property.status_changed', 'property', $id, [
+            'property_id' => $id,
+            'old_status'  => $oldStatus,
+            'new_status'  => $newStatus,
+        ]);
+    }
+
     logActivity('update', 'property', $id, 'Immobile aggiornato #' . $id);
     getProperty($db, $id);
 }
