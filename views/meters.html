@@ -113,7 +113,9 @@
                 </div>
                 <div class="form-group">
                     <label for="meters-reading-date">Data lettura <span class="required">*</span></label>
-                    <input type="date" id="meters-reading-date" name="reading_date" class="form-input" required>
+                    <!-- min/max fermano l'anno a due cifre (26 -> 0026) e le date
+                         future gia' nel browser; il server ricontrolla comunque. -->
+                    <input type="date" id="meters-reading-date" name="reading_date" class="form-input" min="1990-01-01" required>
                 </div>
             </div>
             <div class="form-group">

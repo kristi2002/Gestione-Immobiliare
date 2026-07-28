@@ -5,6 +5,14 @@
     const PROP_API = 'api/properties.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+
+    // Data locale, non `toISOString()`: fra mezzanotte e le 2 in Italia l'UTC e'
+    // ancora al giorno prima e il campo si sarebbe aperto su ieri.
+    function todayISO() {
+        const d = new Date();
+        const p = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
     const TYPE_LABELS = { gas: 'Gas', electricity: 'Elettricità', water: 'Acqua', heating: 'Riscaldamento' };
@@ -87,6 +95,26 @@
         }
     }
 
+    // `consumption` null = prima lettura del contatore, non consumo zero: va detto,
+    // non stampato come 0,00. Il segno conta — un delta negativo e' un contatore
+    // sostituito o azzerato, e con la freccia sempre in su passava per un consumo.
+    function renderConsumption(value, unit) {
+        if (value == null || value === '') {
+            return '<span class="text-muted" title="Prima lettura di questo contatore: nessun precedente con cui calcolare il consumo.">— <small>prima lettura</small></span>';
+        }
+
+        const n = Number(value);
+        if (!isFinite(n)) return '<span class="text-muted">—</span>';
+
+        if (n < 0) {
+            return `<span style="color:var(--color-danger,#c0392b);" title="Lettura inferiore alla precedente: contatore sostituito, azzerato o lettura errata.">▼ ${esc(String(value))} ${esc(unit)}</span>`;
+        }
+        if (n === 0) {
+            return `<span class="text-muted">0 ${esc(unit)}</span>`;
+        }
+        return `<span style="color:var(--color-warning,#e67e22);">▲ ${esc(String(value))} ${esc(unit)}</span>`;
+    }
+
     function renderRows(items) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
@@ -98,10 +126,7 @@
             const typeLabel = TYPE_LABELS[r.meter_type] || r.meter_type || '—';
             const unit      = TYPE_UNITS[r.meter_type] || '';
             const reading   = r.reading_value != null ? `${r.reading_value} ${unit}` : '—';
-            const delta     = r.consumption != null ? `${r.consumption} ${unit}` : '—';
-            const deltaHtml = r.consumption != null
-                ? `<span style="color:${r.consumption > 0 ? 'var(--color-warning,#e67e22)' : 'inherit'};">▲ ${esc(String(r.consumption))} ${esc(unit)}</span>`
-                : '<span class="text-muted">—</span>';
+            const deltaHtml = renderConsumption(r.consumption, unit);
 
             return `<tr>
                 <td data-label="Immobile">${esc(r.property_address || r.property_title || `#${r.property_id}`)}</td>
@@ -141,9 +166,14 @@
         document.getElementById('meters-id').value = '';
         document.getElementById('meters-modal-title').textContent = item ? 'Modifica Lettura' : 'Inserisci Lettura';
 
+        // Una lettura non puo' essere futura: il tetto va rimesso a ogni apertura
+        // perche' la scheda resta in pagina anche a cavallo della mezzanotte.
+        const today = todayISO();
+        document.getElementById('meters-reading-date').max = today;
+
         // default date to today
         if (!item) {
-            document.getElementById('meters-reading-date').value = new Date().toISOString().substring(0, 10);
+            document.getElementById('meters-reading-date').value = today;
         }
 
         if (item) {
@@ -220,9 +250,14 @@
         els.alert._t = setTimeout(() => { els.alert.style.display = 'none'; }, 5000);
     }
 
+    // Formattazione sulla stringa ISO, senza passare da `new Date()`: quello
+    // interpreta "2026-07-03" come mezzanotte UTC (che a fusi negativi diventa il
+    // giorno prima) e soprattutto stampa l'anno 26 come "26", mascherando in
+    // tabella le date corrotte che la KPI invece mostra per intero ("0026").
     function formatDate(str) {
         if (!str) return '—';
-        return new Date(str).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const m = String(str).substring(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : esc(String(str));
     }
 
     init();

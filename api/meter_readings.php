@@ -14,6 +14,10 @@ apiHandleOptions();
 
 const METER_TYPES = ['gas', 'electricity', 'water', 'heating'];
 
+// Sotto questa soglia la data e' quasi certamente un anno a due cifre digitato
+// nel campo data (26 -> 0026), non una lettura d'archivio.
+const MIN_READING_YEAR = 1990;
+
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];
@@ -79,16 +83,26 @@ function listMeterReadings(PDO $db): void
 
     $countSql = "SELECT COUNT(*) FROM meter_readings mr $where";
 
+    // Il "precedente" va scelto per DATA, non per ordine di inserimento: l'agente
+    // inserisce spesso una lettura arretrata dopo una piu' recente. Con `prev.id <
+    // mr.id` quella riga veniva confrontata con una lettura FUTURA (consumo
+    // negativo) e la riga successiva ricontava lo stesso periodo. L'id resta solo
+    // come spareggio fra due letture con la stessa data.
+    //
+    // Senza precedente il consumo e' NULL, non 0: il vecchio COALESCE sul valore
+    // stesso faceva stampare "0,00 m3" alla prima lettura di ogni contatore —
+    // un dato inventato, indistinguibile da un consumo davvero nullo.
     $dataSql = "SELECT mr.*,
                    p.address AS property_address, p.city AS property_city,
-                   ROUND(mr.reading_value - COALESCE((
+                   ROUND(mr.reading_value - (
                        SELECT prev.reading_value FROM meter_readings prev
                        WHERE prev.property_id = mr.property_id
                          AND prev.meter_type  = mr.meter_type
-                         AND prev.id          < mr.id
+                         AND (prev.reading_date < mr.reading_date
+                              OR (prev.reading_date = mr.reading_date AND prev.id < mr.id))
                        ORDER BY prev.reading_date DESC, prev.id DESC
                        LIMIT 1
-                   ), mr.reading_value), 2) AS consumption
+                   ), 2) AS consumption
             FROM meter_readings mr
             LEFT JOIN properties p ON p.id = mr.property_id
             $where
@@ -136,14 +150,21 @@ function getMeterSummary(PDO $db, int $propertyId): void
             continue;
         }
 
-        // Previous reading for consumption delta
+        // Previous reading for consumption delta — stessa regola della lista:
+        // strettamente precedente per data, id solo come spareggio.
         $stmt2 = $db->prepare(
             "SELECT * FROM meter_readings
-             WHERE property_id = :pid AND meter_type = :type AND id != :lid
+             WHERE property_id = :pid AND meter_type = :type
+               AND (reading_date < :ldate OR (reading_date = :ldate AND id < :lid))
              ORDER BY reading_date DESC, id DESC
              LIMIT 1"
         );
-        $stmt2->execute(['pid' => $propertyId, 'type' => $type, 'lid' => $latest['id']]);
+        $stmt2->execute([
+            'pid'   => $propertyId,
+            'type'  => $type,
+            'ldate' => $latest['reading_date'],
+            'lid'   => $latest['id'],
+        ]);
         $previous = $stmt2->fetch() ?: null;
 
         $consumption = null;
@@ -218,6 +239,34 @@ function deleteMeterReading(PDO $db, int $id): void
 // Validation
 // ---------------------------------------------------------------------------
 
+/**
+ * `createFromFormat` da solo NON e' una validazione: accetta l'anno a due cifre
+ * ("0026-07-03" resta anno 26 — e' cosi' che il campo data di Chrome produce
+ * l'anno 0026 se si digitano due cifre) e fa traboccare i valori fuori scala in
+ * silenzio ("2026-13-45" diventa 2027-02-14). Servono tre controlli: il "!" per
+ * azzerare l'orario, il round-trip per intercettare il trabocco, e la finestra
+ * sull'anno per l'anno a due cifre. Una lettura futura non esiste: il contatore
+ * si legge quando lo si guarda (un giorno di tolleranza per il fuso del server).
+ */
+function validateReadingDate(string $readingDate): void
+{
+    $parsed = DateTime::createFromFormat('!Y-m-d', $readingDate);
+
+    if (!$parsed || $parsed->format('Y-m-d') !== $readingDate) {
+        apiError('Data lettura non valida.');
+    }
+
+    $year = (int) $parsed->format('Y');
+    if ($year < MIN_READING_YEAR) {
+        apiError('Anno della lettura non valido: inserire l\'anno per esteso (es. ' . date('Y') . ').');
+    }
+
+    $maxDate = (new DateTime('today'))->modify('+1 day');
+    if ($parsed > $maxDate) {
+        apiError('La data della lettura non puo\' essere nel futuro.');
+    }
+}
+
 function validateMeterInput(array $data): array
 {
     $propertyId   = !empty($data['property_id']) ? (int) $data['property_id'] : 0;
@@ -229,7 +278,7 @@ function validateMeterInput(array $data): array
     if ($propertyId <= 0) apiError('Immobile non valido.');
     if (!in_array($meterType, METER_TYPES, true)) apiError('Tipo contatore non valido.');
     if ($readingValue === null) apiError('Valore lettura obbligatorio.');
-    if (!DateTime::createFromFormat('Y-m-d', $readingDate)) apiError('Data lettura non valida.');
+    validateReadingDate($readingDate);
 
     return [
         'property_id'   => $propertyId,
