@@ -534,17 +534,9 @@
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     }
 
-    function formatDate(d) {
-        if (!d) return '—';
-        const p = String(d).split('-');
-        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
-    }
+    function formatDate(d) { return window.Fmt.date(d); }
 
-    function formatDateTime(d) {
-        if (!d) return '—';
-        const [date, time] = String(d).split(' ');
-        return `${formatDate(date)}${time ? ' ' + time.slice(0, 5) : ''}`;
-    }
+    function formatDateTime(d) { return window.Fmt.dateTime(d); }
 
     function escapeHtml(s) {
         if (!s) return '';

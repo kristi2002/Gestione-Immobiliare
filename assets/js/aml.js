@@ -7,7 +7,7 @@
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-    function fmtDate(str) { return str ? new Date(str).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'; }
+    function fmtDate(str) { return window.Fmt.date(str); }
 
     const RISK_BADGE = { basso: 'badge--success', medio: 'badge--warning', alto: 'badge--danger' };
     const STATUS_LABEL = { da_completare: 'Da completare', completata: 'Completata', sospesa: 'Sospesa' };

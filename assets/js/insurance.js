@@ -237,10 +237,7 @@
         els.alert._t = setTimeout(() => { els.alert.style.display = 'none'; }, 5000);
     }
 
-    function formatDate(str) {
-        if (!str) return '—';
-        return new Date(str).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
+    function formatDate(str) { return window.Fmt.date(str); }
 
     init();
 })();

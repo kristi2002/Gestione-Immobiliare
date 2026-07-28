@@ -282,7 +282,7 @@
         } else {
             $('ape-title').textContent = 'Nuovo Appuntamento';
             const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0);
-            $('ape-date').value = toLocal(d.toISOString());
+            $('ape-date').value = window.Fmt.toInputDateTime(d);
             if (vp.propertyId) $('ape-property').value = String(vp.propertyId);
             if (vp.leadId) $('ape-lead').value = String(vp.leadId);
             if (vp.clientId) $('ape-client').value = String(vp.clientId);

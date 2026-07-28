@@ -274,6 +274,8 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
          (assets/css/theme-orlandi.css) sostituisce le icone di default del
          plugin, per questo NON carichiamo MarkerCluster.Default.css. -->
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+    <!-- format.js prima di tutti: ogni controller ci appoggia le date. -->
+    <script src="assets/js/format.js?v=<?= @filemtime(__DIR__ . '/assets/js/format.js') ?: time() ?>"></script>
     <script src="assets/js/geocode.js"></script>
     <script src="assets/js/confirm.js?v=<?= @filemtime(__DIR__ . '/assets/js/confirm.js') ?: time() ?>"></script>
     <script src="assets/js/pagination.js?v=<?= @filemtime(__DIR__ . '/assets/js/pagination.js') ?: time() ?>"></script>

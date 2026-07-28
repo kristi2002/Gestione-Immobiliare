@@ -267,13 +267,10 @@
     function formatPrice(value) {
         const n = Number(value);
         if (!isFinite(n)) return value;
-        return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return window.Fmt.number(n, 2);
     }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
+    function formatDate(dateStr) { return window.Fmt.date(dateStr); }
 
     function escapeHtml(str) {
         if (str == null) return '';

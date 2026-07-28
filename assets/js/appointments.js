@@ -67,7 +67,7 @@
             return;
         }
 
-        const day = els.from.value || new Date().toISOString().slice(0, 10);
+        const day = els.from.value || window.Fmt.today();
         const params = new URLSearchParams({ from: day, to: day, limit: '100' });
         if (els.typeFilter.value) params.set('type', els.typeFilter.value);
 
@@ -236,11 +236,7 @@
         } catch (err) { showAlert(err.message, 'error'); }
     }
 
-    function formatDateTime(dateStr) {
-        return new Date(dateStr).toLocaleString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-        });
-    }
+    function formatDateTime(dateStr) { return window.Fmt.dateTime(dateStr); }
     function showAlert(message, type) {
         els.alert.textContent = message;
         els.alert.className = `alert alert--${type}`;

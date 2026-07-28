@@ -559,14 +559,16 @@
         els.alert._t = setTimeout(() => { els.alert.style.display = 'none'; }, 5000);
     }
 
+    // Oggi si mostra solo l'ora, gli altri giorni anche la data: in una lista di
+    // conversazioni la data di oggi e' rumore. `new Date(str)` non andava bene
+    // per deciderlo — i DATETIME di MySQL arrivano con lo spazio ("2026-07-03
+    // 10:30:00") e alcuni browser li rifiutano, stampando "Invalid Date".
     function formatTime(str) {
         if (!str) return '';
-        const d = new Date(str);
-        const now = new Date();
-        const isToday = d.toDateString() === now.toDateString();
-        if (isToday) return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-        return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' +
-               d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        if (!window.Fmt.isValid(str)) return '';
+        return window.Fmt.daysFromToday(str) === 0
+            ? window.Fmt.time(str)
+            : window.Fmt.dayMonth(str) + ' ' + window.Fmt.time(str);
     }
 
     init();

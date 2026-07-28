@@ -196,7 +196,7 @@
 
     function money(value) {
         if (value === null || value === undefined || value === '') return '—';
-        return '€ ' + Number(value).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return window.Fmt.money(value);
     }
 
     function renderRows(items) {
@@ -263,7 +263,7 @@
         if (condInput._setDisplay) condInput._setDisplay(3);
 
         if (!item) {
-            document.getElementById('inventory-check-in-date').value = new Date().toISOString().substring(0, 10);
+            document.getElementById('inventory-check-in-date').value = window.Fmt.today();
             document.getElementById('inventory-quantity').value = 1;
         }
 
@@ -784,11 +784,7 @@
         win.document.close();
     }
 
-    function formatDate(str) {
-        if (!str) return '—';
-        const d = new Date(str);
-        return isNaN(d) ? str : d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
+    function formatDate(str) { return window.Fmt.date(str); }
 
     function showAlert(msg, type) {
         els.alert.textContent   = msg;

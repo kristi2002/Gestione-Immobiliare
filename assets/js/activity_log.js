@@ -98,12 +98,7 @@
         if (next) next.addEventListener('click', () => { if (currentPage < data.pages) { currentPage++; loadLog(); } });
     }
 
-    function formatDateTime(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr.replace(' ', 'T')).toLocaleString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-        });
-    }
+    function formatDateTime(dateStr) { return window.Fmt.dateTime(dateStr); }
 
     function escapeHtml(str) {
         if (str == null) return '';

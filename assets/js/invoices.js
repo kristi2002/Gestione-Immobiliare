@@ -198,7 +198,7 @@
             client_id: inv.client_id, lead_id: inv.lead_id, property_id: inv.property_id, description: inv.description,
             amount: inv.amount, vat_rate: inv.vat_rate, status,
             issue_date: inv.issue_date, due_date: inv.due_date,
-            paid_date: status === 'paid' ? (inv.paid_date || new Date().toISOString().slice(0, 10)) : inv.paid_date,
+            paid_date: status === 'paid' ? (inv.paid_date || window.Fmt.today()) : inv.paid_date,
             notes: inv.notes,
         };
         try {
@@ -411,8 +411,8 @@
         } catch (err) { showAlert(err.message, 'error'); }
     }
 
-    function fmt(n) { return Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-    function formatDate(d) { return d ? new Date(d).toLocaleDateString('it-IT') : ''; }
+    function fmt(n) { return window.Fmt.number(n || 0, 2); }
+    function formatDate(d) { return window.Fmt.date(d); }
     function showAlert(message, type) {
         els.alert.textContent = message;
         els.alert.className = `alert alert--${type}`;

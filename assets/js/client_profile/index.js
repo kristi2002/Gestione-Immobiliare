@@ -250,7 +250,7 @@ async function loadFatture() {
             return;
         }
 
-        const invToday = new Date().toISOString().slice(0, 10);
+        const invToday = window.Fmt.today();
         // State derived from status + due date (scaduta = non pagata e oltre scadenza).
         const invState = (i) => {
             if (i.status === 'paid') return { label: 'Pagata', color: '#16a34a' };
@@ -330,7 +330,7 @@ async function loadContratti() {
         }
 
         const CT_TYPE   = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
-        const ctToday = new Date().toISOString().slice(0, 10);
+        const ctToday = window.Fmt.today();
         // State derived from status + start/end dates.
         const ctState = (c) => {
             if (c.status === 'cancelled') return { label: 'Annullato', color: '#94a3b8' };

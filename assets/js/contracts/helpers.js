@@ -9,7 +9,7 @@ import { STATUS_FLOW } from './constants.js';
 // filters consistent with the dates entered on the contract.
 export function effectiveStatus(c) {
     if (c.status === 'cancelled') return 'cancelled';
-    const today = new Date().toISOString().slice(0, 10);
+    const today = window.Fmt.today();
     if (c.end_date && String(c.end_date).slice(0, 10) < today) return 'expired';
     // No manual status set = "Automatico" -> in force = Attivo.
     if (!c.status) return 'active';
@@ -24,13 +24,10 @@ export function nextStatus(status) {
 export function formatPrice(value) {
     const n = Number(value);
     if (!isFinite(n)) return value;
-    return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return window.Fmt.number(n, 2);
 }
 
-export function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+export function formatDate(dateStr) { return window.Fmt.date(dateStr); }
 
 export function escapeHtml(str) {
     if (str == null) return '';

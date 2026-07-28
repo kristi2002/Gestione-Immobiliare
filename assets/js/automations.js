@@ -523,7 +523,7 @@
             }
         } else {
             document.getElementById('automation-modal-title').textContent = 'Nuova Automazione';
-            document.getElementById('automation-start').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('automation-start').value = window.Fmt.today();
             document.getElementById('automation-time').value  = '09:00';
             setTrigger('scheduled');
         }
@@ -669,7 +669,7 @@
             payload.trigger_delay_minutes =
                 Number(document.getElementById('automation-delay').value || 0) *
                 Number(document.getElementById('automation-delay-unit').value || 1);
-            payload.reminder_date = new Date().toISOString().slice(0, 10);
+            payload.reminder_date = window.Fmt.today();
             payload.frequency     = 'once';
             payload.property_id   = document.getElementById('automation-property').value || null;
         } else {
@@ -756,13 +756,7 @@
         return `${minutes} minuti`;
     }
 
-    function fmtDateTime(d) {
-        if (!d) return '—';
-        const dt = new Date(String(d).replace(' ', 'T'));
-        if (isNaN(dt)) return '—';
-        return dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-             + ' alle ' + dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    }
+    function fmtDateTime(d) { return window.Fmt.dateTime(d); }
 
     init();
 })();

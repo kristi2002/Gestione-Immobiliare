@@ -266,7 +266,7 @@
             contract_id: payment.contract_id || null,
             amount:      payment.amount,
             due_date:    payment.due_date,
-            paid_date:   new Date().toISOString().slice(0, 10),
+            paid_date:   window.Fmt.today(),
             status:      'paid',
             notes:       payment.notes || '',
         };
@@ -307,13 +307,10 @@
     function formatPrice(value) {
         const n = Number(value);
         if (!isFinite(n)) return value;
-        return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return window.Fmt.number(n, 2);
     }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
+    function formatDate(dateStr) { return window.Fmt.date(dateStr); }
 
     function truncate(str, len) {
         return str.length > len ? str.slice(0, len) + '…' : str;
@@ -337,7 +334,7 @@
 
         function close() { modal.hidden = true; }
         openBtn.addEventListener('click', () => {
-            monthInput.value = new Date().toISOString().slice(0, 7);
+            monthInput.value = window.Fmt.today().slice(0, 7);
             preview.textContent = '';
             dlBtn.disabled = true;
             modal.hidden = false;

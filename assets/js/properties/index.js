@@ -703,7 +703,7 @@ import {
         const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `immobili_selezionati_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `immobili_selezionati_${window.Fmt.today()}.csv`;
         a.click();
         URL.revokeObjectURL(a.href);
     }
@@ -867,7 +867,7 @@ import {
     function openAppraisalModal(propertyId) {
         document.getElementById('appraisal-form').reset();
         document.getElementById('appraisal-property-id').value = propertyId;
-        document.getElementById('appraisal-date').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('appraisal-date').value = window.Fmt.today();
         document.getElementById('appraisal-modal').hidden = false;
         const hint = document.getElementById('appraisal-omi-hint');
         if (hint) hint.textContent = '';
@@ -929,7 +929,7 @@ import {
                     <div><strong>€ ${Number(a.estimated_value).toLocaleString('it-IT')}</strong>
                         ${a.estimated_rent ? ` · canone € ${Number(a.estimated_rent).toLocaleString('it-IT')}` : ''}
                         <span class="badge">${escapeHtml(RATING_LABELS[a.condition_rating] || a.condition_rating)}</span></div>
-                    <div class="text-muted">${new Date(a.appraisal_date).toLocaleDateString('it-IT')}${a.appraiser_name ? ' · ' + escapeHtml(a.appraiser_name) : ''}</div>
+                    <div class="text-muted">${window.Fmt.date(a.appraisal_date)}${a.appraiser_name ? ' · ' + escapeHtml(a.appraiser_name) : ''}</div>
                     ${a.notes ? `<div class="text-muted">${escapeHtml(a.notes)}</div>` : ''}
                     <button class="btn btn--sm btn--ghost btn-del-appraisal" data-id="${a.id}" data-prop="${propertyId}">Elimina</button>
                 </div>`).join('');
@@ -966,7 +966,7 @@ import {
             if (!json.success) throw new Error(json.error);
             document.getElementById('appraisal-form').reset();
             document.getElementById('appraisal-property-id').value = propertyId;
-            document.getElementById('appraisal-date').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('appraisal-date').value = window.Fmt.today();
             showAlert('Valutazione salvata.', 'success');
             loadAppraisals(propertyId);
         } catch (err) {

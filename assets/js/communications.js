@@ -429,13 +429,7 @@
         els.alert._timer = setTimeout(() => { els.alert.style.display = 'none'; }, 4000);
     }
 
-    function formatDateTime(dateStr) {
-        const d = new Date(dateStr);
-        return d.toLocaleString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        });
-    }
+    function formatDateTime(dateStr) { return window.Fmt.dateTime(dateStr); }
 
     function formatRelativeTime(dateStr) {
         const diff = Date.now() - new Date(dateStr).getTime();
@@ -447,7 +441,7 @@
         if (mins < 60)  return `${mins}m`;
         if (hours < 24) return `${hours}h`;
         if (days < 7)   return `${days}g`;
-        return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+        return window.Fmt.dayMonth(dateStr);
     }
 
     function truncate(str, len) {

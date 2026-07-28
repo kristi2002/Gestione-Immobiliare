@@ -100,9 +100,7 @@
         return d.innerHTML;
     }
     function fmtEuro(v, decimals) {
-        return '€ ' + Number(v || 0).toLocaleString('it-IT', {
-            minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: decimals ? 2 : 0
-        });
+        return window.Fmt.money(v || 0, { decimals: decimals ? 2 : 0 });
     }
     function mediaUrl(path) {
         if (!path) return '';

@@ -479,7 +479,7 @@
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(9, 0, 0, 0);
-            document.getElementById('reminder-date').value = toDatetimeLocal(tomorrow.toISOString());
+            document.getElementById('reminder-date').value = toDatetimeLocal(tomorrow);
             onPropertyChange();
         }
 
@@ -605,18 +605,12 @@
         els.alert._timer = setTimeout(() => { els.alert.style.display = 'none'; }, 5000);
     }
 
-    function toDatetimeLocal(dateStr) {
-        const d = new Date(dateStr);
-        const pad = n => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
+    // `new Date(dateStr)` non bastava: i DATETIME di MySQL arrivano con lo
+    // spazio e su alcuni browser diventano Invalid Date, cioe' un campo
+    // riempito con "NaN-aN-aNTaN:aN".
+    function toDatetimeLocal(dateStr) { return window.Fmt.toInputDateTime(dateStr); }
 
-    function formatDateTime(dateStr) {
-        return new Date(dateStr).toLocaleString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        });
-    }
+    function formatDateTime(dateStr) { return window.Fmt.dateTime(dateStr); }
 
     function truncate(str, len) {
         return str.length > len ? str.slice(0, len) + '…' : str;

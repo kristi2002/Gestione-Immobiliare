@@ -237,7 +237,7 @@ function openModal(post = null) {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(10, 0, 0, 0);
-        document.getElementById('post-scheduled').value = toDatetimeLocal(tomorrow.toISOString());
+        document.getElementById('post-scheduled').value = toDatetimeLocal(tomorrow);
         document.getElementById('post-status').value = 'scheduled';
     }
 

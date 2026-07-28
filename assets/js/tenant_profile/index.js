@@ -174,7 +174,7 @@ async function loadLease() {
 const CT_TYPE = { locazione: 'Locazione', compravendita: 'Compravendita', preliminare: 'Preliminare', mandato: 'Mandato', altro: 'Altro' };
 
 function ctState(c) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = window.Fmt.today();
     if (c.status === 'cancelled') return { label: 'Annullato', color: '#94a3b8' };
     if (c.status === 'expired' || (c.end_date && c.end_date < today)) return { label: 'Scaduto', color: '#dc2626' };
     if (c.status === 'signed') {
@@ -281,7 +281,7 @@ async function markPaymentPaid(id, items) {
         contract_id: payment.contract_id || null,
         amount:      payment.amount,
         due_date:    payment.due_date,
-        paid_date:   new Date().toISOString().slice(0, 10),
+        paid_date:   window.Fmt.today(),
         status:      'paid',
         notes:       payment.notes || '',
     };

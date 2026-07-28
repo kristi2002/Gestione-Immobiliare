@@ -36,9 +36,9 @@ function esc(s) {
     return d.innerHTML;
 }
 const nfEuro0 = new Intl.NumberFormat('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 });
-const fmtEuro = n => '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtDate = s => { if (!s) return '—'; const d = new Date(s.replace(' ', 'T')); return isNaN(d) ? esc(s) : d.toLocaleDateString('it-IT'); };
-const fmtDateTime = s => { if (!s) return '—'; const d = new Date(s.replace(' ', 'T')); return isNaN(d) ? esc(s) : d.toLocaleDateString('it-IT') + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
+const fmtEuro = n => window.Fmt.money(n || 0);
+const fmtDate = s => window.Fmt.date(s);
+const fmtDateTime = s => window.Fmt.dateTime(s);
 // Real-estate budgets: whole euros with consistent Italian grouping (force
 // grouping so 4-digit values like 6.777 aren't left ungrouped by ICU).
 const budget = (min, max) => {

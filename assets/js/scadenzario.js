@@ -4,7 +4,7 @@
     const API = 'api/scadenzario.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
-    function fmtDate(str) { return str ? new Date(str).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'; }
+    function fmtDate(str) { return window.Fmt.date(str); }
 
     const TYPE_LABEL = {
         contract_expiry: 'Scadenza contratto',

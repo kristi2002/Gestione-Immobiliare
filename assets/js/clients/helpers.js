@@ -2,22 +2,13 @@
  * Clients (Proprietari) — pure helpers. Stateless: input → output only.
  */
 
-export function formatDateTime(dateStr) {
-    return new Date(dateStr).toLocaleString('it-IT', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-    });
-}
+export function formatDateTime(dateStr) { return window.Fmt.dateTime(dateStr); }
 
 export function truncate(str, len) {
     return str.length > len ? str.slice(0, len) + '…' : str;
 }
 
-export function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+export function formatDate(dateStr) { return window.Fmt.date(dateStr); }
 
 export function escapeHtml(str) {
     const div = document.createElement('div');

@@ -122,7 +122,7 @@
             catch (err) { showAlert('Impossibile caricare la fattura: ' + err.message, 'error'); }
         } else {
             $('ive-title').textContent = 'Nuova Fattura';
-            $('ive-issue').value = new Date().toISOString().slice(0, 10);
+            $('ive-issue').value = window.Fmt.today();
             if (vp.clientId) $('ive-client').value = String(vp.clientId);
             $('ive-description').focus();
         }

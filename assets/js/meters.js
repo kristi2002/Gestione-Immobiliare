@@ -441,11 +441,7 @@
     // interpreta "2026-07-03" come mezzanotte UTC (che a fusi negativi diventa il
     // giorno prima) e soprattutto stampa l'anno 26 come "26", mascherando in
     // tabella le date corrotte che la KPI invece mostra per intero ("0026").
-    function formatDate(str) {
-        if (!str) return '—';
-        const m = String(str).substring(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        return m ? `${m[3]}/${m[2]}/${m[1]}` : esc(String(str));
-    }
+    function formatDate(str) { return window.Fmt.date(str); }
 
     init();
 })();

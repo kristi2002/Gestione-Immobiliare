@@ -587,7 +587,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         ]).then(([cRes, dRes]) => {
             const contracts = cRes.data?.items || cRes.data || [];
             const docs = dRes.data?.items || dRes.data || [];
-            const today = new Date().toISOString().slice(0, 10);
+            const today = window.Fmt.today();
             // Files attached to a contract record (contract_id set) are shown on that
             // record, not as standalone file cards — avoids duplicate entries.
             const linked = {};
@@ -1087,7 +1087,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                     <div class="doc-row">
                         <a href="${esc(d.download_url || ('api/download_document.php?id=' + d.id))}" target="_blank" class="doc-row__name"><i data-lucide="file-text"></i> ${esc(d.original_name || d.file_name || 'Documento')}</a>
                         ${d.inherited ? `<span class="badge" title="Documento condominiale di ${esc(d.building_name || 'questo edificio')} — si gestisce dalla scheda edificio">condominio</span>` : ''}
-                        <span class="doc-row__date text-muted">${d.created_at ? new Date(d.created_at).toLocaleDateString('it-IT') : ''}</span>
+                        <span class="doc-row__date text-muted">${d.created_at ? window.Fmt.date(d.created_at) : ''}</span>
                         ${d.inherited ? '' : `<button class="btn btn--xs btn--danger" data-doc-id="${d.id}"><i data-lucide="trash-2"></i></button>`}
                     </div>`).join('');
                 list.querySelectorAll('[data-doc-id]').forEach(btn => btn.addEventListener('click', () => deleteDocument(btn.dataset.docId)));
@@ -1133,7 +1133,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                     <div class="reminder-row ${done ? 'reminder-row--done' : ''}">
                         <div class="reminder-row__info">
                             <strong>${esc(r.title)}</strong>
-                            ${r.reminder_date ? `<span class="text-muted">${new Date(r.reminder_date).toLocaleDateString('it-IT')}</span>` : ''}
+                            ${r.reminder_date ? `<span class="text-muted">${window.Fmt.date(r.reminder_date)}</span>` : ''}
                             ${r.description ? `<span class="text-muted">${esc(r.description)}</span>` : ''}
                         </div>
                         <div class="reminder-row__actions">
@@ -1165,7 +1165,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                     list.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun promemoria in programma.</p>';
                     return;
                 }
-                const today = new Date().toISOString().slice(0, 10);
+                const today = window.Fmt.today();
                 list.innerHTML = items.map(r => {
                     const datePart = (r.reminder_date || '').split(/[ T]/)[0];
                     const overdue = datePart && datePart < today;
@@ -1243,7 +1243,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         el.innerHTML = `<table class="data-table">
             <thead><tr><th>Data</th><th>Prezzo</th><th>Tipo</th><th>Note</th></tr></thead>
             <tbody>${history.map(h => `<tr>
-                <td>${h.changed_at ? new Date(h.changed_at).toLocaleDateString('it-IT') : '—'}</td>
+                <td>${h.changed_at ? window.Fmt.date(h.changed_at) : '—'}</td>
                 <td>€ ${parseFloat(h.price).toLocaleString('it-IT')}</td>
                 <td>${h.price_type || '—'}</td>
                 <td>${esc(h.notes || '')}</td>

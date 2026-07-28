@@ -361,7 +361,7 @@
         container.innerHTML = history.map(h => {
             const oldP = h.old_price != null ? `€ ${Number(h.old_price).toLocaleString('it-IT')}` : '—';
             const newP = h.new_price != null ? `€ ${Number(h.new_price).toLocaleString('it-IT')}` : '—';
-            const date = new Date(h.changed_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+            const date = window.Fmt.dateTime(h.changed_at);
             return `<div class="price-history-item">${date}: ${oldP} → <strong>${newP}</strong></div>`;
         }).join('');
     }

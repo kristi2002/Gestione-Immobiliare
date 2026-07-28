@@ -8,12 +8,6 @@ export function esc(s) {
     return d.innerHTML;
 }
 
-export function fmtDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+export function fmtDate(d) { return window.Fmt.date(d); }
 
-export function fmtDateTime(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+export function fmtDateTime(d) { return window.Fmt.dateTime(d); }

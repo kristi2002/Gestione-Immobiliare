@@ -187,7 +187,7 @@
     function formatPrice(value) {
         const n = Number(value);
         if (!isFinite(n)) return '0';
-        return n.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        return window.Fmt.number(n, 0);
     }
 
     function escapeHtml(str) {

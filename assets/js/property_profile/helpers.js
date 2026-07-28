@@ -8,9 +8,11 @@ export function esc(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function ppFmtDate(d) { return d ? new Date(d).toLocaleDateString('it-IT') : ''; }
+// Stringa vuota, non il trattino, quando il valore manca: questi due finiscono
+// anche dentro attributi e campi, dove un "—" sarebbe da cancellare a mano.
+export function ppFmtDate(d) { return d ? window.Fmt.date(d) : ''; }
 
-export function ppMoney(v) { return v != null && v !== '' ? '€ ' + Number(v).toLocaleString('it-IT') : ''; }
+export function ppMoney(v) { return v != null && v !== '' ? window.Fmt.money(v, { decimals: 0 }) : ''; }
 
 export function pciItNumber(raw) {
     if (!raw) return null;

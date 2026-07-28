@@ -35,7 +35,7 @@
     </div>
     <script>
     (function () {
-        var eur = function (v) { return '€ ' + Number(v || 0).toLocaleString('it-IT', { maximumFractionDigits: 0 }); };
+        var eur = function (v) { return window.Fmt.money(v || 0, { decimals: 0 }); };
         fetch('api/expenses.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
             if (!j.success) return;
             var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };

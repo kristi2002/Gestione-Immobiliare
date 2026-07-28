@@ -375,7 +375,7 @@
 
         document.getElementById('btn-distribute-open').addEventListener('click', () => {
             document.getElementById('distribute-table').value = currentTable();
-            document.getElementById('distribute-date').value  = new Date().toISOString().slice(0, 10);
+            document.getElementById('distribute-date').value  = window.Fmt.today();
             document.getElementById('distribute-result').innerHTML = '';
             updateDistributePreview();
             modal.hidden = false;

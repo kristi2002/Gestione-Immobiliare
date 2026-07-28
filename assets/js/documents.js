@@ -362,12 +362,7 @@
         }, 4000);
     }
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('it-IT', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-        });
-    }
+    function formatDate(dateStr) { return window.Fmt.date(dateStr); }
 
     function formatFileSize(bytes) {
         if (!bytes) return '—';

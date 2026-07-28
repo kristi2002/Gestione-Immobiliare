@@ -40,13 +40,7 @@
 
     function parseDate(s) { return s ? new Date(String(s).replace(' ', 'T')) : null; }
 
-    function fmtDateTime(s) {
-        const d = parseDate(s);
-        return d && !isNaN(d) ? d.toLocaleString('it-IT', {
-            weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        }) : '—';
-    }
+    function fmtDateTime(s) { return window.Fmt.dateTime(s); }
     function fmtTime(d) {
         return d && !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—';
     }

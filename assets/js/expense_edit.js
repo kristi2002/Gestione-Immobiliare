@@ -119,7 +119,7 @@
         } else {
             $('exe-title').textContent = 'Nuova Spesa';
             $('exe-category').value = 'altro';
-            $('exe-date').value = new Date().toISOString().slice(0, 10);
+            $('exe-date').value = window.Fmt.today();
             if (vp.propertyId) $('exe-property').value = String(vp.propertyId);
             if (vp.clientId) $('exe-client').value = String(vp.clientId);
             $('exe-description').focus();

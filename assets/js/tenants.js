@@ -339,7 +339,7 @@
         el.style.display = 'block';
     }
 
-    function fmtDate(d) { return d ? new Date(d).toLocaleDateString('it-IT') : '—'; }
+    function fmtDate(d) { return window.Fmt.date(d); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 })();
