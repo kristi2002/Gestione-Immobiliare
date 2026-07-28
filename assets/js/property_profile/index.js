@@ -1078,11 +1078,17 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                 const docs = (json.data?.items || json.data || []).filter(d => d.doc_type !== 'contratto' && (d.download_url || d.id));
                 document.getElementById('pp-docs-count').textContent = docs.length + ' documenti';
                 if (!docs.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun documento caricato.</p>'; return; }
+                // I documenti ereditati arrivano dall'edificio: il file e' uno
+                // solo, condiviso da tutte le unita'. Niente cestino qui — si
+                // cancella dalla scheda dell'edificio, dove e' stato caricato,
+                // altrimenti da un appartamento si toglierebbe il regolamento
+                // a tutto il condominio senza rendersene conto.
                 list.innerHTML = docs.map(d => `
                     <div class="doc-row">
                         <a href="${esc(d.download_url || ('api/download_document.php?id=' + d.id))}" target="_blank" class="doc-row__name"><i data-lucide="file-text"></i> ${esc(d.original_name || d.file_name || 'Documento')}</a>
+                        ${d.inherited ? `<span class="badge" title="Documento condominiale di ${esc(d.building_name || 'questo edificio')} — si gestisce dalla scheda edificio">condominio</span>` : ''}
                         <span class="doc-row__date text-muted">${d.created_at ? new Date(d.created_at).toLocaleDateString('it-IT') : ''}</span>
-                        <button class="btn btn--xs btn--danger" data-doc-id="${d.id}"><i data-lucide="trash-2"></i></button>
+                        ${d.inherited ? '' : `<button class="btn btn--xs btn--danger" data-doc-id="${d.id}"><i data-lucide="trash-2"></i></button>`}
                     </div>`).join('');
                 list.querySelectorAll('[data-doc-id]').forEach(btn => btn.addEventListener('click', () => deleteDocument(btn.dataset.docId)));
             })

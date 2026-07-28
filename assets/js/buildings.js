@@ -3,6 +3,8 @@
 
     const API      = 'api/buildings.php';
     const PROP_API = 'api/properties.php';
+    const SUPP_API = 'api/suppliers.php';
+    const CLIENT_API = 'api/clients.php';
 
     const PROP_STATUS = { available: 'Disponibile', rented: 'Affittato', sold: 'Venduto', maintenance: 'Manutenzione', archived: 'Archiviato' };
     const PROP_COLOR  = { available: '#16a34a', rented: '#2563eb', sold: '#7c3aed', maintenance: '#d97706', archived: '#94a3b8' };
@@ -32,11 +34,13 @@
         els.form       = document.getElementById('buildings-form');
         els.delModal   = document.getElementById('buildings-delete-modal');
         els.linkModal  = document.getElementById('buildings-link-modal');
+        els.genModal   = document.getElementById('buildings-generate-modal');
 
         bindEvents();
         bindRail();
         bindRowMenu();
         loadProperties();
+        window.BuildingAdmin.loadAdministrators();
         loadBuildings();
     }
 
@@ -58,6 +62,15 @@
         els.linkModal.addEventListener('click', e => { if (e.target === els.linkModal) closeLinkModal(); });
 
         els.search.addEventListener('input', debounce(() => { currentPage = 1; loadBuildings(); }, 300));
+
+        window.BuildingAdmin.bindAdminFields();
+        // getBuilding(): l'anteprima degli indirizzi generati ha bisogno
+        // dell'edificio su cui si sta lavorando, non di quello selezionato
+        // nella lista — sono la stessa cosa solo finche' non si cambia riga.
+        window.BuildingAdmin.bindGenerateModal(
+            () => buildings.find(b => b.id === Number(document.getElementById('buildings-generate-building-id').value)),
+            () => { loadBuildings(); refreshRailIfOpen(railBuildingId); }
+        );
     }
 
     async function loadProperties() {
@@ -104,16 +117,27 @@
             return;
         }
 
-        els.tbody.innerHTML = items.map(b => `<tr class="building-row" data-id="${b.id}" style="cursor:pointer;">
+        els.tbody.innerHTML = items.map(b => {
+            // Dichiarate vs realmente in anagrafica: "56" da solo lasciava
+            // credere che le unita' esistessero, mentre non ne era stata creata
+            // nessuna — ed e' la ragione per cui "Occupate" leggeva 0.
+            const declared = parseInt(b.total_units, 10) || 0;
+            const linked   = parseInt(b.unit_count, 10) || 0;
+            const unitsCell = declared || linked
+                ? `<strong>${linked}</strong><span class="text-muted"> / ${declared || linked}</span>`
+                  + (linked < declared ? ` <span class="badge badge--warning" title="${declared - linked} unità dichiarate ma non ancora create">${declared - linked} da creare</span>` : '')
+                : '—';
+            return `<tr class="building-row" data-id="${b.id}" style="cursor:pointer;">
                 <td data-label="Nome"><strong>${esc(b.name)}</strong></td>
                 <td data-label="Indirizzo">${esc(b.address || '—')}</td>
                 <td data-label="Città">${esc(b.city || '—')}</td>
-                <td data-label="Unità totali">${esc(b.total_units ?? b.unit_count ?? '—')}</td>
+                <td data-label="Unità (in anagrafica / dichiarate)">${unitsCell}</td>
                 <td data-label="Occupate">${esc(b.occupancy_count ?? '—')}</td>
                 <td data-label="Azioni" class="lt-actions">
                     <button class="btn btn--sm btn--ghost btn-rail" data-id="${b.id}" title="Azioni" aria-label="Azioni edificio" aria-haspopup="menu"><i data-lucide="more-vertical"></i></button>
                 </td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
         els.tbody.querySelectorAll('.building-row').forEach(row => {
             row.addEventListener('click', e => {
@@ -185,6 +209,9 @@
             <button type="button" class="lt-menu__item" data-act="link" role="menuitem">
                 <i data-lucide="link"></i> Collega immobile
             </button>
+            <button type="button" class="lt-menu__item" data-act="generate" role="menuitem">
+                <i data-lucide="copy-plus"></i> Genera unità
+            </button>
             <div class="lt-menu__sep"></div>
             <button type="button" class="lt-menu__item lt-menu__item--danger" data-act="delete" role="menuitem">
                 <i data-lucide="trash-2"></i> Elimina
@@ -216,6 +243,10 @@
         menu.querySelector('[data-act="link"]').addEventListener('click', () => {
             closeRowMenu();
             openLinkModal(building.id);
+        });
+        menu.querySelector('[data-act="generate"]').addEventListener('click', () => {
+            closeRowMenu();
+            window.BuildingAdmin.openGenerateModal(building);
         });
         menu.querySelector('[data-act="delete"]').addEventListener('click', () => {
             closeRowMenu();
@@ -281,7 +312,14 @@
             document.getElementById('building-rail-chips').innerHTML = chips.join('');
 
             const admin = [];
-            if (b.administrator_name) admin.push(`<div class="rail-doc"><i data-lucide="user"></i> ${esc(b.administrator_name)}</div>`);
+            if (b.administrator_name) {
+                // administrator_source dice se il contatto viene dalla rubrica
+                // (e quindi si aggiorna in un posto solo) o e' testo di questa riga.
+                const badge = b.administrator_source === 'supplier'
+                    ? ' <span class="badge">in rubrica</span>'
+                    : ' <span class="badge badge--warning" title="Testo libero: non si aggiorna insieme agli altri edifici">testo libero</span>';
+                admin.push(`<div class="rail-doc"><i data-lucide="user"></i> ${esc(b.administrator_name)}${badge}</div>`);
+            }
             if (b.administrator_phone) admin.push(`<div class="rail-doc"><i data-lucide="phone"></i> <a href="tel:${esc(b.administrator_phone)}">${esc(b.administrator_phone)}</a></div>`);
             if (b.administrator_email) admin.push(`<div class="rail-doc"><i data-lucide="mail"></i> <a href="mailto:${esc(b.administrator_email)}">${esc(b.administrator_email)}</a></div>`);
             document.getElementById('building-rail-admin').innerHTML = admin.join('') || '<p class="text-muted detail-rail__empty">Nessun amministratore registrato.</p>';
@@ -366,12 +404,12 @@
             document.getElementById('buildings-name').value        = item.name || '';
             document.getElementById('buildings-city').value        = item.city || '';
             document.getElementById('buildings-address').value     = item.address || '';
+            document.getElementById('buildings-cap').value         = item.cap || '';
+            document.getElementById('buildings-province').value    = item.province || '';
             document.getElementById('buildings-total-units').value = item.total_units || '';
-            document.getElementById('buildings-admin-name').value  = item.administrator_name || '';
-            document.getElementById('buildings-admin-phone').value = item.administrator_phone || '';
-            document.getElementById('buildings-admin-email').value = item.administrator_email || '';
             document.getElementById('buildings-notes').value       = item.notes || '';
         }
+        window.BuildingAdmin.fillAdminFields(item);
 
         els.modal.hidden = false;
         document.getElementById('buildings-name').focus();
@@ -386,16 +424,15 @@
         const btn = document.getElementById('buildings-modal-save');
         btn.disabled = true; btn.textContent = 'Salvataggio…';
 
-        const data = {
-            name:                document.getElementById('buildings-name').value.trim(),
-            city:                document.getElementById('buildings-city').value.trim(),
-            address:             document.getElementById('buildings-address').value.trim(),
-            total_units:         parseInt(document.getElementById('buildings-total-units').value) || null,
-            administrator_name:  document.getElementById('buildings-admin-name').value.trim(),
-            administrator_phone: document.getElementById('buildings-admin-phone').value.trim(),
-            administrator_email: document.getElementById('buildings-admin-email').value.trim(),
-            notes:               document.getElementById('buildings-notes').value.trim(),
-        };
+        const data = Object.assign({
+            name:        document.getElementById('buildings-name').value.trim(),
+            city:        document.getElementById('buildings-city').value.trim(),
+            address:     document.getElementById('buildings-address').value.trim(),
+            cap:         document.getElementById('buildings-cap').value.trim(),
+            province:    document.getElementById('buildings-province').value.trim().toUpperCase(),
+            total_units: parseInt(document.getElementById('buildings-total-units').value) || null,
+            notes:       document.getElementById('buildings-notes').value.trim(),
+        }, window.BuildingAdmin.readAdminFields());
 
         try {
             const res  = await fetch(id ? `${API}?id=${id}` : API, {

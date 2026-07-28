@@ -19,18 +19,18 @@
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="door-open"></i></div>
-            <div class="db-stat__label">Unità Totali</div>
+            <div class="db-stat__label">Unità in anagrafica / dichiarate</div>
             <div class="db-stat__value" id="bstat-units">—</div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="badge-check"></i></div>
+            <div class="db-stat__label">Unità occupate</div>
+            <div class="db-stat__value" id="bstat-occupied">—</div>
         </div>
         <div class="db-stat">
             <div class="db-stat__chip"><i data-lucide="map-pin"></i></div>
             <div class="db-stat__label">Città</div>
             <div class="db-stat__value" id="bstat-cities">—</div>
-        </div>
-        <div class="db-stat">
-            <div class="db-stat__chip"><i data-lucide="plus-circle"></i></div>
-            <div class="db-stat__label">Aggiunti quest'anno</div>
-            <div class="db-stat__value" id="bstat-new">—</div>
         </div>
     </div>
     <script>
@@ -38,8 +38,13 @@
         fetch('api/buildings.php?action=stats').then(function (r) { return r.json(); }).then(function (j) {
             if (!j.success) return;
             var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
-            set('bstat-total', j.data.total); set('bstat-units', j.data.units);
-            set('bstat-cities', j.data.cities); set('bstat-new', j.data.new_year);
+            set('bstat-total', j.data.total);
+            // Le due cifre affiancate: quante unita' esistono davvero come
+            // immobili e quante ne sono state dichiarate. Il solo totale
+            // dichiarato non dice se c'e' ancora da generare l'anagrafica.
+            set('bstat-units', j.data.units_linked + ' / ' + j.data.units);
+            set('bstat-occupied', j.data.occupied);
+            set('bstat-cities', j.data.cities);
         }).catch(function () {});
     })();
     </script>
@@ -115,27 +120,50 @@
                     <label for="buildings-address">Indirizzo <span class="required">*</span></label>
                     <input type="text" id="buildings-address" name="address" class="form-input" required maxlength="255">
                 </div>
-                <div class="form-group">
-                    <label for="buildings-total-units">Unità totali</label>
-                    <input type="number" id="buildings-total-units" name="total_units" class="form-input" min="0">
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="buildings-cap">CAP</label>
+                        <input type="text" id="buildings-cap" name="cap" class="form-input" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="62012">
+                    </div>
+                    <div class="form-group">
+                        <label for="buildings-province">Provincia</label>
+                        <input type="text" id="buildings-province" name="province" class="form-input" maxlength="2" placeholder="MC" style="text-transform:uppercase">
+                    </div>
+                    <div class="form-group">
+                        <label for="buildings-total-units">Unità totali</label>
+                        <input type="number" id="buildings-total-units" name="total_units" class="form-input" min="0">
+                    </div>
                 </div>
+                <p class="form-hint text-muted">Il CAP serve a geocodificare l'edificio una volta sola: le unità generate ereditano le sue coordinate.</p>
             </fieldset>
 
             <fieldset class="form-section">
                 <legend>Amministratore di condominio</legend>
-                <div class="form-row form-row--2">
-                    <div class="form-group">
-                        <label for="buildings-admin-name">Nome amministratore</label>
-                        <input type="text" id="buildings-admin-name" name="administrator_name" class="form-input" maxlength="150" autocomplete="off" placeholder="Studio / persona di riferimento">
-                    </div>
-                    <div class="form-group">
-                        <label for="buildings-admin-phone">Telefono amministratore</label>
-                        <input type="tel" id="buildings-admin-phone" name="administrator_phone" class="form-input" maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 0733 123456">
-                    </div>
-                </div>
                 <div class="form-group">
-                    <label for="buildings-admin-email">Email amministratore</label>
-                    <input type="email" id="buildings-admin-email" name="administrator_email" class="form-input" maxlength="255" autocomplete="off" placeholder="amministratore@esempio.it">
+                    <label for="buildings-admin-supplier">Amministratore in rubrica</label>
+                    <select id="buildings-admin-supplier" name="administrator_supplier_id" class="form-select">
+                        <option value="">— Non in rubrica (compila sotto) —</option>
+                    </select>
+                    <p class="form-hint text-muted">Collegandolo alla rubrica fornitori, un cambio di recapito si riflette su tutti gli edifici che amministra.</p>
+                </div>
+                <div id="buildings-admin-manual">
+                    <div class="form-row form-row--2">
+                        <div class="form-group">
+                            <label for="buildings-admin-name">Nome amministratore</label>
+                            <input type="text" id="buildings-admin-name" name="administrator_name" class="form-input" maxlength="150" autocomplete="off" placeholder="Studio / persona di riferimento">
+                        </div>
+                        <div class="form-group">
+                            <label for="buildings-admin-phone">Telefono amministratore</label>
+                            <input type="tel" id="buildings-admin-phone" name="administrator_phone" class="form-input" maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 0733 123456">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="buildings-admin-email">Email amministratore</label>
+                        <input type="email" id="buildings-admin-email" name="administrator_email" class="form-input" maxlength="255" autocomplete="off" placeholder="amministratore@esempio.it">
+                    </div>
+                    <button type="button" class="btn btn--ghost btn--sm" id="buildings-admin-promote">
+                        <i data-lucide="user-plus"></i> Salva in rubrica e collega
+                    </button>
                 </div>
             </fieldset>
 
@@ -176,6 +204,69 @@
     </div>
 </div>
 
+<!-- Generate units modal -->
+<div class="modal-overlay" id="buildings-generate-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="buildings-generate-title">
+        <div class="modal-header">
+            <h3 id="buildings-generate-title">Genera unità</h3>
+            <button class="modal-close" id="buildings-generate-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="buildings-generate-building-id">
+            <p class="text-muted" id="buildings-generate-summary" style="margin-top:0;"></p>
+
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="buildings-generate-count">Quante unità <span class="required">*</span></label>
+                    <input type="number" id="buildings-generate-count" class="form-input" min="1" max="200">
+                </div>
+                <div class="form-group">
+                    <label for="buildings-generate-start">Numerazione da</label>
+                    <input type="number" id="buildings-generate-start" class="form-input" min="1" value="1">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="buildings-generate-client">Proprietario <span class="required">*</span></label>
+                <select id="buildings-generate-client" class="form-select">
+                    <option value="">— Seleziona —</option>
+                </select>
+                <p class="form-hint text-muted">Ogni immobile deve avere un intestatario. Le singole unità si potranno poi riassegnare.</p>
+            </div>
+
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="buildings-generate-prefix">Etichetta</label>
+                    <input type="text" id="buildings-generate-prefix" class="form-input" maxlength="40" value="Unità" placeholder="Unità / Interno / Scala A">
+                </div>
+                <div class="form-group">
+                    <label for="buildings-generate-type">Tipologia</label>
+                    <select id="buildings-generate-type" class="form-select">
+                        <option value="appartamento">Appartamento</option>
+                        <option value="ufficio">Ufficio</option>
+                        <option value="negozio">Negozio</option>
+                        <option value="box">Box</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="buildings-generate-price-type">Destinazione</label>
+                    <select id="buildings-generate-price-type" class="form-select">
+                        <option value="affitto">Affitto</option>
+                        <option value="vendita">Vendita</option>
+                    </select>
+                </div>
+            </div>
+
+            <p class="form-hint text-muted" id="buildings-generate-preview"></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="buildings-generate-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="buildings-generate-confirm">Genera</button>
+        </div>
+    </div>
+</div>
+
 <!-- Delete confirm modal -->
 <div class="modal-overlay" id="buildings-delete-modal" hidden>
     <div class="modal modal--sm" role="dialog">
@@ -193,4 +284,5 @@
     </div>
 </div>
 
+<script src="assets/js/building_condominio.js"></script>
 <script src="assets/js/buildings.js"></script>

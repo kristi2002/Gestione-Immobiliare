@@ -28,6 +28,7 @@
         <div class="profile-hero__actions">
             <button class="btn btn--ghost btn--sm" id="btn-profile-edit"><i data-lucide="pencil"></i> Modifica</button>
             <button class="btn btn--ghost btn--sm" id="btn-profile-link"><i data-lucide="link"></i> Collega immobile</button>
+            <button class="btn btn--ghost btn--sm" id="btn-profile-generate"><i data-lucide="copy-plus"></i> Genera unità</button>
         </div>
     </div>
 
@@ -39,6 +40,44 @@
         <div id="profile-admin-box" style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;"></div>
     </div>
 
+    <!-- Tabelle millesimali -->
+    <div class="card" id="profile-millesimi-card" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+            <h4 style="margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);">Tabelle millesimali</h4>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <select id="millesimi-table-type" class="form-select" style="max-width:200px;">
+                    <option value="proprieta">Proprietà</option>
+                    <option value="riscaldamento">Riscaldamento</option>
+                    <option value="ascensore">Ascensore</option>
+                    <option value="scale">Scale</option>
+                    <option value="acqua">Acqua</option>
+                    <option value="altro">Altro</option>
+                </select>
+                <button class="btn btn--ghost btn--sm" id="btn-millesimi-split"><i data-lucide="divide"></i> Dividi in parti uguali</button>
+                <button class="btn btn--primary btn--sm" id="btn-millesimi-save"><i data-lucide="save"></i> Salva tabella</button>
+            </div>
+        </div>
+        <div id="millesimi-body">
+            <p class="text-muted">Caricamento…</p>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;flex-wrap:wrap;">
+            <span class="text-muted" id="millesimi-total">—</span>
+            <button class="btn btn--ghost btn--sm" id="btn-distribute-open"><i data-lucide="receipt"></i> Ripartisci una spesa condominiale</button>
+        </div>
+    </div>
+
+    <!-- Documenti condominiali -->
+    <div class="card" id="profile-docs-card" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
+            <h4 style="margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);">Documenti condominiali</h4>
+            <button class="btn btn--ghost btn--sm" id="btn-doc-upload"><i data-lucide="upload"></i> Carica documento</button>
+        </div>
+        <p class="text-muted" style="margin:0 0 10px;font-size:13px;">
+            Caricati una volta sull'edificio, tutte le unità collegate li vedono in sola lettura.
+        </p>
+        <div id="profile-docs-list"><p class="text-muted">Caricamento…</p></div>
+    </div>
+
     <!-- Immobili -->
     <div class="profile-panel__header">
         <span class="text-muted" id="profile-props-count"></span>
@@ -47,6 +86,100 @@
         <div class="entity-loading">Caricamento…</div>
     </div>
 
+</div>
+
+<!-- Ripartizione spesa condominiale -->
+<div class="modal-overlay" id="distribute-modal" hidden>
+    <div class="modal modal--lg" role="dialog" aria-labelledby="distribute-title">
+        <div class="modal-header">
+            <h3 id="distribute-title">Ripartisci spesa condominiale</h3>
+            <button class="modal-close" id="distribute-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="distribute-description">Descrizione <span class="required">*</span></label>
+                    <input type="text" id="distribute-description" class="form-input" maxlength="500" placeholder="Es. Rifacimento tetto">
+                </div>
+                <div class="form-group">
+                    <label for="distribute-amount">Importo totale (€) <span class="required">*</span></label>
+                    <input type="number" id="distribute-amount" class="form-input" min="0.01" step="0.01">
+                </div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="distribute-date">Data <span class="required">*</span></label>
+                    <input type="date" id="distribute-date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="distribute-category">Categoria</label>
+                    <select id="distribute-category" class="form-select">
+                        <option value="condominio">Condominio</option>
+                        <option value="manutenzione">Manutenzione</option>
+                        <option value="utenze">Utenze</option>
+                        <option value="assicurazione">Assicurazione</option>
+                        <option value="tasse">Tasse</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="distribute-table">Tabella millesimale</label>
+                    <select id="distribute-table" class="form-select">
+                        <option value="proprieta">Proprietà</option>
+                        <option value="riscaldamento">Riscaldamento</option>
+                        <option value="ascensore">Ascensore</option>
+                        <option value="scale">Scale</option>
+                        <option value="acqua">Acqua</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+            </div>
+            <div id="distribute-preview" class="text-muted" style="font-size:13px;"></div>
+            <div id="distribute-result" style="margin-top:12px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="distribute-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="distribute-confirm">Ripartisci</button>
+        </div>
+    </div>
+</div>
+
+<!-- Upload documento condominiale -->
+<div class="modal-overlay" id="building-doc-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="building-doc-title">
+        <div class="modal-header">
+            <h3 id="building-doc-title">Carica documento condominiale</h3>
+            <button class="modal-close" id="building-doc-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="building-doc-form" class="modal-body">
+            <div class="form-group">
+                <label for="building-doc-type">Tipo documento <span class="required">*</span></label>
+                <select id="building-doc-type" class="form-select" required>
+                    <option value="regolamento">Regolamento di condominio</option>
+                    <option value="planimetria">Planimetria / elaborato strutturale</option>
+                    <option value="verbale">Verbale d'assemblea</option>
+                    <option value="invoice">Fattura</option>
+                    <option value="other">Altro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="building-doc-title-input">Titolo (opzionale)</label>
+                <input type="text" id="building-doc-title-input" class="form-input" maxlength="255" placeholder="Es. Regolamento 2024">
+            </div>
+            <div class="form-group">
+                <label for="building-doc-file">File <span class="required">*</span></label>
+                <input type="file" id="building-doc-file" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="building-doc-notes">Note</label>
+                <textarea id="building-doc-notes" class="form-textarea" rows="2"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="building-doc-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="building-doc-save">Carica</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- reuse buildings.js modals by including the same markup ids the page already knows how to drive -->
@@ -75,27 +208,50 @@
                     <label for="buildings-address">Indirizzo <span class="required">*</span></label>
                     <input type="text" id="buildings-address" name="address" class="form-input" required maxlength="255">
                 </div>
-                <div class="form-group">
-                    <label for="buildings-total-units">Unità totali</label>
-                    <input type="number" id="buildings-total-units" name="total_units" class="form-input" min="0">
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="buildings-cap">CAP</label>
+                        <input type="text" id="buildings-cap" name="cap" class="form-input" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="62012">
+                    </div>
+                    <div class="form-group">
+                        <label for="buildings-province">Provincia</label>
+                        <input type="text" id="buildings-province" name="province" class="form-input" maxlength="2" placeholder="MC" style="text-transform:uppercase">
+                    </div>
+                    <div class="form-group">
+                        <label for="buildings-total-units">Unità totali</label>
+                        <input type="number" id="buildings-total-units" name="total_units" class="form-input" min="0">
+                    </div>
                 </div>
+                <p class="form-hint text-muted">Il CAP serve a geocodificare l'edificio una volta sola: le unità generate ereditano le sue coordinate.</p>
             </fieldset>
 
             <fieldset class="form-section">
                 <legend>Amministratore di condominio</legend>
-                <div class="form-row form-row--2">
-                    <div class="form-group">
-                        <label for="buildings-admin-name">Nome amministratore</label>
-                        <input type="text" id="buildings-admin-name" name="administrator_name" class="form-input" maxlength="150" autocomplete="off" placeholder="Studio / persona di riferimento">
-                    </div>
-                    <div class="form-group">
-                        <label for="buildings-admin-phone">Telefono amministratore</label>
-                        <input type="tel" id="buildings-admin-phone" name="administrator_phone" class="form-input" maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 0733 123456">
-                    </div>
-                </div>
                 <div class="form-group">
-                    <label for="buildings-admin-email">Email amministratore</label>
-                    <input type="email" id="buildings-admin-email" name="administrator_email" class="form-input" maxlength="255" autocomplete="off" placeholder="amministratore@esempio.it">
+                    <label for="buildings-admin-supplier">Amministratore in rubrica</label>
+                    <select id="buildings-admin-supplier" name="administrator_supplier_id" class="form-select">
+                        <option value="">— Non in rubrica (compila sotto) —</option>
+                    </select>
+                    <p class="form-hint text-muted">Collegandolo alla rubrica fornitori, un cambio di recapito si riflette su tutti gli edifici che amministra.</p>
+                </div>
+                <div id="buildings-admin-manual">
+                    <div class="form-row form-row--2">
+                        <div class="form-group">
+                            <label for="buildings-admin-name">Nome amministratore</label>
+                            <input type="text" id="buildings-admin-name" name="administrator_name" class="form-input" maxlength="150" autocomplete="off" placeholder="Studio / persona di riferimento">
+                        </div>
+                        <div class="form-group">
+                            <label for="buildings-admin-phone">Telefono amministratore</label>
+                            <input type="tel" id="buildings-admin-phone" name="administrator_phone" class="form-input" maxlength="30" inputmode="tel" autocomplete="off" placeholder="es. 0733 123456">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="buildings-admin-email">Email amministratore</label>
+                        <input type="email" id="buildings-admin-email" name="administrator_email" class="form-input" maxlength="255" autocomplete="off" placeholder="amministratore@esempio.it">
+                    </div>
+                    <button type="button" class="btn btn--ghost btn--sm" id="buildings-admin-promote">
+                        <i data-lucide="user-plus"></i> Salva in rubrica e collega
+                    </button>
                 </div>
             </fieldset>
 
@@ -135,4 +291,68 @@
     </div>
 </div>
 
+<!-- Generate units modal (stessi id di buildings.html: la logica sta in building_condominio.js) -->
+<div class="modal-overlay" id="buildings-generate-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="buildings-generate-title">
+        <div class="modal-header">
+            <h3 id="buildings-generate-title">Genera unità</h3>
+            <button class="modal-close" id="buildings-generate-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="buildings-generate-building-id">
+            <p class="text-muted" id="buildings-generate-summary" style="margin-top:0;"></p>
+
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="buildings-generate-count">Quante unità <span class="required">*</span></label>
+                    <input type="number" id="buildings-generate-count" class="form-input" min="1" max="200">
+                </div>
+                <div class="form-group">
+                    <label for="buildings-generate-start">Numerazione da</label>
+                    <input type="number" id="buildings-generate-start" class="form-input" min="1" value="1">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="buildings-generate-client">Proprietario <span class="required">*</span></label>
+                <select id="buildings-generate-client" class="form-select">
+                    <option value="">— Seleziona —</option>
+                </select>
+                <p class="form-hint text-muted">Ogni immobile deve avere un intestatario. Le singole unità si potranno poi riassegnare.</p>
+            </div>
+
+            <div class="form-row form-row--3">
+                <div class="form-group">
+                    <label for="buildings-generate-prefix">Etichetta</label>
+                    <input type="text" id="buildings-generate-prefix" class="form-input" maxlength="40" value="Unità" placeholder="Unità / Interno / Scala A">
+                </div>
+                <div class="form-group">
+                    <label for="buildings-generate-type">Tipologia</label>
+                    <select id="buildings-generate-type" class="form-select">
+                        <option value="appartamento">Appartamento</option>
+                        <option value="ufficio">Ufficio</option>
+                        <option value="negozio">Negozio</option>
+                        <option value="box">Box</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="buildings-generate-price-type">Destinazione</label>
+                    <select id="buildings-generate-price-type" class="form-select">
+                        <option value="affitto">Affitto</option>
+                        <option value="vendita">Vendita</option>
+                    </select>
+                </div>
+            </div>
+
+            <p class="form-hint text-muted" id="buildings-generate-preview"></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="buildings-generate-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="buildings-generate-confirm">Genera</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/building_condominio.js"></script>
 <script src="assets/js/building_profile/index.js"></script>

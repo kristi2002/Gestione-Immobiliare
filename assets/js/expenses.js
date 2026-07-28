@@ -15,6 +15,7 @@
         tasse:         'Tasse',
         assicurazione: 'Assicurazione',
         agenzia:       'Agenzia',
+        condominio:    'Condominio',
         altro:         'Altro',
     };
 
