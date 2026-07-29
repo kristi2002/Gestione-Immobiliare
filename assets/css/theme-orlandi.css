@@ -165,7 +165,7 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
     /* Single source of truth for the topbar layer — was conflicting across era
        files (15 in 08-shell, 1150 in 01-base, 1200 in 03-clients mobile), and the
        stray 15 left its own dropdowns behind 1000-level content (.pp-subnav,
-       .toolbar--pinned). 1050 sits ABOVE that content but BELOW the detail rail
+       and the sticky filter bar at 900). 1050 sits ABOVE that content but BELOW the detail rail
        (1060), the mobile sidebar overlay (1100), the media lightbox (1200) and
        modals (1400+). */
     z-index: 1050;

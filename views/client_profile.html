@@ -43,6 +43,9 @@
         <button class="profile-tab" role="tab" data-tab="documents"><i data-lucide="file-text"></i>Documenti</button>
         <button class="profile-tab" role="tab" data-tab="communications"><i data-lucide="message-square"></i>Comunicazioni</button>
         <button class="profile-tab" role="tab" data-tab="reminders"><i data-lucide="bell"></i>Promemoria</button>
+        <!-- Solo super_admin (il ruolo DPO): api/gdpr.php e' requireRole('super_admin').
+             Lo nasconde client_profile/index.js in base a window.userRole. -->
+        <button class="profile-tab" role="tab" data-tab="gdpr" id="profile-tab-gdpr" hidden><i data-lucide="shield-check"></i>Dati personali</button>
     </div>
 
     <!-- Panel: Immobili -->
@@ -128,6 +131,42 @@
         </div>
         <div id="profile-reminders-list" class="reminders-list">
             <div class="entity-loading">Caricamento…</div>
+        </div>
+    </div>
+
+    <!-- Panel: Dati personali (GDPR) ────────────────────────────────────────
+         api/gdpr.php era completo — esportazione Art. 15/20, richiesta di
+         cancellazione Art. 17, registro dei consensi, tracciato degli accessi —
+         e non aveva un solo bottone in tutta l'applicazione. Un diritto
+         dell'interessato che nessuno puo' esercitare non e' un diritto, ed e' il
+         primo punto che un titolare del trattamento si sente chiedere.
+         Sta sulla scheda della persona perche' e' li' che la domanda arriva:
+         "mandatemi i miei dati", "cancellatemi". -->
+    <div class="profile-panel" id="profile-panel-gdpr" hidden>
+        <div class="gdpr-panel">
+            <div class="gdpr-actions">
+                <div class="gdpr-action">
+                    <h4>Esporta i dati (Art. 15 / 20)</h4>
+                    <p class="text-muted">Tutto quello che l'agenzia detiene su questa persona, in un file JSON leggibile e trasferibile. L'esportazione viene registrata.</p>
+                    <button class="btn btn--secondary btn--sm" id="gdpr-export"><i data-lucide="download"></i> Scarica l'esportazione</button>
+                </div>
+                <div class="gdpr-action gdpr-action--danger">
+                    <h4>Richiedi la cancellazione (Art. 17)</h4>
+                    <p class="text-muted">Registra la richiesta. La cancellazione effettiva resta un'azione separata e ponderata: fatture e contratti hanno obblighi di conservazione fiscale che il diritto all'oblio non supera.</p>
+                    <button class="btn btn--sm btn--danger" id="gdpr-erase"><i data-lucide="user-x"></i> Registra la richiesta</button>
+                </div>
+            </div>
+
+            <div class="gdpr-ledgers">
+                <div>
+                    <h4>Consensi registrati</h4>
+                    <div id="gdpr-consents" class="gdpr-list"><div class="entity-loading">Caricamento…</div></div>
+                </div>
+                <div>
+                    <h4>Accessi ai dati</h4>
+                    <div id="gdpr-log" class="gdpr-list"><div class="entity-loading">Caricamento…</div></div>
+                </div>
+            </div>
         </div>
     </div>
 

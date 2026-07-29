@@ -132,35 +132,10 @@
 
 #pp-gallery-pagination { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
 
-/* --------------------------------------------------------------------------
-   Filter bar becomes ONE with the top bar on scroll-down (item 4). JS pins it
-   over the topbar (fixed) instead of under it; a spacer holds its flow place.
-   -------------------------------------------------------------------------- */
-.toolbar--pinned {
-    position: fixed;
-    top: var(--topbar-height);   /* flush beneath the full-width topbar */
-    z-index: 1000;               /* below topbar (1150), above content */
-    margin: 0;
-    border-radius: 0;
-    border-left: 0; border-right: 0; border-top: 0;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-    animation: pp-subnav-in 0.16s var(--ease-out, ease-out);
-    /* Merge into the top bar as ONE single row (matches the topbar height). */
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 10px;
-    height: var(--topbar-height);
-    min-height: var(--topbar-height);
-    padding: 0 20px;
-    overflow-x: auto;
-    overflow-y: hidden;
-}
-.toolbar--pinned > * { flex: 0 0 auto; }
-.toolbar--pinned .filter-bar__controls { flex: 1 1 auto; flex-wrap: nowrap; }
-.toolbar--pinned .search-box { flex: 0 1 240px; }
-.toolbar--pinned .btn-clear-filters { margin-left: 0; }
-.toolbar-spacer { flex: none; }
+/* The filter bar no longer merges into the top bar: it pins in place, as the
+   same bar. `.toolbar--pinned` / `.toolbar-spacer` were the first take on that
+   idea and nothing sets them any more — see .toolbar--sticky in
+   style/09-filter-toolbar.css. */
 
 /* --------------------------------------------------------------------------
    Fornitori cards — align with the Proprietari entity-card pattern

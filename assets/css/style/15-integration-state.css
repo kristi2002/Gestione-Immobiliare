@@ -1,0 +1,127 @@
+/* =====================================================================
+   15-integration-state.css — "questa cosa non è successa davvero".
+
+   Email e WhatsApp, quando l'integrazione è spenta, rispondono comunque
+   success=true e marcano `simulated`. Fino a phase86 quel messaggio finiva
+   in archivio come "inviato": l'elenco Comunicazioni — che è quello che si
+   guarda per dire a un proprietario "le ho scritto il 14" — affermava una
+   consegna mai avvenuta.
+
+   Ora c'è lo stato `simulated`, e qui gli si dà un aspetto che non si possa
+   confondere con una spunta di consegna. Ambra, non rosso: non è un guasto
+   da riparare, è una funzione spenta di proposito — e distinguere le due
+   cose dice all'agenzia se deve chiamare qualcuno o solo configurare.
+
+   Vive in un file suo perché .chat-status sta in 02-properties-media.css,
+   che in questo momento è in mano a un'altra sessione.
+   ===================================================================== */
+
+.chat-status.is-simulated {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    color: #92400e;                    /* ambra scura — 7.1:1 su #fef3c7 */
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 999px;
+    padding: 1px 8px;
+    white-space: normal;
+}
+
+/* Dentro una nuvoletta ricevuta il fondo è scuro: lì l'ambra piena non si
+   legge, quindi resta solo il testo. */
+.chat-bubble--received .chat-status.is-simulated {
+    background: transparent;
+    border-color: rgba(252, 211, 77, 0.5);
+    color: #fde68a;
+}
+
+/* Il pallino davanti al testo evita che, letto di sfuggita, "Non inviata"
+   passi per l'ennesima etichetta di stato neutra. */
+.chat-status.is-simulated::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+/* =====================================================================
+   Pannello "Dati personali" (GDPR) — scheda proprietario.
+
+   api/gdpr.php esisteva già completo: esportazione Art. 15/20, richiesta
+   di cancellazione Art. 17, registro dei consensi, tracciato degli accessi.
+   Non aveva un solo bottone in tutta l'applicazione. Un diritto che
+   l'interessato non può esercitare non è un diritto — ed è la prima cosa
+   che a un'agenzia viene chiesta di dimostrare.
+   ===================================================================== */
+
+.gdpr-panel { display: grid; gap: 28px; }
+
+.gdpr-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.gdpr-action {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    background: var(--color-surface);
+}
+
+.gdpr-action h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.gdpr-action p {
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    max-width: 60ch;
+}
+
+/* La cancellazione non è un'azione come le altre: si distingue prima di
+   essere premuta, non dopo. */
+.gdpr-action--danger { border-color: #fca5a5; background: #fff7f7; }
+
+.gdpr-ledgers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.gdpr-ledgers h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.gdpr-list { display: flex; flex-direction: column; gap: 2px; }
+
+.gdpr-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    background: var(--color-bg);
+}
+
+.gdpr-row__main { font-weight: 600; color: var(--color-text); flex: 1 1 auto; min-width: 0; }
+
+@media (max-width: 640px) {
+    .gdpr-action--danger { background: var(--color-surface); }
+}

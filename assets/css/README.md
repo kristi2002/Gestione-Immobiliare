@@ -45,7 +45,7 @@ wins**:
 | `04-phase11.css` | **Grab bag, not a component file** — entity cards + status badges (lead/contract/payment/expense/appointment/invoice), calendar, map, appraisal/portal-export modals, TOTP, CSV import, pagination/bulk selection. Named after the dev sprint that produced it, not its content; a real name would have to be "everything shipped in one phase," which isn't useful. Splitting it by component is future work — don't add to it, and don't copy its shape for new files (see §1 rule 5). |
 | `05-ui-polish.css` | Cross-cutting polish (zebra lists, card refinements) |
 | `06-buttons-responsive.css` | Button visual polish + responsive |
-| `07-refresh-2026.css` | **Also a grab bag** — topbar logo/global search, custom datepicker, valuation quick-form, contract filter-pill dots, per-owner card accent colours, plus the filter-bar-pins-into-topbar-on-scroll mechanics (`.topbar-filters`, `.toolbar--merged`). Same caveat as `04-phase11.css`: the name marks *when*, not *what*. |
+| `07-refresh-2026.css` | **Also a grab bag** — topbar logo/global search, custom datepicker, valuation quick-form, contract filter-pill dots, per-owner card accent colours. (The filter-bar-pins-into-topbar-on-scroll mechanics used to live here too; the bar now pins in place — see `09-filter-toolbar.css`.) Same caveat as `04-phase11.css`: the name marks *when*, not *what*. |
 | `08-shell-dashboard.css` | Shell + dashboard redesign (light sidebar, dashboard stat/table components) |
 | `09-filter-toolbar.css` | **Single home for `.view-header` and the reference filter-bar** (`.fb-*`, built by `filters.js`'s `buildRefBar`) + card-header alignment |
 
@@ -159,6 +159,9 @@ the pattern to follow for the ones still open above:
   it stuffed each view's header actions into the filter bar and hoisted the bar to the top of
   the page, unevenly (pages whose action button wasn't inside `.view-header__actions` never
   merged, pages with many actions wrapped to 2–3 ragged rows). Removed outright, along with the
-  CSS it alone produced (`.view-header--merged`, `.fb-actions`, `.toolbar--pagebar`). The
-  scroll-triggered pin-into-topbar behavior (`setupMergeToTopbar`, `.toolbar--merged`) is
-  unrelated and unaffected — that one stays.
+  CSS it alone produced (`.view-header--merged`, `.fb-actions`, `.toolbar--pagebar`).
+- **The scroll-triggered pin-into-topbar behavior** (`setupMergeToTopbar`, `.toolbar--merged`,
+  `#topbar-filters`) — also removed. It portalled the toolbar into the topbar and restyled it
+  into a compact row with the search + saved-searches hidden, so the filter section you
+  scrolled away from was not the one that came back. Replaced by `.toolbar--sticky` in
+  `style/09-filter-toolbar.css`: the bar pins in place, unchanged, on every page.

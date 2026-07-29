@@ -522,11 +522,25 @@
         bar.dataset.stickyBound = '1';
         bar.classList.add('toolbar--sticky');
 
+        // A sticky element pins to the scroller's CONTENT box, not its border box:
+        // .app-content has a top padding, so the bar comes to rest that many px
+        // below the scroller's top edge. Comparing against the border box would
+        // mean `is-stuck` never fires — no shadow, and inside a .list-card no
+        // opaque background either, so the rows would scroll through the bar.
+        let padTop = 0;
+        const measure = () => { padTop = parseFloat(getComputedStyle(scroller).paddingTop) || 0; };
+        measure();
+        window.addEventListener('resize', measure);
+
         const onScroll = () => {
             // The view was swapped out: this bar is gone, stop listening.
-            if (!document.body.contains(bar)) { scroller.removeEventListener('scroll', onScroll); return; }
-            const stuck = bar.getBoundingClientRect().top <= scroller.getBoundingClientRect().top + 1;
-            bar.classList.toggle('is-stuck', stuck);
+            if (!document.body.contains(bar)) {
+                scroller.removeEventListener('scroll', onScroll);
+                window.removeEventListener('resize', measure);
+                return;
+            }
+            const pinTop = scroller.getBoundingClientRect().top + padTop;
+            bar.classList.toggle('is-stuck', bar.getBoundingClientRect().top <= pinTop + 1);
         };
         scroller.addEventListener('scroll', onScroll, { passive: true });
         onScroll();

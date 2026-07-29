@@ -253,16 +253,22 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 @media (max-width: 900px) { .topbar-logo { width: auto; } .topbar-logo__text small { display: none; } }
 @media (max-width: 640px) { .topbar-logo__text { display: none; } .global-search { max-width: none; } }
 
-/* Proprietari + Lead cards → fixed 3-column grid (responsive down). */
-#clients-grid,
+/* Schede Lead → griglia a 3 colonne (scende a 2 e poi a 1).
+   #clients-grid non e' piu' in questo elenco: i Proprietari sono diventati una
+   tabella e quell'id ora e' un <tbody> (views/clients.html:77), quindi
+   grid-template-columns su di esso non faceva niente da un pezzo.
+   Questa regola vince per specificita' (id, 1-0-0) su .entity-grid--wide di
+   03-clients-cards.css, che chiede 2 colonne: e' voluto ed e' il motivo per cui
+   views/leads.html non porta piu' quella classe — la portava, e diceva il
+   falso. */
 #leads-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 @media (max-width: 1200px) {
-    #clients-grid, #leads-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #leads-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
-    #clients-grid, #leads-grid { grid-template-columns: 1fr; }
+    #leads-grid { grid-template-columns: 1fr; }
 }
 
 /* ============================================================

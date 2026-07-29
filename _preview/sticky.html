@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sticky filter bar test</title>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/theme-orlandi.css">
+<style>[data-lucide]{display:inline-block;width:1em;height:1em}</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><a class="sb-brand" href="#"><span class="sb-brand__word"><span class="sb-brand__eyebrow">IMMOBILIARE</span><b class="sb-brand__name">ORLANDI</b></span></a></div>
+    <nav class="sidebar-nav"><ul><li><a href="#" class="nav-link active"><span class="nav-label">Dashboard</span></a></li></ul></nav>
+  </aside>
+  <div class="main-wrapper">
+    <header class="topbar">
+      <button class="sidebar-toggle" id="sidebar-toggle"><span></span><span></span><span></span></button>
+      <div class="topbar-title"><h1 id="page-title">Test</h1><p class="topbar-sub">Benvenuto, admin</p></div>
+      <div class="global-search"><i class="global-search__icon" data-lucide="search"></i><input type="search" class="global-search__input" placeholder="Cerca proprietari, immobili…"></div>
+      <div class="topbar-actions"><a href="#" class="topbar-link topbar-icon-btn"><i data-lucide="mail"></i></a><button class="notif-bell">&#128276;</button></div>
+    </header>
+    <main id="app-content" class="app-content"></main>
+  </div>
+</div>
+<script>
+const view = new URLSearchParams(location.search).get('view') || 'clients';
+document.getElementById('page-title').textContent = view;
+
+function mockRows() {
+  // Tables: fill the tbody so the list is long enough to scroll.
+  document.querySelectorAll('table').forEach(t => {
+    const tb = t.querySelector('tbody'); if (!tb || tb.querySelector('tr')) return;
+    const n = t.querySelectorAll('thead th').length || 6;
+    for (let r = 0; r < 30; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < n; c++) {
+        const td = document.createElement('td');
+        td.textContent = c === 0 ? ('Riga di prova ' + (r + 1)) : 'valore';
+        tr.appendChild(td);
+      }
+      tb.appendChild(tr);
+    }
+  });
+  // Card grids: same idea.
+  document.querySelectorAll('.entity-grid').forEach(g => {
+    g.innerHTML = '';
+    for (let i = 0; i < 24; i++) {
+      const d = document.createElement('div');
+      d.className = 'entity-card'; d.dataset.id = String(i + 1);
+      d.innerHTML = '<div class="entity-card__header"><div class="entity-card__avatar">EC</div>' +
+        '<div><h4>Scheda di prova ' + (i + 1) + '</h4><p class="text-muted">riga secondaria</p></div></div>' +
+        '<div class="entity-card__footer">footer</div>';
+      g.appendChild(d);
+    }
+  });
+}
+
+fetch('/views/' + view + '.html').then(r => r.text()).then(h => {
+  const host = document.getElementById('app-content');
+  // Strip the view's own <script> blocks: they call the real API, which is not
+  // running here. We only need the markup + filters.js.
+  host.innerHTML = h.replace(/<script[\s\S]*?<\/script>/gi, '');
+  mockRows();
+  const s = document.createElement('script');
+  s.src = '/assets/js/filters.js?b=' + Math.random();
+  s.onload = () => { window.FilterBar.setupIn(document); window.__ready = true; };
+  document.body.appendChild(s);
+}).catch(e => { document.getElementById('app-content').textContent = String(e); window.__ready = true; });
+</script>
+</body></html>

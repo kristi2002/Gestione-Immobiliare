@@ -165,10 +165,11 @@
    (theme-orlandi.css .list-card .toolbar) — pinned, that would let the rows
    scroll straight through it. Give it back a surface once it detaches.
    The box-shadow is repeated here because that same rule zeroes it at equal
-   specificity from a later file. */
+   specificity from a later file. No border, on purpose: a border-bottom would
+   add 1px to the bar the moment it pins and nudge the whole list down — the
+   shadow does the separating. */
 .list-card .toolbar--sticky.is-stuck {
     background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10);
 }
 

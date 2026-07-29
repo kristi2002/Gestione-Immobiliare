@@ -101,6 +101,12 @@ function listDocuments(PDO $db): void
         $inheritedBuildingId = (int) $bStmt->fetchColumn() ?: null;
     }
 
+    // Quante righe serve leggere da ciascun ramo. Vedi il commento sul LIMIT
+    // piu' sotto: la pagina richiesta sta interamente dentro le prime
+    // (offset + limit) righe di ognuno dei due elenchi ordinati per data.
+    $window  = $pagination['offset'] + $pagination['limit'];
+    $total   = 0;
+
     // ── Part 1: real documents ────────────────────────────────────────────
     $docItems = [];
     if ($docType !== 'contratto') {
@@ -163,10 +169,34 @@ function listDocuments(PDO $db): void
              LEFT JOIN contracts ct ON ct.id = d.contract_id
              LEFT JOIN buildings b ON b.id = d.building_id
              $dWhere
-             ORDER BY d.created_at DESC"
+             ORDER BY d.created_at DESC
+             LIMIT :window"
         );
-        $stmt->execute($dParams);
+        // Il taglio: servono solo le prime (offset+limit) righe di questo ramo.
+        // La pagina finale nasce dalla fusione di due elenchi gia' ordinati per
+        // data, e le prime N di una fusione stanno per forza dentro l'unione
+        // delle prime N di ciascuno — prenderne di piu' e' lavoro buttato.
+        // Prima non c'era LIMIT: ogni apertura di Documenti caricava in memoria
+        // OGNI documento e OGNI contratto, con i loro join, per poi mostrarne
+        // venticinque.
+        $stmt->bindValue(':window', $window, PDO::PARAM_INT);
+        foreach ($dParams as $k => $v) { $stmt->bindValue(':' . $k, $v); }
+        $stmt->execute();
         $docItems = $stmt->fetchAll();
+
+        // Conteggio esatto: stessa WHERE e stessi join (servono ai filtri di
+        // ricerca su cliente/immobile), ma senza trasferire righe.
+        $cnt = $db->prepare(
+            "SELECT COUNT(*)
+             FROM documents d
+             LEFT JOIN clients c ON c.id = d.client_id
+             LEFT JOIN properties p ON p.id = d.property_id
+             LEFT JOIN contracts ct ON ct.id = d.contract_id
+             LEFT JOIN buildings b ON b.id = d.building_id
+             $dWhere"
+        );
+        $cnt->execute($dParams);
+        $total += (int) $cnt->fetchColumn();
         foreach ($docItems as &$d) {
             $d['download_url'] = 'api/download_document.php?id=' . $d['id'];
             // Ereditato = arriva dall'edificio, non da questo immobile. La UI lo
@@ -217,10 +247,23 @@ function listDocuments(PDO $db): void
              LEFT JOIN clients cl ON cl.id = ct.client_id
              INNER JOIN properties pr ON pr.id = ct.property_id
              $cWhere
-             ORDER BY ct.created_at DESC"
+             ORDER BY ct.created_at DESC
+             LIMIT :window"
         );
-        $stmt->execute($cParams);
+        $stmt->bindValue(':window', $window, PDO::PARAM_INT);
+        foreach ($cParams as $k => $v) { $stmt->bindValue(':' . $k, $v); }
+        $stmt->execute();
         $rows = $stmt->fetchAll();
+
+        $cnt = $db->prepare(
+            "SELECT COUNT(*)
+             FROM contracts ct
+             LEFT JOIN clients cl ON cl.id = ct.client_id
+             INNER JOIN properties pr ON pr.id = ct.property_id
+             $cWhere"
+        );
+        $cnt->execute($cParams);
+        $total += (int) $cnt->fetchColumn();
         foreach ($rows as $row) {
             $row['original_name'] = $typeLabels[$row['original_name']] ?? $row['original_name'];
             $row['download_url']  = null;
@@ -228,11 +271,13 @@ function listDocuments(PDO $db): void
         }
     }
 
-    // ── Merge, sort, paginate in PHP ──────────────────────────────────────
+    // ── Merge, sort, paginate ─────────────────────────────────────────────
     $all = array_merge($docItems, $ctItems);
     usort($all, fn($a, $b) => strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? '')));
 
-    $total = count($all);
+    // count($all) non vale piu' come totale: i due rami sono troncati a $window.
+    // Il conteggio esatto lo fa il database, che e' anche il posto in cui costa
+    // meno — nessun join, nessuna riga trasferita.
     $items = array_slice($all, $pagination['offset'], $pagination['limit']);
 
     apiPaginatedSuccess($items, $total, $pagination);

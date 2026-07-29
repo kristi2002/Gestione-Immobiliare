@@ -281,6 +281,53 @@
 }
 .wa-empty-state-icon { font-size: 3rem; opacity: 0.3; }
 .wa-empty-state-text { font-size: 0.9rem; }
+
+/* ── Sotto i 900px ─────────────────────────────────────────────────────────
+   In tutto questo foglio (432 righe) non c'era una sola @media, e la griglia
+   e' fissa: `300px 1fr`. Su un telefono da 375px restano 75px per la
+   conversazione — l'elenco dei messaggi non e' leggibile, e la casella di
+   scrittura nemmeno. L'inbox e' la schermata che si guarda mentre si e' fuori
+   a fare visite, cioe' proprio da telefono.
+
+   Niente stato in JS: si impila. L'elenco delle conversazioni diventa una
+   striscia in alto, alta al massimo 38vh e scorrevole per conto suo; la
+   conversazione prende tutto il resto. `height: auto` sul contenitore toglie
+   il calc(100vh - 150px), che su mobile — con le barre del browser che
+   entrano ed escono — taglia sempre qualcosa. */
+@media (max-width: 900px) {
+    .wa-inbox-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        min-height: 0;
+    }
+
+    .wa-thread-list {
+        border-right: 0;
+        border-bottom: 1px solid var(--color-border, #e0e0e0);
+        max-height: 38vh;
+    }
+
+    .wa-chat-panel {
+        /* Senza un'altezza minima il pannello collassa sul suo contenuto e la
+           conversazione vuota non ha nemmeno lo spazio per dirlo. */
+        min-height: 60vh;
+    }
+}
+
+@media (max-width: 560px) {
+    .wa-inbox-layout {
+        /* A tutta larghezza: bordi e angoli arrotondati sprecano 32px preziosi
+           e non aggiungono niente quando il riquadro e' lo schermo intero. */
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .wa-thread-tabs { flex-wrap: wrap; }
+    .wa-thread-list { max-height: 32vh; }
+}
 </style>
 
 <div class="whatsapp-inbox-view">

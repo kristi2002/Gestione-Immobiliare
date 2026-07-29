@@ -313,7 +313,13 @@ function createMessage(PDO $db): void
                 apiError($result['error'] ?? 'Invio fallito.');
             }
 
-            $status     = $result['status'];
+            // Con MAIL_ENABLED=false config/mail.php risponde comunque
+            // success=true (per non bloccare i flussi) ma marca simulated=true.
+            // Leggere solo `status` scriveva "inviata" in archivio per un
+            // messaggio che nessuno ha ricevuto — ed e' l'archivio che l'agente
+            // guarda per dire al proprietario "le ho scritto il 14".
+            $simulated  = !empty($result['simulated']);
+            $status     = $simulated ? 'simulated' : $result['status'];
             $externalId = $result['external_id'];
         } elseif ($channel === 'whatsapp') {
             if (empty($client['phone'])) {
@@ -327,7 +333,9 @@ function createMessage(PDO $db): void
                 apiError($result['error'] ?? 'Invio WhatsApp fallito.');
             }
 
-            $status     = $result['status'];
+            // Stessa simulazione lato WhatsApp quando l'integrazione e' spenta.
+            $simulated  = !empty($result['simulated']);
+            $status     = $simulated ? 'simulated' : $result['status'];
             $externalId = $result['external_id'];
         }
     }
