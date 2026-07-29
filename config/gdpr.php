@@ -346,6 +346,14 @@ function gdprAnonymizeSubject(PDO $db, string $subjectType, int $subjectId): boo
               WHERE tenant_id = :id", ['id' => $subjectId]);
     }
 
+    // Link di reset password ancora aperti (phase83). Qui si CANCELLA invece di
+    // anonimizzare: la riga contiene l'email a cui il link è stato spedito e
+    // l'IP di chi l'ha usato, e soprattutto un link vivo è un accesso pendente
+    // al portale di una persona che ha appena chiesto di sparire. Anonimizzare
+    // l'email lascerebbe il token valido — il contrario di una cancellazione.
+    $resetColumn = $subjectType === 'client' ? 'client_id' : 'tenant_id';
+    $scrub($db, "DELETE FROM password_resets WHERE $resetColumn = :id", ['id' => $subjectId]);
+
     // Registro custodia chiavi: la riga resta (serve a provare chi aveva le
     // chiavi di un immobile), ma le etichette con il nome della persona vanno
     // ripulite — sono uno snapshot testuale che la FK annullata non porta via.

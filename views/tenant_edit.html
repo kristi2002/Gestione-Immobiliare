@@ -107,7 +107,20 @@
 
             <fieldset class="form-section">
                 <legend>Accesso portale &amp; note</legend>
-                <div class="form-group" style="max-width:420px"><label for="tne-portal-pass">Password portale inquilino</label><input type="password" id="tne-portal-pass" class="form-input" minlength="8" placeholder="Min. 8 caratteri (opzionale in modifica)"></div>
+                <!-- Nuovo inquilino: si puo' ancora impostare una password a mano.
+                     In MODIFICA il campo sparisce a favore del link di reset: una
+                     password digitata qui e' una password che l'agenzia conosce e
+                     deve poi comunicare su un canale qualsiasi. -->
+                <div class="form-group" id="tne-portal-pass-group" style="max-width:420px">
+                    <label for="tne-portal-pass">Password portale inquilino</label>
+                    <input type="password" id="tne-portal-pass" class="form-input" minlength="8" autocomplete="new-password" placeholder="Min. 8 caratteri (facoltativa)">
+                    <small class="text-muted">Puoi lasciarla vuota e invitare l'inquilino con un link dopo il salvataggio.</small>
+                </div>
+                <div class="form-group" id="tne-portal-reset-group" hidden style="max-width:420px">
+                    <label>Accesso al portale</label>
+                    <div><button type="button" class="btn btn--ghost" id="tne-portal-reset"><i data-lucide="key-round"></i> Invia link di accesso</button></div>
+                    <small class="text-muted">L'inquilino riceve un link via email e sceglie la password da solo. L'agenzia non la vede e non puo' recuperarla.</small>
+                </div>
                 <div class="form-group"><label for="tne-notes">Note</label><textarea id="tne-notes" class="form-textarea" rows="2"></textarea></div>
             </fieldset>
 

@@ -5,9 +5,10 @@
 (function () {
     'use strict';
 
-    const API      = 'api/tenants.php';
-    const PROP_API = 'api/properties.php';
-    const PDF_API  = 'api/generate_pdf.php';
+    const API       = 'api/tenants.php';
+    const PROP_API  = 'api/properties.php';
+    const PDF_API   = 'api/generate_pdf.php';
+    const RESET_API = 'api/password_reset.php';
 
     const vp       = window.App?.viewParams || {};
     const tenantId = vp.tenantId || null;
@@ -169,6 +170,47 @@
         } catch (err) { showAlert(err.message, 'error'); }
     }
 
+    /**
+     * Invia all'inquilino il link con cui SI SCEGLIE la password.
+     *
+     * Il token non torna mai in questa risposta (tranne in sviluppo, dove non
+     * parte nessuna email): se comparisse qui, l'accesso passerebbe di nuovo per
+     * le mani dell'agenzia, che e' il punto che questo flusso rimuove.
+     */
+    async function sendResetLink() {
+        const btn = $('tne-portal-reset');
+        const id  = $('tne-id').value;
+        if (!id) return;
+
+        btn.disabled = true;
+        const label = btn.innerHTML;
+        btn.textContent = 'Invio…';
+        try {
+            const j = await fetch(RESET_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject_type: 'tenant', subject_id: parseInt(id, 10) }),
+            }).then(r => r.json());
+
+            if (!j.success) throw new Error(j.error);
+
+            const scade = j.data.expires_at ? ` Scade il ${j.data.expires_at.substring(0, 16).replace('T', ' ')}.` : '';
+            if (j.data.simulated) {
+                // MAIL_ENABLED=false: nessuna email e- partita davvero. Dire
+                // "inviata" farebbe cercare per mezz'ora un messaggio inesistente.
+                showAlert(`Invio SIMULATO (email disattivate): nessun messaggio e' partito. Link: ${j.data.link}`, 'warning');
+            } else {
+                showAlert(`Link di accesso inviato a ${j.data.email}.${scade}`, 'success');
+            }
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = label;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
     async function init() {
         $('tne-back').addEventListener('click', goBack);
         $('tne-cancel').addEventListener('click', goBack);
@@ -182,6 +224,13 @@
         $('tne-pdf').hidden = !isEdit;
         $('tne-form').addEventListener('input',  () => { dirty = true; });
         $('tne-form').addEventListener('change', () => { dirty = true; });
+
+        // Su un inquilino esistente la password non si digita piu': si manda il
+        // link e la sceglie lui. Il campo resta solo alla creazione, dove non
+        // c'e' ancora una riga a cui agganciare un token.
+        $('tne-portal-pass-group').hidden  = isEdit;
+        $('tne-portal-reset-group').hidden = !isEdit;
+        $('tne-portal-reset').addEventListener('click', sendResetLink);
 
         try { await loadProperties(); }
         catch (err) { showAlert('Errore caricamento immobili: ' + err.message, 'error'); }
