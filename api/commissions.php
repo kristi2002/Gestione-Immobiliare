@@ -17,6 +17,9 @@ requireRole('admin', 'super_admin');
 
 const COMMISSION_TYPES    = ['vendita', 'locazione', 'affitto', 'gestione', 'altro'];
 const COMMISSION_STATUSES = ['pending', 'paid', 'cancelled'];
+// Ruolo dell'agente sull'affare (phase81): 'unico' = provvigione intera, gli
+// altri due sono le meta' di uno split fra acquisitore e venditore.
+const COMMISSION_AGENT_ROLES = ['unico', 'acquisitore', 'venditore'];
 
 try {
     $db     = getDB();
@@ -61,7 +64,9 @@ try {
 
 function listCommissions(PDO $db): void
 {
-    $pagination  = apiGetPagination();
+    // maxLimit allineato a leads/clients: la scheda agente chiede limit=200 e
+    // con il tetto di default (100) veniva tosata a meta' senza dirlo.
+    $pagination  = apiGetPagination(25, 500);
     $adminUserId = isset($_GET['admin_user_id']) ? (int) $_GET['admin_user_id'] : null;
     $status      = trim($_GET['status'] ?? '');
 
@@ -168,10 +173,10 @@ function createCommission(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO agent_commissions
-            (admin_user_id, contract_id, property_id, client_id, amount, percentage,
+            (admin_user_id, agent_role, contract_id, property_id, client_id, amount, percentage,
              commission_type, status, notes, due_date, paid_at)
          VALUES
-            (:admin_user_id, :contract_id, :property_id, :client_id, :amount, :percentage,
+            (:admin_user_id, :agent_role, :contract_id, :property_id, :client_id, :amount, :percentage,
              :commission_type, :status, :notes, :due_date, :paid_at)"
     );
     $stmt->execute($validated);
@@ -183,7 +188,7 @@ function createCommission(PDO $db): void
 
 function updateCommission(PDO $db, int $id): void
 {
-    $stmt = $db->prepare("SELECT status, paid_at FROM agent_commissions WHERE id = :id");
+    $stmt = $db->prepare("SELECT status, paid_at, agent_role FROM agent_commissions WHERE id = :id");
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
@@ -206,9 +211,17 @@ function updateCommission(PDO $db, int $id): void
         $validated['paid_at'] = $existing['paid_at'] ?: date('Y-m-d H:i:s');
     }
 
+    // Same reasoning for agent_role: it validates to 'unico' when absent, so a
+    // caller that doesn't send the field would quietly collapse half of a split
+    // deal back into a whole commission.
+    if (!array_key_exists('agent_role', $data)) {
+        $validated['agent_role'] = $existing['agent_role'];
+    }
+
     $stmt = $db->prepare(
         "UPDATE agent_commissions
-         SET admin_user_id = :admin_user_id, contract_id = :contract_id,
+         SET admin_user_id = :admin_user_id, agent_role = :agent_role,
+             contract_id = :contract_id,
              property_id = :property_id, client_id = :client_id,
              amount = :amount, percentage = :percentage,
              commission_type = :commission_type, status = :status,
@@ -255,6 +268,7 @@ function markCommissionPaid(PDO $db, int $id): void
 function validateCommissionInput(array $data): array
 {
     $adminUserId     = !empty($data['admin_user_id']) ? (int) $data['admin_user_id'] : 0;
+    $agentRole       = trim($data['agent_role'] ?? '') ?: 'unico';
     $contractId      = !empty($data['contract_id']) ? (int) $data['contract_id'] : null;
     $propertyId      = !empty($data['property_id']) ? (int) $data['property_id'] : null;
     $clientId        = !empty($data['client_id']) ? (int) $data['client_id'] : null;
@@ -268,6 +282,7 @@ function validateCommissionInput(array $data): array
 
     if ($adminUserId <= 0) apiError('Agente obbligatorio.');
     if ($amount === null || $amount < 0) apiError('Importo non valido.');
+    if (!in_array($agentRole, COMMISSION_AGENT_ROLES, true)) apiError('Ruolo agente non valido.');
     if (!in_array($commissionType, COMMISSION_TYPES, true)) apiError('Tipo commissione non valido.');
     if (!in_array($status, COMMISSION_STATUSES, true)) apiError('Stato non valido.');
     if ($dueDate !== null && !DateTime::createFromFormat('Y-m-d', $dueDate)) apiError('Data scadenza non valida.');
@@ -275,6 +290,7 @@ function validateCommissionInput(array $data): array
 
     return [
         'admin_user_id'   => $adminUserId,
+        'agent_role'      => $agentRole,
         'contract_id'     => $contractId,
         'property_id'     => $propertyId,
         'client_id'       => $clientId,

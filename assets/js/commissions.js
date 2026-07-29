@@ -8,6 +8,8 @@
 
     const STATUS_LABELS = { pending: 'In sospeso', paid: 'Pagata', cancelled: 'Annullata' };
     const STATUS_COLORS = { pending: 'var(--color-warning,#e67e22)', paid: 'var(--color-success,#27ae60)', cancelled: '#999' };
+    // 'unico' resta senza etichetta: e' il caso normale, non una meta' di split.
+    const ROLE_LABELS   = { acquisitore: 'Acquisitore', venditore: 'Venditore' };
 
     let currentPage    = 1;
     const PAGE_LIMIT   = 25;
@@ -110,8 +112,13 @@
             const statusColor = STATUS_COLORS[c.status] || '#333';
             const isPending   = c.status === 'pending';
 
+            // Il ruolo sta sotto il nome invece che in una colonna sua: la tabella
+            // ne ha gia' otto, e 'unico' (il caso normale) non va detto.
+            const roleLabel = ROLE_LABELS[c.agent_role] || '';
+
             return `<tr>
-                <td data-label="Agente">${esc(agentName)}</td>
+                <td data-label="Agente">${esc(agentName)}
+                    ${roleLabel ? `<div class="text-muted" style="font-size:11px;">${esc(roleLabel)}</div>` : ''}</td>
                 <td data-label="Tipo"><span class="badge">${esc(c.commission_type || '—')}</span></td>
                 <td data-label="Importo"><strong>${fmt(c.amount)}</strong></td>
                 <td data-label="Percentuale">${c.percentage != null ? esc(c.percentage) + '%' : '—'}</td>
@@ -176,6 +183,7 @@
         if (item) {
             document.getElementById('commissions-id').value          = item.id;
             document.getElementById('commissions-agent-id').value    = item.admin_user_id || item.agent_id || '';
+            document.getElementById('commissions-agent-role').value  = item.agent_role || 'unico';
             document.getElementById('commissions-type').value        = item.commission_type || '';
             document.getElementById('commissions-amount').value      = item.amount || '';
             document.getElementById('commissions-percentage').value  = item.percentage || '';
@@ -199,6 +207,7 @@
 
         const data = {
             admin_user_id:   document.getElementById('commissions-agent-id').value,
+            agent_role:      document.getElementById('commissions-agent-role').value || 'unico',
             commission_type: document.getElementById('commissions-type').value,
             amount:          parseFloat(document.getElementById('commissions-amount').value) || 0,
             percentage:      document.getElementById('commissions-percentage').value || null,

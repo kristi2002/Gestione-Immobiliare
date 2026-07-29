@@ -61,7 +61,9 @@ try {
 
 function listAppointments(PDO $db): void
 {
-    $pagination = apiGetPagination();
+    // maxLimit allineato a leads/clients: la scheda agente chiede limit=200 e
+    // con il tetto di default (100) veniva tosata a meta' senza dirlo.
+    $pagination = apiGetPagination(25, 500);
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $agentId    = isset($_GET['agent_id']) ? (int) $_GET['agent_id'] : null;
     $status     = trim($_GET['status'] ?? '');

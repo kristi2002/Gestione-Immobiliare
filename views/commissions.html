@@ -71,7 +71,7 @@
         </div>
         <form id="commissions-form" class="modal-body">
             <input type="hidden" id="commissions-id" name="id">
-            <div class="form-row form-row--2">
+            <div class="form-row form-row--3">
                 <div class="form-group">
                     <label for="commissions-agent-id">Agente <span class="required">*</span></label>
                     <select id="commissions-agent-id" name="agent_id" class="form-select" required>
@@ -79,10 +79,19 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="commissions-agent-role">Ruolo sull'affare</label>
+                    <select id="commissions-agent-role" name="agent_role" class="form-select">
+                        <option value="unico">Provvigione intera</option>
+                        <option value="acquisitore">Acquisitore (ha preso il mandato)</option>
+                        <option value="venditore">Venditore (ha portato l'acquirente)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="commissions-type">Tipo <span class="required">*</span></label>
                     <select id="commissions-type" name="commission_type" class="form-select" required>
                         <option value="">— Seleziona tipo —</option>
                         <option value="vendita">Vendita</option>
+                        <option value="locazione">Locazione</option>
                         <option value="affitto">Affitto</option>
                         <option value="gestione">Gestione</option>
                         <option value="altro">Altro</option>

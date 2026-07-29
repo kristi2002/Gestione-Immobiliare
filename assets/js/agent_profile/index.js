@@ -14,20 +14,31 @@ const INTEREST_LABELS = { affitto: 'Affitto', acquisto: 'Acquisto', entrambi: 'E
 const SOURCE_LABELS = { telefono: 'Telefono', email: 'Email', web: 'Web', passaparola: 'Passaparola', social: 'Social', immobiliare: 'Immobiliare.it', idealista: 'Idealista', casa: 'Casa.it', subito: 'Subito', whatsapp: 'WhatsApp', altro: 'Altro' };
 const APPT_STATUS = { scheduled: 'Programmato', completed: 'Completato', cancelled: 'Annullato', no_show: 'Non presentato' };
 const COMM_STATUS = { pending: 'Da incassare', paid: 'Incassata' };
+const COMM_ROLE = { unico: '—', acquisitore: 'Acquisitore', venditore: 'Venditore' };
 
-// KPI cards. `filter` makes a card filter the leads table; `tab` switches tab.
+// KPI cards. `filter` makes a card filter the leads table; `tab` switches tab;
+// `money` formats the value as euro instead of a bare count.
 const KPI_ITEMS = [
     { key: 'leads_total',     label: 'Lead totali',  icon: 'clipboard-list' },
     { key: 'leads_converted', label: 'Convertiti',   icon: 'check-circle' },
-    { key: 'appointments',    label: 'Appuntamenti', icon: 'calendar', tab: 'appointments' },
+    { key: 'appointments',    label: 'Appuntamenti', icon: 'calendar', tab: 'appointments', tip: 'Vai agli appuntamenti' },
     { key: 'properties',      label: 'Immobili',     icon: 'building-2' },
     { key: 'keys_out',        label: 'Chiavi fuori', icon: 'key' },
-    { key: 'leads_new',       label: 'Nuovi lead',   icon: 'badge-plus', filter: 'new' },
+    { key: 'leads_new',       label: 'Nuovi lead',   icon: 'badge-plus', filter: 'new', tip: 'Mostra solo questi lead' },
+    // Il numero per cui un agente apre davvero questa pagina: fin qui i soldi
+    // stavano solo dentro il tab Provvigioni, tre click piu' in la'.
+    { key: 'commissions_pending', label: 'Da incassare', icon: 'hourglass', money: true,
+      tab: 'commissions', tip: 'Vai alle provvigioni', cls: 'db-stat--warn' },
+    { key: 'commissions_paid',    label: 'Incassate',    icon: 'euro',     money: true,
+      tab: 'commissions', tip: 'Vai alle provvigioni', cls: 'db-stat--ok' },
 ];
 
 // --- module state -----------------------------------------------------------
 let leadsCache = [];
 let leadFilter = 'all'; // 'all' | a lead status (e.g. 'new')
+// Totali provvigioni dell'agente, presi da agent_portfolio (conteggio a DB) e
+// non sommando le righe a schermo, che sono solo la prima pagina.
+let commTotals = null;
 
 function esc(s) {
     if (s == null) return '';
@@ -49,6 +60,32 @@ const budget = (min, max) => {
     return '—';
 };
 function startOfToday() { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+
+// Quante righe chiediamo per tab. Sotto questa soglia i conteggi coincidono;
+// sopra, la tabella mostra una pagina e il totale vero arriva da `total`.
+const PAGE_LIMIT = 200;
+
+// Ogni endpoint risponde {items, total, page, limit, pages}. `total` e' il
+// COUNT(*) a DB, items.length e' solo la pagina corrente: leggere il secondo al
+// posto del primo faceva scrivere "100 provvigioni" a un agente che ne aveva
+// 240, senza alcun segno che la tabella fosse tagliata.
+function unwrap(payload) {
+    const items = (payload && payload.items) || (Array.isArray(payload) ? payload : []);
+    const total = Number(payload?.total ?? items.length);
+    return { items, total, truncated: total > items.length };
+}
+
+function countLabel(shown, total, noun) {
+    return shown < total ? `${shown} di ${total} ${noun}` : `${total} ${noun}`;
+}
+
+// Riga di avviso in coda alla tabella tagliata: il conteggio onesto da solo si
+// legge come un filtro, non come "qui sotto manca roba".
+function truncatedNote(total, colspan) {
+    return `<tr><td colspan="${colspan}" class="ap-truncated">
+        Mostrate le prime ${PAGE_LIMIT} righe di ${total}. Usa la pagina dedicata per l'elenco completo.
+    </td></tr>`;
+}
 
 function showAlert(message, type = 'error') {
     const el = document.getElementById('ap-alert');
@@ -120,18 +157,21 @@ async function loadHero() {
         document.getElementById('ap-meta').innerHTML = a.email
             ? `<a href="mailto:${esc(a.email)}"><i data-lucide="mail"></i> ${esc(a.email)}</a>` : '';
         document.getElementById('ap-conv-rate').textContent = (Number(d.conversion_rate) || 0) + '%';
+        commTotals = { pending: d.commissions_pending, paid: d.commissions_paid };
+        renderCommTotals();
         document.getElementById('ap-kpis').innerHTML = KPI_ITEMS.map(k => {
             const clickable = k.filter || k.tab;
             const attrs = [
                 k.filter ? `data-filter="${k.filter}"` : '',
                 k.tab ? `data-tab="${k.tab}"` : '',
-                clickable ? `role="button" tabindex="0" title="${k.filter ? 'Mostra solo questi lead' : 'Vai agli appuntamenti'}"` : '',
+                clickable ? `role="button" tabindex="0" title="${esc(k.tip || '')}"` : '',
             ].join(' ');
+            const value = k.money ? fmtEuro(d[k.key]) : (d[k.key] ?? 0);
             return `
-            <div class="db-stat ${clickable ? 'db-stat--clickable' : ''}" ${attrs}>
+            <div class="db-stat ${k.cls || ''} ${clickable ? 'db-stat--clickable' : ''}" ${attrs}>
                 <div class="db-stat__chip"><i data-lucide="${k.icon}"></i></div>
                 <div class="db-stat__label">${k.label}</div>
-                <div class="db-stat__value">${d[k.key] ?? 0}</div>
+                <div class="db-stat__value">${value}</div>
             </div>`;
         }).join('');
         document.querySelectorAll('#ap-kpis .db-stat--clickable').forEach(el => {
@@ -154,13 +194,17 @@ function syncKpiActive() {
     });
 }
 
+let leadsTotal = 0;
+
 async function loadLeads() {
     const tbody = document.getElementById('ap-leads-tbody');
     try {
-        const res = await fetch(`api/leads.php?assigned_to=${agentId}&limit=200`);
+        const res = await fetch(`api/leads.php?assigned_to=${agentId}&limit=${PAGE_LIMIT}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        leadsCache = (json.data && json.data.items) || json.data || [];
+        const { items, total } = unwrap(json.data);
+        leadsCache = items;
+        leadsTotal = total;
         renderLeads();
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="7" class="entity-error">${esc(err.message)}</td></tr>`;
@@ -196,7 +240,11 @@ function renderLeads() {
         return 0;
     });
 
-    countEl.textContent = `${list.length} lead`;
+    // Col filtro attivo il confronto col totale a DB non regge — quel totale non
+    // e' filtrato — quindi si dichiara solo quanto si sta mostrando.
+    countEl.textContent = leadFilter === 'all'
+        ? countLabel(list.length, leadsTotal, 'lead')
+        : `${list.length} lead`;
     if (leadFilter !== 'all') {
         chip.hidden = false;
         chip.textContent = `Filtro: ${LEAD_STATUS[leadFilter] || leadFilter}`;
@@ -218,7 +266,7 @@ function renderLeads() {
             <td>${nextActionCell(l)}</td>
             <td>${SOURCE_LABELS[l.source] || esc(l.source)}</td>
             <td><button class="btn btn--sm btn--ghost ap-open-lead" data-id="${l.id}">Apri</button></td>
-        </tr>`).join('');
+        </tr>`).join('') + (leadsCache.length < leadsTotal ? truncatedNote(leadsTotal, 7) : '');
     tbody.querySelectorAll('.ap-open-lead').forEach(b => b.addEventListener('click', () => {
         window.App?.navigateTo('lead_edit', { leadId: Number(b.dataset.id) });
     }));
@@ -252,10 +300,10 @@ function apptGroup(kind, title, list, isToday, emptyText) {
 async function loadAppointments() {
     const body = document.getElementById('ap-appts-body');
     try {
-        const res = await fetch(`api/appointments.php?agent_id=${agentId}&limit=200`);
+        const res = await fetch(`api/appointments.php?agent_id=${agentId}&limit=${PAGE_LIMIT}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const items = (json.data && json.data.items) || json.data || [];
+        const { items, total, truncated } = unwrap(json.data);
         const today = startOfToday();
         const todays = [], upcoming = [], past = [];
         items.forEach(a => {
@@ -270,7 +318,7 @@ async function loadAppointments() {
         past.reverse(); // most recent past first
 
         document.getElementById('ap-appts-count').textContent =
-            `Oggi: ${todays.length} · Prossimi: ${upcoming.length} · Totale: ${items.length}`;
+            `Oggi: ${todays.length} · Prossimi: ${upcoming.length} · Totale: ${countLabel(items.length, total, 'appuntamenti')}`;
 
         if (!items.length) { body.innerHTML = '<div class="ap-appt-empty">Nessun appuntamento.</div>'; return; }
 
@@ -278,6 +326,10 @@ async function loadAppointments() {
         if (upcoming.length) html += apptGroup('upcoming', 'Prossimi', upcoming, false, '');
         if (past.length) {
             html += `<details class="ap-appt-past"><summary>Passati (${past.length})</summary>${apptTable(past, false)}</details>`;
+        }
+        if (truncated) {
+            html += `<div class="ap-truncated">Mostrati i primi ${PAGE_LIMIT} appuntamenti di ${total}. `
+                  + `Usa la pagina Appuntamenti per l'elenco completo.</div>`;
         }
         body.innerHTML = html;
         if (window.lucide) window.lucide.createIcons();
@@ -289,11 +341,11 @@ async function loadAppointments() {
 async function loadClients() {
     const grid = document.getElementById('ap-clients-grid');
     try {
-        const res = await fetch(`api/clients.php?assigned_agent_id=${agentId}&limit=200`);
+        const res = await fetch(`api/clients.php?assigned_agent_id=${agentId}&limit=${PAGE_LIMIT}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const items = (json.data && json.data.items) || json.data || [];
-        document.getElementById('ap-clients-count').textContent = `${items.length} clienti`;
+        const { items, total, truncated } = unwrap(json.data);
+        document.getElementById('ap-clients-count').textContent = countLabel(items.length, total, 'clienti');
         if (!items.length) { grid.innerHTML = '<div class="entity-empty">Nessun cliente assegnato.</div>'; return; }
         grid.innerHTML = items.map(c => {
             const initials = (((c.name || '').charAt(0)) + ((c.surname || '').charAt(0))).toUpperCase() || '?';
@@ -311,7 +363,10 @@ async function loadClients() {
                     ${!c.email && !c.phone ? '<div class="entity-card__info text-muted">Nessun contatto registrato</div>' : ''}
                 </div>
             </div>`;
-        }).join('');
+        }).join('') + (truncated
+            ? `<div class="ap-truncated">Mostrati i primi ${PAGE_LIMIT} clienti di ${total}. `
+              + `Usa la pagina Proprietari per l'elenco completo.</div>`
+            : '');
         grid.querySelectorAll('.entity-card').forEach(card => card.addEventListener('click', () => {
             window.App?.navigateTo('client_profile', { clientId: Number(card.dataset.id) });
         }));
@@ -321,30 +376,42 @@ async function loadClients() {
     }
 }
 
+// Badge Incassate / Da incassare. I numeri arrivano da agent_portfolio, che li
+// somma a DB sull'intero storico dell'agente: sommare invece le righe a schermo
+// dava il totale della sola prima pagina, e quindi un compenso sottostimato.
+// Chiamata sia da loadHero (che li produce) sia da loadCommissions, perche' le
+// due fetch partono insieme e non c'e' un ordine di arrivo garantito.
+function renderCommTotals() {
+    const el = document.getElementById('ap-comm-totals');
+    if (!el || !commTotals) return;
+    el.innerHTML =
+        `<span class="badge badge--lead-converted">Incassate: ${fmtEuro(commTotals.paid)}</span> ` +
+        `<span class="badge badge--lead-contacted">Da incassare: ${fmtEuro(commTotals.pending)}</span>`;
+}
+
 async function loadCommissions() {
     const tbody = document.getElementById('ap-comm-tbody');
     try {
-        const res = await fetch(`api/commissions.php?admin_user_id=${agentId}&limit=200`);
+        const res = await fetch(`api/commissions.php?admin_user_id=${agentId}&limit=${PAGE_LIMIT}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const items = (json.data && json.data.items) || json.data || [];
-        document.getElementById('ap-comm-count').textContent = `${items.length} provvigioni`;
-        const paid    = items.filter(c => c.status === 'paid').reduce((s, c) => s + Number(c.amount || 0), 0);
-        const pending = items.filter(c => c.status === 'pending').reduce((s, c) => s + Number(c.amount || 0), 0);
-        document.getElementById('ap-comm-totals').innerHTML =
-            `<span class="badge badge--lead-converted">Incassate: ${fmtEuro(paid)}</span> ` +
-            `<span class="badge badge--lead-contacted">Da incassare: ${fmtEuro(pending)}</span>`;
-        if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Nessuna provvigione registrata.</td></tr>'; return; }
+        const { items, total, truncated } = unwrap(json.data);
+        document.getElementById('ap-comm-count').textContent = countLabel(items.length, total, 'provvigioni');
+        renderCommTotals();
+        if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Nessuna provvigione registrata.</td></tr>'; return; }
         tbody.innerHTML = items.map(c => `
             <tr>
                 <td>${esc(c.property_address || '—')}</td>
                 <td>${esc(c.commission_type || '—')}</td>
+                <td>${c.agent_role && c.agent_role !== 'unico'
+                        ? `<span class="badge">${COMM_ROLE[c.agent_role] || esc(c.agent_role)}</span>`
+                        : '<span class="text-muted">—</span>'}</td>
                 <td><strong>${fmtEuro(c.amount)}</strong></td>
                 <td>${fmtDate(c.due_date)}</td>
                 <td><span class="badge badge--lead-${c.status === 'paid' ? 'converted' : 'contacted'}">${COMM_STATUS[c.status] || esc(c.status)}</span></td>
-            </tr>`).join('');
+            </tr>`).join('') + (truncated ? truncatedNote(total, 6) : '');
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="entity-error">${esc(err.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="entity-error">${esc(err.message)}</td></tr>`;
     }
 }
 

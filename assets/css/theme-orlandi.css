@@ -222,9 +222,10 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .db-stats .db-stat:nth-child(5) { --accent: #3186d5; }
 .db-stats .db-stat:nth-child(6) { --accent: #16a34a; }
 
-/* 3-up variant — list pages with three summary tiles (e.g. Provvigioni) and
-   6-tile rows (agent_profile KPIs) rendered as 2x3. Overrides the base
-   repeat(4) from 08-shell-dashboard on wide screens; breakpoints mirror it. */
+/* 3-up variant — list pages with three summary tiles (e.g. Provvigioni).
+   Overrides the base repeat(4) from 08-shell-dashboard on wide screens;
+   breakpoints mirror it. (agent_profile used this for a 2x3 of six KPIs; it is
+   on eight tiles now and sits on the base repeat(4).) */
 .db-stats--3 { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 1100px) { .db-stats--3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .db-stats--3 { grid-template-columns: 1fr; } }

@@ -30,7 +30,9 @@
         </div>
     </div>
 
-    <div class="db-stats db-stats--3" id="ap-kpis"></div>
+    <!-- 8 tessere: la griglia base e' repeat(4), quindi 2 righe piene. Con
+         db-stats--3 (3 colonne) l'ultima riga resterebbe spaiata a due. -->
+    <div class="db-stats" id="ap-kpis"></div>
 
     <div id="ap-alert" class="alert" style="display:none;"></div>
 
@@ -75,8 +77,8 @@
             <span id="ap-comm-totals" class="ap-comm-totals"></span>
         </div>
         <div class="table-wrapper"><table class="data-table">
-            <thead><tr><th>Immobile</th><th>Tipo</th><th>Importo</th><th>Scadenza</th><th>Stato</th></tr></thead>
-            <tbody id="ap-comm-tbody"><tr><td colspan="5" class="entity-loading">Caricamento…</td></tr></tbody>
+            <thead><tr><th>Immobile</th><th>Tipo</th><th title="Su una compravendita divisa: chi ha preso il mandato vs chi ha portato l'acquirente">Ruolo</th><th>Importo</th><th>Scadenza</th><th>Stato</th></tr></thead>
+            <tbody id="ap-comm-tbody"><tr><td colspan="6" class="entity-loading">Caricamento…</td></tr></tbody>
         </table></div>
     </div>
 </div>
@@ -99,6 +101,18 @@
 .agent-profile-view .ap-na--today   { color: var(--color-warning, #d97706); font-weight: 700; }
 .agent-profile-view .ap-na__note { font-size: 11px; color: var(--color-text-muted, #6b7688); margin-top: 2px; }
 .agent-profile-view .ap-na__tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-left: 4px; }
+/* Avviso di tabella tagliata: la pagina mostra solo le prime N righe */
+.agent-profile-view .ap-truncated {
+    font-size: 12px; color: var(--color-text-muted, #6b7688);
+    padding: 8px 10px; margin-top: 6px;
+    background: var(--color-surface-alt, #f6f8fb);
+    border-left: 3px solid var(--color-warning, #d97706);
+    border-radius: 0 4px 4px 0;
+}
+.agent-profile-view td.ap-truncated { margin-top: 0; border-radius: 0; }
+/* Dentro .entity-grid l'avviso e' una cella della griglia: senza questo
+   occuperebbe una colonna sola, in fila con le schede cliente. */
+.agent-profile-view .entity-grid > .ap-truncated { grid-column: 1 / -1; }
 /* Appointments grouping */
 .agent-profile-view .ap-appt-group { margin-bottom: 18px; }
 .agent-profile-view .ap-appt-group__title {
@@ -118,4 +132,4 @@
 .agent-profile-view details.ap-appt-past[open] > summary::before { content: "\25BE\00a0"; }
 </style>
 
-<script type="module" src="assets/js/agent_profile/index.js?v=2"></script>
+<script type="module" src="assets/js/agent_profile/index.js?v=3"></script>
