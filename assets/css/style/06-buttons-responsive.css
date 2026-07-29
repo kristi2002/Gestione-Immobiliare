@@ -1536,3 +1536,35 @@
     .pp-social-preview__img { width: 100%; }
 }
 
+
+
+/* ---------------------------------------------------------------------
+   .btn--secondary — usata e mai definita.
+
+   Compare su sei bottoni veri (views/settings.html:260 e :279,
+   views/valuation.html:8 e :81, assets/js/valuation.js:252 e :285) senza
+   una sola regola in tutto il foglio: "Importa listino", "Anteprima" e
+   "Salva indice" uscivano con il solo `.btn`, cioe' fondo trasparente e
+   bordo assente — indistinguibili dal testo intorno.
+
+   Non un secondo bottone primario: e' l'azione di supporto accanto a
+   quella principale, quindi prende il colore del marchio sul bordo e sul
+   testo ma non sul fondo. Stesso ruolo di .btn--outline-primary, di cui
+   riusa i valori per non aprire un terzo vocabolario.
+   --------------------------------------------------------------------- */
+.btn--secondary {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.btn--secondary:not(:disabled):hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+.btn--secondary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
