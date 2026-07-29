@@ -166,41 +166,106 @@ function runSqlFile(PDO $db, string $file): void
     }
 }
 
-/** Split SQL into statements, tracking DELIMITER changes and skipping comments. */
+/**
+ * Split SQL into statements, tracking DELIMITER changes and skipping comments.
+ *
+ * Lo split RISPETTA i letterali: un delimitatore dentro una stringa non taglia
+ * niente. Prima non era cosi', e il costo non era teorico — un `;` dentro un
+ * COMMENT spezzava la CREATE TABLE a meta' e la migrazione moriva in deploy con
+ * un errore 1064 che parlava di sintassi mentre l'SQL era perfettamente valido.
+ * Ne erano affette phase74, 79, 80, 81 e 82, tutte con lo stesso commento a due
+ * frasi ("unico = provvigione intera; acquisitore = meta' di uno split"). E
+ * siccome il runner si ferma al primo errore, bastava la piu' vecchia per
+ * bloccare ogni migrazione successiva.
+ *
+ * Si tiene conto di apici singoli, doppi apici e backtick, del raddoppio ('')
+ * come carattere letterale e dell'escape con backslash. Una riga che inizia per
+ * `--` viene saltata solo se NON siamo dentro una stringa: i COMMENT su piu'
+ * righe di phase74 altrimenti perderebbero pezzi.
+ */
 function splitSqlStatements(string $sql): array
 {
     $statements = [];
     $delimiter  = ';';
     $buffer     = '';
+    $quote      = null;   // null | "'" | '"' | '`' — quale letterale è aperto
+    $scanned    = 0;      // quanto del buffer è già stato analizzato
+
+    $emit = static function (string $statement) use (&$statements): void {
+        if (trim($statement) !== '') {
+            $statements[] = $statement;
+        }
+    };
 
     foreach (preg_split('/\R/', $sql) as $line) {
-        $trimmed = trim($line);
+        // Le direttive di riga (commenti, DELIMITER) valgono solo fuori da un
+        // letterale: dentro, sono testo del dato.
+        if ($quote === null) {
+            $trimmed = trim($line);
 
-        // Standalone line comments (-- / #). Block comments are left in place;
-        // MySQL tolerates them inside exec().
-        if ($trimmed === '' && $buffer === '') {
-            continue;
-        }
-        if (str_starts_with($trimmed, '--') || str_starts_with($trimmed, '#')) {
-            continue;
-        }
+            // Standalone line comments (-- / #). Block comments are left in place;
+            // MySQL tolerates them inside exec().
+            if ($trimmed === '' && $buffer === '') {
+                continue;
+            }
+            if (str_starts_with($trimmed, '--') || str_starts_with($trimmed, '#')) {
+                continue;
+            }
 
-        // DELIMITER directive (client-side; not real SQL).
-        if (preg_match('/^DELIMITER\s+(\S+)/i', $trimmed, $m)) {
-            $delimiter = $m[1];
-            continue;
+            // DELIMITER directive (client-side; not real SQL).
+            if (preg_match('/^DELIMITER\s+(\S+)/i', $trimmed, $m)) {
+                $delimiter = $m[1];
+                continue;
+            }
         }
 
         $buffer .= $line . "\n";
 
-        // Emit whenever the current delimiter terminates the buffer.
-        while (($pos = strpos($buffer, $delimiter)) !== false) {
-            $statement = substr($buffer, 0, $pos);
-            $buffer    = substr($buffer, $pos + strlen($delimiter));
-            if (trim($statement) !== '') {
-                $statements[] = $statement;
+        // Scansione dal punto in cui ci si era fermati: ogni carattere viene
+        // guardato una volta sola anche su file lunghi.
+        $i      = $scanned;
+        $len    = strlen($buffer);
+        $dlen   = strlen($delimiter);
+
+        while ($i < $len) {
+            $ch = $buffer[$i];
+
+            if ($quote !== null) {
+                // I backtick non conoscono l'escape con backslash.
+                if ($ch === '\\' && $quote !== '`') {
+                    $i += 2;
+                    continue;
+                }
+                if ($ch === $quote) {
+                    // Raddoppiato ('') = un apice dentro la stringa, non la fine.
+                    if ($i + 1 < $len && $buffer[$i + 1] === $quote) {
+                        $i += 2;
+                        continue;
+                    }
+                    $quote = null;
+                }
+                $i++;
+                continue;
             }
+
+            if ($ch === "'" || $ch === '"' || $ch === '`') {
+                $quote = $ch;
+                $i++;
+                continue;
+            }
+
+            if ($dlen > 0 && substr($buffer, $i, $dlen) === $delimiter) {
+                $emit(substr($buffer, 0, $i));
+                $buffer = substr($buffer, $i + $dlen);
+                $len    = strlen($buffer);
+                $i      = 0;
+                continue;
+            }
+
+            $i++;
         }
+
+        $scanned = strlen($buffer);
     }
 
     if (trim($buffer) !== '') {
