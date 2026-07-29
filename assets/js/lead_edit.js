@@ -24,8 +24,10 @@
         el.textContent = msg; el.className = `alert alert--${type}`; el.style.display = 'block';
         clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
     }
-    function showError(m) { const el = $('lde-error'); if (el) { el.textContent = m; el.style.display = 'block'; } }
-    function clearError() { const el = $('lde-error'); if (el) el.style.display = 'none'; }
+    // Scroll the failure into view: the box is below the fold once the
+    // preferences section is open, and Salva is pinned to the viewport bottom.
+    function showError(m) { window.FormGuard.reportError($('lde-error'), m); }
+    function clearError() { window.FormGuard.clearError($('lde-error')); }
 
     function goBack() { if (window.App) window.App.navigateTo('leads'); }
     // "Indietro"/"Annulla"/Esc ripercorrono il cammino fatto; l'elenco Leads e'
@@ -139,6 +141,16 @@
 
         // If they typed something in the property box that didn't match a listing,
         // don't silently drop it — ask them to pick one or clear the field.
+        // Ne' il modulo ne' l'API confrontavano i due estremi: un lead con
+        // budget 300.000–30.000 si salvava e non corrispondeva a niente.
+        const bMin = parseFloat($('lde-budget-min').value);
+        const bMax = parseFloat($('lde-budget-max').value);
+        if (Number.isFinite(bMin) && Number.isFinite(bMax) && bMin > bMax) {
+            showError('Il budget minimo non può superare il massimo.');
+            $('lde-budget-max').focus();
+            return;
+        }
+
         const propTxt = $('lde-property-search').value.trim();
         if (propTxt !== '' && !$('lde-property-id').value) {
             showError('Immobile richiesto: seleziona una voce dall\'elenco oppure svuota il campo.');
@@ -177,10 +189,18 @@
         }
     }
 
+    // Unsaved-changes guard — assigned in init(), consulted by leave().
+    let guard = null;
+    let saving = false;
+
     async function init() {
         $('lde-back').addEventListener('click', leave);
         $('lde-cancel').addEventListener('click', leave);
         $('lde-form').addEventListener('submit', save);
+        guard = window.FormGuard.guardUnsaved($('lde-form'), { isSaving: () => saving });
+        // Il Codice Fiscale vive in un <details> chiuso: se l'API lo rifiuta, il
+        // messaggio puntava a un campo che l'utente non poteva nemmeno vedere.
+        $('lde-form').addEventListener('invalid', (e) => window.FormGuard.revealField(e.target), true);
         $('lde-form').addEventListener('keydown', onKeydown);
         $('lde-property-search').addEventListener('input', resolveProperty);
 

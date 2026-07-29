@@ -32,8 +32,12 @@
         clearTimeout(el._t);
         el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
     }
-    function showError(message) { const el = $('pe-error'); if (el) { el.textContent = message; el.style.display = 'block'; } }
-    function clearError() { const el = $('pe-error'); if (el) el.style.display = 'none'; }
+    // #pe-error is the last element before the action bar, i.e. ~4000px down the
+    // page, while Salva is pinned to the bottom of the viewport. Submitting from
+    // any section above the last one painted the failure off-screen and the save
+    // looked like a no-op. FormGuard.reportError scrolls it into view.
+    function showError(message) { window.FormGuard.reportError($('pe-error'), message); }
+    function clearError() { window.FormGuard.clearError($('pe-error')); }
 
     function goBack() {
         if (!window.App) return;
@@ -44,6 +48,9 @@
     // resta come ripiego quando il form e' la prima pagina aperta.
     function leave() {
         if (!window.App) return;
+        // Forty filled-in fields used to disappear on one stray click.
+        if (guard && !guard.confirmLeave()) return;
+        if (guard) guard.detach();
         if (isEdit) window.App.back('property_profile', { propertyId });
         else window.App.back('properties');
     }
@@ -60,7 +67,17 @@
             }
             const opts = list.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
             $('pe-client').innerHTML = '<option value="">— Seleziona proprietario —</option>' + opts;
-            if (selectedId) $('pe-client').value = selectedId;
+            if (selectedId) {
+                // The list is status=active only. A proprietario deactivated after
+                // the immobile was filed has no <option>, so `.value = id` silently
+                // resolved to "" and the next Salva wrote client_id: "" — the
+                // immobile lost its owner just because someone opened the form.
+                const label = await window.FormGuard.labelFor(
+                    CLIENTS_API, selectedId,
+                    c => [c.surname, c.name].filter(Boolean).join(' ') || c.company_name || ''
+                );
+                window.FormGuard.keepSelected($('pe-client'), selectedId, label);
+            }
         } catch (err) {
             showAlert('Errore caricamento proprietari: ' + err.message, 'error');
         }
@@ -73,6 +90,9 @@
             const list = json.data || [];
             $('pe-agent').innerHTML = '<option value="">Scegli</option>' +
                 list.map(a => `<option value="${a.id}">${escapeHtml(a.username)}</option>`).join('');
+            // Same trap as loadClients: the endpoint returns is_active = 1 only,
+            // so a since-deactivated agent would be silently unassigned on save.
+            if (selectedId) window.FormGuard.keepSelected($('pe-agent'), selectedId);
             if (selectedId) $('pe-agent').value = selectedId;
         } catch (e) { /* dropdown resta vuoto, campo opzionale */ }
     }
@@ -656,6 +676,7 @@
         clearError();
         const id  = $('pe-id').value;
         const btn = $('pe-save');
+        saving = true;
         btn.disabled = true; btn.textContent = 'Salvataggio...';
         try {
             const res = await fetch(id ? `${API}?id=${id}` : API, {
@@ -666,9 +687,11 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             const newId = id || json.data?.id;
+            if (guard) { guard.markClean(); guard.detach(); }
             if (window.App && newId) window.App.navigateTo('property_profile', { propertyId: Number(newId) });
             else if (window.App) window.App.navigateTo('properties');
         } catch (err) {
+            saving = false;
             showError(err.message);
             btn.disabled = false; btn.textContent = 'Salva';
         }
@@ -805,6 +828,11 @@
         input.addEventListener('blur', () => setTimeout(close, 150));
     }
 
+    // Watches the form for edits so leaving with a half-filled immobile asks first.
+    // Assigned in init(); every exit path goes through leave().
+    let guard = null;
+    let saving = false;
+
     async function init() {
         buildLangPanels();
         updateTypologyOptions('');
@@ -822,6 +850,12 @@
         $('pe-back').addEventListener('click', leave);
         $('pe-cancel').addEventListener('click', leave);
         $('pe-form').addEventListener('submit', save);
+        // Un campo obbligatorio dentro una sezione chiusa non e' focalizzabile:
+        // il browser segnala l'errore puntando a un elemento invisibile.
+        $('pe-form').addEventListener('invalid', (e) => {
+            window.FormGuard.revealField(e.target);
+        }, true);
+        guard = window.FormGuard.guardUnsaved($('pe-form'), { isSaving: () => saving });
         setupAutoGeocode();
         $('pe-mandato').addEventListener('click', generateMandato);
         setupAddressAutocomplete();

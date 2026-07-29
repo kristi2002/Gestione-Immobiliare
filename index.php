@@ -288,6 +288,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     <script src="assets/js/pagination.js?v=<?= @filemtime(__DIR__ . '/assets/js/pagination.js') ?: time() ?>"></script>
     <script src="assets/js/filters.js?v=<?= @filemtime(__DIR__ . '/assets/js/filters.js') ?: time() ?>"></script>
     <script src="assets/js/datepicker.js?v=<?= @filemtime(__DIR__ . '/assets/js/datepicker.js') ?: time() ?>"></script>
+    <script src="assets/js/form_guard.js?v=<?= @filemtime(__DIR__ . '/assets/js/form_guard.js') ?: time() ?>"></script>
     <script>
     // Topbar welcome line — "Benvenuto, <utente> · Lunedì 14 Luglio 2026"
     (function () {

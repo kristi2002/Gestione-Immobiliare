@@ -31,14 +31,12 @@
     }
 
     function showError(message) {
-        const el = $('ce-error');
-        if (!el) return;
-        el.textContent = message;
-        el.style.display = 'block';
+        // #ce-error sits just above the sticky action bar, below the fold on a
+        // form this long: without scrolling it in, Salva looks like it did nothing.
+        window.FormGuard.reportError($('ce-error'), message);
     }
     function clearError() {
-        const el = $('ce-error');
-        if (el) el.style.display = 'none';
+        window.FormGuard.clearError($('ce-error'));
         const dup = $('ce-duplicate');
         if (dup) dup.style.display = 'none';
     }
@@ -108,6 +106,8 @@
     // resta come ripiego quando il form e' la prima pagina aperta.
     function leave() {
         if (!window.App) return;
+        if (guard && !guard.confirmLeave()) return;
+        if (guard) guard.detach();
         if (isEdit) window.App.back('client_profile', { clientId });
         else window.App.back('clients');
     }
@@ -330,6 +330,12 @@
         $('ce-back').addEventListener('click', leave);
         $('ce-cancel').addEventListener('click', leave);
         $('ce-form').addEventListener('submit', save);
+        guard = window.FormGuard.guardUnsaved($('ce-form'), { isSaving: () => saving });
+        // Nascere domani non e' previsto. Il campo (e l'API) accettavano date future.
+        const birth = $('ce-birth-date');
+        if (birth) birth.max = new Date().toISOString().slice(0, 10);
+        // Un campo obbligatorio dentro un <details> chiuso non e' focalizzabile.
+        $('ce-form').addEventListener('invalid', (e) => window.FormGuard.revealField(e.target), true);
         $('ce-person-type').addEventListener('change', applyPersonType);
 
         // ID card uploads

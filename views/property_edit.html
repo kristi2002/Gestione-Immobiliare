@@ -54,7 +54,9 @@
                     </div>
                     <div class="form-group">
                         <label for="pe-province">Provincia</label>
-                        <input type="text" id="pe-province" class="form-input" maxlength="10" placeholder="MC">
+                        <input type="text" id="pe-province" class="form-input" maxlength="2" placeholder="MC"
+                               pattern="[A-Za-z]{2}" title="Sigla di due lettere, es. MC"
+                               autocapitalize="characters" style="text-transform:uppercase">
                     </div>
                 </div>
                 <div class="form-group">
@@ -127,7 +129,7 @@
                     </div>
                     <div class="form-group">
                         <label for="pe-price"><span id="pe-price-label">Prezzo vendita</span> (€)</label>
-                        <input type="number" id="pe-price" class="form-input" min="0" step="0.01">
+                        <input type="number" id="pe-price" class="form-input" min="0" step="0.01" inputmode="decimal">
                         <label class="pe-check"><input type="checkbox" id="pe-price-request"> Mostra come "Prezzo su richiesta"</label>
                     </div>
                 </div>
@@ -293,21 +295,6 @@
                         </select>
                     </div>
                 </div>
-                <div class="yn-grid">
-                    <div class="yn-item"><span>Armadi a muro</span><div class="yn" id="pe-wardrobes"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Cantina</span><div class="yn" id="pe-cellar"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Mansarda</span><div class="yn" id="pe-attic"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Taverna</span><div class="yn" id="pe-tavern"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Porta blindata</span><div class="yn" id="pe-armored-door"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Impianto d'allarme</span><div class="yn" id="pe-alarm"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Cancello elettrico</span><div class="yn" id="pe-electric-gate"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Videocitofono</span><div class="yn" id="pe-video-intercom"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Fibra ottica</span><div class="yn" id="pe-fiber"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Camino / caminetto</span><div class="yn" id="pe-fireplace"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Idromassaggio</span><div class="yn" id="pe-jacuzzi"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Piscina</span><div class="yn" id="pe-pool"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                    <div class="yn-item"><span>Campo da tennis</span><div class="yn" id="pe-tennis"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
-                </div>
             </fieldset>
 
             <fieldset class="form-section">
@@ -315,7 +302,9 @@
                 <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="pe-year-built">Anno costruzione</label>
-                        <input type="number" id="pe-year-built" class="form-input" min="1800" max="2099" step="1" placeholder="es. 1985">
+                        <input type="number" id="pe-year-built" class="form-input" min="1800" max="2026" step="1"
+                               inputmode="numeric" placeholder="es. 1985"
+                               title="Un anno fra il 1800 e il 2026">
                     </div>
                     <div class="form-group">
                         <label for="pe-property-class">Classe immobile</label>
@@ -438,8 +427,27 @@
                 </div>
             </fieldset>
 
-            <fieldset class="form-section">
-                <legend>Certificazione Energetica</legend>
+            <details class="form-section form-section--fold">
+                <summary><span class="ef-fold-title">Dotazioni e impianti</span><span class="ef-fold-meta">porta blindata, allarme, fibra, piscina…</span></summary>
+                <div class="yn-grid">
+                    <div class="yn-item"><span>Armadi a muro</span><div class="yn" id="pe-wardrobes"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Cantina</span><div class="yn" id="pe-cellar"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Mansarda</span><div class="yn" id="pe-attic"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Taverna</span><div class="yn" id="pe-tavern"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Porta blindata</span><div class="yn" id="pe-armored-door"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Impianto d'allarme</span><div class="yn" id="pe-alarm"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Cancello elettrico</span><div class="yn" id="pe-electric-gate"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Videocitofono</span><div class="yn" id="pe-video-intercom"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Fibra ottica</span><div class="yn" id="pe-fiber"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Camino / caminetto</span><div class="yn" id="pe-fireplace"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Idromassaggio</span><div class="yn" id="pe-jacuzzi"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Piscina</span><div class="yn" id="pe-pool"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                    <div class="yn-item"><span>Campo da tennis</span><div class="yn" id="pe-tennis"><button type="button" class="yn__btn" data-v="1">Sì</button><button type="button" class="yn__btn" data-v="0">No</button></div></div>
+                </div>
+            </details>
+
+            <details class="form-section form-section--fold">
+                <summary><span class="ef-fold-title">Certificazione Energetica</span><span class="ef-fold-meta">APE</span></summary>
                 <div class="form-row form-row--3">
                     <div class="form-group">
                         <label for="pe-energy">Classe Energetica</label>
@@ -482,10 +490,10 @@
                     </div>
                 </div>
                 <p class="field-hint">La scadenza APE si compila da sola a 10 anni dal rilascio se lasciata vuota.</p>
-            </fieldset>
+            </details>
 
-            <fieldset class="form-section">
-                <legend>Dati catastali <span class="section-flag">Non visibile in pubblicità</span></legend>
+            <details class="form-section form-section--fold">
+                <summary><span class="ef-fold-title">Dati catastali</span><span class="ef-fold-meta">visura</span><span class="section-flag">Non visibile in pubblicità</span></summary>
                 <div class="form-row form-row--4">
                     <div class="form-group">
                         <label for="pe-cat-sezione">Sezione</label>
@@ -536,16 +544,16 @@
                         <input type="text" id="pe-cat-other" class="form-input" maxlength="500">
                     </div>
                 </div>
-            </fieldset>
+            </details>
 
-            <fieldset class="form-section">
-                <legend>Descrizione per i portali web</legend>
+            <details class="form-section form-section--fold">
+                <summary><span class="ef-fold-title">Descrizione per i portali web</span><span class="ef-fold-meta">annuncio</span></summary>
                 <div class="lang-tabs" id="pe-lang-tabs"></div>
                 <div id="pe-lang-panels"></div>
-            </fieldset>
+            </details>
 
-            <fieldset class="form-section">
-                <legend>Dati intermediazione</legend>
+            <details class="form-section form-section--fold">
+                <summary><span class="ef-fold-title">Dati intermediazione</span><span class="ef-fold-meta">mandato e provvigione</span></summary>
                 <div class="form-row form-row--4">
                     <div class="form-group">
                         <label for="pe-reference">Riferimento annuncio</label>
@@ -575,14 +583,14 @@
                         </select>
                     </div>
                 </div>
-            </fieldset>
+            </details>
 
-            <fieldset class="form-section">
-                <legend>Note <span class="section-flag">Non visibile in pubblicità</span></legend>
+            <details class="form-section form-section--fold">
+                <summary><span class="ef-fold-title">Note</span><span class="ef-fold-meta"></span><span class="section-flag">Non visibile in pubblicità</span></summary>
                 <div class="form-group">
                     <textarea id="pe-notes" class="form-textarea" rows="3" placeholder="Inserisci una nota"></textarea>
                 </div>
-            </fieldset>
+            </details>
 
             <div id="pe-error" class="alert alert--error" style="display:none;margin:12px 0 0 0"></div>
 
