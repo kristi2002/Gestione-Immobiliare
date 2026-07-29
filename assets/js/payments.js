@@ -362,6 +362,13 @@
                 let msg = `${d.count} addebiti idonei · totale ${eur(d.total)}`;
                 if (d.collection_date) msg += ` · addebito il ${formatDate(d.collection_date)}`;
                 msg += '.';
+                // I primi incassi su un mandato (FRST) sono quelli che la banca
+                // respinge piu' spesso e che vogliono piu' preavviso: vanno detti
+                // per nome prima di scaricare, non scoperti dalla ricevuta di scarto.
+                if (d.first_count) {
+                    msg += ` ℹ ${d.first_count} primo/i addebito/i su nuovo mandato (${d.first_debtors.join(', ')})`
+                         + ' — verifica il preavviso richiesto dalla banca.';
+                }
                 if (d.missing && d.missing.length) msg += ` ⚠ Configura: ${d.missing.join(', ')}.`;
                 if (d.skipped && d.skipped.length) msg += ` Esclusi (mandato/IBAN mancante o non valido): ${d.skipped.length}.`;
                 // Blocking problems: these are exactly what the bank would reject.

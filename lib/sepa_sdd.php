@@ -9,10 +9,28 @@
  * This produces the standard XML; the agency uploads it to home-banking / CBI.
  */
 
+/** The two sequence types this file can emit (SeqTp). */
+const SEPA_SEQ_TYPES = ['FRST', 'RCUR'];
+
+/**
+ * Normalise a transaction's sequence type.
+ *
+ * Anything that isn't literally FRST is treated as RCUR: a wrong RCUR on a first
+ * collection is rejected by the bank, but a wrong FRST on a recurring one is
+ * rejected too — and only one of the two can be reached by a caller that simply
+ * forgot the key. sepaSddValidate() is where a missing value is actually
+ * reported; this keeps the builder from emitting an empty SeqTp element.
+ */
+function sepaSeqType(array $tx): string
+{
+    return (($tx['seq_type'] ?? '') === 'FRST') ? 'FRST' : 'RCUR';
+}
+
 /**
  * @param array{name:string,iban:string,creditor_id:string} $creditor
  * @param array<int,array{end_to_end_id:string,amount:float,mandate_id:string,
- *   mandate_date:string,debtor_name:string,debtor_iban:string,remittance:string}> $txs
+ *   mandate_date:string,debtor_name:string,debtor_iban:string,remittance:string,
+ *   seq_type:string}> $txs
  * @param string $collectionDate  Y-m-d requested collection date
  * @param string $msgId           unique message id
  * @param string $createdAt       ISO 8601 creation datetime (pass in — no clock here)
@@ -31,7 +49,7 @@ function sepaSddBuildXml(array $creditor, array $txs, string $collectionDate, st
     foreach ($txs as $t) $ctrlSum += (float) $t['amount'];
     $nb = count($txs);
 
-    // Group header
+    // Group header — totals are for the whole message, across every PmtInf block.
     $grpHdr = $dom->createElement('GrpHdr');
     $root->appendChild($grpHdr);
     $grpHdr->appendChild($dom->createElement('MsgId', sepaClean($msgId, 35)));
@@ -42,10 +60,43 @@ function sepaSddBuildXml(array $creditor, array $txs, string $collectionDate, st
     $initg->appendChild($dom->createElement('Nm', sepaClean($creditor['name'], 70)));
     $grpHdr->appendChild($initg);
 
-    // Payment information block
+    // SeqTp lives in PmtTpInf, which is a property of the PAYMENT INFORMATION
+    // block — not of the single transaction. A batch that mixes a new tenant's
+    // first collection with everyone else's recurring ones therefore cannot be
+    // one block: it is split into one PmtInf per sequence type. FRST first, so
+    // the block needing the longer bank lead time is at the top of the file.
+    foreach (SEPA_SEQ_TYPES as $seq) {
+        $group = array_values(array_filter($txs, fn($t) => sepaSeqType($t) === $seq));
+        if (!$group) {
+            continue;   // no empty PmtInf: NbOfTxs = 0 is a schema violation
+        }
+        sepaSddAppendPmtInf($dom, $root, $creditor, $group, $seq, $collectionDate, $msgId);
+    }
+
+    return $dom->saveXML();
+}
+
+/**
+ * One <PmtInf> block: the creditor side, the sequence type, and its transactions.
+ */
+function sepaSddAppendPmtInf(
+    DOMDocument $dom,
+    DOMElement $root,
+    array $creditor,
+    array $txs,
+    string $seqType,
+    string $collectionDate,
+    string $msgId
+): void {
+    $ctrlSum = 0.0;
+    foreach ($txs as $t) $ctrlSum += (float) $t['amount'];
+    $nb = count($txs);
+
     $pmtInf = $dom->createElement('PmtInf');
     $root->appendChild($pmtInf);
-    $pmtInf->appendChild($dom->createElement('PmtInfId', sepaClean($msgId, 35)));
+    // PmtInfId must be unique within the message: suffix it with the sequence
+    // type, which is exactly what distinguishes the blocks.
+    $pmtInf->appendChild($dom->createElement('PmtInfId', sepaClean($msgId . '-' . $seqType, 35)));
     $pmtInf->appendChild($dom->createElement('PmtMtd', 'DD'));
     $pmtInf->appendChild($dom->createElement('NbOfTxs', (string) $nb));
     $pmtInf->appendChild($dom->createElement('CtrlSum', sepaAmt($ctrlSum)));
@@ -54,7 +105,7 @@ function sepaSddBuildXml(array $creditor, array $txs, string $collectionDate, st
     $pmtInf->appendChild($pmtTpInf);
     $svcLvl = $dom->createElement('SvcLvl'); $svcLvl->appendChild($dom->createElement('Cd', 'SEPA')); $pmtTpInf->appendChild($svcLvl);
     $lclInstrm = $dom->createElement('LclInstrm'); $lclInstrm->appendChild($dom->createElement('Cd', 'CORE')); $pmtTpInf->appendChild($lclInstrm);
-    $pmtTpInf->appendChild($dom->createElement('SeqTp', 'RCUR'));
+    $pmtTpInf->appendChild($dom->createElement('SeqTp', $seqType));
 
     $pmtInf->appendChild($dom->createElement('ReqdColltnDt', substr($collectionDate, 0, 10)));
 
@@ -106,8 +157,6 @@ function sepaSddBuildXml(array $creditor, array $txs, string $collectionDate, st
 
         $rmt = $dom->createElement('RmtInf'); $rmt->appendChild($dom->createElement('Ustrd', sepaClean($t['remittance'], 140))); $tx->appendChild($rmt);
     }
-
-    return $dom->saveXML();
 }
 
 function sepaAmt(float $n): string
@@ -231,6 +280,13 @@ function sepaSddValidate(array $creditor, array $txs, string $collectionDate, st
         }
         if (trim((string) ($t['debtor_name'] ?? '')) === '') {
             $errors[] = 'Un addebito non ha il nome del debitore.';
+        }
+        // Il chiamante DEVE decidere la sequenza (vedi sddAssignSequenceTypes in
+        // api/generate_sdd.php): il builder ripiega su RCUR e un RCUR sbagliato
+        // sul primo incasso di un mandato e' proprio il rifiuto che si vuole
+        // evitare, quindi l'assenza va segnalata qui e non lasciata passare.
+        if (!in_array($t['seq_type'] ?? '', SEPA_SEQ_TYPES, true)) {
+            $errors[] = "Sequenza SDD (FRST/RCUR) non determinata per $who.";
         }
     }
 

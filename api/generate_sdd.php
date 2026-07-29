@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../lib/sepa_sdd.php';
+require_once __DIR__ . '/../lib/sdd_sequence.php';
 
 if (!in_array(getCurrentRole(), ['admin', 'super_admin'], true)) {
     apiError('Permesso negato.', 403);
@@ -35,7 +36,7 @@ try {
 
     // Collect due SDD payments with a valid mandate.
     $stmt = $db->prepare(
-        "SELECT pay.id, pay.amount, pay.due_date,
+        "SELECT pay.id, pay.tenant_id, pay.amount, pay.due_date,
                 t.name AS t_name, t.surname AS t_surname, t.iban, t.sdd_mandate_ref, t.sdd_mandate_date,
                 p.address AS property_address
          FROM payments pay
@@ -65,6 +66,10 @@ try {
             continue;
         }
         $txs[] = [
+            // payment_id / tenant_id non finiscono nell'XML: servono al registro
+            // sdd_collections per decidere e ricordare la sequenza FRST/RCUR.
+            'payment_id'    => (int) $r['id'],
+            'tenant_id'     => (int) $r['tenant_id'],
             'end_to_end_id' => 'RENT-' . $r['id'],
             'amount'        => (float) $r['amount'],
             'mandate_id'    => $r['sdd_mandate_ref'],
@@ -74,6 +79,10 @@ try {
             'remittance'    => 'Canone locazione ' . $month . ' ' . ($r['property_address'] ?? ''),
         ];
     }
+
+    // FRST o RCUR: deciso qui, prima di validare, perche' sepaSddValidate()
+    // pretende che la sequenza esista.
+    $txs = sddAssignSequenceTypes($db, $txs);
 
     $today = date('Y-m-d');
 
@@ -91,6 +100,7 @@ try {
 
     if (!empty($_GET['check'])) {
         $schemaAvailable = is_readable(sepaSddSchemaPath());
+        $firstOnes = array_values(array_filter($txs, fn($t) => $t['seq_type'] === 'FRST'));
         apiSuccess([
             'ready'           => empty($missing) && empty($problems) && count($txs) > 0,
             'missing'         => $missing,
@@ -101,6 +111,13 @@ try {
             'month'           => $month,
             'collection_date' => $collectionDate,
             'schema_validation' => $schemaAvailable ? 'attiva' : 'non disponibile',
+            // I primi addebiti sono quelli che la banca guarda con piu' attenzione
+            // e che richiedono piu' preavviso: vanno mostrati per nome, non contati
+            // e basta. La preview NON scrive nel registro — la sequenza qui e' una
+            // previsione, e diventa definitiva solo quando il file viene generato.
+            'first_count'     => count($firstOnes),
+            'first_debtors'   => array_map(fn($t) => $t['debtor_name'], $firstOnes),
+            'recurring_count' => count($txs) - count($firstOnes),
         ]);
     }
 
@@ -122,11 +139,19 @@ try {
         apiError('Il file generato non rispetta lo schema pain.008.001.02: ' . implode(' | ', array_slice($schema['errors'], 0, 5)), 500);
     }
 
+    // Il registro si scrive solo ORA: dopo la validazione e prima di consegnare
+    // il file. Registrare prima avrebbe bruciato il FRST di un mandato su un file
+    // mai prodotto, e il mese dopo la banca avrebbe ricevuto un RCUR senza primo
+    // incasso — lo stesso rifiuto, spostato di trenta giorni.
+    sddRecordExport($db, $txs, $collectionDate, $msgId, getCurrentAdminId());
+
     apiDiscardBufferedOutput();
     header('Content-Type: application/xml; charset=utf-8');
     header('Content-Disposition: attachment; filename="SDD_' . $month . '.xml"');
     echo $xml;
     exit;
 } catch (PDOException $e) {
+    error_log('generate_sdd failed: ' . $e->getMessage());
     apiError('Errore database.', 500);
 }
+
