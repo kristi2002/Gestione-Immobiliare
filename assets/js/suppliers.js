@@ -29,21 +29,14 @@
         els.pagination     = document.getElementById('suppliers-pagination');
         els.search         = document.getElementById('suppliers-search');
         els.categoryFilter = document.getElementById('suppliers-category-filter');
-        els.modal          = document.getElementById('suppliers-modal');
-        els.form           = document.getElementById('suppliers-form');
         els.delModal       = document.getElementById('suppliers-delete-modal');
 
         bindEvents();
-        initStarSelector();
         loadSuppliers();
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-supplier').addEventListener('click', () => openModal());
-        document.getElementById('suppliers-modal-close').addEventListener('click', closeModal);
-        document.getElementById('suppliers-modal-cancel').addEventListener('click', closeModal);
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-        els.form.addEventListener('submit', handleSubmit);
+        document.getElementById('btn-new-supplier').addEventListener('click', () => openForm());
 
         document.getElementById('suppliers-delete-close').addEventListener('click', closeDeleteModal);
         document.getElementById('suppliers-delete-cancel').addEventListener('click', closeDeleteModal);
@@ -52,37 +45,6 @@
 
         els.search.addEventListener('input', debounce(() => { currentPage = 1; loadSuppliers(); }, 300));
         els.categoryFilter.addEventListener('change', () => { currentPage = 1; loadSuppliers(); });
-    }
-
-    function initStarSelector() {
-        const stars      = document.querySelectorAll('#suppliers-star-selector .star');
-        const ratingInput = document.getElementById('suppliers-rating');
-
-        function setStars(val) {
-            stars.forEach(s => {
-                s.textContent = parseInt(s.dataset.value) <= val ? '★' : '☆';
-                s.style.color = parseInt(s.dataset.value) <= val ? '#f5a623' : '#ccc';
-            });
-        }
-
-        stars.forEach(star => {
-            star.addEventListener('mouseover', () => setStars(parseInt(star.dataset.value)));
-            star.addEventListener('mouseout',  () => setStars(parseInt(ratingInput.value) || 0));
-            star.addEventListener('click', () => {
-                ratingInput.value = star.dataset.value;
-                setStars(parseInt(star.dataset.value));
-            });
-        });
-    }
-
-    function setRatingDisplay(val) {
-        const stars = document.querySelectorAll('#suppliers-star-selector .star');
-        const v     = parseInt(val) || 0;
-        document.getElementById('suppliers-rating').value = v;
-        stars.forEach(s => {
-            s.textContent = parseInt(s.dataset.value) <= v ? '★' : '☆';
-            s.style.color = parseInt(s.dataset.value) <= v ? '#f5a623' : '#ccc';
-        });
     }
 
     async function loadSuppliers() {
@@ -158,15 +120,7 @@
         });
 
         els.grid.querySelectorAll('.btn-s-edit').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    const res  = await fetch(`${API}?id=${btn.dataset.id}`);
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.error);
-                    const item = Array.isArray(json.data) ? json.data[0] : json.data;
-                    openModal(item);
-                } catch (e) { showAlert(e.message, 'error'); }
-            });
+            btn.addEventListener('click', () => openForm(btn.dataset.id));
         });
 
         els.grid.querySelectorAll('.btn-s-del').forEach(btn => {
@@ -178,62 +132,15 @@
         });
     }
 
-    function openModal(item = null) {
-        els.form.reset();
-        document.getElementById('suppliers-id').value = '';
-        document.getElementById('suppliers-modal-title').textContent = item ? 'Modifica Fornitore' : 'Nuovo Fornitore';
-        setRatingDisplay(0);
-
-        if (item) {
-            document.getElementById('suppliers-id').value       = item.id;
-            document.getElementById('suppliers-name').value     = item.name || '';
-            document.getElementById('suppliers-category').value = item.category || '';
-            document.getElementById('suppliers-phone').value    = item.phone || '';
-            document.getElementById('suppliers-email').value    = item.email || '';
-            document.getElementById('suppliers-address').value  = item.address || '';
-            document.getElementById('suppliers-notes').value    = item.notes || '';
-            setRatingDisplay(item.rating || 0);
-        }
-
-        els.modal.hidden = false;
-        document.getElementById('suppliers-name').focus();
-    }
-
-    function closeModal() { els.modal.hidden = true; }
-    function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id  = document.getElementById('suppliers-id').value;
-        const btn = document.getElementById('suppliers-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-        const data = {
-            name:     document.getElementById('suppliers-name').value.trim(),
-            category: document.getElementById('suppliers-category').value,
-            phone:    document.getElementById('suppliers-phone').value.trim(),
-            email:    document.getElementById('suppliers-email').value.trim(),
-            address:  document.getElementById('suppliers-address').value.trim(),
-            notes:    document.getElementById('suppliers-notes').value.trim(),
-            rating:   parseInt(document.getElementById('suppliers-rating').value) || 0,
-        };
-
-        try {
-            const res  = await fetch(id ? `${API}?id=${id}` : API, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Fornitore salvato con successo.', 'success');
-            loadSuppliers();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
+    /**
+     * La scheda fornitore e' una pagina (entity_edit), non piu' una finestra:
+     * ha un suo indirizzo, entra nelle briciole di pane e il tasto Indietro del
+     * browser ci torna sopra. Il modulo e' descritto in
+     * assets/js/entity_edit/schemas/suppliers.js.
+     */
+    function openForm(id) {
+        if (!window.App) return;
+        window.App.navigateTo('entity_edit', id ? { entity: 'suppliers', id } : { entity: 'suppliers' });
     }
 
     async function confirmDelete() {

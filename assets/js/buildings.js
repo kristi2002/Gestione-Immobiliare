@@ -3,8 +3,6 @@
 
     const API      = 'api/buildings.php';
     const PROP_API = 'api/properties.php';
-    const SUPP_API = 'api/suppliers.php';
-    const CLIENT_API = 'api/clients.php';
 
     const PROP_STATUS = { available: 'Disponibile', rented: 'Affittato', sold: 'Venduto', maintenance: 'Manutenzione', archived: 'Archiviato' };
     const PROP_COLOR  = { available: '#16a34a', rented: '#2563eb', sold: '#7c3aed', maintenance: '#d97706', archived: '#94a3b8' };
@@ -30,8 +28,6 @@
         els.tbody      = document.getElementById('buildings-tbody');
         els.pagination = document.getElementById('buildings-pagination');
         els.search     = document.getElementById('buildings-search');
-        els.modal      = document.getElementById('buildings-modal');
-        els.form       = document.getElementById('buildings-form');
         els.delModal   = document.getElementById('buildings-delete-modal');
         els.linkModal  = document.getElementById('buildings-link-modal');
         els.genModal   = document.getElementById('buildings-generate-modal');
@@ -40,16 +36,11 @@
         bindRail();
         bindRowMenu();
         loadProperties();
-        window.BuildingAdmin.loadAdministrators();
         loadBuildings();
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-building').addEventListener('click', () => openModal());
-        document.getElementById('buildings-modal-close').addEventListener('click', closeModal);
-        document.getElementById('buildings-modal-cancel').addEventListener('click', closeModal);
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-        els.form.addEventListener('submit', handleSubmit);
+        document.getElementById('btn-new-building').addEventListener('click', () => openForm());
 
         document.getElementById('buildings-delete-close').addEventListener('click', closeDeleteModal);
         document.getElementById('buildings-delete-cancel').addEventListener('click', closeDeleteModal);
@@ -63,7 +54,6 @@
 
         els.search.addEventListener('input', debounce(() => { currentPage = 1; loadBuildings(); }, 300));
 
-        window.BuildingAdmin.bindAdminFields();
         // getBuilding(): l'anteprima degli indirizzi generati ha bisogno
         // dell'edificio su cui si sta lavorando, non di quello selezionato
         // nella lista — sono la stessa cosa solo finche' non si cambia riga.
@@ -231,14 +221,10 @@
             closeRowMenu();
             if (window.App) window.App.navigateTo('building_profile', { buildingId: building.id });
         });
-        menu.querySelector('[data-act="edit"]').addEventListener('click', async () => {
+        menu.querySelector('[data-act="edit"]').addEventListener('click', () => {
             closeRowMenu();
-            try {
-                const res  = await fetch(`${API}?id=${building.id}`);
-                const json = await res.json();
-                if (!json.success) throw new Error(json.error);
-                openModal(json.data);
-            } catch (err) { showAlert(err.message, 'error'); }
+            // Niente fetch: il form si carica da solo il record dall'API.
+            openForm(building.id);
         });
         menu.querySelector('[data-act="link"]').addEventListener('click', () => {
             closeRowMenu();
@@ -394,64 +380,17 @@
         }
     }
 
-    function openModal(item = null) {
-        els.form.reset();
-        document.getElementById('buildings-id').value = '';
-        document.getElementById('buildings-modal-title').textContent = item ? 'Modifica Edificio' : 'Nuovo Edificio';
-
-        if (item) {
-            document.getElementById('buildings-id').value          = item.id;
-            document.getElementById('buildings-name').value        = item.name || '';
-            document.getElementById('buildings-city').value        = item.city || '';
-            document.getElementById('buildings-address').value     = item.address || '';
-            document.getElementById('buildings-cap').value         = item.cap || '';
-            document.getElementById('buildings-province').value    = item.province || '';
-            document.getElementById('buildings-total-units').value = item.total_units || '';
-            document.getElementById('buildings-notes').value       = item.notes || '';
-        }
-        window.BuildingAdmin.fillAdminFields(item);
-
-        els.modal.hidden = false;
-        document.getElementById('buildings-name').focus();
-    }
-
-    function closeModal() { els.modal.hidden = true; }
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id  = document.getElementById('buildings-id').value;
-        const btn = document.getElementById('buildings-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-        const data = Object.assign({
-            name:        document.getElementById('buildings-name').value.trim(),
-            city:        document.getElementById('buildings-city').value.trim(),
-            address:     document.getElementById('buildings-address').value.trim(),
-            cap:         document.getElementById('buildings-cap').value.trim(),
-            province:    document.getElementById('buildings-province').value.trim().toUpperCase(),
-            total_units: parseInt(document.getElementById('buildings-total-units').value) || null,
-            notes:       document.getElementById('buildings-notes').value.trim(),
-        }, window.BuildingAdmin.readAdminFields());
-
-        try {
-            const res  = await fetch(id ? `${API}?id=${id}` : API, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Edificio salvato con successo.', 'success');
-            const saved = Array.isArray(json.data) ? json.data[0] : json.data;
-            loadBuildings();
-            if (id && saved && saved.id) refreshRailIfOpen(Number(saved.id));
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
+    /**
+     * La scheda edificio e' una pagina (entity_edit), non piu' una finestra: ha
+     * un suo indirizzo, entra nelle briciole di pane e il tasto Indietro del
+     * browser ci torna sopra. Il modulo e' descritto in
+     * assets/js/entity_edit/schemas/buildings.js.
+     */
+    function openForm(id) {
+        if (!window.App) return;
+        window.App.navigateTo('entity_edit', id ? { entity: 'buildings', id } : { entity: 'buildings' });
     }
 
     async function confirmDelete() {

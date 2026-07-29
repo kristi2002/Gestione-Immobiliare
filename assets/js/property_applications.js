@@ -1,8 +1,7 @@
 (function () {
     'use strict';
 
-    const API        = 'api/property_applications.php';
-    const PROPS_API  = 'api/properties.php';
+    const API = 'api/property_applications.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
@@ -31,20 +30,17 @@
         els.typeFilter  = document.getElementById('pa-type-filter');
         els.search      = document.getElementById('pa-search');
         els.detailModal = document.getElementById('pa-detail-modal');
-        els.newModal    = document.getElementById('pa-new-modal');
-        els.newForm     = document.getElementById('pa-new-form');
 
         // Pre-fill filters from URL
         if (urlParams.get('status'))      els.statusFilter.value = urlParams.get('status');
 
         bindEvents();
-        loadProperties();
         loadApplications();
     }
 
     function bindEvents() {
         document.getElementById('btn-pa-refresh').addEventListener('click', () => loadApplications());
-        document.getElementById('btn-pa-new').addEventListener('click', openNewModal);
+        document.getElementById('btn-pa-new').addEventListener('click', () => openForm());
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadApplications(); });
         els.typeFilter.addEventListener('change', () => { currentPage = 1; loadApplications(); });
         els.search.addEventListener('input', debounce(() => { currentPage = 1; loadApplications(); }, 300));
@@ -55,66 +51,25 @@
 
         document.getElementById('pa-detail-save-status').addEventListener('click', saveStatus);
         document.getElementById('pa-detail-convert-lead').addEventListener('click', convertToLead);
-
-        document.getElementById('pa-new-close').addEventListener('click', closeNewModal);
-        document.getElementById('pa-new-cancel').addEventListener('click', closeNewModal);
-        els.newModal.addEventListener('click', e => { if (e.target === els.newModal) closeNewModal(); });
-        els.newForm.addEventListener('submit', handleNewSubmit);
     }
 
-    async function loadProperties() {
-        try {
-            const items = await window.Pagination.fetchList(PROPS_API);
-            const sel = document.getElementById('pa-new-property');
-            items.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = `${p.address}, ${p.city}`;
-                sel.appendChild(opt);
-            });
-        } catch (_) { /* non-critical */ }
-    }
-
-    function openNewModal() {
-        els.newForm.reset();
-        els.newModal.hidden = false;
-        document.getElementById('pa-new-name').focus();
-    }
-
-    function closeNewModal() {
-        els.newModal.hidden = true;
-    }
-
-    async function handleNewSubmit(e) {
-        e.preventDefault();
-        const btn = document.getElementById('pa-new-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-        const data = {
-            property_id:      document.getElementById('pa-new-property').value,
-            applicant_name:   document.getElementById('pa-new-name').value.trim(),
-            applicant_email:  document.getElementById('pa-new-email').value.trim(),
-            applicant_phone:  document.getElementById('pa-new-phone').value.trim(),
-            application_type: document.getElementById('pa-new-type').value,
-            message:          document.getElementById('pa-new-message').value.trim(),
-        };
-
-        try {
-            const res  = await fetch(API, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeNewModal();
-            showAlert('Richiesta creata con successo.', 'success');
-            loadApplications();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva richiesta';
-        }
+    /**
+     * La candidatura si registra su una pagina (entity_edit), non piu' in una
+     * finestra: ha un suo indirizzo, entra nelle briciole di pane e il tasto
+     * Indietro del browser ci torna sopra. L'elenco degli immobili non lo carica
+     * piu' questo file — se ne occupa lib/lookups.js, che pagina oltre il
+     * centesimo record invece di fermarsi li'. Il modulo e' descritto in
+     * assets/js/entity_edit/schemas/applications.js.
+     *
+     * Se stiamo guardando le richieste di un solo immobile, quello e' anche
+     * l'immobile della richiesta nuova: arriva al modulo gia' compilato.
+     */
+    function openForm() {
+        if (!window.App) return;
+        const params = { entity: 'applications' };
+        const propId = urlParams.get('property_id');
+        if (propId) params.property_id = propId;
+        window.App.navigateTo('entity_edit', params);
     }
 
     async function loadApplications() {

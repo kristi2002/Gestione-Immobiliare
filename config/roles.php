@@ -23,6 +23,29 @@ function isViewDisabled(string $view): bool
     return in_array($view, DISABLED_VIEWS, true);
 }
 
+/**
+ * Schema-driven form pages all share one route (view.php?name=entity_edit with
+ * an `entity` parameter), so the role check can't key off the view name alone:
+ * it has to resolve to the list view that owns the entity. Keep this in sync
+ * with the REGISTRY in assets/js/entity_edit/schemas/index.js — an entity
+ * missing here is refused for every role, which is the safe direction.
+ */
+const ENTITY_FORM_VIEWS = [
+    'suppliers'    => 'suppliers',
+    'insurance'    => 'insurance',
+    'commissions'  => 'commissions',
+    'keys'         => 'keys',
+    'buildings'    => 'buildings',
+    'aml'          => 'aml',
+    'valuation'    => 'valuation',
+    'applications' => 'property_applications',
+];
+
+function entityFormListView(string $entity): ?string
+{
+    return ENTITY_FORM_VIEWS[$entity] ?? null;
+}
+
 const VIEW_MIN_ROLE = [
     'settings'     => 'super_admin',
     'users'        => 'super_admin',

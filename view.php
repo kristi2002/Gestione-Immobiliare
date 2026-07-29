@@ -14,7 +14,7 @@ $allowed = [
     'property_profile', 'agent_profile', 'client_edit', 'property_edit', 'tenant_profile', 'building_profile',
     'aml', 'scadenzario', 'portal_sync', 'valuation',
     'contract_edit', 'invoice_edit', 'lead_edit', 'tenant_edit', 'appointment_edit', 'expense_edit', 'payment_edit',
-    'appointment_profile',
+    'appointment_profile', 'entity_edit',
 ];
 $name    = basename($_GET['name'] ?? '');
 
@@ -23,7 +23,21 @@ if (!in_array($name, $allowed, true)) {
     exit('Vista non trovata.');
 }
 
-if (!canAccessView($name)) {
+// The schema-driven form page is one route serving many entities, so its
+// permission is the permission of the list view that owns the entity — not of
+// the shared route. An unknown entity is refused rather than waved through.
+if ($name === 'entity_edit') {
+    $entity = preg_replace('/[^a-z0-9_]/', '', strtolower($_GET['entity'] ?? ''));
+    $owner  = $entity !== '' ? entityFormListView($entity) : null;
+    if ($owner === null) {
+        http_response_code(404);
+        exit('Modulo non trovato.');
+    }
+    if (!canAccessView($owner)) {
+        http_response_code(403);
+        exit('Accesso negato.');
+    }
+} elseif (!canAccessView($name)) {
     http_response_code(403);
     exit('Accesso negato.');
 }

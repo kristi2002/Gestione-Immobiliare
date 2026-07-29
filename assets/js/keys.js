@@ -1,16 +1,15 @@
 /**
- * Gestione chiavi — property key tracking
+ * Gestione chiavi — lista, rientro rapido e registro di custodia.
  *
- * Il detentore è polimorfo: si sceglie prima il TIPO (agente, fornitore,
- * inquilino, proprietario, lead) e poi il soggetto da una lista cercabile, con
- * lo stesso pattern input+datalist+hidden usato dai promemoria. "Altro" resta
- * l'unica strada verso il testo libero, per il detentore occasionale.
+ * Il form non è più qui: "Registra chiavi" e "Modifica" aprono la pagina
+ * entity_edit, che costruisce il modulo dallo schema in
+ * assets/js/entity_edit/schemas/keys.js. In questo file restano la lista, il
+ * rientro in un click, lo storico e la scansione del portachiavi.
  */
 (function () {
     'use strict';
 
     const API = 'api/property_keys.php';
-    const PROP_API = 'api/properties.php';
 
     const STATUS_LABELS = { out: 'In possesso', in_office: 'In ufficio', lost: 'Smarrite' };
     const KEY_TYPE_LABELS = { portone: 'Portone principale', appartamento: 'Appartamento', cantina: 'Cantina', box: 'Box auto', cancello: 'Cancello / telecomando', altro: 'Altro' };
@@ -20,12 +19,6 @@
         agente: 'Agente', fornitore: 'Fornitore', inquilino: 'Inquilino',
         proprietario: 'Proprietario', lead: 'Cliente / lead', altro: 'Occasionale',
     };
-    /** holder_type → colonna che l'API restituisce con l'id del soggetto. */
-    const HOLDER_ID_FIELDS = {
-        agente: 'holder_id', fornitore: 'holder_supplier_id', inquilino: 'holder_tenant_id',
-        proprietario: 'holder_client_id', lead: 'holder_lead_id',
-    };
-
     const EVENT_LABELS = {
         created: 'Scheda creata', handover: 'Chiavi consegnate', return: 'Chiavi rientrate',
         status_change: 'Stato aggiornato', lost: 'Chiavi smarrite',
@@ -33,15 +26,10 @@
     };
 
     let keys = [];
-    let properties = [];
-    let holderOptions = {};
-    /** label → id, ricostruita a ogni cambio di tipo detentore. */
-    let holderByLabel = new Map();
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let searchTimer = null;
     let scanStream = null;
-    let scanTarget = 'search';
     const els = {};
 
     function init() {
@@ -50,18 +38,6 @@
         els.search = document.getElementById('key-search');
         els.statusFilter = document.getElementById('key-status-filter');
         els.alert = document.getElementById('keys-alert');
-        els.modal = document.getElementById('key-modal');
-        els.form = document.getElementById('key-form');
-        els.holderType = document.getElementById('key-holder-type');
-        els.holderRefGroup = document.getElementById('key-holder-ref-group');
-        els.holderRef = document.getElementById('key-holder-ref');
-        els.holderRefId = document.getElementById('key-holder-ref-id');
-        els.holderList = document.getElementById('key-holder-options');
-        els.holderNameGroup = document.getElementById('key-holder-name-group');
-        els.holderName = document.getElementById('key-holder-name');
-        els.property = document.getElementById('key-property');
-        els.contextGroup = document.getElementById('key-context-group');
-        els.context = document.getElementById('key-context');
         els.historyModal = document.getElementById('key-history-modal');
         els.historyBody = document.getElementById('key-history-body');
         els.historyTitle = document.getElementById('key-history-title');
@@ -71,26 +47,16 @@
 
         bindEvents();
         setupScanner();
-        Promise.all([loadProperties(), loadHolderOptions()]).then(() => loadKeys());
+        loadKeys();
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-key').addEventListener('click', () => openModal());
-        document.getElementById('key-modal-close').addEventListener('click', closeModal);
-        document.getElementById('key-modal-cancel').addEventListener('click', closeModal);
-        els.form.addEventListener('submit', handleSubmit);
+        document.getElementById('btn-new-key').addEventListener('click', () => openForm());
         els.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => { currentPage = 1; loadKeys(); }, 300);
         });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadKeys(); });
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-
-        els.holderType.addEventListener('change', () => renderHolderPicker(els.holderType.value));
-        els.property.addEventListener('change', () => loadHandoverContext(els.property.value));
-        els.holderRef.addEventListener('input', () => {
-            els.holderRefId.value = holderByLabel.get(els.holderRef.value) || '';
-        });
 
         document.getElementById('key-history-close').addEventListener('click', closeHistory);
         els.historyModal.addEventListener('click', e => { if (e.target === els.historyModal) closeHistory(); });
@@ -98,18 +64,9 @@
         els.scanModal.addEventListener('click', e => { if (e.target === els.scanModal) stopScan(); });
     }
 
-    async function loadProperties() {
-        properties = await Pagination.fetchList(PROP_API);
-        const sel = document.getElementById('key-property');
-        sel.innerHTML = '<option value="">— Seleziona —</option>' +
-            properties.map(p => `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`).join('');
-    }
-
-    /** Una sola richiesta per le cinque rubriche del selettore detentore. */
-    async function loadHolderOptions() {
-        const res = await fetch(`${API}?action=holder_options`);
-        const json = await res.json();
-        if (json.success) holderOptions = json.data || {};
+    /** Il modulo è una pagina, non una modale: immobili e detentori li carica lo schema. */
+    function openForm(id) {
+        window.App.navigateTo('entity_edit', id ? { entity: 'keys', id } : { entity: 'keys' });
     }
 
     async function loadKeys() {
@@ -179,10 +136,7 @@
         }).join('');
 
         els.grid.querySelectorAll('.btn-edit-key').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const item = keys.find(x => x.id == btn.dataset.id);
-                if (item) openModal(item);
-            });
+            btn.addEventListener('click', () => openForm(btn.dataset.id));
         });
         els.grid.querySelectorAll('.btn-del-key').forEach(btn => {
             btn.addEventListener('click', () => deleteKey(btn.dataset.id));
@@ -234,78 +188,6 @@
             loadKeys();
         } catch (err) {
             showAlert(err.message, 'error');
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Detentore polimorfo
-    // -------------------------------------------------------------------------
-
-    function renderHolderPicker(type, preselectedId = '', preselectedName = '') {
-        const isOther = type === 'altro';
-        const isRef   = !!type && !isOther;
-
-        els.holderRefGroup.hidden = !isRef;
-        els.holderNameGroup.hidden = !isOther;
-
-        els.holderName.value = isOther ? (preselectedName || '') : '';
-
-        holderByLabel = new Map();
-        if (!isRef) {
-            els.holderList.innerHTML = '';
-            els.holderRef.value = '';
-            els.holderRefId.value = '';
-            return;
-        }
-
-        const list = holderOptions[type] || [];
-        // Gli omonimi si annullerebbero a vicenda nel datalist, che risolve per
-        // etichetta: si disambigua con l'id, come nella rubrica promemoria.
-        const options = list.map(o => {
-            let label = o.label || `#${o.id}`;
-            if (holderByLabel.has(label)) label += ` · #${o.id}`;
-            holderByLabel.set(label, String(o.id));
-            return `<option value="${escAttr(label)}"></option>`;
-        }).join('');
-        els.holderList.innerHTML = options;
-
-        const match = preselectedId
-            ? [...holderByLabel.entries()].find(([, id]) => id === String(preselectedId))
-            : null;
-        els.holderRef.value = match ? match[0] : '';
-        els.holderRefId.value = match ? match[1] : '';
-    }
-
-    // -------------------------------------------------------------------------
-    // Motivo della consegna (appuntamento / intervento)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Le chiavi escono quasi sempre per una visita o per un intervento: offrirli
-     * come scelta evita che il "perché" finisca in una nota libera, o in niente.
-     */
-    async function loadHandoverContext(propertyId, selected = '') {
-        els.context.innerHTML = '<option value="">— Non specificato —</option>';
-        if (!propertyId) { els.contextGroup.hidden = true; return; }
-
-        try {
-            const res = await fetch(`${API}?action=context&property_id=${encodeURIComponent(propertyId)}`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-
-            const appts = (json.data.appointments || []).map(a =>
-                `<option value="appointment:${a.id}">Appuntamento ${escapeHtml(a.appointment_type)} — ${formatDateTime(a.appointment_date)}${a.counterpart ? ' · ' + escapeHtml(a.counterpart) : ''}</option>`
-            ).join('');
-            const works = (json.data.interventi || []).map(r =>
-                `<option value="reminder:${r.id}">Intervento — ${escapeHtml(r.title)}${r.supplier_name ? ' · ' + escapeHtml(r.supplier_name) : ''}</option>`
-            ).join('');
-
-            els.context.innerHTML = '<option value="">— Non specificato —</option>' + appts + works;
-            els.context.value = selected || '';
-            // Niente da collegare: un select vuoto è solo rumore nel form.
-            els.contextGroup.hidden = !(appts || works);
-        } catch {
-            els.contextGroup.hidden = true;
         }
     }
 
@@ -390,12 +272,13 @@
             navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
         if (!supported) return;
 
+        // #btn-scan-code lived inside the create/edit modal and left with it —
+        // scanning straight into the "Codice portachiavi" field belongs to the
+        // form page now. Here the scanner only drives the list search.
         const btnSearch = document.getElementById('btn-scan-key');
-        const btnCode   = document.getElementById('btn-scan-code');
+        if (!btnSearch) return;
         btnSearch.hidden = false;
-        btnCode.hidden = false;
         btnSearch.addEventListener('click', () => startScan('search'));
-        btnCode.addEventListener('click', () => startScan('code'));
     }
 
     async function startScan(target) {
@@ -430,10 +313,6 @@
 
     function applyScannedCode(code) {
         stopScan();
-        if (scanTarget === 'code') {
-            document.getElementById('key-code').value = code;
-            return;
-        }
         els.search.value = code;
         currentPage = 1;
         loadKeys();
@@ -446,79 +325,6 @@
         }
         els.scanVideo.srcObject = null;
         els.scanModal.hidden = true;
-    }
-
-    // -------------------------------------------------------------------------
-    // Form
-    // -------------------------------------------------------------------------
-
-    function openModal(item = null) {
-        document.getElementById('key-modal-title').textContent = item ? 'Modifica chiavi' : 'Registra chiavi';
-        document.getElementById('key-id').value = item?.id || '';
-        document.getElementById('key-property').value = item?.property_id || '';
-        document.getElementById('key-type').value = item?.key_type || 'portone';
-        document.getElementById('key-quantity').value = item?.quantity || 1;
-        document.getElementById('key-code').value = item?.key_code || '';
-        document.getElementById('key-status').value = item?.status || 'in_office';
-        document.getElementById('key-location').value = item?.location || '';
-        document.getElementById('key-handed').value = item?.handed_at || '';
-        document.getElementById('key-due-back').value = item?.due_back_at || '';
-        document.getElementById('key-returned').value = item?.returned_at || '';
-        document.getElementById('key-notes').value = item?.notes || '';
-
-        const holderType = item?.holder_type || '';
-        els.holderType.value = holderType;
-        const refField = HOLDER_ID_FIELDS[holderType];
-        renderHolderPicker(holderType, refField ? item?.[refField] : '', item?.holder_name);
-
-        loadHandoverContext(item?.property_id || '');
-
-        els.modal.hidden = false;
-    }
-
-    function closeModal() { els.modal.hidden = true; }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id = document.getElementById('key-id').value;
-        const holderType = els.holderType.value;
-
-        if (holderType && holderType !== 'altro' && !els.holderRefId.value) {
-            showAlert('Seleziona il detentore dall\'elenco.', 'error');
-            return;
-        }
-
-        // "appointment:12" / "reminder:7" → la FK giusta sull'evento di registro.
-        const [ctxKind, ctxId] = (els.context.value || '').split(':');
-
-        const payload = {
-            property_id: parseInt(els.property.value, 10),
-            appointment_id: ctxKind === 'appointment' ? parseInt(ctxId, 10) : null,
-            reminder_id: ctxKind === 'reminder' ? parseInt(ctxId, 10) : null,
-            key_type: document.getElementById('key-type').value,
-            quantity: parseInt(document.getElementById('key-quantity').value, 10) || 1,
-            key_code: document.getElementById('key-code').value.trim() || null,
-            holder_type: holderType || null,
-            holder_ref_id: holderType && holderType !== 'altro' ? parseInt(els.holderRefId.value, 10) : null,
-            holder_name: holderType === 'altro' ? (els.holderName.value.trim() || null) : null,
-            status: document.getElementById('key-status').value,
-            location: document.getElementById('key-location').value.trim() || null,
-            handed_at: document.getElementById('key-handed').value || null,
-            due_back_at: document.getElementById('key-due-back').value || null,
-            returned_at: document.getElementById('key-returned').value || null,
-            notes: document.getElementById('key-notes').value.trim() || null,
-        };
-        const url = id ? `${API}?id=${id}` : API;
-        const method = id ? 'PUT' : 'POST';
-        const res = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (!json.success) { showAlert(json.error, 'error'); return; }
-        closeModal();
-        loadKeys();
     }
 
     function showAlert(msg, type) {

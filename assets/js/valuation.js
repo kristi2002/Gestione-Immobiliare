@@ -23,8 +23,6 @@
         els.tbody      = document.getElementById('omi-tbody');
         els.pagination = document.getElementById('omi-pagination');
         els.search     = document.getElementById('omi-search');
-        els.modal      = document.getElementById('omi-modal');
-        els.form       = document.getElementById('omi-form');
         els.delModal   = document.getElementById('omi-delete-modal');
         els.importModal= document.getElementById('omi-import-modal');
         els.estResult  = document.getElementById('val-estimate-result');
@@ -35,11 +33,7 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-omi').addEventListener('click', () => openModal());
-        document.getElementById('omi-modal-close').addEventListener('click', closeModal);
-        document.getElementById('omi-modal-cancel').addEventListener('click', closeModal);
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-        els.form.addEventListener('submit', handleSubmit);
+        document.getElementById('btn-new-omi').addEventListener('click', () => openForm());
 
         document.getElementById('omi-delete-close').addEventListener('click', closeDeleteModal);
         document.getElementById('omi-delete-cancel').addEventListener('click', closeDeleteModal);
@@ -249,6 +243,15 @@
                 Affitto: ${eur(omi.rent_min)} – ${eur(omi.rent_max)}/mese</p>`;
         } else {
             html += '<p class="text-muted">Nessuna quotazione OMI per questa zona/tipologia.</p>';
+            // Il pannello resta vuoto anche quando la quotazione ESISTE ma
+            // l'immobile non ha i m² (l'API compone `omi` solo con la
+            // superficie): invitare a inserirla in quel caso creerebbe un
+            // doppione sulla stessa chiave. Si propone solo quando la superficie
+            // c'è e la riga manca davvero.
+            if (d.sqm) {
+                html += '<button type="button" class="btn btn--sm btn--secondary" id="btn-add-omi-here">'
+                      + '<i data-lucide="plus"></i> Inserisci la quotazione mancante</button>';
+            }
         }
         html += '</div></div>';
 
@@ -289,6 +292,14 @@
 
         const saveBtn = document.getElementById('btn-save-appraisal');
         if (saveBtn) saveBtn.addEventListener('click', () => saveAppraisal(d.property_id, saveBtn));
+
+        const addOmiBtn = document.getElementById('btn-add-omi-here');
+        if (addOmiBtn) {
+            addOmiBtn.addEventListener('click', () => openForm(null, {
+                comune:        d.city || '',
+                property_type: d.property_type || '',
+            }));
+        }
 
         if (window.lucide) window.lucide.createIcons();
     }
@@ -359,78 +370,35 @@
             </td>
         </tr>`).join('');
 
+        // La riga non si carica più qui: il modulo la rilegge da solo con l'id,
+        // quindi una modifica aperta su un link incollato mostra sempre il dato
+        // fresco invece di quello congelato nell'ultima paginazione.
         els.tbody.querySelectorAll('.btn-omi-edit').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    const res  = await fetch(`${API}?id=${btn.dataset.id}`);
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.error);
-                    openModal(Array.isArray(json.data) ? json.data[0] : json.data);
-                } catch (e) { showAlert(e.message, 'error'); }
-            });
+            btn.addEventListener('click', () => openForm(btn.dataset.id));
         });
         els.tbody.querySelectorAll('.btn-omi-del').forEach(btn => {
             btn.addEventListener('click', () => { deleteTargetId = btn.dataset.id; els.delModal.hidden = false; });
         });
     }
 
-    function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ''; }
-
-    function openModal(item = null) {
-        els.form.reset();
-        setVal('omi-id', '');
-        document.getElementById('omi-modal-title').textContent = item ? 'Modifica quotazione OMI' : 'Nuova quotazione OMI';
-        if (item) {
-            setVal('omi-id', item.id);
-            setVal('omi-comune', item.comune);
-            setVal('omi-zone', item.cadastral_zone);
-            setVal('omi-type', item.property_type || 'appartamento');
-            setVal('omi-price-min', item.price_min_sqm);
-            setVal('omi-price-max', item.price_max_sqm);
-            setVal('omi-rent-min', item.rent_min_sqm);
-            setVal('omi-rent-max', item.rent_max_sqm);
-            setVal('omi-period', item.period);
-            setVal('omi-notes', item.notes);
-        }
-        els.modal.hidden = false;
-        document.getElementById('omi-comune').focus();
-    }
-
-    function closeModal() { els.modal.hidden = true; }
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id = document.getElementById('omi-id').value;
-        const btn = document.getElementById('omi-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-        const data = {
-            comune:         document.getElementById('omi-comune').value.trim(),
-            cadastral_zone: document.getElementById('omi-zone').value.trim(),
-            property_type:  document.getElementById('omi-type').value,
-            price_min_sqm:  document.getElementById('omi-price-min').value || null,
-            price_max_sqm:  document.getElementById('omi-price-max').value || null,
-            rent_min_sqm:   document.getElementById('omi-rent-min').value || null,
-            rent_max_sqm:   document.getElementById('omi-rent-max').value || null,
-            period:         document.getElementById('omi-period').value.trim(),
-            notes:          document.getElementById('omi-notes').value.trim(),
-        };
-        try {
-            const res  = await fetch(id ? `${API}?id=${id}` : API, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Quotazione salvata.', 'success');
-            loadOmi();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
+    /**
+     * La quotazione OMI è una pagina (entity_edit), non più una finestra: ha un
+     * suo indirizzo, entra nelle briciole di pane e il tasto Indietro del browser
+     * ci torna sopra. Il modulo è descritto in
+     * assets/js/entity_edit/schemas/valuation.js.
+     *
+     * `prefill` serve alla stima che non trova il listino: comune e tipologia
+     * dell'immobile arrivano già compilati, così la riga mancante si inserisce
+     * senza ricopiarli a mano — ed è proprio la coppia che deve corrispondere
+     * alla scheda, quindi meglio passarla che farla ridigitare.
+     */
+    function openForm(id, prefill) {
+        if (!window.App) return;
+        const params = Object.assign({ entity: 'valuation' }, prefill || {});
+        if (id) params.id = id;
+        window.App.navigateTo('entity_edit', params);
     }
 
     async function confirmDelete() {

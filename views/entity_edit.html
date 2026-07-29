@@ -1,0 +1,19 @@
+<!--
+    entity_edit — the one page behind every schema-driven "Nuovo / Modifica" form.
+
+    Reached as view.php?name=entity_edit with App.viewParams = { entity, id? }.
+    The markup is produced by assets/js/lib/entity_form.js from the schema
+    registered in assets/js/entity_edit/schemas/, so there is nothing to write
+    here per entity — adding a form is adding a schema file.
+-->
+<div id="entity-edit-root" class="entity-edit-host">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Caricamento…</h2>
+            <p>Compilazione della scheda.</p>
+        </div>
+    </div>
+    <div class="ef-boot" aria-live="polite">Preparazione del modulo…</div>
+</div>
+
+<script type="module" src="assets/js/entity_edit/index.js"></script>

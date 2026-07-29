@@ -2,7 +2,6 @@
     'use strict';
 
     const API = 'api/insurance.php';
-    const PROP_API = 'api/properties.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
@@ -10,9 +9,17 @@
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let deleteTargetId = null;
-    let properties = [];
 
     const els = {};
+
+    /**
+     * Nuova / modifica polizza vivono nella pagina schema-driven
+     * (assets/js/entity_edit/schemas/insurance.js). Qui resta solo la lista.
+     */
+    function openForm(id) {
+        if (!window.App) return;
+        window.App.navigateTo('entity_edit', id ? { entity: 'insurance', id } : { entity: 'insurance' });
+    }
 
     function init() {
         els.alert       = document.getElementById('insurance-alert');
@@ -21,21 +28,14 @@
         els.search      = document.getElementById('insurance-search');
         els.typeFilter  = document.getElementById('insurance-type-filter');
         els.expiringChk = document.getElementById('insurance-expiring-toggle');
-        els.modal       = document.getElementById('insurance-modal');
-        els.form        = document.getElementById('insurance-form');
         els.delModal    = document.getElementById('insurance-delete-modal');
 
         bindEvents();
-        loadProperties();
         loadInsurances();
     }
 
     function bindEvents() {
-        document.getElementById('btn-new-insurance').addEventListener('click', () => openModal());
-        document.getElementById('insurance-modal-close').addEventListener('click', closeModal);
-        document.getElementById('insurance-modal-cancel').addEventListener('click', closeModal);
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-        els.form.addEventListener('submit', handleSubmit);
+        document.getElementById('btn-new-insurance').addEventListener('click', () => openForm());
 
         document.getElementById('insurance-delete-close').addEventListener('click', closeDeleteModal);
         document.getElementById('insurance-delete-cancel').addEventListener('click', closeDeleteModal);
@@ -45,20 +45,6 @@
         els.search.addEventListener('input', debounce(() => { currentPage = 1; loadInsurances(); }, 300));
         els.typeFilter.addEventListener('change', () => { currentPage = 1; loadInsurances(); });
         els.expiringChk.addEventListener('change', () => { currentPage = 1; loadInsurances(); });
-    }
-
-    async function loadProperties() {
-        try {
-            const items = await window.Pagination.fetchList(PROP_API);
-            properties = items;
-            const sel = document.getElementById('insurance-property-id');
-            items.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.address || p.title || `#${p.id}`;
-                sel.appendChild(opt);
-            });
-        } catch (e) { /* non-critical */ }
     }
 
     async function loadInsurances() {
@@ -131,16 +117,9 @@
             </tr>`;
         }).join('');
 
+        // Niente fetch preventivo: la scheda si carica il record da sola.
         els.tbody.querySelectorAll('.btn-ins-edit').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    const res  = await fetch(`${API}?id=${btn.dataset.id}`);
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.error);
-                    const item = Array.isArray(json.data) ? json.data[0] : json.data;
-                    openModal(item);
-                } catch (e) { showAlert(e.message, 'error'); }
-            });
+            btn.addEventListener('click', () => openForm(Number(btn.dataset.id)));
         });
 
         els.tbody.querySelectorAll('.btn-ins-del').forEach(btn => {
@@ -152,64 +131,7 @@
         });
     }
 
-    function openModal(item = null) {
-        els.form.reset();
-        document.getElementById('insurance-id').value = '';
-        document.getElementById('insurance-modal-title').textContent = item ? 'Modifica Polizza' : 'Nuova Polizza';
-
-        if (item) {
-            document.getElementById('insurance-id').value             = item.id;
-            document.getElementById('insurance-property-id').value    = item.property_id || '';
-            document.getElementById('insurance-insurer').value        = item.insurer_name || '';
-            document.getElementById('insurance-policy-number').value  = item.policy_number || '';
-            document.getElementById('insurance-type').value           = item.policy_type || '';
-            document.getElementById('insurance-premium').value        = item.premium_annual || '';
-            document.getElementById('insurance-start-date').value     = item.start_date ? item.start_date.substring(0, 10) : '';
-            document.getElementById('insurance-end-date').value       = item.end_date ? item.end_date.substring(0, 10) : '';
-            document.getElementById('insurance-notes').value          = item.notes || '';
-        }
-
-        els.modal.hidden = false;
-        document.getElementById('insurance-insurer').focus();
-    }
-
-    function closeModal() { els.modal.hidden = true; }
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id  = document.getElementById('insurance-id').value;
-        const btn = document.getElementById('insurance-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-        const data = {
-            property_id:    document.getElementById('insurance-property-id').value,
-            insurer_name:   document.getElementById('insurance-insurer').value.trim(),
-            policy_number:  document.getElementById('insurance-policy-number').value.trim(),
-            policy_type:    document.getElementById('insurance-type').value,
-            premium_annual: document.getElementById('insurance-premium').value || null,
-            start_date:     document.getElementById('insurance-start-date').value || null,
-            end_date:       document.getElementById('insurance-end-date').value || null,
-            notes:          document.getElementById('insurance-notes').value.trim(),
-        };
-
-        try {
-            const res  = await fetch(id ? `${API}?id=${id}` : API, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Polizza salvata con successo.', 'success');
-            loadInsurances();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
-    }
 
     async function confirmDelete() {
         if (!deleteTargetId) return;

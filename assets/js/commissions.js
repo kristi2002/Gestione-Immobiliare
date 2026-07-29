@@ -1,8 +1,7 @@
 (function () {
     'use strict';
 
-    const API       = 'api/commissions.php';
-    const USERS_API = 'api/admin_users.php';
+    const API = 'api/commissions.php';
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
@@ -27,21 +26,20 @@
         els.alert      = document.getElementById('commissions-alert');
         els.tbody      = document.getElementById('commissions-tbody');
         els.pagination = document.getElementById('commissions-pagination');
-        els.modal      = document.getElementById('commissions-modal');
-        els.form       = document.getElementById('commissions-form');
         els.delModal   = document.getElementById('commissions-delete-modal');
 
         bindEvents();
-        loadAgents();
         loadCommissions();
     }
 
+    function openForm(id) {
+        // La scheda vive in entity_edit (schema in entity_edit/schemas/commissions.js):
+        // qui non si costruisce piu' il form, si porta l'utente sulla pagina.
+        if (window.App) window.App.navigateTo('entity_edit', id ? { entity: 'commissions', id: Number(id) } : { entity: 'commissions' });
+    }
+
     function bindEvents() {
-        document.getElementById('btn-new-commission').addEventListener('click', () => openModal());
-        document.getElementById('commissions-modal-close').addEventListener('click', closeModal);
-        document.getElementById('commissions-modal-cancel').addEventListener('click', closeModal);
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-        els.form.addEventListener('submit', handleSubmit);
+        document.getElementById('btn-new-commission').addEventListener('click', () => openForm());
 
         document.getElementById('commissions-delete-close').addEventListener('click', closeDeleteModal);
         document.getElementById('commissions-delete-cancel').addEventListener('click', closeDeleteModal);
@@ -57,19 +55,6 @@
                 loadCommissions();
             });
         });
-    }
-
-    async function loadAgents() {
-        try {
-            const items = await window.Pagination.fetchList(USERS_API);
-            const sel = document.getElementById('commissions-agent-id');
-            items.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = `${u.name || ''} ${u.surname || ''}`.trim() || u.username || `#${u.id}`;
-                sel.appendChild(opt);
-            });
-        } catch (e) { /* non-critical */ }
     }
 
     async function loadCommissions() {
@@ -137,16 +122,9 @@
             btn.addEventListener('click', () => markPaid(btn.dataset.id, btn));
         });
 
+        // Il record lo rilegge la scheda: qui basta l'id.
         els.tbody.querySelectorAll('.btn-c-edit').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    const res  = await fetch(`${API}?id=${btn.dataset.id}`);
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.error);
-                    const item = Array.isArray(json.data) ? json.data[0] : json.data;
-                    openModal(item);
-                } catch (e) { showAlert(e.message, 'error'); }
-            });
+            btn.addEventListener('click', () => openForm(btn.dataset.id));
         });
 
         els.tbody.querySelectorAll('.btn-c-del').forEach(btn => {
@@ -175,64 +153,7 @@
         }
     }
 
-    function openModal(item = null) {
-        els.form.reset();
-        document.getElementById('commissions-id').value = '';
-        document.getElementById('commissions-modal-title').textContent = item ? 'Modifica Provvigione' : 'Nuova Provvigione';
-
-        if (item) {
-            document.getElementById('commissions-id').value          = item.id;
-            document.getElementById('commissions-agent-id').value    = item.admin_user_id || item.agent_id || '';
-            document.getElementById('commissions-agent-role').value  = item.agent_role || 'unico';
-            document.getElementById('commissions-type').value        = item.commission_type || '';
-            document.getElementById('commissions-amount').value      = item.amount || '';
-            document.getElementById('commissions-percentage').value  = item.percentage || '';
-            document.getElementById('commissions-due-date').value    = item.due_date ? item.due_date.substring(0, 10) : '';
-            document.getElementById('commissions-contract-id').value = item.contract_id || '';
-            document.getElementById('commissions-notes').value       = item.notes || '';
-        }
-
-        els.modal.hidden = false;
-        document.getElementById('commissions-agent-id').focus();
-    }
-
-    function closeModal() { els.modal.hidden = true; }
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id  = document.getElementById('commissions-id').value;
-        const btn = document.getElementById('commissions-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-        const data = {
-            admin_user_id:   document.getElementById('commissions-agent-id').value,
-            agent_role:      document.getElementById('commissions-agent-role').value || 'unico',
-            commission_type: document.getElementById('commissions-type').value,
-            amount:          parseFloat(document.getElementById('commissions-amount').value) || 0,
-            percentage:      document.getElementById('commissions-percentage').value || null,
-            due_date:        document.getElementById('commissions-due-date').value || null,
-            contract_id:     document.getElementById('commissions-contract-id').value.trim() || null,
-            notes:           document.getElementById('commissions-notes').value.trim(),
-        };
-
-        try {
-            const res  = await fetch(id ? `${API}?id=${id}` : API, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeModal();
-            showAlert('Provvigione salvata.', 'success');
-            loadCommissions();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
-    }
 
     async function confirmDelete() {
         if (!deleteTargetId) return;

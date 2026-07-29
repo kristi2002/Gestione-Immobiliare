@@ -142,6 +142,26 @@
             scadenzario:           'Scadenzario Fiscale',
             portal_sync:           'Pubblicazioni Portali',
             valuation:             'Valutazioni OMI',
+            // One route, many forms — the real label comes from entityFormTitles
+            // below via resolveTitle(). This entry exists so parseUrl() accepts
+            // the view on a reload or a pasted link.
+            entity_edit:           'Scheda',
+        },
+
+        /**
+         * Titles for the schema-driven form page. Keyed by the `entity` param,
+         * because every one of those forms is served by the single entity_edit
+         * route. Keep in sync with assets/js/entity_edit/schemas/index.js.
+         */
+        entityFormTitles: {
+            suppliers:    { create: 'Nuovo Fornitore',    edit: 'Modifica Fornitore' },
+            insurance:    { create: 'Nuova Polizza',      edit: 'Modifica Polizza' },
+            commissions:  { create: 'Nuova Provvigione',  edit: 'Modifica Provvigione' },
+            keys:         { create: 'Registra Chiavi',    edit: 'Modifica Chiavi' },
+            buildings:    { create: 'Nuovo Edificio',     edit: 'Modifica Edificio' },
+            aml:          { create: 'Nuova Verifica AML', edit: 'Modifica Verifica AML' },
+            valuation:    { create: 'Nuova Valutazione',  edit: 'Modifica Valutazione' },
+            applications: { create: 'Nuova Candidatura',  edit: 'Modifica Candidatura' },
         },
 
         // Edit views that serve BOTH create and edit: the static viewTitles label
@@ -155,6 +175,11 @@
 
         resolveTitle(viewKey, params) {
             const p = params || this.viewParams;
+            if (viewKey === 'entity_edit') {
+                const t = this.entityFormTitles[p && p.entity];
+                if (t) return (p && p.id) ? t.edit : t.create;
+                return this.viewTitles.entity_edit;
+            }
             const e = this.editTitles[viewKey];
             if (e) {
                 return (p && p[e.idKey]) ? e.edit : e.create;
@@ -642,7 +667,7 @@
             this.renderCrumbs();
             const link = document.querySelector(`.nav-link[data-view="${entry.view}"]`);
             if (link) this.setActiveNav(link);
-            this.loadView(this.hrefFor(entry.view), entry.view);
+            this.loadView(this.hrefFor(entry.view, entry.params), entry.view);
         },
 
         onPopState(e) {
@@ -689,9 +714,16 @@
             return { view, params, label: null };
         },
 
-        hrefFor(view) {
+        hrefFor(view, params) {
             const link = document.querySelector(`.nav-link[data-view="${view}"]`);
-            return link ? link.getAttribute('href') : `view.php?name=${encodeURIComponent(view)}`;
+            const base = link ? link.getAttribute('href') : `view.php?name=${encodeURIComponent(view)}`;
+            // entity_edit is one route serving many entities, and view.php gates
+            // it by the entity's own list-view permission — so the partial fetch
+            // has to carry `entity`, which otherwise lives only in viewParams.
+            if (view === 'entity_edit' && params && params.entity) {
+                return `${base}${base.includes('?') ? '&' : '?'}entity=${encodeURIComponent(params.entity)}`;
+            }
+            return base;
         },
 
         /** Views that are a step in a task, not a place you navigate back to. */

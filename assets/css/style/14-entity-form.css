@@ -1,0 +1,267 @@
+/* =====================================================================
+   14-entity-form.css — the schema-driven form pages (.ef-view).
+
+   12-forms.css owns the shared vocabulary of every *_edit page: sections,
+   labels, the sticky action bar. This file adds only what the generated
+   forms need on top of it:
+
+     · a 12-column grid where each field declares its own span, instead of
+       rows that guess their column count from how many fields they hold;
+     · collapsible sections, so a 60-field schema opens at the length of
+       the job rather than the length of the schema;
+     · per-field error text, which the hand-written pages never had — they
+       had one alert at the top and left the user to find the bad field.
+
+   Loaded after 12-forms.css, so anything restated here wins on purpose.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Grid — one ruler, per-field spans
+   .form-row sized its columns from its own child count; here every field
+   states its width against the same 12 columns, so edges line up across
+   sections regardless of how many fields each one holds.
+   --------------------------------------------------------------------- */
+.ef-view .form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 20px;
+    row-gap: 20px;
+    align-items: start;
+}
+
+.ef-view .form-grid > .form-group {
+    grid-column: span 6;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.ef-view .form-grid > .ef-span-1  { grid-column: span 1; }
+.ef-view .form-grid > .ef-span-2  { grid-column: span 2; }
+.ef-view .form-grid > .ef-span-3  { grid-column: span 3; }
+.ef-view .form-grid > .ef-span-4  { grid-column: span 4; }
+.ef-view .form-grid > .ef-span-5  { grid-column: span 5; }
+.ef-view .form-grid > .ef-span-6  { grid-column: span 6; }
+.ef-view .form-grid > .ef-span-7  { grid-column: span 7; }
+.ef-view .form-grid > .ef-span-8  { grid-column: span 8; }
+.ef-view .form-grid > .ef-span-9  { grid-column: span 9; }
+.ef-view .form-grid > .ef-span-10 { grid-column: span 10; }
+.ef-view .form-grid > .ef-span-11 { grid-column: span 11; }
+.ef-view .form-grid > .ef-span-12 { grid-column: span 12; }
+
+/* A field hidden by a `when` rule must leave the grid entirely — [hidden]
+   loses to `display:grid`/`block` on the same element, so restate it. */
+.ef-view .form-grid > .form-group[hidden] { display: none; }
+
+/* Narrow fields double up before anything stacks; below 760px everything
+   is full width, which is the only honest layout on a phone. */
+@media (max-width: 1180px) {
+    .ef-view .form-grid > .ef-span-1,
+    .ef-view .form-grid > .ef-span-2,
+    .ef-view .form-grid > .ef-span-3 { grid-column: span 4; }
+    .ef-view .form-grid > .ef-span-5,
+    .ef-view .form-grid > .ef-span-7 { grid-column: span 6; }
+}
+
+@media (max-width: 1000px) {
+    .ef-view .form-grid > .ef-span-4,
+    .ef-view .form-grid > .ef-span-8 { grid-column: span 6; }
+    .ef-view .form-grid > .ef-span-9,
+    .ef-view .form-grid > .ef-span-10,
+    .ef-view .form-grid > .ef-span-11 { grid-column: span 12; }
+}
+
+@media (max-width: 760px) {
+    .ef-view .form-grid > .form-group { grid-column: span 12 !important; }
+}
+
+/* ---------------------------------------------------------------------
+   Card — matches the 28px inline padding the nine hand-written pages
+   carry as an inline style, which 12-forms.css's -28px action-bar bleed
+   is measured against. Declared here so new pages stop repeating it.
+   --------------------------------------------------------------------- */
+.ef-view .ef-card { padding: 8px 28px 24px; }
+
+@media (max-width: 760px) {
+    .ef-view .ef-card { padding: 8px 16px 20px; }
+    /* The bleed has to follow the padding or the sticky bar leaves a gutter. */
+    .ef-view .form-actions { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+}
+
+/* ---------------------------------------------------------------------
+   Sections
+   --------------------------------------------------------------------- */
+.entity-edit-view .ef-section-hint {
+    margin: -8px 0 16px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #5b6779;
+    max-width: 70ch;
+}
+
+/* Collapsible section. A <details> can't be a <fieldset>, so it borrows the
+   .form-section rule for spacing and the separator, and re-states the parts
+   a <summary> needs. */
+.entity-edit-view details.form-section--fold {
+    position: relative;
+    border: 0;
+    margin: 40px 0 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.entity-edit-view details.form-section--fold::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: -20px;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.entity-edit-view details.form-section--fold > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+    padding: 2px 0;
+    margin-bottom: 16px;
+    user-select: none;
+}
+
+.entity-edit-view details.form-section--fold > summary::-webkit-details-marker { display: none; }
+
+/* The disclosure triangle is drawn rather than inherited so it can rotate
+   and pick up the text colour. */
+.entity-edit-view details.form-section--fold > summary::before {
+    content: "";
+    flex: none;
+    width: 0; height: 0;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: translateY(-1px);
+    transition: transform 0.15s ease;
+    color: var(--color-text-muted);
+}
+
+.entity-edit-view details.form-section--fold[open] > summary::before { transform: rotate(90deg) translateX(-1px); }
+
+.entity-edit-view .ef-fold-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+}
+
+.entity-edit-view .ef-fold-meta {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.entity-edit-view details.form-section--fold > summary:hover .ef-fold-title { color: var(--color-primary); }
+
+.entity-edit-view details.form-section--fold > summary:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------
+   Per-field errors — the thing a single top-of-form alert can't do:
+   say which field, next to that field.
+   --------------------------------------------------------------------- */
+.ef-view .ef-field-error {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 500;
+    color: var(--color-danger, #dc2626);
+}
+
+.ef-view .form-group.has-error .form-input,
+.ef-view .form-group.has-error .form-select,
+.ef-view .form-group.has-error .form-textarea {
+    border-color: var(--color-danger, #dc2626);
+    /* Colour alone can't carry an error state (WCAG 1.4.1); the ring gives it
+       a second, non-chromatic cue. */
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.ef-view .form-group.has-error > label:not(.pe-check) { color: var(--color-danger, #dc2626); }
+
+/* ---------------------------------------------------------------------
+   Star rating
+   --------------------------------------------------------------------- */
+.ef-view .ef-stars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ef-view .ef-star,
+.ef-view .ef-star-clear {
+    background: none;
+    border: 0;
+    padding: 2px 3px;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    color: #cbd5e1;
+    transition: color 0.12s ease, transform 0.12s ease;
+}
+
+.ef-view .ef-star.is-on { color: #f5a623; }
+.ef-view .ef-star:hover { transform: scale(1.12); }
+
+.ef-view .ef-star-clear {
+    font-size: 18px;
+    margin-left: 8px;
+    color: var(--color-text-muted);
+}
+
+.ef-view .ef-star:focus-visible,
+.ef-view .ef-star-clear:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------
+   Read-only derived values
+   --------------------------------------------------------------------- */
+.ef-view .ef-static {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 9px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* ---------------------------------------------------------------------
+   Action bar extras — the hint sits left, the buttons stay right.
+   --------------------------------------------------------------------- */
+.ef-view .form-actions .ef-kbd-hint {
+    margin-right: auto;
+    font-size: 12px;
+    color: var(--color-text-muted, #6b7688);
+}
+
+.ef-view .ef-kbd-hint kbd {
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1;
+    background: var(--color-surface-muted, #f1f5f9);
+    border: 1px solid var(--color-border-strong, #cbd5e1);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 2px 5px;
+    color: var(--color-text, #334155);
+}
+
+@media (max-width: 900px) {
+    .ef-view .form-actions .ef-kbd-hint { display: none; }
+}
