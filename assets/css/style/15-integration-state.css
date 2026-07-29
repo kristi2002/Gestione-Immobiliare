@@ -1,0 +1,52 @@
+/* =====================================================================
+   15-integration-state.css — "questa cosa non è successa davvero".
+
+   Email e WhatsApp, quando l'integrazione è spenta, rispondono comunque
+   success=true e marcano `simulated`. Fino a phase86 quel messaggio finiva
+   in archivio come "inviato": l'elenco Comunicazioni — che è quello che si
+   guarda per dire a un proprietario "le ho scritto il 14" — affermava una
+   consegna mai avvenuta.
+
+   Ora c'è lo stato `simulated`, e qui gli si dà un aspetto che non si possa
+   confondere con una spunta di consegna. Ambra, non rosso: non è un guasto
+   da riparare, è una funzione spenta di proposito — e distinguere le due
+   cose dice all'agenzia se deve chiamare qualcuno o solo configurare.
+
+   Vive in un file suo perché .chat-status sta in 02-properties-media.css,
+   che in questo momento è in mano a un'altra sessione.
+   ===================================================================== */
+
+.chat-status.is-simulated {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    color: #92400e;                    /* ambra scura — 7.1:1 su #fef3c7 */
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 999px;
+    padding: 1px 8px;
+    white-space: normal;
+}
+
+/* Dentro una nuvoletta ricevuta il fondo è scuro: lì l'ambra piena non si
+   legge, quindi resta solo il testo. */
+.chat-bubble--received .chat-status.is-simulated {
+    background: transparent;
+    border-color: rgba(252, 211, 77, 0.5);
+    color: #fde68a;
+}
+
+/* Il pallino davanti al testo evita che, letto di sfuggita, "Non inviata"
+   passi per l'ennesima etichetta di stato neutra. */
+.chat-status.is-simulated::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}

@@ -38,6 +38,14 @@ $clientId = isset($data['client_id']) ? (int)$data['client_id'] : null;
 // risposta non c'era. Il thread mostrava solo i messaggi in arrivo.
 // Il numero viene normalizzato come lo scrive Twilio in entrata, altrimenti
 // "333 1234567" e "+393331234567" diventerebbero due conversazioni distinte.
+// Con WhatsApp spento config/whatsapp.php risponde success=true (per non
+// bloccare i flussi) ma marca simulated=true. Scrivere 'sent' in archivio per un
+// messaggio che nessuno ha ricevuto rende l'archivio inservibile proprio nel
+// momento in cui serve: quando si deve dire a un inquilino cosa gli era stato
+// comunicato e quando.
+$simulated  = !empty($result['simulated']);
+$savedStatus = $simulated ? 'simulated' : $result['status'];
+
 try {
     $db     = getDB();
     $toNorm = normalizeWhatsAppNumber($phone);
@@ -89,7 +97,7 @@ if ($clientId) {
             'cid'    => $clientId,
             'subj'   => 'WhatsApp: ' . mb_substr($message, 0, 80),
             'body'   => $message,
-            'status' => $result['status'],
+            'status' => $savedStatus,
             'ext'    => $result['external_id'],
         ]);
     } catch (PDOException) {
@@ -98,7 +106,10 @@ if ($clientId) {
 }
 
 apiSuccess([
-    'status'      => $result['status'],
+    'status'      => $savedStatus,
+    'simulated'   => $simulated,
     'external_id' => $result['external_id'],
-    'message'     => 'Messaggio WhatsApp inviato.',
+    'message'     => $simulated
+        ? "Invio simulato: l'integrazione WhatsApp non è attiva, il messaggio non è partito."
+        : 'Messaggio WhatsApp inviato.',
 ]);
