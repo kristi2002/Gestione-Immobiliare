@@ -23,6 +23,7 @@
  *   php scripts/backfill_media_thumbnails.php --limit=200    # a scaglioni
  */
 
+require_once __DIR__ . '/../config/cli_only.php';
 if (PHP_SAPI !== 'cli') {
     exit("CLI only\n");
 }

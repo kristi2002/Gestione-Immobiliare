@@ -34,6 +34,16 @@ DirectoryIndex index.php
     RewriteRule ^database/ - [F,L]
     RewriteRule ^cron/ - [F,L]
     RewriteRule ^backups/ - [F,L]
+    # scripts/ was missing from this list. It holds maintenance CLI tools that
+    # print what they operate on: scripts/db_check.php answers an unauthenticated
+    # GET with the DB host, the DB name, row counts and every admin username and
+    # role. Blocked here, and each script now refuses to run outside the CLI.
+    RewriteRule ^scripts/ - [F,L]
+    RewriteRule ^tests/ - [F,L]
+    RewriteRule ^vendor/ - [F,L]
+    # Session jars, dumps and dependency manifests that have no business being
+    # fetchable if one ever lands in the image.
+    RewriteRule ^(cookies\.txt|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml)$ - [F,L]
 
     # Defense-in-depth: deny ALL direct access to the uploaded-documents tree
     # (ID scans, contracts, generated PDFs/invoices, private attachments). These
@@ -58,10 +68,18 @@ DirectoryIndex index.php
 
 # ── Client caching ───────────────────────────────────────────────────────────
 <IfModule mod_headers.c>
-    # Versioned CSS/JS (loaded with ?v=<filemtime> or a per-view token) — safe to
-    # cache for a year; any change bumps the URL so it can't go stale.
+    # "immutable" is only true for a URL that carries a version. index.php and the
+    # view loader append ?v=<filemtime> / ?t=<token> to the files they request —
+    # but an ES module's own `import` statements do not, so every sub-module under
+    # assets/js/<page>/ and assets/js/lib/ was being fetched bare and then pinned
+    # in the browser cache for a year. A returning user would never pick up a fix
+    # to one. Version-less asset URLs revalidate instead.
+    <IfModule mod_setenvif.c>
+        SetEnvIf Query_String "(^|&)(v|t)=" GI_VERSIONED_ASSET=1
+    </IfModule>
     <FilesMatch "\.(css|js|mjs)$">
-        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header set Cache-Control "public, max-age=31536000, immutable" env=GI_VERSIONED_ASSET
+        Header set Cache-Control "public, max-age=300, must-revalidate" env=!GI_VERSIONED_ASSET
     </FilesMatch>
     # Images and fonts — cache a week (property photos use stable filenames).
     <FilesMatch "\.(png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$">
@@ -72,6 +90,17 @@ DirectoryIndex index.php
     <FilesMatch "\.php$">
         Header set Cache-Control "no-cache, no-store, must-revalidate"
     </FilesMatch>
+
+    # ── Baseline security headers ────────────────────────────────────────────
+    # The app renders owner/tenant personal data and ID documents; none of it
+    # should be framable, sniffable, or leaked into a third-party Referer.
+    # (A Content-Security-Policy is NOT set here: the pages still carry inline
+    #  <script> and inline style attributes, so a policy strict enough to be
+    #  worth having would break them. Tracked as remaining work.)
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(self), microphone=(), camera=(self)"
 </IfModule>
 
 <Files ".env">

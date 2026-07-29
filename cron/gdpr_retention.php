@@ -14,6 +14,11 @@
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
+
+// This job purges and anonymises personal data and had no authentication at all
+// on the HTTP path. See config/cron_guard.php — no-op under CLI.
+require_once __DIR__ . '/../config/cron_guard.php';
+
 require_once __DIR__ . '/../config/settings.php';
 
 if (PHP_SAPI !== 'cli') {

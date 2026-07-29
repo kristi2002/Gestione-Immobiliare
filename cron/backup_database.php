@@ -9,6 +9,10 @@
 require_once __DIR__ . '/../config/env.php';
 loadEnv(dirname(__DIR__) . '/.env');
 
+// HTTP entry point gate — see config/cron_guard.php. No-op under CLI, so the
+// production crontab is unaffected.
+require_once __DIR__ . '/../config/cron_guard.php';
+
 $backupDir = dirname(__DIR__) . '/backups';
 if (!is_dir($backupDir)) {
     mkdir($backupDir, 0750, true);

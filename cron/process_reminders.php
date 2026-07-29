@@ -8,6 +8,10 @@
 
 require_once __DIR__ . '/../config/env.php';
 loadEnv(dirname(__DIR__) . '/.env');
+
+// HTTP entry point gate — see config/cron_guard.php. No-op under CLI, so the
+// production crontab is unaffected.
+require_once __DIR__ . '/../config/cron_guard.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/reminders.php';
 

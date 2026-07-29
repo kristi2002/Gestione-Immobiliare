@@ -11,8 +11,12 @@
  *   .\scripts\seed-demo.ps1
  *   .\scripts\seed-demo.ps1 -Fresh -Scale 2
  */
+
 declare(strict_types=1);
 
+// (This script already carried its own CLI check — see below. The shared
+//  config/cli_only.php guard can't go above a declare(strict_types), which
+//  must be the first statement in the file.)
 if (PHP_SAPI !== 'cli') {
     fwrite(STDERR, "Run from CLI only.\n");
     exit(1);

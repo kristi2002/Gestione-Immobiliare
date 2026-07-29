@@ -1,4 +1,6 @@
 <?php
+
+require_once __DIR__ . '/../config/cli_only.php';
 require dirname(__DIR__) . '/config/db.php';
 
 try {

@@ -10,6 +10,8 @@
  *   php scripts/fix_mojibake.php             # apply fixes
  */
 
+
+require_once __DIR__ . '/../config/cli_only.php';
 if (PHP_SAPI !== 'cli') {
     exit("CLI only\n");
 }

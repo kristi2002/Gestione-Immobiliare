@@ -14,6 +14,13 @@ backups/*
 !README.md
 node_modules
 assets/dist
+# A curl session jar left over from local testing. It carries a real
+# gestionale_session value and was being copied into the image, where the web
+# root would have served it at /cookies.txt.
+cookies.txt
+*.tmp
+tests
+phpunit.xml
 immobiliare design/
 Dockerfile
 docker-compose*.yml

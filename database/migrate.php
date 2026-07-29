@@ -14,6 +14,7 @@
  * (phase29+) are written to be idempotent and are always safe to run.
  */
 
+require_once __DIR__ . '/../config/cli_only.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(dirname(__DIR__) . '/.env');
 require_once __DIR__ . '/../config/db.php';
