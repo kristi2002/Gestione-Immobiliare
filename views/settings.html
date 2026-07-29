@@ -15,6 +15,7 @@
         <button class="settings-tab" data-tab="backup">Backup cloud</button>
         <button class="settings-tab" data-tab="meta">Meta / Social</button>
         <button class="settings-tab" data-tab="fatturazione">Fatturazione</button>
+        <button class="settings-tab" data-tab="istat">Indici ISTAT</button>
         <button class="settings-tab" data-tab="sistema">Stato sistema</button>
         <button class="settings-tab" data-tab="wa-templates">Template WhatsApp</button>
         <button class="settings-tab" data-tab="email-templates">Template Email</button>
@@ -197,6 +198,63 @@
             </fieldset>
             <button type="submit" class="btn btn--primary">Salva dati fatturazione</button>
         </form>
+    </div>
+
+    <div class="settings-panel" id="panel-istat" hidden>
+        <div class="card">
+            <h3>Indici ISTAT FOI</h3>
+            <p class="text-muted" style="margin-top:0">
+                Indice dei prezzi al consumo per famiglie di operai e impiegati, al netto dei tabacchi (base 2015 = 100).
+                È la base dell'adeguamento del canone sui contratti di locazione indicizzati.
+                L'ISTAT lo pubblica ogni mese: finché il mese non è caricato qui, il calcolo ripiega sulla media annua e lo dichiara.
+            </p>
+
+            <div id="istat-coverage" style="margin:10px 0 16px 0;"></div>
+
+            <fieldset class="form-section">
+                <legend>Importa da file</legend>
+                <p class="text-muted" style="margin-top:0">
+                    Servono due colonne: <strong>periodo</strong> (<code>2026-01</code>, <code>01/2026</code>, <code>gennaio 2026</code> o <code>2026</code> per la media annua)
+                    e <strong>valore</strong> dell'indice. Separatore <code>;</code>, <code>,</code> o tabulazione; intestazione facoltativa.
+                    Le righe corrette a mano non vengono sovrascritte.
+                </p>
+                <div class="form-row form-row--2">
+                    <div class="form-group">
+                        <label for="istat-import-file">File CSV</label>
+                        <input type="file" id="istat-import-file" class="form-input" accept=".csv,text/csv,text/plain">
+                    </div>
+                    <div class="form-group" style="align-self:end;">
+                        <button type="button" class="btn btn--secondary" id="istat-import-preview"><i data-lucide="eye"></i> Anteprima</button>
+                        <button type="button" class="btn btn--primary" id="istat-import-confirm" disabled><i data-lucide="upload"></i> Importa</button>
+                    </div>
+                </div>
+                <div id="istat-import-report" style="margin-top:6px;"></div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Aggiungi o correggi un indice</legend>
+                <div class="form-row form-row--3">
+                    <div class="form-group">
+                        <label for="istat-manual-period">Periodo</label>
+                        <input type="text" id="istat-manual-period" class="form-input" maxlength="20" placeholder="2026-01">
+                    </div>
+                    <div class="form-group">
+                        <label for="istat-manual-value">Indice</label>
+                        <input type="text" id="istat-manual-value" class="form-input" maxlength="12" placeholder="123,4">
+                    </div>
+                    <div class="form-group" style="align-self:end;">
+                        <button type="button" class="btn btn--secondary" id="istat-manual-save"><i data-lucide="save"></i> Salva indice</button>
+                    </div>
+                </div>
+            </fieldset>
+
+            <table class="data-table" id="istat-table">
+                <thead>
+                    <tr><th>Periodo</th><th>Indice</th><th>Origine</th><th>Aggiornato</th><th></th></tr>
+                </thead>
+                <tbody id="istat-tbody"><tr><td colspan="5" class="text-muted">Caricamento…</td></tr></tbody>
+            </table>
+        </div>
     </div>
 
     <div class="settings-panel" id="panel-sistema" hidden>

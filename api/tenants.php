@@ -92,7 +92,10 @@ function currentContractJoinSql(): string
 
 function listTenants(PDO $db): void
 {
-    $pagination = apiGetPagination();
+    // Stesso motivo di clients.php: le tendine "Inquilino" caricano l'elenco
+    // completo con limit=500 in una richiesta sola, e col tetto a 100 gli
+    // inquilini oltre il centesimo sparivano dai form senza alcun segnale.
+    $pagination = apiGetPagination(25, 500);
     $search = trim($_GET['search'] ?? '');
     $where = "WHERE t.status != 'archived'";
     $params = [];

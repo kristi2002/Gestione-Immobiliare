@@ -34,10 +34,16 @@ function processContractExpirations(PDO $db): array
         return ['processed' => 0, 'created' => 0, 'skipped' => 0, 'results' => [], 'note' => 'Tabella contracts non presente.'];
     }
 
+    // `status IS NULL` = "Automatico", che dal phase69 e' il DEFAULT del form dei
+    // contratti: filtrare sul solo 'signed' significava saltare la maggior parte
+    // dei contratti creati dall'interfaccia: nessun promemoria a -30 giorni,
+    // nessuna email, e la scadenza scoperta il giorno stesso o dopo. E' la stessa
+    // definizione di "in vigore" usata dal filtro "Attivi" e dallo scadenzario —
+    // annullati e bozze restano giustamente fuori.
     $stmt = $db->query(
         "SELECT c.id, c.title, c.client_id, c.property_id, c.end_date
          FROM contracts c
-         WHERE c.status = 'signed'
+         WHERE (c.status IS NULL OR c.status = 'signed')
            AND c.end_date IS NOT NULL
            AND c.end_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 90 DAY)"
     );

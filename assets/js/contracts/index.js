@@ -19,6 +19,37 @@ import {
     escapeHtml,
 } from './helpers.js';
 
+// Allineati a CONTRACT_RENTAL_TYPES / CONTRACT_SALE_TYPES in api/contracts.php.
+const RENTAL_TYPES = ['locazione'];
+const SALE_TYPES   = ['compravendita', 'preliminare', 'mandato'];
+
+/**
+ * L'importo da mostrare in scheda ed elenco, con l'unita' giusta.
+ *
+ * Il «/mese» non e' una decorazione: su una compravendita trasformava un prezzo
+ * di vendita in un canone ricorrente sotto gli occhi di chi leggeva la scheda.
+ * Per questo su un contratto di vendita si mostra SOLO il prezzo — mai un
+ * ripiego sul canone, che li' e' per definizione un residuo da correggere.
+ *
+ * Sta qui e non in helpers.js di proposito: solo lo script di INGRESSO della
+ * vista viene caricato con `?t=` (app.js), mentre i moduli importati arrivano
+ * dalla cache con `max-age=1y, immutable` (.htaccess). Aggiungere un export a
+ * un sotto-modulo e importarlo da qui significa che, al primo deploy, chi ha
+ * il vecchio helpers.js in cache riceve un modulo senza quell'export e la
+ * pagina contratti muore in blocco.
+ *
+ * @returns {{label:string, text:string}|null} null = nessun importo da mostrare
+ */
+function contractAmount(c) {
+    const has   = (v) => v != null && v !== '';
+    const rent  = has(c.monthly_rent) ? { label: 'Canone', text: `€ ${formatPrice(c.monthly_rent)}/mese` } : null;
+    const price = has(c.sale_price)   ? { label: 'Prezzo', text: `€ ${formatPrice(c.sale_price)}` } : null;
+
+    if (SALE_TYPES.includes(c.contract_type))   return price;
+    if (RENTAL_TYPES.includes(c.contract_type)) return rent;
+    return rent || price; // 'altro': semantica ignota, si mostra cio' che c'e'
+}
+
 let contracts  = [];
 let contractDocs = [];
 let properties = [];
@@ -242,7 +273,8 @@ function renderCards() {
             ? `<button class="btn btn--sm btn--ghost btn-advance" data-id="${c.id}" title="Avanza stato">→ ${STATUS_LABELS[nextStatus(c.status)]}</button>`
             : '';
 
-        const eff = effectiveStatus(c);
+        const eff    = effectiveStatus(c);
+        const amount = contractAmount(c);
         return `
         <div class="entity-card contract-card contract-card--${eff} entity-card--clickable" data-id="${c.id}">
             <div class="entity-card__header">
@@ -258,7 +290,7 @@ function renderCards() {
                 <div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="building-2"></i></span>${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</div>
                 ${who ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="user"></i></span>${who}</div>` : ''}
                 ${dateRange ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="calendar"></i></span>${dateRange}</div>` : ''}
-                ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="euro"></i></span>€ ${formatPrice(c.monthly_rent)}/mese</div>` : ''}
+                ${amount ? `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="euro"></i></span>${amount.text}</div>` : ''}
             </div>
             <div class="entity-card__footer">
                 <div class="entity-card__actions">
@@ -330,7 +362,13 @@ function openSchedaModal(c) {
         : '—';
 
     document.getElementById('scheda-ct-title').textContent = c.title;
-    const schedaEff = effectiveStatus(c);
+    const schedaEff    = effectiveStatus(c);
+    const schedaAmount = contractAmount(c);
+    // «Deposito» su una compravendita e' la caparra: stesso campo, nome diverso
+    // a seconda del contratto (vedi phase79).
+    const depositLabel = ['compravendita', 'preliminare', 'mandato'].includes(c.contract_type)
+        ? 'Caparra'
+        : 'Deposito';
     document.getElementById('scheda-ct-badges').innerHTML =
         `<span class="badge badge--contract-type badge--contract-type-${c.contract_type}">${TYPE_LABELS[c.contract_type] || c.contract_type}</span>
          <span class="badge badge--contract-${schedaEff}">${STATUS_LABELS[schedaEff] || schedaEff}</span>`;
@@ -340,8 +378,8 @@ function openSchedaModal(c) {
             <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="building-2"></i> Immobile</span><span class="scheda-row__value">${escapeHtml(c.property_address)}, ${escapeHtml(c.property_city)}</span></div>
             <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="user"></i> Parte</span><span class="scheda-row__value">${escapeHtml(who)}</span></div>
             <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="calendar"></i> Durata</span><span class="scheda-row__value">${escapeHtml(dateRange)}</span></div>
-            ${c.monthly_rent != null && c.monthly_rent !== '' ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="euro"></i> Canone</span><span class="scheda-row__value">€ ${formatPrice(c.monthly_rent)}/mese</span></div>` : ''}
-            ${c.deposit ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="lock"></i> Deposito</span><span class="scheda-row__value">€ ${formatPrice(c.deposit)}</span></div>` : ''}
+            ${schedaAmount ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="euro"></i> ${schedaAmount.label}</span><span class="scheda-row__value">${schedaAmount.text}</span></div>` : ''}
+            ${c.deposit ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="lock"></i> ${depositLabel}</span><span class="scheda-row__value">€ ${formatPrice(c.deposit)}</span></div>` : ''}
             ${c.notes ? `<div class="scheda-row"><span class="scheda-row__label"><i data-lucide="file-pen"></i> Note</span><span class="scheda-row__value">${escapeHtml(c.notes)}</span></div>` : ''}
             <div class="scheda-row"><span class="scheda-row__label"><i data-lucide="paperclip"></i> Documenti</span><span class="scheda-row__value" id="scheda-ct-docs">Caricamento…</span></div>
         </div>`;

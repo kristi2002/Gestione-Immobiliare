@@ -1,4 +1,10 @@
 import { API, USERS_API, LOGO_API, EMAIL_TPL_API, BACKUP_API, USERS_PAGE_LIMIT, EMAIL_TPLS_PAGE_LIMIT } from './constants.js';
+
+// Sta qui e non in constants.js: solo lo script d'ingresso viene caricato con
+// `?t=` (app.js), i moduli importati restano in cache un anno (.htaccess). Un
+// export nuovo in un sotto-modulo romperebbe la pagina a chi ha la versione
+// vecchia in cache.
+const ISTAT_API = 'api/istat_index.php';
 import { esc } from './helpers.js';
 
 let settings = null;
@@ -14,6 +20,7 @@ async function init() {
     bindForms();
     bindUsers();
     bindEmailTemplates();
+    bindIstat();
     bind2fa();
     render2fa();
     const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
@@ -29,6 +36,7 @@ function bindTabs() {
             document.getElementById('panel-' + tab.dataset.tab).hidden = false;
             if (tab.dataset.tab === 'sistema') loadReadiness();
             if (tab.dataset.tab === 'email-templates') loadEmailTemplates();
+            if (tab.dataset.tab === 'istat') loadIstat();
         });
     });
 }
@@ -550,6 +558,156 @@ async function saveEmailTemplate(e) {
     } else {
         showAlert(json.error || 'Errore salvataggio template.', 'error');
     }
+}
+
+// ── Indici ISTAT FOI ────────────────────────────────────────────────────────
+// Il calcolo dell'adeguamento sta sul contratto; qui c'e' il DATO che quel
+// calcolo legge. Separarli e' il punto: prima gli indici erano un array nel
+// codice, quindi aggiornarli voleva dire un deploy.
+
+let istatCsv = null;
+
+function bindIstat() {
+    const file = document.getElementById('istat-import-file');
+    if (!file) return;
+
+    const confirmBtn = document.getElementById('istat-import-confirm');
+    const report     = document.getElementById('istat-import-report');
+
+    file.addEventListener('change', async () => {
+        // Ogni nuovo file riparte dall'anteprima: il pulsante "Importa" non deve
+        // restare abilitato da un'anteprima fatta su un file diverso.
+        istatCsv = null;
+        confirmBtn.disabled = true;
+        report.innerHTML = '';
+        const f = file.files[0];
+        if (!f) return;
+        try {
+            istatCsv = await f.text();
+        } catch (err) {
+            showAlert('Impossibile leggere il file: ' + err.message, 'error');
+        }
+    });
+
+    document.getElementById('istat-import-preview').addEventListener('click', () => runIstatImport(true));
+    confirmBtn.addEventListener('click', () => runIstatImport(false));
+    document.getElementById('istat-manual-save').addEventListener('click', saveIstatManual);
+}
+
+async function loadIstat() {
+    const tbody = document.getElementById('istat-tbody');
+    if (!tbody) return;
+
+    const res  = await fetch(ISTAT_API);
+    const json = await res.json();
+    if (!json.success) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-muted">${esc(json.error)}</td></tr>`;
+        return;
+    }
+
+    const { items, coverage, message } = json.data;
+    const cov = document.getElementById('istat-coverage');
+
+    if (!coverage.available) {
+        cov.innerHTML = `<div class="alert alert--warning">${esc(message || 'Tabella indici non disponibile.')}</div>`;
+    } else if (coverage.total === 0) {
+        cov.innerHTML = '<div class="alert alert--warning">Nessun indice caricato: l\'adeguamento ISTAT non può essere calcolato.</div>';
+    } else {
+        // I valori 'seed' sono quelli ereditati dal codice: funzionano, ma
+        // nessuno li ha confrontati col bollettino. Dirlo qui evita che un
+        // numero provvisorio venga usato per anni come se fosse ufficiale.
+        const seedWarn = coverage.seed > 0
+            ? ` <strong>${coverage.seed}</strong> ancora da verificare sul bollettino ufficiale.`
+            : '';
+        cov.innerHTML =
+            `<div class="alert alert--${coverage.seed > 0 ? 'warning' : 'info'}">` +
+            `<strong>${coverage.total}</strong> periodi (${coverage.monthly} mensili, ${coverage.annual} medie annue) ` +
+            `da ${esc(coverage.first)} a ${esc(coverage.last)}.${seedWarn}</div>`;
+    }
+
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Nessun indice.</td></tr>';
+        return;
+    }
+
+    const SOURCE_LABEL = { seed: 'ereditato dal codice', import: 'import', manuale: 'manuale' };
+    tbody.innerHTML = items.map(r => `
+        <tr>
+            <td>${esc(r.period)}</td>
+            <td>${esc(r.index_value)}</td>
+            <td>${esc(SOURCE_LABEL[r.source] || r.source)}</td>
+            <td>${esc(String(r.updated_at || '').substring(0, 10))}</td>
+            <td><button class="btn btn--sm btn--ghost" data-istat-del="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button></td>
+        </tr>`).join('');
+
+    tbody.querySelectorAll('[data-istat-del]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!await confirmDialog('Eliminare questo indice?', { title: 'Elimina indice' })) return;
+            const res = await fetch(`${ISTAT_API}?id=${btn.dataset.istatDel}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) return showAlert(json.error, 'error');
+            await loadIstat();
+            showAlert('Indice eliminato.', 'success');
+        });
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+async function runIstatImport(dryRun) {
+    const report = document.getElementById('istat-import-report');
+    if (!istatCsv) return showAlert('Seleziona prima un file CSV.', 'error');
+
+    const res  = await fetch(ISTAT_API + '?action=import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv: istatCsv, dry_run: dryRun }),
+    });
+    const json = await res.json();
+
+    if (!json.success) {
+        report.innerHTML = `<div class="alert alert--error">${esc(json.error)}</div>`;
+        document.getElementById('istat-import-confirm').disabled = true;
+        return;
+    }
+
+    const d = json.data;
+    const preview = (d.preview || []).map(p => `${esc(p.period)} = ${esc(p.index_value)}`).join(' · ');
+    report.innerHTML =
+        `<div class="alert alert--${dryRun ? 'info' : 'success'}">` +
+        `${esc(d.message)}<br>` +
+        `Righe lette ${d.rows_in_file}, pronte ${d.rows_ready}, scartate ${d.skipped_bad}, ` +
+        `override manuali preservati ${d.skipped_manual}.` +
+        (preview ? `<br><small class="text-muted">${preview}</small>` : '') +
+        `</div>`;
+
+    // Si abilita l'import solo se l'anteprima ha trovato qualcosa da scrivere.
+    document.getElementById('istat-import-confirm').disabled = !(dryRun && d.rows_ready > 0);
+
+    if (!dryRun) {
+        istatCsv = null;
+        document.getElementById('istat-import-file').value = '';
+        await loadIstat();
+    }
+}
+
+async function saveIstatManual() {
+    const period = document.getElementById('istat-manual-period').value.trim();
+    const value  = document.getElementById('istat-manual-value').value.trim();
+    if (!period || !value) return showAlert('Indica periodo e valore.', 'error');
+
+    const res  = await fetch(ISTAT_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period, index_value: value }),
+    });
+    const json = await res.json();
+    if (!json.success) return showAlert(json.error, 'error');
+
+    document.getElementById('istat-manual-period').value = '';
+    document.getElementById('istat-manual-value').value = '';
+    await loadIstat();
+    showAlert(`Indice ${json.data.period} salvato.`, 'success');
 }
 
 function showAlert(msg, type) {

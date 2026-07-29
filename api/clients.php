@@ -99,7 +99,14 @@ function clientStats(PDO $db): void
 
 function listClients(PDO $db): void
 {
-    $pagination = apiGetPagination();
+    // Tetto a 500 come properties.php/leads.php, e non per simmetria estetica:
+    // questo endpoint alimenta anche le TENDINE "Proprietario" (contratto,
+    // fattura, spesa, immobile, edificio... dodici viste in tutto), che chiedono
+    // limit=500 in una sola richiesta. Col tetto di default a 100, un'agenzia con
+    // piu' di cento anagrafiche non riusciva piu' a selezionare i proprietari
+    // oltre il centesimo in ordine alfabetico: non un errore, semplicemente
+    // assenti dall'elenco. La lista paginata continua a chiedere 25 per pagina.
+    $pagination = apiGetPagination(25, 500);
     $search = trim($_GET['search'] ?? '');
     $status = trim($_GET['status'] ?? '');
 

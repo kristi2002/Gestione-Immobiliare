@@ -17,6 +17,19 @@ requireViewAccess('contracts');
 const CONTRACT_TYPES    = ['locazione', 'compravendita', 'preliminare', 'mandato', 'altro'];
 const CONTRACT_STATUSES = ['draft', 'sent', 'signed', 'expired', 'cancelled'];
 
+/**
+ * Il tipo di contratto decide QUALE campo economico ha senso, e i due non
+ * convivono mai: un canone mensile su una compravendita e' sempre un errore di
+ * inserimento, un prezzo di vendita su una locazione pure.
+ *
+ * `mandato` sta con le vendite perche' l'incarico porta il prezzo richiesto;
+ * `altro` non sta in nessuno dei due gruppi di proposito — e' la casella per i
+ * casi che non abbiamo previsto, e li' l'agente deve poter compilare entrambi
+ * senza che il sistema decida al posto suo.
+ */
+const CONTRACT_RENTAL_TYPES = ['locazione'];
+const CONTRACT_SALE_TYPES   = ['compravendita', 'preliminare', 'mandato'];
+
 try {
     $db     = getDB();
     $method = $_SERVER['REQUEST_METHOD'];
@@ -187,13 +200,13 @@ function createContract(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO contracts
             (property_id, tenant_id, client_id, title, contract_type, contract_subtype, status,
-             start_date, end_date, monthly_rent, deposit, notes,
+             start_date, end_date, monthly_rent, sale_price, deposit, notes,
              registration_number, registration_date, registration_office, cedolare_secca,
              registration_tax_annual, stamp_duty, imposta_registro_due_date,
              istat_update_enabled, istat_baseline_index, istat_baseline_month, last_istat_update, created_by)
          VALUES
             (:property_id, :tenant_id, :client_id, :title, :contract_type, :contract_subtype, :status,
-             :start_date, :end_date, :monthly_rent, :deposit, :notes,
+             :start_date, :end_date, :monthly_rent, :sale_price, :deposit, :notes,
              :registration_number, :registration_date, :registration_office, :cedolare_secca,
              :registration_tax_annual, :stamp_duty, :imposta_registro_due_date,
              :istat_update_enabled, :istat_baseline_index, :istat_baseline_month, :last_istat_update, :created_by)"
@@ -207,6 +220,7 @@ function createContract(PDO $db): void
     // this the contract exists but the payments module knows nothing about it
     // until someone remembers to press "Genera scadenzario".
     autoGeneratePaymentSchedule($db, $newId);
+    syncPropertyOccupancy($db, $newId);
 
     getContract($db, $newId);
 }
@@ -227,7 +241,7 @@ function updateContract(PDO $db, int $id): void
              title = :title, contract_type = :contract_type, contract_subtype = :contract_subtype,
              status = :status,
              start_date = :start_date, end_date = :end_date, monthly_rent = :monthly_rent,
-             deposit = :deposit, notes = :notes,
+             sale_price = :sale_price, deposit = :deposit, notes = :notes,
              registration_number = :registration_number, registration_date = :registration_date,
              registration_office = :registration_office, cedolare_secca = :cedolare_secca,
              registration_tax_annual = :registration_tax_annual, stamp_duty = :stamp_duty,
@@ -244,6 +258,7 @@ function updateContract(PDO $db, int $id): void
     // creation it wasn't in force yet, so nothing was generated. insertPaymentSchedule
     // is a no-op when a schedule already exists, so repeated saves are harmless.
     autoGeneratePaymentSchedule($db, $id);
+    syncPropertyOccupancy($db, $id);
 
     getContract($db, $id);
 }
@@ -404,6 +419,7 @@ function validateContractInput(array $data): array
     $startDate    = trim($data['start_date'] ?? '') ?: null;
     $endDate      = trim($data['end_date'] ?? '') ?: null;
     $monthlyRent  = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? (float) $data['monthly_rent'] : null;
+    $salePrice    = isset($data['sale_price']) && $data['sale_price'] !== '' ? (float) $data['sale_price'] : null;
     $deposit      = isset($data['deposit']) && $data['deposit'] !== '' ? (float) $data['deposit'] : null;
     $notes        = trim($data['notes'] ?? '') ?: null;
 
@@ -444,6 +460,33 @@ function validateContractInput(array $data): array
     if ($endDate !== null && !DateTime::createFromFormat('Y-m-d', $endDate)) {
         apiError('Data fine non valida.');
     }
+    // Ordine delle date. Senza questo controllo un periodo rovesciato si salvava
+    // senza un fiato, e il danno arrivava dopo e altrove: `effectiveStatus()`
+    // mostrava il contratto gia' "Scaduto" il giorno della firma, e soprattutto
+    // "Genera scadenzario" rispondeva «0 pagamenti creati» con l'aria di essere
+    // andato a buon fine — il ciclo esce alla prima iterazione perche' la prima
+    // scadenza cade gia' oltre `end`. Un canone che non viene mai richiesto e'
+    // il tipo di errore che si scopre a fine anno guardando i conti.
+    // Confronto tra stringhe: il formato Y-m-d e' gia' validato sopra ed e'
+    // ordinabile lessicograficamente, quindi non serve costruire due DateTime.
+    if ($startDate !== null && $endDate !== null && $endDate < $startDate) {
+        apiError('La data di fine non può precedere la data di inizio.');
+    }
+
+    // Campo economico coerente col tipo. Si azzera in silenzio invece di dare
+    // errore perche' il caso normale non e' un utente che sbaglia, e' un cambio
+    // di tipo su un contratto gia' compilato: il form nasconde il campo non
+    // pertinente, e senza questa riga il vecchio valore resterebbe in tabella,
+    // invisibile nella scheda ma ben presente in elenco («€ 700,00/mese» su una
+    // compravendita). L'UPDATE riscrive comunque tutte le colonne, quindi qui
+    // "non passato" e "da azzerare" sono la stessa cosa e non si perde nulla che
+    // il form non abbia gia' nascosto.
+    if (in_array($contractType, CONTRACT_SALE_TYPES, true)) {
+        $monthlyRent = null;
+    }
+    if (in_array($contractType, CONTRACT_RENTAL_TYPES, true)) {
+        $salePrice = null;
+    }
 
     return [
         'property_id'   => $propertyId,
@@ -455,6 +498,7 @@ function validateContractInput(array $data): array
         'start_date'    => $startDate,
         'end_date'      => $endDate,
         'monthly_rent'  => $monthlyRent,
+        'sale_price'    => $salePrice,
         'deposit'       => $deposit,
         'notes'         => $notes,
         'contract_subtype'          => $contractSubtype,
@@ -538,24 +582,75 @@ function istatAdjustment(PDO $db, int $id): void
     $baselineIndex = ($c['istat_baseline_index'] ?? null) !== null && $c['istat_baseline_index'] !== ''
         ? (float) $c['istat_baseline_index'] : null;
 
-    // Fallback baseline year from start_date when no explicit index is stored.
-    $baselineYear = null;
-    if ($baselineIndex === null && !empty($c['start_date'])) {
-        $baselineYear = (int) substr((string) $c['start_date'], 0, 4);
+    // Periodo base: prima il campo «Mese indice base» del contratto — che fino a
+    // phase80 veniva salvato e mai letto — poi, se vuoto, il mese di decorrenza.
+    // Il MESE conta: una locazione che parte a marzo si adegua sull'indice di
+    // marzo, non sulla media annua, e per anni qui e' stato usato il solo anno.
+    $baselinePeriod = istatParsePeriod($c['istat_baseline_month'] ?? null);
+    if ($baselinePeriod === null && !empty($c['start_date'])) {
+        $start = (string) $c['start_date'];
+        $baselinePeriod = ['year' => (int) substr($start, 0, 4), 'month' => (int) substr($start, 5, 2)];
+    }
+    if ($baselinePeriod === null) {
+        apiError('Manca il periodo di riferimento: compila «Mese indice base» oppure la data di inizio del contratto.');
     }
 
-    $targetYear = isset($_GET['target_year']) && $_GET['target_year'] !== ''
-        ? (int) $_GET['target_year']
-        : (int) date('Y');
+    // Bersaglio: quello chiesto, altrimenti l'ultimo indice pubblicato che
+    // abbiamo in tabella. Puntare a `date('Y')` come prima significava chiedere
+    // un indice che a gennaio non esiste ancora.
+    $target = istatParsePeriod($_GET['target_period'] ?? ($_GET['target_year'] ?? ''))
+        ?? istatLatestPeriod($db);
+    if ($target === null) {
+        apiError('Nessun indice ISTAT disponibile. Importa gli indici da Impostazioni → Indici ISTAT.');
+    }
 
-    $result = istatComputeAdjustment($rent, $baselineIndex, $baselineYear, $targetYear);
+    $result = istatComputeAdjustment(
+        $db,
+        $rent,
+        ['year' => $baselinePeriod['year'], 'month' => $baselinePeriod['month'], 'index' => $baselineIndex],
+        $target
+    );
     if (empty($result['ok'])) {
         apiError($result['message'] ?? 'Calcolo ISTAT non riuscito.');
     }
 
     $result['contract_id'] = $id;
-    $result['note'] = 'Adeguamento pari al 75% della variazione FOI. Valori indicativi: verificare con il dato ISTAT ufficiale.';
+    $result['note'] = 'Adeguamento pari al ' . (int) round($result['share'] * 100) . '% della variazione FOI '
+        . $result['baseline_period'] . ' → ' . $result['target_period'] . '.';
     apiSuccess($result);
+}
+
+/**
+ * Allinea lo stato dell'immobile al contratto appena salvato.
+ *
+ * Va chiamata DOPO la scrittura, con il contratto riletto dal database: quello
+ * che conta e' cosa c'e' scritto adesso, non cosa e' arrivato nel payload.
+ *
+ * Il ritiro dai portali era gia' implementato ma inarrivabile: nessuno portava
+ * l'immobile ad "affittato", quindi `property.status_changed` non veniva mai
+ * emesso e l'annuncio restava online a pagamento (vedi lib/contract_lifecycle.php).
+ */
+function syncPropertyOccupancy(PDO $db, int $contractId): void
+{
+    require_once __DIR__ . '/../lib/contract_lifecycle.php';
+
+    $stmt = $db->prepare('SELECT * FROM contracts WHERE id = :id');
+    $stmt->execute(['id' => $contractId]);
+    $contract = $stmt->fetch();
+    if (!$contract || !contractOccupiesProperty($contract)) {
+        return;
+    }
+
+    $result = contractSyncPropertyOccupancy($db, (int) $contract['property_id']);
+    if ($result['changed']) {
+        logActivity(
+            'update',
+            'property',
+            (int) $contract['property_id'],
+            'Immobile passato ad affittato: contratto #' . $contractId . ' in vigore'
+            . ($result['retired'] > 0 ? ' — ' . $result['retired'] . ' pubblicazioni ritirate dai portali' : '')
+        );
+    }
 }
 
 /**
