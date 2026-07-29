@@ -104,6 +104,13 @@
         if (isEdit) window.App.navigateTo('client_profile', { clientId });
         else window.App.navigateTo('clients');
     }
+    // "Indietro"/"Annulla" ripercorrono il cammino fatto; la scheda (o l'elenco)
+    // resta come ripiego quando il form e' la prima pagina aperta.
+    function leave() {
+        if (!window.App) return;
+        if (isEdit) window.App.back('client_profile', { clientId });
+        else window.App.back('clients');
+    }
 
     // Persona fisica vs giuridica: reveal company fields, relabel the anagrafica
     // block as the legale rappresentante, and hide the birth fields (a company
@@ -320,8 +327,8 @@
     }
 
     function init() {
-        $('ce-back').addEventListener('click', goBack);
-        $('ce-cancel').addEventListener('click', goBack);
+        $('ce-back').addEventListener('click', leave);
+        $('ce-cancel').addEventListener('click', leave);
         $('ce-form').addEventListener('submit', save);
         $('ce-person-type').addEventListener('change', applyPersonType);
 

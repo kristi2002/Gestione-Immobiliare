@@ -25,12 +25,13 @@
     function showError(m) { const el = $('exe-error'); if (el) { el.textContent = m; el.style.display = 'block'; } }
     function clearError() { const el = $('exe-error'); if (el) el.style.display = 'none'; }
 
-    function goBack() {
-        if (!window.App) return;
-        if (vp.propertyId) window.App.navigateTo('property_profile', { propertyId: vp.propertyId });
-        else if (vp.clientId) window.App.navigateTo('client_profile', { clientId: vp.clientId });
-        else window.App.navigateTo('expenses');
+    function backTarget() {
+        if (vp.propertyId) return ['property_profile', { propertyId: vp.propertyId }];
+        if (vp.clientId)   return ['client_profile', { clientId: vp.clientId }];
+        return ['expenses', {}];
     }
+    function goBack() { if (window.App) { const [v, p] = backTarget(); window.App.navigateTo(v, p); } }
+    function leave()  { if (window.App) { const [v, p] = backTarget(); window.App.back(v, p); } }
 
     async function fetchList(url, params) {
         if (window.Pagination?.fetchList) return window.Pagination.fetchList(url, params || {});
@@ -105,8 +106,8 @@
     }
 
     async function init() {
-        $('exe-back').addEventListener('click', goBack);
-        $('exe-cancel').addEventListener('click', goBack);
+        $('exe-back').addEventListener('click', leave);
+        $('exe-cancel').addEventListener('click', leave);
         $('exe-form').addEventListener('submit', save);
 
         try { await loadDropdowns(); }

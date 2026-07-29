@@ -80,6 +80,7 @@
 
     function renderHero() {
         document.getElementById('profile-name').textContent = building.name;
+        window.App?.setCrumb(building.name);
 
         const meta = [];
         if (building.address) meta.push(`<span><i data-lucide="map-pin"></i> ${esc(building.address)}, ${esc(building.city || '')}${building.cap ? ' — ' + esc(building.cap) : ''}</span>`);

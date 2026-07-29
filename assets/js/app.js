@@ -73,6 +73,21 @@
         viewParams: {},
         _viewToken: 0,
 
+        // ── Navigation trail ─────────────────────────────────────────────────
+        // The app has no fixed page hierarchy: un immobile can be reached from
+        // Immobili, from the scheda of its proprietario, from the mappa… so the
+        // breadcrumb is the path actually walked, not a static parent chain.
+        //   trail    — [{ view, params, label, seq }], oldest first
+        //   trailIdx — where we are in it (always the last element)
+        //   _seq     — how many history entries WE pushed in this document; each
+        //              entry carries the seq it was written at, so a crumb click
+        //              can be turned into a real history.go() delta.
+        // The whole trail travels inside history.state, so Back/Forward and a
+        // reload all restore the exact same path.
+        trail: [],
+        trailIdx: 0,
+        _seq: 0,
+
         /** Human-readable titles for each view */
         viewTitles: {
             dashboard:      'Dashboard',
@@ -138,10 +153,11 @@
             appointment_edit: { create: 'Nuovo Appuntamento',  edit: 'Modifica Appuntamento',  idKey: 'appointmentId' },
         },
 
-        resolveTitle(viewKey) {
+        resolveTitle(viewKey, params) {
+            const p = params || this.viewParams;
             const e = this.editTitles[viewKey];
             if (e) {
-                return (this.viewParams && this.viewParams[e.idKey]) ? e.edit : e.create;
+                return (p && p[e.idKey]) ? e.edit : e.create;
             }
             return this.viewTitles[viewKey] || null;
         },
@@ -156,6 +172,7 @@
             this.bindTopbarLinks();
             this.bindGlobalSearch();
             this.bindSidebarToggle();
+            this.bindCrumbs();
 
             // Render Lucide icons in the static chrome (sidebar, topbar) and keep
             // any dynamically-injected [data-lucide] elements rendered (cards, modals…).
@@ -180,20 +197,19 @@
                 observer.observe(document.body, { childList: true, subtree: true });
             }
 
-            const sp = new URLSearchParams(window.location.search);
-            const startView = sp.get('view');
-            if (startView && this.viewTitles[startView]) {
-                // Restore any scalar params (e.g. clientId) that syncUrl() wrote,
-                // so a reloaded/bookmarked detail view keeps its id.
-                const params = {};
-                for (const [k, v] of sp.entries()) {
-                    if (k === 'view') continue;
-                    params[k] = /^-?\d+$/.test(v) ? Number(v) : v;
-                }
-                this.navigateTo(startView, params);
-            } else {
-                this.loadView('view.php?name=dashboard', 'dashboard');
+            window.addEventListener('popstate', (e) => this.onPopState(e));
+
+            // A reload keeps history.state, so the trail (and the crumbs) survive
+            // F5 on a page reached three steps deep.
+            if (this.adoptState(history.state)) {
+                this.enterCurrent();
+                return;
             }
+
+            // Fresh entry: one step, built from the URL (which carries the view +
+            // any scalar params, e.g. clientId, so a bookmarked detail view works).
+            const start = this.parseUrl() || { view: 'dashboard', params: {}, label: null };
+            this.navigateTo(start.view, start.params, { root: true, replace: true });
         },
 
         /** Intercept sidebar link clicks and load views via fetch */
@@ -206,11 +222,13 @@
 
                     const view = link.dataset.view;
 
-                    if (view === this.currentView) return;
+                    if (view === this.currentView && this.trail.length <= 1) return;
 
                     // Route through navigateTo so the URL is kept in sync (clears
                     // any stale detail-view params like clientId from a profile).
-                    this.navigateTo(view);
+                    // root: a sidebar entry is a destination, not a drill-down —
+                    // it restarts the trail instead of extending the previous one.
+                    this.navigateTo(view, {}, { root: true });
                     this.closeSidebar();
                 });
             });
@@ -226,9 +244,9 @@
                 const view = link.dataset.view;
                 if (!view || view === this.currentView) return;
 
-                const navLink = document.querySelector(`.nav-link[data-view="${view}"]`);
-                if (navLink) this.setActiveNav(navLink);
-                this.loadView(link.getAttribute('href'), view);
+                // Drill-down from inside a page ("Vedi tutti", quick actions):
+                // extends the trail, so the crumbs show where we came from.
+                this.navigateTo(view);
             });
         },
 
@@ -239,10 +257,17 @@
                     e.preventDefault();
                     const view = link.dataset.view;
                     if (!view) return;
-                    const navLink = document.querySelector(`.nav-link[data-view="${view}"]`);
-                    if (navLink) this.setActiveNav(navLink);
-                    this.navigateTo(view);
+                    this.navigateTo(view, {}, { root: true });
                 });
+            });
+        },
+
+        /** Breadcrumb bar: back arrow + one clickable step per ancestor. */
+        bindCrumbs() {
+            document.getElementById('crumb-back')?.addEventListener('click', () => this.back());
+            document.getElementById('crumbs')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.crumb__link');
+                if (btn) this.goToTrailIndex(Number(btn.dataset.i));
             });
         },
 
@@ -258,7 +283,9 @@
             const close = () => { box.hidden = true; box.innerHTML = ''; activeIdx = -1; flat = []; };
             const paint = () => box.querySelectorAll('.gsr-item').forEach((b, i) => b.classList.toggle('is-active', i === activeIdx));
 
-            const go = (it) => { if (!it) return; close(); input.value = ''; self.navigateTo(it.view, it.params || {}); };
+            // A search jump lands anywhere: it starts a new trail rather than
+            // pretending the result hangs off the page we happened to be on.
+            const go = (it) => { if (!it) return; close(); input.value = ''; self.navigateTo(it.view, it.params || {}, { root: true }); };
 
             const render = (groups) => {
                 flat = [];
@@ -518,19 +545,219 @@
             }
         },
 
-        /** Navigate to a view programmatically (e.g. from client profile) */
-        navigateTo(viewKey, params = {}) {
-            this.viewParams = params;
-            this.syncUrl(viewKey, params);
-            const link = document.querySelector(`.nav-link[data-view="${viewKey}"]`);
-            const href = link
-                ? link.getAttribute('href')
-                : `view.php?name=${encodeURIComponent(viewKey)}`;
+        /**
+         * Navigate to a view programmatically (e.g. from client profile).
+         *   opts.root    — a destination, not a drill-down: the trail restarts here
+         *                  (sidebar, topbar links, global search).
+         *   opts.replace — swap the current step instead of adding one (no new
+         *                  history entry, so Back skips it).
+         */
+        navigateTo(viewKey, params = {}, opts = {}) {
+            const entry = { view: viewKey, params: this.scalarParams(params), label: null };
+            const key   = this.entryKey(entry);
 
-            if (link && viewKey !== this.currentView) {
-                this.setActiveNav(link);
+            if (opts.root) {
+                this.trail    = [entry];
+                this.trailIdx = 0;
+                this.writeHistory(opts.replace === true);
+            } else {
+                const seen = this.trail.findIndex(e => this.entryKey(e) === key);
+                if (seen >= 0 && seen < this.trailIdx) {
+                    // Walking back onto a step we already took (e.g. saving a form
+                    // returns to the scheda it was opened from): rewind to it
+                    // instead of stacking a second copy on top. Rewinding through
+                    // the history — not pushing — is what keeps the browser's own
+                    // Back button honest: after "Salva" it must leave the form
+                    // behind, not step back into it.
+                    this.goToTrailIndex(seen);
+                    return;
+                } else {
+                    const cur = this.trail[this.trailIdx];
+                    // An *_edit form is a step, not a place: once you leave it
+                    // (saved or cancelled) it drops out of the trail, so Back from
+                    // the result never lands you back inside the form.
+                    const replace = opts.replace === true
+                        || seen === this.trailIdx
+                        || !!(cur && this.isTransient(cur.view) && cur.view !== viewKey);
+                    this.trail = this.trail.slice(0, replace ? this.trailIdx : this.trailIdx + 1);
+                    this.trail.push(entry);
+                    this.trailIdx = this.trail.length - 1;
+                    this.writeHistory(replace);
+                }
             }
-            this.loadView(href, viewKey);
+
+            this.enterCurrent();
+        },
+
+        /**
+         * Step back the way the user came in — along the trail, not to a fixed
+         * parent. fallbackView is used only when this is the first page opened.
+         */
+        back(fallbackView, fallbackParams) {
+            if (this.trailIdx > 0) { this.goToTrailIndex(this.trailIdx - 1); return; }
+            if (this._seq > 0) { history.back(); return; }
+            if (fallbackView) this.navigateTo(fallbackView, fallbackParams || {}, { root: true });
+        },
+
+        /** Jump to an ancestor step (crumb click / back arrow). */
+        goToTrailIndex(i) {
+            const target = this.trail[i];
+            if (!target || i === this.trailIdx) return;
+
+            // Every pushed step owns exactly one history entry and seq counts them,
+            // so the difference in seq IS the history delta. Going through history
+            // keeps the browser's own Back/Forward honest instead of piling up
+            // entries. If the step predates this document (no seq), re-walk it.
+            const delta = (typeof target.seq === 'number' ? target.seq : NaN) - this._seq;
+            if (delta < 0) {
+                history.go(delta);
+                // Se quella voce non è più nella cronologia della scheda, popstate
+                // non arriva mai e il bottone resterebbe morto: ripercorriamo il
+                // passo a mano. Il confronto evita il doppio salto quando invece
+                // popstate e' arrivato.
+                // _seq invariato = nessun popstate e nessuna altra navigazione:
+                // solo allora rifacciamo il passo a mano.
+                const at = this._seq;
+                setTimeout(() => { if (this._seq === at) this.walkToTrailIndex(i); }, 400);
+                return;
+            }
+
+            this.walkToTrailIndex(i);
+        },
+
+        /** Rewind the trail to step i without leaning on the history stack. */
+        walkToTrailIndex(i) {
+            if (!this.trail[i]) return;
+            this.trail    = this.trail.slice(0, i + 1);
+            this.trailIdx = i;
+            this.writeHistory(false);
+            this.enterCurrent();
+        },
+
+        /** Load whatever step the trail currently points at. */
+        enterCurrent() {
+            const entry = this.trail[this.trailIdx];
+            if (!entry) return;
+            this.viewParams = entry.params || {};
+            this.renderCrumbs();
+            const link = document.querySelector(`.nav-link[data-view="${entry.view}"]`);
+            if (link) this.setActiveNav(link);
+            this.loadView(this.hrefFor(entry.view), entry.view);
+        },
+
+        onPopState(e) {
+            if (this.adoptState(e.state)) { this.enterCurrent(); return; }
+            // An entry we never wrote (the document's first one, or a foreign
+            // page): rebuild a one-step trail out of the URL.
+            const parsed = this.parseUrl();
+            if (!parsed) return;
+            this.trail    = [parsed];
+            this.trailIdx = 0;
+            this._seq     = 0;
+            this.enterCurrent();
+        },
+
+        adoptState(st) {
+            if (!st || st.app !== 'gi' || !Array.isArray(st.trail) || !st.trail[st.idx]) return false;
+            this.trail    = st.trail;
+            this.trailIdx = st.idx;
+            this._seq     = st.seq || 0;
+            return true;
+        },
+
+        /** Write the current step into the history entry + the URL. */
+        writeHistory(replace) {
+            const entry = this.trail[this.trailIdx];
+            if (!entry) return;
+            if (!replace) this._seq += 1;
+            entry.seq = this._seq;
+            const state = { app: 'gi', trail: this.trail, idx: this.trailIdx, seq: this._seq };
+            try {
+                history[replace ? 'replaceState' : 'pushState'](state, '', this.urlFor(entry.view, entry.params));
+            } catch (e) { /* history API unavailable — non-fatal */ }
+        },
+
+        parseUrl() {
+            const sp   = new URLSearchParams(window.location.search);
+            const view = sp.get('view');
+            if (!view || !this.viewTitles[view]) return null;
+            const params = {};
+            for (const [k, v] of sp.entries()) {
+                if (k === 'view') continue;
+                params[k] = /^-?\d+$/.test(v) ? Number(v) : v;
+            }
+            return { view, params, label: null };
+        },
+
+        hrefFor(view) {
+            const link = document.querySelector(`.nav-link[data-view="${view}"]`);
+            return link ? link.getAttribute('href') : `view.php?name=${encodeURIComponent(view)}`;
+        },
+
+        /** Views that are a step in a task, not a place you navigate back to. */
+        isTransient(view) { return /_edit$/.test(String(view || '')); },
+
+        scalarParams(params) {
+            const out = {};
+            Object.entries(params || {}).forEach(([k, v]) => {
+                if (v !== null && v !== undefined && typeof v !== 'object') out[k] = v;
+            });
+            return out;
+        },
+
+        /** Identity of a step: same view + same params = same page. */
+        entryKey(entry) {
+            const p = entry.params || {};
+            return entry.view + '|' + Object.keys(p).sort().map(k => k + '=' + p[k]).join('&');
+        },
+
+        crumbLabel(entry) {
+            return entry.label || this.resolveTitle(entry.view, entry.params) || entry.view;
+        },
+
+        renderCrumbs() {
+            const bar  = document.getElementById('crumbbar');
+            const list = document.getElementById('crumbs');
+            if (!bar || !list) return;
+
+            // A single step is not a path — no bar on a plain list page.
+            if (this.trail.length < 2) {
+                bar.hidden = true;
+                list.innerHTML = '';
+                return;
+            }
+
+            const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+            list.innerHTML = this.trail.map((e, i) => {
+                const label = esc(this.crumbLabel(e));
+                return i === this.trailIdx
+                    ? `<li class="crumb crumb--current" aria-current="page">${label}</li>`
+                    : `<li class="crumb"><button type="button" class="crumb__link" data-i="${i}">${label}</button></li>`;
+            }).join('');
+            bar.hidden = false;
+            // La lista scorre su una riga sola: la pagina corrente sta in fondo,
+            // quindi va tenuta in vista quando il percorso è più largo della barra.
+            list.scrollLeft = list.scrollWidth;
+        },
+
+        /**
+         * Name the current step after the record it shows ("Mario Rossi" instead of
+         * "Scheda Cliente"). Detail views call this once the record has loaded; the
+         * label lives in the history entry, so it survives Back and a reload.
+         */
+        setCrumb(label) {
+            const entry = this.trail[this.trailIdx];
+            if (!entry) return;
+            const text = String(label ?? '').trim();
+            entry.label = text || null;
+            this.renderCrumbs();
+            try {
+                history.replaceState(
+                    { app: 'gi', trail: this.trail, idx: this.trailIdx, seq: this._seq },
+                    '',
+                    this.urlFor(entry.view, entry.params)
+                );
+            } catch (e) { /* non-fatal */ }
         },
 
         /**
@@ -538,19 +765,14 @@
          * Detail views keep their id in memory only (App.viewParams); without
          * this, reloading or bookmarking e.g. a client profile loses the
          * clientId and the view errors with "ID proprietario non specificato".
-         * Mirrored by init(), which parses these params back on load.
+         * Mirrored by parseUrl(), which reads these params back on load.
          */
-        syncUrl(viewKey, params = {}) {
-            try {
-                const qs = new URLSearchParams({ view: viewKey });
-                Object.entries(params || {}).forEach(([k, v]) => {
-                    if (v !== null && v !== undefined && typeof v !== 'object') {
-                        qs.set(k, String(v));
-                    }
-                });
-                history.replaceState(null, '', 'index.php?' + qs.toString());
-            } catch (e) { /* history API unavailable — non-fatal */ }
+        urlFor(view, params) {
+            const qs = new URLSearchParams({ view });
+            Object.entries(params || {}).forEach(([k, v]) => qs.set(k, String(v)));
+            return 'index.php?' + qs.toString();
         },
+
     };
 
     document.addEventListener('DOMContentLoaded', () => App.init());

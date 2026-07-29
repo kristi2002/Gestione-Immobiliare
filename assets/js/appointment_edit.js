@@ -44,14 +44,17 @@
     function showError(m) { const el = $('ape-error'); if (el) { el.textContent = m; el.style.display = 'block'; } }
     function clearError() { const el = $('ape-error'); if (el) el.style.display = 'none'; }
 
-    function goBack() {
-        if (!window.App) return;
-        if (isEdit) window.App.navigateTo('appointment_profile', { appointmentId });
-        else if (vp.leadId) window.App.navigateTo('lead_edit', { leadId: vp.leadId });
-        else if (vp.propertyId) window.App.navigateTo('property_profile', { propertyId: vp.propertyId });
-        else if (vp.clientId) window.App.navigateTo('client_profile', { clientId: vp.clientId });
-        else window.App.navigateTo('appointments');
+    function backTarget() {
+        if (isEdit)          return ['appointment_profile', { appointmentId }];
+        if (vp.leadId)       return ['lead_edit', { leadId: vp.leadId }];
+        if (vp.propertyId)   return ['property_profile', { propertyId: vp.propertyId }];
+        if (vp.clientId)     return ['client_profile', { clientId: vp.clientId }];
+        return ['appointments', {}];
     }
+    function goBack() { if (window.App) { const [v, p] = backTarget(); window.App.navigateTo(v, p); } }
+    // "Indietro"/"Annulla" ripercorrono il cammino fatto; backTarget() resta come
+    // ripiego quando il form e' la prima pagina aperta.
+    function leave() { if (window.App) { const [v, p] = backTarget(); window.App.back(v, p); } }
 
     function toLocal(dt) {
         if (!dt) return '';
@@ -251,8 +254,8 @@
     }
 
     async function init() {
-        $('ape-back').addEventListener('click', goBack);
-        $('ape-cancel').addEventListener('click', goBack);
+        $('ape-back').addEventListener('click', leave);
+        $('ape-cancel').addEventListener('click', leave);
         $('ape-form').addEventListener('submit', save);
 
         $('ape-property').addEventListener('change', refreshOwner);

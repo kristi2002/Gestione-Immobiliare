@@ -80,9 +80,11 @@ function init() {
         .then(() => loadContracts())
         .then(() => {
             // Legacy entry points now redirect to the dedicated contract page.
+            // replace: un redirect non e' un passo del percorso — altrimenti
+            // tornando indietro si ricade qui e si riapre subito il form.
             const vp = window.App?.viewParams || {};
-            if (vp.contractId && window.App) window.App.navigateTo('contract_edit', { contractId: vp.contractId });
-            else if (vp.openNew && window.App) window.App.navigateTo('contract_edit', vp.clientId ? { clientId: vp.clientId } : {});
+            if (vp.contractId && window.App) window.App.navigateTo('contract_edit', { contractId: vp.contractId }, { replace: true });
+            else if (vp.openNew && window.App) window.App.navigateTo('contract_edit', vp.clientId ? { clientId: vp.clientId } : {}, { replace: true });
         })
         .catch(err => {
             if (!els.alert?.isConnected) return;

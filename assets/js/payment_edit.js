@@ -24,11 +24,12 @@
     function showError(m) { const el = $('pye-error'); if (el) { el.textContent = m; el.style.display = 'block'; } }
     function clearError() { const el = $('pye-error'); if (el) el.style.display = 'none'; }
 
-    function goBack() {
-        if (!window.App) return;
-        if (vp.tenantId) window.App.navigateTo('tenant_profile', { tenantId: vp.tenantId });
-        else window.App.navigateTo('payments');
+    function backTarget() {
+        if (vp.tenantId) return ['tenant_profile', { tenantId: vp.tenantId }];
+        return ['payments', {}];
     }
+    function goBack() { if (window.App) { const [v, p] = backTarget(); window.App.navigateTo(v, p); } }
+    function leave()  { if (window.App) { const [v, p] = backTarget(); window.App.back(v, p); } }
 
     async function fetchList(url, params) {
         if (window.Pagination?.fetchList) return window.Pagination.fetchList(url, params || {});
@@ -165,8 +166,8 @@
     }
 
     async function init() {
-        $('pye-back').addEventListener('click', goBack);
-        $('pye-cancel').addEventListener('click', goBack);
+        $('pye-back').addEventListener('click', leave);
+        $('pye-cancel').addEventListener('click', leave);
         $('pye-form').addEventListener('submit', save);
         $('pye-tenant').addEventListener('change', onTenantChange);
 

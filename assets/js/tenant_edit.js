@@ -30,6 +30,7 @@
     function clearError() { const el = $('tne-error'); if (el) el.style.display = 'none'; }
 
     function goBack() { if (window.App) window.App.navigateTo('tenants'); }
+    function leave() { if (window.App) window.App.back('tenants'); }
 
     // Persona fisica vs giuridica: reveal company fields, relabel the anagrafica
     // block as the legale rappresentante, hide the birth fields. Mirrors client_edit.
@@ -212,8 +213,8 @@
     }
 
     async function init() {
-        $('tne-back').addEventListener('click', goBack);
-        $('tne-cancel').addEventListener('click', goBack);
+        $('tne-back').addEventListener('click', leave);
+        $('tne-cancel').addEventListener('click', leave);
         $('tne-form').addEventListener('submit', save);
         $('tne-pdf').addEventListener('click', generatePdf);
         $('tne-person-type').addEventListener('change', applyPersonType);

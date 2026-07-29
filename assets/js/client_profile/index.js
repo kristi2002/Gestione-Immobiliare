@@ -100,6 +100,7 @@ function renderHero() {
     const initials = ((client.name || '')[0] || '') + ((client.surname || '')[0] || '');
     document.getElementById('profile-avatar').textContent = initials.toUpperCase();
     document.getElementById('profile-name').textContent = `${client.name} ${client.surname}`;
+    window.App?.setCrumb(`${client.name} ${client.surname}`);
 
     const badge = document.getElementById('profile-status-badge');
     badge.textContent = STATUS_LABELS[client.status] || client.status;

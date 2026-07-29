@@ -74,6 +74,7 @@ function renderHero() {
     const initials = ((tenant.name || '')[0] || '') + ((tenant.surname || '')[0] || '');
     document.getElementById('profile-avatar').textContent = initials.toUpperCase();
     document.getElementById('profile-name').textContent = `${tenant.name} ${tenant.surname}`;
+    window.App?.setCrumb(`${tenant.name} ${tenant.surname}`);
 
     const badge = document.getElementById('profile-status-badge');
     badge.textContent = STATUS_LABELS[tenant.status] || tenant.status;

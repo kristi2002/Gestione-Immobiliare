@@ -151,6 +151,7 @@ async function loadHero() {
         const a = d.agent || {};
         document.getElementById('ap-avatar').textContent = (a.username || '?').slice(0, 2).toUpperCase();
         document.getElementById('ap-name').textContent = a.username || 'Agente';
+        window.App?.setCrumb(a.username || 'Agente');
         const roleEl = document.getElementById('ap-role-badge');
         roleEl.textContent = ROLE_LABELS[a.role] || a.role || '';
         roleEl.className = `badge badge--role-${a.role || 'agent'}`;

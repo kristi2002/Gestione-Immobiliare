@@ -28,6 +28,9 @@
     function clearError() { const el = $('lde-error'); if (el) el.style.display = 'none'; }
 
     function goBack() { if (window.App) window.App.navigateTo('leads'); }
+    // "Indietro"/"Annulla"/Esc ripercorrono il cammino fatto; l'elenco Leads e'
+    // il ripiego quando il form e' la prima pagina aperta.
+    function leave() { if (window.App) window.App.back('leads'); }
 
     function propLabel(p) {
         const ref  = (p.reference_code || '').trim();
@@ -164,7 +167,7 @@
     function onKeydown(e) {
         if (e.key === 'Escape') {
             e.preventDefault();
-            goBack();
+            leave();
         } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             // Ctrl/Cmd+Enter saves from anywhere — including the Note textarea,
             // where a plain Enter is (correctly) a newline.
@@ -175,8 +178,8 @@
     }
 
     async function init() {
-        $('lde-back').addEventListener('click', goBack);
-        $('lde-cancel').addEventListener('click', goBack);
+        $('lde-back').addEventListener('click', leave);
+        $('lde-cancel').addEventListener('click', leave);
         $('lde-form').addEventListener('submit', save);
         $('lde-form').addEventListener('keydown', onKeydown);
         $('lde-property-search').addEventListener('input', resolveProperty);

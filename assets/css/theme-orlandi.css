@@ -178,6 +178,60 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .topbar-sub { font-size: 13px; color: var(--color-text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; }
 @media (max-width: 1100px) { .topbar-sub { display: none; } .topbar-title h1 { font-size: 18px; } }
 
+/* --- Breadcrumb bar: the path actually walked, + a Back that retraces it ---
+   Sits between the topbar and the content, and only appears once there is more
+   than one step (app.js keeps it [hidden] otherwise), so list pages reached from
+   the sidebar look exactly as before. */
+.crumbbar {
+    display: flex; align-items: center; gap: 10px;
+    margin: 4px var(--shell-gap) 0 calc(var(--shell-gap) / 2 + 4px);
+    padding: 2px 2px 0;
+    min-width: 0;
+}
+.crumbbar[hidden] { display: none; }
+.crumbbar__back {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px 5px 9px;
+    border: 1px solid var(--color-border); border-radius: 999px;
+    background: var(--color-surface); color: var(--color-text);
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    box-shadow: var(--shadow);
+}
+.crumbbar__back:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+/* La classe sta sull'<i>, e createIcons() la ricopia sull'<svg> che lo sostituisce. */
+.crumbbar__back [data-lucide], .crumbbar__back svg { width: 15px; height: 15px; }
+
+/* Una riga sola, che scorre: un percorso lungo non deve far crescere la barra
+   di tre righe su mobile né spingere la pagina in larghezza. */
+.crumbs {
+    display: flex; align-items: center; flex-wrap: nowrap; gap: 2px;
+    list-style: none; margin: 0; padding: 0;
+    flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none;
+}
+.crumbs::-webkit-scrollbar { display: none; }
+.crumb {
+    display: inline-flex; align-items: center; flex: 0 0 auto;
+    font-size: 12.5px; color: var(--color-text-muted);
+}
+.crumb + .crumb::before {
+    content: "›"; margin: 0 6px; color: var(--color-text-muted); opacity: .6;
+}
+.crumb__link, .crumb--current {
+    padding: 2px 4px; border-radius: 6px; max-width: 32ch;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.crumb__link {
+    border: 0; background: none;
+    font: inherit; color: var(--color-text-muted); cursor: pointer;
+}
+.crumb__link:hover { color: var(--color-primary); background: var(--color-primary-light); }
+.crumb--current { font-weight: 700; color: var(--color-text); }
+@media (max-width: 768px) {
+    .crumbbar { margin: 4px 10px 0; gap: 8px; }
+    .crumbbar__back span { display: none; }
+    .crumbbar__back { padding: 6px 8px; }
+}
+
 /* --app-content-pad-b mirrors the padding-bottom below. Sticky footers inside
    the scroller (the *_edit form action bars) resolve `bottom` against this
    padding edge, so they need to cancel it out to sit flush. Keep in sync. */

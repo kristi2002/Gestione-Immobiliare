@@ -98,6 +98,7 @@
         $('apr-title').textContent = appt.property_address
             ? `${appt.property_address}, ${appt.property_city}`
             : 'Immobile eliminato';
+        window.App?.setCrumb($('apr-title').textContent);
 
         const end = start ? new Date(start.getTime() + (Number(appt.duration_minutes) || 0) * 60000) : null;
         $('apr-meta').innerHTML =

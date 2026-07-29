@@ -39,6 +39,9 @@
         return ['contracts', {}];
     }
     function goBack() { if (window.App) { const [v, p] = backTarget(); window.App.navigateTo(v, p); } }
+    // Il bottone "Indietro"/"Annulla" ripercorre il cammino fatto; backTarget()
+    // resta come ripiego quando il form e' la prima pagina aperta.
+    function leave() { if (window.App) { const [v, p] = backTarget(); window.App.back(v, p); } }
 
     async function fetchList(url, params) {
         if (window.Pagination?.fetchList) return window.Pagination.fetchList(url, params || {});
@@ -242,8 +245,8 @@
     }
 
     async function init() {
-        $('cte-back').addEventListener('click', goBack);
-        $('cte-cancel').addEventListener('click', goBack);
+        $('cte-back').addEventListener('click', leave);
+        $('cte-cancel').addEventListener('click', leave);
         $('cte-form').addEventListener('submit', save);
         const istatBtn = $('cte-istat-calc');
         if (istatBtn) istatBtn.addEventListener('click', calcIstat);

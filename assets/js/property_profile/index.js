@@ -286,6 +286,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         const priceEl = document.getElementById('pp-subnav-price');
         const linksEl = document.getElementById('pp-subnav-links');
         if (titleEl) titleEl.textContent = (p.address || 'Immobile') + (p.city ? ', ' + p.city : '');
+        window.App?.setCrumb((p.address || 'Immobile') + (p.city ? ', ' + p.city : ''));
         if (priceEl) priceEl.textContent = p.price ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '') : '';
 
         const links = [

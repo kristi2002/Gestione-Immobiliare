@@ -40,6 +40,13 @@
         if (isEdit) window.App.navigateTo('property_profile', { propertyId });
         else window.App.navigateTo('properties');
     }
+    // "Indietro"/"Annulla" ripercorrono il cammino fatto; la scheda (o l'elenco)
+    // resta come ripiego quando il form e' la prima pagina aperta.
+    function leave() {
+        if (!window.App) return;
+        if (isEdit) window.App.back('property_profile', { propertyId });
+        else window.App.back('properties');
+    }
 
     async function loadClients(selectedId) {
         try {
@@ -812,8 +819,8 @@
         $('pe-other-rooms').addEventListener('input', updateLocali);
         $('pe-surface-add').addEventListener('click', () => addSurfaceRow(null));
 
-        $('pe-back').addEventListener('click', goBack);
-        $('pe-cancel').addEventListener('click', goBack);
+        $('pe-back').addEventListener('click', leave);
+        $('pe-cancel').addEventListener('click', leave);
         $('pe-form').addEventListener('submit', save);
         setupAutoGeocode();
         $('pe-mandato').addEventListener('click', generateMandato);

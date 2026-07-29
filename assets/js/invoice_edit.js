@@ -30,6 +30,7 @@
         return ['invoices', {}];
     }
     function goBack() { if (window.App) { const [v, p] = backTarget(); window.App.navigateTo(v, p); } }
+    function leave() { if (window.App) { const [v, p] = backTarget(); window.App.back(v, p); } }
 
     async function fetchList(url, params) {
         if (window.Pagination?.fetchList) return window.Pagination.fetchList(url, params || {});
@@ -110,8 +111,8 @@
     }
 
     async function init() {
-        $('ive-back').addEventListener('click', goBack);
-        $('ive-cancel').addEventListener('click', goBack);
+        $('ive-back').addEventListener('click', leave);
+        $('ive-cancel').addEventListener('click', leave);
         $('ive-form').addEventListener('submit', save);
 
         try { await loadDropdowns(); }

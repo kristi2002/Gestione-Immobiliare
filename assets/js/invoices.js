@@ -30,8 +30,10 @@
         Promise.all([loadClients(), loadLeads()]).then(() => {
             loadInvoices();
             // Legacy "+ Nuova Fattura" entry now redirects to the dedicated page.
+            // replace: un redirect non e' un passo del percorso — altrimenti
+            // tornando indietro si ricade qui e si riapre subito il form.
             const vp = window.App?.viewParams;
-            if (vp && vp.openNew && window.App) window.App.navigateTo('invoice_edit', vp.clientId ? { clientId: vp.clientId } : {});
+            if (vp && vp.openNew && window.App) window.App.navigateTo('invoice_edit', vp.clientId ? { clientId: vp.clientId } : {}, { replace: true });
         });
     }
 
