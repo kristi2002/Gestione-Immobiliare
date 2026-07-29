@@ -13,6 +13,9 @@
     const tenantId = vp.tenantId || null;
     const isEdit   = !!tenantId;
     let properties = [];
+    // Vero appena l'utente tocca un campo. loadTenant() valorizza i campi via
+    // assegnazione, che non emette 'input': il caricamento iniziale non sporca.
+    let dirty      = false;
 
     function $(id) { return document.getElementById(id); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -130,6 +133,21 @@
     }
 
     async function generatePdf() {
+        // Il PDF non e' una fotografia del form: generateContractPdf() rilegge
+        // proprietario, immobile e inquilino DAL DATABASE a partire dagli id, e
+        // prende dal payload solo canone e date. Su un inquilino mai salvato non
+        // c'e' alcun id da rileggere — il contratto usciva con i dati anagrafici
+        // digitati e nessun legame con l'archivio (pdf_documents.tenant_id NULL),
+        // cioe' un documento che nella scheda dell'inquilino non compare. Il
+        // bottone e' quindi nascosto finche' la riga non esiste (vedi init()).
+        if (!isEdit) return;
+        // Stessa ragione un passo piu' avanti: a form modificato meta' documento
+        // verrebbe dal database e meta' dallo schermo, e le due meta' non
+        // coinciderebbero. Meglio un rifiuto esplicito di un contratto ibrido.
+        if (dirty) {
+            showAlert('Salva le modifiche prima di generare il contratto: il PDF legge i dati dall\'archivio.', 'error');
+            return;
+        }
         const propertyId = $('tne-property').value;
         if (!propertyId) { showAlert('Seleziona un immobile.', 'error'); return; }
         const prop = properties.find(p => p.id == propertyId);
@@ -157,6 +175,13 @@
         $('tne-form').addEventListener('submit', save);
         $('tne-pdf').addEventListener('click', generatePdf);
         $('tne-person-type').addEventListener('change', applyPersonType);
+
+        // Su un nuovo inquilino il contratto non e' generabile: non esiste ancora
+        // la riga a cui agganciarlo. Nascosto, non disabilitato — un bottone
+        // grigio accanto a "Salva" si legge come un permesso mancante.
+        $('tne-pdf').hidden = !isEdit;
+        $('tne-form').addEventListener('input',  () => { dirty = true; });
+        $('tne-form').addEventListener('change', () => { dirty = true; });
 
         try { await loadProperties(); }
         catch (err) { showAlert('Errore caricamento immobili: ' + err.message, 'error'); }
