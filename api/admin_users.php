@@ -80,7 +80,7 @@ function createUser(PDO $db): void
     );
     $stmt->execute([
         'u' => $username,
-        'p' => password_hash($password, PASSWORD_DEFAULT),
+        'p' => appPasswordHash($password),
         'e' => $email,
         'r' => $role,
     ]);
@@ -124,7 +124,7 @@ function updateUser(PDO $db, int $id): void
     }
     if (!empty($data['password']) && strlen($data['password']) >= 8) {
         $fields[] = 'password_hash = :pass';
-        $params['pass'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        $params['pass'] = appPasswordHash($data['password']);
     }
 
     if (empty($fields)) {

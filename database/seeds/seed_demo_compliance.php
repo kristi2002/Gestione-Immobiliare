@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/../../config/env.php';
+require_once __DIR__ . '/../../config/password.php';
 loadEnv(__DIR__ . '/../../.env');
 
 // SAFETY: this seed TRUNCATEs demo tables. Never let it wipe a production DB by
@@ -48,7 +49,7 @@ $db->exec('SET FOREIGN_KEY_CHECKS = 1');
 
 // --- admin -------------------------------------------------------------------
 section('admin', function () use ($db) {
-    $hash = password_hash('DemoOrlandi2026', PASSWORD_DEFAULT);
+    $hash = appPasswordHash('DemoOrlandi2026');
     $db->prepare("INSERT INTO admin_users (username, password_hash, role, email, is_active)
                   VALUES ('admin', :h, 'super_admin', 'admin@orlandi.it', 1)
                   ON DUPLICATE KEY UPDATE password_hash = :h2, is_active = 1")

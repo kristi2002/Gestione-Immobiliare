@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/roles.php';
+require_once __DIR__ . '/password.php';
 
 define('TENANT_SESSION_NAME', 'gestionale_tenant_session');
 
@@ -138,6 +139,17 @@ function attemptLoginStep(string $username, string $password): string
         return 'fail';
     }
 
+    // Migrazione bcrypt → argon2id: qui, e solo qui, la password in chiaro esiste
+    // ed e' appena stata verificata. Un fallimento non deve impedire l'accesso —
+    // l'hash vecchio resta valido e si ritenta al login successivo.
+    appPasswordUpgrade(
+        $password,
+        $user['password_hash'],
+        fn(string $hash) => getDB()
+            ->prepare('UPDATE admin_users SET password_hash = :hash WHERE id = :id')
+            ->execute(['hash' => $hash, 'id' => (int) $user['id']])
+    );
+
     if (!empty($user['totp_enabled'])) {
         $_SESSION['_2fa_pending'] = (int) $user['id'];
         return '2fa';
@@ -186,6 +198,14 @@ function attemptTenantLogin(string $email, string $password): bool
     if (!$row || !password_verify($password, $row['password_hash'])) {
         return false;
     }
+
+    appPasswordUpgrade(
+        $password,
+        $row['password_hash'],
+        fn(string $hash) => getDB()
+            ->prepare('UPDATE tenant_users SET password_hash = :hash WHERE id = :id')
+            ->execute(['hash' => $hash, 'id' => (int) $row['tenant_user_id']])
+    );
 
     session_regenerate_id(true);
     $_SESSION['tenant_user_id'] = (int) $row['tenant_user_id'];
@@ -273,7 +293,7 @@ function createAdminUser(string $username, string $password, string $role = 'sup
 {
     require_once __DIR__ . '/db.php';
 
-    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $hash = appPasswordHash($password);
     $db   = getDB();
 
     $stmt = $db->prepare('SELECT id FROM admin_users WHERE username = :username');
@@ -302,7 +322,7 @@ function adminUserExists(): bool
 function createTenantPortalUser(int $tenantId, string $password): void
 {
     require_once __DIR__ . '/db.php';
-    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $hash = appPasswordHash($password);
     $db   = getDB();
 
     $stmt = $db->prepare('SELECT id FROM tenant_users WHERE tenant_id = :tenant_id');

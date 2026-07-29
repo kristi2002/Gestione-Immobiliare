@@ -48,7 +48,7 @@ function setOwnerPassword(PDO $db, array $data): void
         apiError('Proprietario non trovato.', 404);
     }
 
-    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $hash = appPasswordHash($password);
     $upd  = $db->prepare(
         "UPDATE clients SET portal_password_hash = :hash, portal_email = :email WHERE id = :id"
     );

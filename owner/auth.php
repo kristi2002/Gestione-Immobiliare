@@ -74,6 +74,14 @@ function attemptOwnerLogin(string $email, string $password): bool
         return false;
     }
 
+    appPasswordUpgrade(
+        $password,
+        $row['portal_password_hash'],
+        fn(string $hash) => getDB()
+            ->prepare('UPDATE clients SET portal_password_hash = :hash WHERE id = :id')
+            ->execute(['hash' => $hash, 'id' => (int) $row['id']])
+    );
+
     session_regenerate_id(true);
     $_SESSION['owner_client_id'] = (int) $row['id'];
     $_SESSION['owner_name']      = $row['name'] . ' ' . $row['surname'];
