@@ -606,8 +606,13 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
     width: 46px; height: 46px; border-radius: 8px; flex-shrink: 0;
     background: #e3eefb center/cover no-repeat; color: #7ba7d4;
     display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
 }
 .rail-prop__img svg, .rail-prop__img [data-lucide] { width: 18px; height: 18px; }
+/* La miniatura arriva come background-image (clients) o come <img> vero
+   (buildings): senza queste misure l'<img> si disegna alla sua dimensione
+   naturale e sfonda il riquadro da 46px, trascinando con se' tutta la barra. */
+.rail-prop__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .rail-prop__txt { min-width: 0; flex: 1; line-height: 1.35; }
 .rail-prop__txt b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rail-prop__txt span { font-size: 12.5px; font-weight: 800; color: var(--color-primary); }
