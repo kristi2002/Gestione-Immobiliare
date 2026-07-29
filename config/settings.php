@@ -33,6 +33,7 @@ const SETTINGS_DEFAULTS = [
     'backup_s3_prefix'      => 'gestionale-backups/',
     'meta_app_id'           => '',
     'meta_app_secret'       => '',
+    'mailgun_webhook_key'   => '',
     // Fatturazione elettronica (identità fiscale cedente/prestatore)
     'agency_piva'           => '',
     'agency_cf'             => '',
@@ -54,8 +55,14 @@ if (!function_exists('getSetting')) {
 function getSetting(string $key, ?string $default = null): ?string
 {
     static $cache = null;
+    static $generation = -1;
 
-    if ($cache === null) {
+    // La cache vale per la singola richiesta, ma una scrittura la invalida: chi
+    // salva e poi rilegge (l'API Impostazioni risponde con i valori salvati)
+    // deve vedere il nuovo valore, non quello caricato a inizio richiesta.
+    $current = $GLOBALS['__settings_cache_generation'] ?? 0;
+
+    if ($cache === null || $generation !== $current) {
         $cache = [];
         try {
             $db   = getDB();
@@ -66,9 +73,16 @@ function getSetting(string $key, ?string $default = null): ?string
         } catch (Throwable) {
             $cache = [];
         }
+        $generation = $current;
     }
 
-    if (array_key_exists($key, $cache) && $cache[$key] !== null && $cache[$key] !== '') {
+    // Una riga presente in app_settings VINCE, anche se vale ''. Prima il vuoto
+    // veniva scambiato per "mai impostato" e la lettura ripiegava su .env o sul
+    // default: svuotare un campo dalle Impostazioni non aveva quindi alcun
+    // effetto (scegliere sicurezza SMTP "Nessuna" tornava sempre a TLS, e
+    // cancellare l'indirizzo faceva riapparire quello scritto qui sotto).
+    // Il fallback resta per le chiavi che in tabella non esistono affatto.
+    if (array_key_exists($key, $cache) && $cache[$key] !== null) {
         return $cache[$key];
     }
 
@@ -109,6 +123,11 @@ function getSetting(string $key, ?string $default = null): ?string
 }
 } // if (!function_exists('getSetting'))
 
+function settingsCacheInvalidate(): void
+{
+    $GLOBALS['__settings_cache_generation'] = ($GLOBALS['__settings_cache_generation'] ?? 0) + 1;
+}
+
 function setSetting(string $key, ?string $value): void
 {
     $db = getDB();
@@ -117,6 +136,7 @@ function setSetting(string $key, ?string $value): void
          ON DUPLICATE KEY UPDATE setting_value = :value2'
     );
     $stmt->execute(['key' => $key, 'value' => $value, 'value2' => $value]);
+    settingsCacheInvalidate();
 }
 
 function setSettings(array $pairs): void
@@ -149,7 +169,8 @@ function getMailConfig(): array
         'agency_name'  => getSetting('agency_name'),
         'agency_email' => getSetting('agency_email'),
         'smtp_host'    => getSetting('smtp_host'),
-        'smtp_port'    => (int) getSetting('smtp_port', '587'),
+        // `?:` e non solo il default: una riga vuota in tabella darebbe porta 0.
+        'smtp_port'    => (int) (getSetting('smtp_port', '587') ?: '587'),
         'smtp_user'    => getSetting('smtp_user'),
         'smtp_pass'    => getSetting('smtp_pass'),
         'smtp_secure'  => getSetting('smtp_secure', 'tls'),
@@ -180,6 +201,22 @@ function getBackupCloudConfig(): array
     ];
 }
 
+/**
+ * I segreti non tornano MAI al browser, nemmeno mascherati dentro il campo:
+ * riempire l'input con la maschera faceva sì che un utente che la modificava
+ * rispedisse una stringa che inizia con `••••`, che il salvataggio scartava in
+ * silenzio annunciando "Impostazioni salvate". Ora il campo resta vuoto e la
+ * pagina mostra solo se il segreto c'è (`*_set`) e le sue ultime 4 cifre
+ * (`*_hint`), che sono un promemoria, non un valore da rispedire.
+ */
+const SETTINGS_SECRET_KEYS = [
+    'smtp_pass',
+    'mailgun_webhook_key',
+    'twilio_auth_token',
+    'backup_s3_secret',
+    'meta_app_secret',
+];
+
 function maskSecret(?string $value): ?string
 {
     if (!$value || strlen($value) < 4) {
@@ -188,39 +225,43 @@ function maskSecret(?string $value): ?string
     return '••••••••' . substr($value, -4);
 }
 
+function secretState(string $key): array
+{
+    $value = (string) getSetting($key, '');
+    return [
+        $key . '_set'  => $value !== '',
+        $key . '_hint' => $value !== '' ? maskSecret($value) : null,
+    ];
+}
+
 function publicSettingsPayload(): array
 {
     return [
         'branding' => getPublicBranding(),
-        'mail' => [
+        'mail' => array_merge([
             'mail_enabled'        => filter_var(getSetting('mail_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
             'agency_email'        => getSetting('agency_email'),
             'smtp_host'           => getSetting('smtp_host'),
-            'smtp_port'           => (int) getSetting('smtp_port', '587'),
+            'smtp_port'           => (int) (getSetting('smtp_port', '587') ?: '587'),
             'smtp_user'           => getSetting('smtp_user'),
-            'smtp_pass'           => maskSecret(getSetting('smtp_pass')),
             'smtp_secure'         => getSetting('smtp_secure', 'tls'),
-            'mailgun_webhook_key' => maskSecret(getSetting('mailgun_webhook_key')),
-        ],
-        'whatsapp' => [
+        ], secretState('smtp_pass'), secretState('mailgun_webhook_key')),
+        'whatsapp' => array_merge([
             'whatsapp_enabled'     => filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
             'twilio_account_sid'   => getSetting('twilio_account_sid'),
-            'twilio_auth_token'    => maskSecret(getSetting('twilio_auth_token')),
             'twilio_whatsapp_from' => getSetting('twilio_whatsapp_from'),
-        ],
-        'backup' => [
+        ], secretState('twilio_auth_token')),
+        'backup' => array_merge([
             'backup_cloud_enabled' => filter_var(getSetting('backup_cloud_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
             'backup_s3_endpoint'   => getSetting('backup_s3_endpoint'),
             'backup_s3_bucket'     => getSetting('backup_s3_bucket'),
             'backup_s3_region'     => getSetting('backup_s3_region'),
             'backup_s3_key'        => getSetting('backup_s3_key'),
-            'backup_s3_secret'     => maskSecret(getSetting('backup_s3_secret')),
             'backup_s3_prefix'     => getSetting('backup_s3_prefix'),
-        ],
-        'meta' => [
-            'meta_app_id'     => getSetting('meta_app_id'),
-            'meta_app_secret' => maskSecret(getSetting('meta_app_secret')),
-        ],
+        ], secretState('backup_s3_secret')),
+        'meta' => array_merge([
+            'meta_app_id' => getSetting('meta_app_id'),
+        ], secretState('meta_app_secret')),
         'fatturazione' => [
             'agency_piva'           => getSetting('agency_piva'),
             'agency_cf'             => getSetting('agency_cf'),
@@ -235,4 +276,279 @@ function publicSettingsPayload(): array
             'agency_sepa_creditor_id' => getSetting('agency_sepa_creditor_id'),
         ],
     ];
+}
+
+// ---------------------------------------------------------------------------
+// Normalizzazione e validazione dei valori in ingresso
+//
+// Questi campi non restano nel database: finiscono nell'XML FatturaPA, nel file
+// pain.008 che va in banca, nella connessione SMTP. Un IBAN con una cifra
+// sbagliata non dà errore qui — lo dà la banca, giorni dopo, rifiutando l'intero
+// flusso di incasso. Per questo il controllo sta nel momento in cui il dato
+// viene scritto, non nel momento in cui viene usato.
+// ---------------------------------------------------------------------------
+
+const SETTINGS_REGIMI_FISCALI = ['RF01', 'RF02', 'RF04', 'RF18', 'RF19'];
+
+/**
+ * Ripulisce i valori PRIMA della validazione: maiuscole dove sono obbligatorie
+ * (P.IVA, provincia, IBAN), spazi interni via, prefissi normalizzati. Così
+ * "it60 x054 2811 1010 0000 0123 456" e "IT60X0542811101000000123456" sono lo
+ * stesso IBAN, e l'utente non deve indovinare il formato.
+ */
+function normalizeSettings(array $pairs): array
+{
+    $upperNoSpace = ['agency_piva', 'agency_cf', 'agency_provincia', 'agency_iban', 'agency_sepa_creditor_id'];
+    foreach ($upperNoSpace as $key) {
+        if (isset($pairs[$key])) {
+            $pairs[$key] = strtoupper(preg_replace('/\s+/', '', (string) $pairs[$key]));
+        }
+    }
+
+    if (isset($pairs['agency_cap'])) {
+        $pairs['agency_cap'] = preg_replace('/\D/', '', (string) $pairs['agency_cap']);
+    }
+
+    foreach (['primary_color', 'sidebar_color'] as $key) {
+        if (isset($pairs[$key]) && $pairs[$key] !== '') {
+            $color = strtolower(trim((string) $pairs[$key]));
+            $pairs[$key] = str_starts_with($color, '#') ? $color : '#' . $color;
+        }
+    }
+
+    foreach (['agency_email', 'agency_pec'] as $key) {
+        if (isset($pairs[$key])) {
+            $pairs[$key] = strtolower(trim((string) $pairs[$key]));
+        }
+    }
+
+    // Twilio vuole il numero in E.164; il prefisso `whatsapp:` lo aggiunge il
+    // client al momento dell'invio, quindi qui va tolto se l'utente lo incolla.
+    if (isset($pairs['twilio_whatsapp_from'])) {
+        $from = preg_replace('/\s+/', '', (string) $pairs['twilio_whatsapp_from']);
+        $from = preg_replace('/^whatsapp:/i', '', $from);
+        $pairs['twilio_whatsapp_from'] = $from;
+    }
+
+    // La chiave S3 è un percorso: senza `/` finale i backup finiscono in una
+    // cartella con il nome incollato al file.
+    if (isset($pairs['backup_s3_prefix']) && $pairs['backup_s3_prefix'] !== '') {
+        $pairs['backup_s3_prefix'] = ltrim(rtrim(trim((string) $pairs['backup_s3_prefix']), '/'), '/') . '/';
+    }
+
+    if (isset($pairs['backup_s3_endpoint'])) {
+        $pairs['backup_s3_endpoint'] = rtrim(trim((string) $pairs['backup_s3_endpoint']), '/');
+    }
+
+    return $pairs;
+}
+
+/**
+ * @return array<string,string> chiave impostazione => messaggio d'errore.
+ *                              Vuoto = tutto valido.
+ */
+function validateSettings(array $pairs): array
+{
+    $errors = [];
+    $has    = static fn(string $k): bool => array_key_exists($k, $pairs);
+    $val    = static fn(string $k): string => trim((string) ($pairs[$k] ?? ''));
+
+    if ($has('agency_name') && $val('agency_name') === '') {
+        $errors['agency_name'] = 'Il nome agenzia non può restare vuoto.';
+    }
+
+    foreach (['primary_color' => 'Colore primario', 'sidebar_color' => 'Colore sidebar'] as $key => $label) {
+        if ($has($key) && $val($key) !== '' && !preg_match('/^#[0-9a-f]{6}$/i', $val($key))) {
+            $errors[$key] = "{$label}: usa un colore esadecimale, es. #206bac.";
+        }
+    }
+
+    foreach (['agency_email' => 'Email agenzia', 'agency_pec' => 'PEC'] as $key => $label) {
+        if ($has($key) && $val($key) !== '' && !filter_var($val($key), FILTER_VALIDATE_EMAIL)) {
+            $errors[$key] = "{$label}: indirizzo non valido.";
+        }
+    }
+
+    if ($has('smtp_port')) {
+        $port = $val('smtp_port');
+        if ($port === '' || !ctype_digit($port) || (int) $port < 1 || (int) $port > 65535) {
+            $errors['smtp_port'] = 'Porta SMTP: un numero tra 1 e 65535 (di norma 587).';
+        }
+    }
+
+    if ($has('smtp_secure') && !in_array($val('smtp_secure'), ['tls', 'ssl', ''], true)) {
+        $errors['smtp_secure'] = 'Sicurezza SMTP non valida.';
+    }
+
+    // Il valore che conta è quello che resterà DOPO il salvataggio: se il campo
+    // arriva nella richiesta vince quello, altrimenti quello già memorizzato.
+    // Serve nei due sensi — attivare una funzione senza le sue credenziali, e
+    // svuotare una credenziale mentre la funzione è attiva.
+    $effective = static function (string $key) use ($pairs): string {
+        return array_key_exists($key, $pairs)
+            ? trim((string) $pairs[$key])
+            : (string) getSetting($key, '');
+    };
+    $effectiveFlag = static function (string $key) use ($pairs): bool {
+        $raw = array_key_exists($key, $pairs) ? $pairs[$key] : getSetting($key, 'false');
+        return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+    };
+
+    // Invio reale senza host SMTP: il messaggio partirebbe con mail() di PHP,
+    // che su questo server non è configurato. Meglio dirlo adesso.
+    if ($effectiveFlag('mail_enabled')) {
+        if ($effective('smtp_host') === '') {
+            $errors['smtp_host'] = 'Con l\'invio reale attivo serve un host SMTP.';
+        }
+        if ($effective('agency_email') === '') {
+            $errors['agency_email'] = 'Con l\'invio reale attivo serve l\'email dell\'agenzia.';
+        }
+    }
+
+    if ($has('twilio_whatsapp_from') && $val('twilio_whatsapp_from') !== ''
+        && !preg_match('/^\+[1-9]\d{7,14}$/', $val('twilio_whatsapp_from'))) {
+        $errors['twilio_whatsapp_from'] = 'Numero WhatsApp in formato internazionale, es. +393331234567.';
+    }
+
+    if ($effectiveFlag('whatsapp_enabled')) {
+        $required = [
+            'twilio_account_sid'   => 'Account SID',
+            'twilio_auth_token'    => 'Auth Token',
+            'twilio_whatsapp_from' => 'Numero WhatsApp',
+        ];
+        foreach ($required as $key => $label) {
+            if ($effective($key) === '') {
+                $errors[$key] = "{$label}: obbligatorio finché WhatsApp è attivo.";
+            }
+        }
+    }
+
+    if ($has('backup_s3_endpoint') && $val('backup_s3_endpoint') !== ''
+        && !filter_var($val('backup_s3_endpoint'), FILTER_VALIDATE_URL)) {
+        $errors['backup_s3_endpoint'] = 'Endpoint: URL completo, es. https://s3.eu-central-1.amazonaws.com.';
+    }
+
+    if ($effectiveFlag('backup_cloud_enabled')) {
+        $required = [
+            'backup_s3_endpoint' => 'Endpoint',
+            'backup_s3_bucket'   => 'Bucket',
+            'backup_s3_key'      => 'Access Key',
+            'backup_s3_secret'   => 'Secret Key',
+        ];
+        foreach ($required as $key => $label) {
+            if ($effective($key) === '') {
+                $errors[$key] = "{$label}: obbligatorio finché il backup su cloud è attivo.";
+            }
+        }
+    }
+
+    if ($has('meta_app_id') && $val('meta_app_id') !== '' && !ctype_digit($val('meta_app_id'))) {
+        $errors['meta_app_id'] = 'Meta App ID: solo cifre.';
+    }
+
+    if ($has('agency_regime_fiscale') && !in_array($val('agency_regime_fiscale'), SETTINGS_REGIMI_FISCALI, true)) {
+        $errors['agency_regime_fiscale'] = 'Regime fiscale non valido.';
+    }
+
+    if ($has('agency_piva') && $val('agency_piva') !== '' && !isValidPartitaIva($val('agency_piva'))) {
+        $errors['agency_piva'] = 'Partita IVA: 11 cifre con codice di controllo valido.';
+    }
+
+    if ($has('agency_cf') && $val('agency_cf') !== '' && !isValidCodiceFiscaleAgenzia($val('agency_cf'))) {
+        $errors['agency_cf'] = 'Codice fiscale: 16 caratteri (persona fisica) o 11 cifre (società).';
+    }
+
+    if ($has('agency_cap') && $val('agency_cap') !== '' && !preg_match('/^\d{5}$/', $val('agency_cap'))) {
+        $errors['agency_cap'] = 'CAP: 5 cifre.';
+    }
+
+    if ($has('agency_provincia') && $val('agency_provincia') !== '' && !preg_match('/^[A-Z]{2}$/', $val('agency_provincia'))) {
+        $errors['agency_provincia'] = 'Provincia: sigla di 2 lettere, es. MC.';
+    }
+
+    if ($has('agency_iban') && $val('agency_iban') !== '' && !isValidIban($val('agency_iban'))) {
+        $errors['agency_iban'] = 'IBAN non valido (codice di controllo errato).';
+    }
+
+    if ($has('agency_sepa_creditor_id') && $val('agency_sepa_creditor_id') !== ''
+        && !isValidSepaCreditorId($val('agency_sepa_creditor_id'))) {
+        $errors['agency_sepa_creditor_id'] = 'Identificativo Creditore SEPA non valido: le due cifre di controllo non tornano (es. valido: IT79ZZZA1B02C34D56E78F90).';
+    }
+
+    return $errors;
+}
+
+/** Resto della divisione per 97 su una stringa numerica lunga (niente bcmath). */
+function iso7064Mod97(string $digits): int
+{
+    $remainder = 0;
+    foreach (str_split($digits) as $digit) {
+        $remainder = ($remainder * 10 + (int) $digit) % 97;
+    }
+    return $remainder;
+}
+
+/** Converte le lettere in numeri secondo lo schema IBAN: A=10 … Z=35. */
+function alphaToDigits(string $value): string
+{
+    $out = '';
+    foreach (str_split($value) as $char) {
+        $out .= ctype_alpha($char) ? (string) (ord($char) - 55) : $char;
+    }
+    return $out;
+}
+
+/**
+ * Delega a lib/sepa_sdd.php: quel controllo conosce anche la lunghezza
+ * registrata per ogni paese ed è lo stesso che gira prima dell'export pain.008.
+ * Due implementazioni dell'IBAN vorrebbero dire un IBAN accettato qui e
+ * rifiutato là — l'inclusione è pigra perché settings.php lo carica ovunque.
+ */
+function isValidIban(string $iban): bool
+{
+    require_once __DIR__ . '/../lib/sepa_sdd.php';
+    return sepaIbanIsValid($iban);
+}
+
+/**
+ * Identificativo Creditore SEPA: paese + 2 cifre di controllo + 3 caratteri di
+ * "business code" (che NON entrano nel calcolo) + identificativo nazionale.
+ */
+function isValidSepaCreditorId(string $cid): bool
+{
+    $cid = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cid));
+    if (!preg_match('/^[A-Z]{2}\d{2}[A-Z0-9]{3}[A-Z0-9]{1,28}$/', $cid)) {
+        return false;
+    }
+    $national = substr($cid, 7);
+    return iso7064Mod97(alphaToDigits($national . substr($cid, 0, 4))) === 1;
+}
+
+/** Codice di controllo della partita IVA italiana (11 cifre, algoritmo di Luhn). */
+function isValidPartitaIva(string $piva): bool
+{
+    if (!preg_match('/^\d{11}$/', $piva)) {
+        return false;
+    }
+    $sum = 0;
+    for ($i = 0; $i < 10; $i++) {
+        $digit = (int) $piva[$i];
+        if ($i % 2 === 1) {
+            $digit *= 2;
+            if ($digit > 9) {
+                $digit -= 9;
+            }
+        }
+        $sum += $digit;
+    }
+    return ((10 - $sum % 10) % 10) === (int) $piva[10];
+}
+
+/** Le società usano la P.IVA come codice fiscale: entrambe le forme sono valide. */
+function isValidCodiceFiscaleAgenzia(string $cf): bool
+{
+    if (preg_match('/^\d{11}$/', $cf)) {
+        return isValidPartitaIva($cf);
+    }
+    return (bool) preg_match('/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/', $cf);
 }

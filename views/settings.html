@@ -2,7 +2,8 @@
     <div class="view-header">
         <div class="view-header__text">
             <h2>Impostazioni</h2>
-            <p>Branding, email, WhatsApp, backup cloud, utenti e Meta.</p>
+            <p>Branding, email, WhatsApp, backup cloud, utenti e Meta.
+               L'autenticazione a due fattori si attiva in <a href="view.php?name=account" data-view="account">Il mio account</a>.</p>
         </div>
     </div>
 
@@ -19,7 +20,6 @@
         <button class="settings-tab" data-tab="sistema">Stato sistema</button>
         <button class="settings-tab" data-tab="wa-templates">Template WhatsApp</button>
         <button class="settings-tab" data-tab="email-templates">Template Email</button>
-        <button class="settings-tab" data-tab="security">Sicurezza 2FA</button>
         <button class="settings-tab" data-tab="users" id="tab-users" style="display:none">Utenti</button>
     </div>
 
@@ -58,51 +58,63 @@
             </div>
             <div class="form-group">
                 <label>Logo</label>
-                <input type="file" id="set-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                <input type="file" id="set-logo-file" accept="image/png,image/jpeg,image/webp">
+                <small class="form-hint">PNG, JPG o WebP, massimo 2 MB. Il logo precedente viene sostituito.</small>
                 <img id="set-logo-preview" src="" alt="" style="max-height:48px;margin-top:8px;display:none">
             </div>
-            <button type="submit" class="btn btn--primary">Salva branding</button>
+            <div class="settings-actions">
+                <button type="submit" class="btn btn--primary">Salva branding</button>
+                <div class="settings-feedback" id="feedback-branding" hidden></div>
+            </div>
         </form>
     </div>
 
     <div class="settings-panel" id="panel-mail" hidden>
         <form id="form-mail" class="card">
-            <h3>Email</h3>
-            <fieldset class="form-section">
-                <legend>Invio (SMTP)</legend>
-                <label class="form-check"><input type="checkbox" id="set-mail-enabled"> Abilita invio email reale</label>
-                <div class="form-row form-row--2" style="margin-top:16px">
-                    <div class="form-group"><label>Email agenzia</label><input type="email" id="set-agency-email" class="form-input"></div>
-                    <div class="form-group"><label>Host SMTP</label><input type="text" id="set-smtp-host" class="form-input" placeholder="smtp.gmail.com"></div>
-                </div>
-                <div class="form-row form-row--3">
-                    <div class="form-group"><label>Porta</label><input type="number" id="set-smtp-port" class="form-input" value="587"></div>
-                    <div class="form-group"><label>Utente SMTP</label><input type="text" id="set-smtp-user" class="form-input"></div>
-                    <div class="form-group"><label>Password SMTP</label><input type="password" id="set-smtp-pass" class="form-input" autocomplete="off"></div>
-                </div>
+            <h3>Email — invio (SMTP)</h3>
+            <label class="form-check"><input type="checkbox" id="set-mail-enabled"> Abilita invio email reale</label>
+            <p class="form-hint" id="mail-disabled-hint">A invio disattivato nulla parte davvero: i messaggi vengono solo registrati nel log.</p>
+            <div class="form-row form-row--2" style="margin-top:16px">
+                <div class="form-group"><label for="set-agency-email">Email agenzia</label><input type="email" id="set-agency-email" class="form-input"></div>
+                <div class="form-group"><label for="set-smtp-host">Host SMTP</label><input type="text" id="set-smtp-host" class="form-input" placeholder="smtp.gmail.com"></div>
+            </div>
+            <div class="form-row form-row--3">
+                <div class="form-group"><label for="set-smtp-port">Porta</label><input type="number" id="set-smtp-port" class="form-input" value="587" min="1" max="65535"></div>
+                <div class="form-group"><label for="set-smtp-user">Utente SMTP</label><input type="text" id="set-smtp-user" class="form-input"></div>
                 <div class="form-group">
-                    <label>Sicurezza</label>
-                    <select id="set-smtp-secure" class="form-input"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="">Nessuna</option></select>
+                    <label for="set-smtp-pass">Password SMTP</label>
+                    <input type="password" id="set-smtp-pass" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarla">
+                    <small class="form-hint secret-state" id="state-smtp_pass"></small>
                 </div>
-                <div style="display:flex;gap:12px;flex-wrap:wrap">
-                    <button type="submit" class="btn btn--primary">Salva email</button>
-                    <button type="button" class="btn btn--ghost" id="btn-test-email">Invia email di test</button>
-                </div>
-            </fieldset>
+            </div>
+            <div class="form-group">
+                <label for="set-smtp-secure">Sicurezza</label>
+                <select id="set-smtp-secure" class="form-input"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="">Nessuna</option></select>
+            </div>
+            <div class="settings-actions">
+                <button type="submit" class="btn btn--primary">Salva email</button>
+                <button type="button" class="btn btn--ghost" id="btn-test-email">Invia email di test</button>
+                <div class="settings-feedback" id="feedback-mail" hidden></div>
+            </div>
+        </form>
 
-            <fieldset class="form-section">
-                <legend>Ricezione (Mailgun)</legend>
-                <p class="text-muted" style="font-size:13px;margin:0 0 16px">
-                    Configura una Route Mailgun che inoltri le email in arrivo a:
-                    <code id="mailgun-webhook-url" style="font-size:12px;cursor:pointer;" title="Clicca per copiare"></code>
-                </p>
-                <div class="form-group">
-                    <label>Mailgun HTTP Webhook Signing Key</label>
-                    <input type="password" id="set-mailgun-webhook-key" class="form-input" autocomplete="off"
-                           placeholder="Trovalo in Mailgun → Settings → Webhooks">
-                    <small class="form-hint">Non è l'API Key — è il "HTTP webhook signing key" nelle impostazioni Mailgun.</small>
-                </div>
-            </fieldset>
+        <form id="form-mailgun" class="card">
+            <h3>Email — ricezione (Mailgun)</h3>
+            <p class="text-muted" style="font-size:13px;margin:0 0 16px">
+                Configura una Route Mailgun che inoltri le email in arrivo a:
+                <code id="mailgun-webhook-url" style="font-size:12px;cursor:pointer;" title="Clicca per copiare"></code>
+            </p>
+            <div class="form-group">
+                <label for="set-mailgun-webhook-key">Mailgun HTTP Webhook Signing Key</label>
+                <input type="password" id="set-mailgun-webhook-key" class="form-input" autocomplete="new-password"
+                       placeholder="Lascia vuoto per non modificarla">
+                <small class="form-hint">Non è l'API Key — è il "HTTP webhook signing key" nelle impostazioni Mailgun.</small>
+                <small class="form-hint secret-state" id="state-mailgun_webhook_key"></small>
+            </div>
+            <div class="settings-actions">
+                <button type="submit" class="btn btn--primary">Salva chiave Mailgun</button>
+                <div class="settings-feedback" id="feedback-mailgun" hidden></div>
+            </div>
         </form>
     </div>
 
@@ -111,10 +123,17 @@
             <h3>WhatsApp (Twilio)</h3>
             <p class="text-muted">Richiede account Twilio con WhatsApp Business API. Webhook: <code>api/whatsapp_webhook.php</code></p>
             <label class="form-check"><input type="checkbox" id="set-wa-enabled"> Abilita WhatsApp</label>
-            <div class="form-group" style="margin-top:16px"><label>Account SID</label><input type="text" id="set-twilio-sid" class="form-input"></div>
-            <div class="form-group"><label>Auth Token</label><input type="password" id="set-twilio-token" class="form-input" autocomplete="off"></div>
-            <div class="form-group"><label>Numero WhatsApp (es. +14155238886)</label><input type="text" id="set-twilio-from" class="form-input"></div>
-            <button type="submit" class="btn btn--primary">Salva WhatsApp</button>
+            <div class="form-group" style="margin-top:16px"><label for="set-twilio-sid">Account SID</label><input type="text" id="set-twilio-sid" class="form-input"></div>
+            <div class="form-group">
+                <label for="set-twilio-token">Auth Token</label>
+                <input type="password" id="set-twilio-token" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarlo">
+                <small class="form-hint secret-state" id="state-twilio_auth_token"></small>
+            </div>
+            <div class="form-group"><label for="set-twilio-from">Numero WhatsApp (formato internazionale, es. +14155238886)</label><input type="text" id="set-twilio-from" class="form-input"></div>
+            <div class="settings-actions">
+                <button type="submit" class="btn btn--primary">Salva WhatsApp</button>
+                <div class="settings-feedback" id="feedback-whatsapp" hidden></div>
+            </div>
         </form>
     </div>
 
@@ -123,19 +142,24 @@
             <h3>Backup su cloud (S3-compatible)</h3>
             <p class="text-muted">Compatibile con AWS S3, Backblaze B2, MinIO. I backup locali restano in <code>backups/</code>.</p>
             <label class="form-check"><input type="checkbox" id="set-backup-enabled"> Abilita upload cloud dopo backup</label>
-            <div class="form-group" style="margin-top:16px"><label>Endpoint</label><input type="url" id="set-s3-endpoint" class="form-input" placeholder="https://s3.eu-central-1.amazonaws.com"></div>
+            <div class="form-group" style="margin-top:16px"><label for="set-s3-endpoint">Endpoint</label><input type="url" id="set-s3-endpoint" class="form-input" placeholder="https://s3.eu-central-1.amazonaws.com"></div>
             <div class="form-row form-row--2">
-                <div class="form-group"><label>Bucket</label><input type="text" id="set-s3-bucket" class="form-input"></div>
-                <div class="form-group"><label>Regione</label><input type="text" id="set-s3-region" class="form-input" value="eu-central-1"></div>
+                <div class="form-group"><label for="set-s3-bucket">Bucket</label><input type="text" id="set-s3-bucket" class="form-input"></div>
+                <div class="form-group"><label for="set-s3-region">Regione</label><input type="text" id="set-s3-region" class="form-input" value="eu-central-1"></div>
             </div>
             <div class="form-row form-row--2">
-                <div class="form-group"><label>Access Key</label><input type="text" id="set-s3-key" class="form-input"></div>
-                <div class="form-group"><label>Secret Key</label><input type="password" id="set-s3-secret" class="form-input" autocomplete="off"></div>
+                <div class="form-group"><label for="set-s3-key">Access Key</label><input type="text" id="set-s3-key" class="form-input"></div>
+                <div class="form-group">
+                    <label for="set-s3-secret">Secret Key</label>
+                    <input type="password" id="set-s3-secret" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarla">
+                    <small class="form-hint secret-state" id="state-backup_s3_secret"></small>
+                </div>
             </div>
-            <div class="form-group"><label>Prefisso cartella</label><input type="text" id="set-s3-prefix" class="form-input" value="gestionale-backups/"></div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+            <div class="form-group"><label for="set-s3-prefix">Prefisso cartella</label><input type="text" id="set-s3-prefix" class="form-input" value="gestionale-backups/"></div>
+            <div class="settings-actions">
                 <button type="submit" class="btn btn--primary">Salva backup</button>
                 <button type="button" class="btn btn--ghost" id="btn-backup-now"><i data-lucide="save"></i> Backup ora</button>
+                <div class="settings-feedback" id="feedback-backup" hidden></div>
             </div>
         </form>
     </div>
@@ -145,12 +169,17 @@
             <h3>Meta App (Facebook / Instagram OAuth)</h3>
             <p class="text-muted">Crea un'app su <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a> e imposta redirect: <code id="meta-redirect-uri">—</code></p>
             <div class="form-row form-row--2">
-                <div class="form-group"><label>Meta App ID</label><input type="text" id="set-meta-app-id" class="form-input"></div>
-                <div class="form-group"><label>Meta App Secret</label><input type="password" id="set-meta-app-secret" class="form-input" autocomplete="off"></div>
+                <div class="form-group"><label for="set-meta-app-id">Meta App ID</label><input type="text" id="set-meta-app-id" class="form-input"></div>
+                <div class="form-group">
+                    <label for="set-meta-app-secret">Meta App Secret</label>
+                    <input type="password" id="set-meta-app-secret" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarlo">
+                    <small class="form-hint secret-state" id="state-meta_app_secret"></small>
+                </div>
             </div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div class="settings-actions">
                 <button type="submit" class="btn btn--primary">Salva credenziali Meta</button>
                 <a href="meta_oauth.php" class="btn btn--ghost" id="btn-meta-oauth">Connetti Facebook / Instagram</a>
+                <div class="settings-feedback" id="feedback-meta" hidden></div>
             </div>
         </form>
     </div>
@@ -192,11 +221,15 @@
                 <legend>Addebito diretto SEPA (SDD)</legend>
                 <p class="text-muted" style="margin-top:0">Usati per generare il file pain.008 di incasso canoni (Pagamenti → Esporta SDD).</p>
                 <div class="form-row form-row--2">
-                    <div class="form-group"><label>IBAN agenzia (creditore)</label><input type="text" id="set-fp-iban" class="form-input" maxlength="34"></div>
-                    <div class="form-group"><label>Identificativo Creditore SEPA (CID)</label><input type="text" id="set-fp-creditor-id" class="form-input" maxlength="35" placeholder="IT..ZZZ.........."></div>
+                    <div class="form-group"><label for="set-fp-iban">IBAN agenzia (creditore)</label><input type="text" id="set-fp-iban" class="form-input" maxlength="42" placeholder="IT60X0542811101000000123456"></div>
+                    <div class="form-group"><label for="set-fp-creditor-id">Identificativo Creditore SEPA (CID)</label><input type="text" id="set-fp-creditor-id" class="form-input" maxlength="35" placeholder="IT79ZZZA1B02C34D56E78F90"></div>
                 </div>
+                <p class="form-hint">IBAN e CID vengono verificati con il loro codice di controllo: una cifra sbagliata farebbe rifiutare in banca l'intero flusso di incasso.</p>
             </fieldset>
-            <button type="submit" class="btn btn--primary">Salva dati fatturazione</button>
+            <div class="settings-actions">
+                <button type="submit" class="btn btn--primary">Salva dati fatturazione</button>
+                <div class="settings-feedback" id="feedback-fatturazione" hidden></div>
+            </div>
         </form>
     </div>
 
@@ -293,44 +326,6 @@
             </table>
             </div>
             <div id="email-tpl-pagination" class="pagination-container"></div>
-        </div>
-    </div>
-
-    <div class="settings-panel" id="panel-security" hidden>
-        <div class="card totp-setup">
-            <h3>Autenticazione a due fattori (2FA)</h3>
-            <div id="totp-status"></div>
-
-            <div id="totp-disabled-view" hidden>
-                <p class="text-muted">Aggiungi un secondo livello di sicurezza al tuo account con un'app TOTP (Google Authenticator, Authy).</p>
-                <button class="btn btn--primary" id="btn-2fa-start">Attiva 2FA</button>
-
-                <div id="totp-setup-panel" hidden style="margin-top:16px">
-                    <p>Scansiona il QR code con Google Authenticator o Authy, oppure inserisci il codice manualmente.</p>
-                    <img id="totp-qr" src="" alt="QR Code 2FA" style="max-width:200px;display:block;margin:12px 0">
-                    <p class="text-muted">Codice manuale (otpauth URI):</p>
-                    <pre id="totp-uri" style="white-space:pre-wrap;word-break:break-all;background:var(--color-bg);padding:8px;border-radius:6px"></pre>
-                    <div class="form-group">
-                        <label for="totp-verify-code">Inserisci il codice a 6 cifre per confermare</label>
-                        <input type="text" id="totp-verify-code" class="form-input" inputmode="numeric" maxlength="6">
-                    </div>
-                    <button class="btn btn--primary" id="btn-2fa-confirm">Conferma e attiva</button>
-                </div>
-
-                <div id="totp-backup-panel" hidden style="margin-top:16px">
-                    <p><strong>Salva questi codici di backup.</strong> Ognuno è utilizzabile una sola volta se perdi l'app.</p>
-                    <pre id="totp-backup-codes" style="background:var(--color-bg);padding:8px;border-radius:6px"></pre>
-                </div>
-            </div>
-
-            <div id="totp-enabled-view" hidden>
-                <p class="alert alert--success" style="display:block"><i data-lucide="check-circle"></i> La 2FA è attiva sul tuo account.</p>
-                <div class="form-group">
-                    <label for="totp-disable-pass">Per disattivare, inserisci la tua password</label>
-                    <input type="password" id="totp-disable-pass" class="form-input" autocomplete="off">
-                </div>
-                <button class="btn btn--danger" id="btn-2fa-disable">Disattiva 2FA</button>
-            </div>
         </div>
     </div>
 

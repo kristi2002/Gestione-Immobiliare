@@ -1,0 +1,56 @@
+<div class="account-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Il mio account</h2>
+            <p>Dati del tuo accesso e autenticazione a due fattori.</p>
+        </div>
+    </div>
+
+    <div id="account-alert" class="alert" style="display:none;"></div>
+
+    <div class="card">
+        <h3>Accesso</h3>
+        <dl class="detail-grid">
+            <div><dt>Username</dt><dd id="account-username">—</dd></div>
+            <div><dt>Email</dt><dd id="account-email">—</dd></div>
+            <div><dt>Ruolo</dt><dd id="account-role">—</dd></div>
+        </dl>
+    </div>
+
+    <div class="card totp-setup">
+        <h3>Autenticazione a due fattori (2FA)</h3>
+
+        <div id="totp-disabled-view" hidden>
+            <p class="text-muted">Aggiungi un secondo livello di sicurezza al tuo account con un'app TOTP (Google Authenticator, Authy).</p>
+            <button class="btn btn--primary" id="btn-2fa-start">Attiva 2FA</button>
+
+            <div id="totp-setup-panel" hidden style="margin-top:16px">
+                <p>Scansiona il QR code con Google Authenticator o Authy, oppure inserisci il codice manualmente.</p>
+                <img id="totp-qr" src="" alt="QR Code 2FA" style="max-width:200px;display:block;margin:12px 0">
+                <p class="text-muted">Codice manuale (otpauth URI):</p>
+                <pre id="totp-uri" style="white-space:pre-wrap;word-break:break-all;background:var(--color-bg);padding:8px;border-radius:6px"></pre>
+                <div class="form-group">
+                    <label for="totp-verify-code">Inserisci il codice a 6 cifre per confermare</label>
+                    <input type="text" id="totp-verify-code" class="form-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+                </div>
+                <button class="btn btn--primary" id="btn-2fa-confirm">Conferma e attiva</button>
+            </div>
+
+            <div id="totp-backup-panel" hidden style="margin-top:16px">
+                <p><strong>Salva questi codici di backup.</strong> Ognuno è utilizzabile una sola volta se perdi l'app.</p>
+                <pre id="totp-backup-codes" style="background:var(--color-bg);padding:8px;border-radius:6px"></pre>
+            </div>
+        </div>
+
+        <div id="totp-enabled-view" hidden>
+            <p class="alert alert--success" style="display:block"><i data-lucide="check-circle"></i> La 2FA è attiva sul tuo account.</p>
+            <div class="form-group">
+                <label for="totp-disable-pass">Per disattivare, inserisci la tua password</label>
+                <input type="password" id="totp-disable-pass" class="form-input" autocomplete="current-password">
+            </div>
+            <button class="btn btn--danger" id="btn-2fa-disable">Disattiva 2FA</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="assets/js/account/index.js"></script>

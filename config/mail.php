@@ -5,9 +5,14 @@
 
 require_once __DIR__ . '/settings.php';
 
-function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null, array $attachments = []): array
+/**
+ * $cfgOverride serve all'invio di prova dalle Impostazioni: prova la
+ * configurazione che l'utente ha davanti, non quella già salvata. Tutti gli
+ * altri chiamanti passano null e leggono da app_settings.
+ */
+function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null, array $attachments = [], ?array $cfgOverride = null): array
 {
-    $cfg = getMailConfig();
+    $cfg = $cfgOverride ?? getMailConfig();
 
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'Email destinatario non valida.'];
@@ -202,11 +207,11 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
     return ['success' => true, 'status' => 'sent', 'external_id' => 'smtp-' . uniqid(), 'error' => null];
 }
 
-function sendTestEmail(string $to): array
+function sendTestEmail(string $to, ?array $cfgOverride = null): array
 {
-    $cfg     = getMailConfig();
+    $cfg     = $cfgOverride ?? getMailConfig();
     $subject = 'Test email — ' . ($cfg['agency_name'] ?: 'Gestionale');
     $body    = "Questa è un'email di test dal gestionale immobiliare.\n\nSe la ricevi, la configurazione SMTP funziona correttamente.";
     $html    = wrapHtmlEmail($subject, $body);
-    return sendClientEmail($to, $subject, $body, $html);
+    return sendClientEmail($to, $subject, $body, $html, [], $cfgOverride);
 }

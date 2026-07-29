@@ -7,7 +7,7 @@ const ADMIN_ROLES = ['super_admin', 'admin', 'agent', 'readonly'];
 
 const ROLE_PERMISSIONS = [
     'super_admin' => ['*'],
-    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','agents','reports','social','settings','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
+    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','agents','reports','social','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
     'agent'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
     'readonly'    => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','tenants','tenant_edit','tenant_profile','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','forecast','property_applications','invoices','invoice_edit','aml','scadenzario','portal_sync','valuation'],
 ];
@@ -46,7 +46,14 @@ function entityFormListView(string $entity): ?string
     return ENTITY_FORM_VIEWS[$entity] ?? null;
 }
 
+// Attenzione: VIEW_MIN_ROLE vince su ROLE_PERMISSIONS. Elencare una vista qui
+// e anche là (com'era per 'settings' nel ruolo admin) crea una riga morta che
+// racconta un permesso che non esiste: la soglia qui sotto è l'unica vera.
 const VIEW_MIN_ROLE = [
+    // Il proprio account lo gestisce chiunque abbia un accesso, sola lettura
+    // compresa: è dove si attiva la 2FA, e negarla a un ruolo significherebbe
+    // lasciare quel ruolo senza secondo fattore.
+    'account'      => 'readonly',
     'settings'     => 'super_admin',
     'users'        => 'super_admin',
     'activity_log' => 'super_admin',

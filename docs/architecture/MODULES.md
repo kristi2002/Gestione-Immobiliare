@@ -334,8 +334,11 @@ System-wide configuration. Organised into tabs:
 - **Social / Meta** — Facebook / Instagram OAuth connection.
 - **WhatsApp Templates** — reusable message templates with `{{variables}}`.
 - **Email Templates** — reusable email templates with `{{variables}}`.
-- **Sicurezza (2FA)** — enable two-factor authentication via TOTP (Google Authenticator, Authy).
 - **Utenti** *(super-admin only)* — create and manage admin accounts with roles: `super_admin`, `admin`, `agent`, `readonly`.
+
+> **2FA is no longer here.** It moved to **Il mio account** (`view.php?name=account`,
+> `api/account.php`): Settings is super-admin-only, so hosting per-user security
+> there left every other role without a second factor.
 
 **Connects to:** All modules (global configuration source).
 

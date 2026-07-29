@@ -111,6 +111,7 @@
             social:         'Social Media',
             activity_log:   'Log Attività',
             settings:       'Impostazioni',
+            account:        'Il mio account',
             client_profile:        'Scheda Cliente',
             agent_profile:         'Scheda Agente',
             property_profile:      'Scheda Immobile',

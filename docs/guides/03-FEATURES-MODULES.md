@@ -193,8 +193,11 @@ when, IP, which record. Cannot be edited/deleted. *Connects to:* all modules.
 - **Backup** — S3-compatible cloud backup config.
 - **Social / Meta** — Facebook/Instagram OAuth.
 - **WhatsApp Templates** / **Email Templates** — reusable templates with `{{variables}}`.
-- **Sicurezza (2FA)** — TOTP (Google Authenticator, Authy).
 - **Utenti** *(super-admin only)* — manage admin accounts and roles.
+
+**Il mio account** *(every role)* — own login details and **2FA** via TOTP
+(Google Authenticator, Authy). Moved out of Settings so that non-super-admin
+users can secure their own access.
 
 ---
 

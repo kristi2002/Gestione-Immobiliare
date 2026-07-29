@@ -96,6 +96,25 @@ function apiError(string $message, int $code = 400): void
     exit;
 }
 
+/**
+ * Errore di validazione con il dettaglio per campo, così la pagina può marcare
+ * l'input sbagliato invece di mostrare un solo messaggio generico in cima.
+ *
+ * @param array<string,string> $fields nome campo => messaggio
+ */
+function apiValidationError(array $fields, string $message = 'Controlla i campi evidenziati.'): void
+{
+    apiDiscardBufferedOutput();
+    apiHeaders();
+    http_response_code(422);
+    echo json_encode([
+        'success' => false,
+        'error'   => $message,
+        'fields'  => $fields,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 function apiGetJsonBody(): array
 {
     static $cached = null;

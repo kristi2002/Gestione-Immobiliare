@@ -223,6 +223,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                         <?php if (canAccessView('activity_log')): ?>
                         <li><a href="view.php?name=activity_log" class="nav-link" data-view="activity_log"><i class="nav-icon" data-lucide="history"></i><span class="nav-label">Log Attività</span></a></li>
                         <?php endif; ?>
+                        <li><a href="view.php?name=account" class="nav-link" data-view="account"><i class="nav-icon" data-lucide="user-cog"></i><span class="nav-label">Il mio account</span></a></li>
                         <?php if (canAccessView('settings')): ?>
                         <li><a href="view.php?name=settings" class="nav-link" data-view="settings"><i class="nav-icon" data-lucide="settings"></i><span class="nav-label">Impostazioni</span></a></li>
                         <?php endif; ?>

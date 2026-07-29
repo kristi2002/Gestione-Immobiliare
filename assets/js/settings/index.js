@@ -12,19 +12,72 @@ let isSuperAdmin = false;
 let usersPage = 1;
 let emailTplsPage = 1;
 
+// setting_key → id dell'input, per riportare l'errore del server SOTTO il campo
+// che lo ha causato invece che in un unico messaggio generico.
+const FIELD_IDS = {
+    agency_name: 'set-agency-name',
+    agency_tagline: 'set-agency-tagline',
+    agency_phone: 'set-agency-phone',
+    agency_address: 'set-agency-address',
+    primary_color: 'set-primary-color',
+    sidebar_color: 'set-sidebar-color',
+    mail_enabled: 'set-mail-enabled',
+    agency_email: 'set-agency-email',
+    smtp_host: 'set-smtp-host',
+    smtp_port: 'set-smtp-port',
+    smtp_user: 'set-smtp-user',
+    smtp_pass: 'set-smtp-pass',
+    smtp_secure: 'set-smtp-secure',
+    mailgun_webhook_key: 'set-mailgun-webhook-key',
+    whatsapp_enabled: 'set-wa-enabled',
+    twilio_account_sid: 'set-twilio-sid',
+    twilio_auth_token: 'set-twilio-token',
+    twilio_whatsapp_from: 'set-twilio-from',
+    backup_cloud_enabled: 'set-backup-enabled',
+    backup_s3_endpoint: 'set-s3-endpoint',
+    backup_s3_bucket: 'set-s3-bucket',
+    backup_s3_region: 'set-s3-region',
+    backup_s3_key: 'set-s3-key',
+    backup_s3_secret: 'set-s3-secret',
+    backup_s3_prefix: 'set-s3-prefix',
+    meta_app_id: 'set-meta-app-id',
+    meta_app_secret: 'set-meta-app-secret',
+    agency_denominazione: 'set-fp-denominazione',
+    agency_regime_fiscale: 'set-fp-regime',
+    agency_piva: 'set-fp-piva',
+    agency_cf: 'set-fp-cf',
+    agency_indirizzo: 'set-fp-indirizzo',
+    agency_pec: 'set-fp-pec',
+    agency_cap: 'set-fp-cap',
+    agency_comune: 'set-fp-comune',
+    agency_provincia: 'set-fp-provincia',
+    agency_iban: 'set-fp-iban',
+    agency_sepa_creditor_id: 'set-fp-creditor-id',
+};
+
+// Sezione dell'API → riquadro di esito. Il modulo Mailgun salva la stessa
+// sezione 'mail' ma ha un pulsante suo, quindi un riquadro suo.
+const SECTION_FEEDBACK = {
+    branding: 'branding', mail: 'mail', mailgun: 'mailgun',
+    whatsapp: 'whatsapp', backup: 'backup', meta: 'meta', fatturazione: 'fatturazione',
+};
+
 init();
 
-async function init() {
+// I `bind*` PRIMA del caricamento: se la GET fallisce (sessione scaduta, errore
+// PHP che risponde HTML) l'eccezione fermava init() a metà e la pagina restava
+// muta — pulsanti che non fanno niente e nessun messaggio.
+function init() {
     bindTabs();
-    await loadSettings();
     bindForms();
     bindUsers();
     bindEmailTemplates();
     bindIstat();
-    bind2fa();
-    render2fa();
+
     const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
     document.getElementById('meta-redirect-uri').textContent = base + 'meta_callback.php';
+
+    loadSettings().catch(err => showAlert('Impossibile caricare le impostazioni: ' + err.message, 'error'));
 }
 
 function bindTabs() {
@@ -42,16 +95,10 @@ function bindTabs() {
 }
 
 async function loadSettings() {
-    const res = await fetch(API);
-    const json = await res.json();
+    const json = await request(API);
     if (!json.success) return showAlert(json.error, 'error');
-    settings = json.data;
-    fillBranding(settings.branding);
-    fillMail(settings.mail);
-    fillWhatsApp(settings.whatsapp);
-    fillBackup(settings.backup);
-    fillMeta(settings.meta);
-    fillFatturazione(settings.fatturazione);
+    applySettings(json.data);
+
     try {
         const uRes = await fetch(USERS_API);
         if (uRes.ok) {
@@ -60,6 +107,72 @@ async function loadSettings() {
             await loadUsers();
         }
     } catch (_) {}
+}
+
+// Un salvataggio riscrive i campi con quello che il server ha DAVVERO memorizzato:
+// normalizzazioni (IBAN senza spazi, provincia in maiuscolo, prefisso con lo
+// slash finale) e stato dei segreti diventano così visibili subito.
+function applySettings(data) {
+    settings = data;
+    if (data.branding)     fillBranding(data.branding);
+    if (data.mail)         fillMail(data.mail);
+    if (data.whatsapp)     fillWhatsApp(data.whatsapp);
+    if (data.backup)       fillBackup(data.backup);
+    if (data.meta)         fillMeta(data.meta);
+    if (data.fatturazione) fillFatturazione(data.fatturazione);
+}
+
+// Una risposta non-JSON (fatal PHP, redirect al login) qui diventa un errore
+// leggibile invece di un "Unexpected token <" nella console.
+async function request(url, options = {}) {
+    const res  = await fetch(url, options);
+    const text = await res.text();
+    try {
+        return JSON.parse(text);
+    } catch (_) {
+        throw new Error(`risposta non valida dal server (HTTP ${res.status}).`);
+    }
+}
+
+/**
+ * Un segreto non torna mai al browser: la pagina mostra solo se è impostato e
+ * le sue ultime cifre. "rimuovi" è l'unico modo per cancellarlo — un campo
+ * lasciato vuoto significa "non toccarlo", non "svuotalo".
+ */
+function fillSecret(key, section, data, feedbackKey = section) {
+    const input = document.getElementById(FIELD_IDS[key]);
+    const state = document.getElementById('state-' + key);
+    if (input) input.value = '';
+    if (!state) return;
+
+    state.textContent = '';
+    if (data[key + '_set']) {
+        state.append(`Impostato (${data[key + '_hint'] || '••••'}). Lascia vuoto per non modificarlo.`);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'secret-state__clear';
+        btn.textContent = 'rimuovi';
+        btn.addEventListener('click', () => clearSecret(key, section, feedbackKey));
+        state.append(btn);
+    } else {
+        state.append('Non impostato.');
+    }
+}
+
+async function clearSecret(key, section, feedbackKey) {
+    if (!await confirmDialog('Rimuovere il valore memorizzato? La funzione che lo usa smetterà di funzionare.', { title: 'Rimuovi segreto' })) return;
+    try {
+        const json = await request(API, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section, [key + '_clear']: true }),
+        });
+        if (!json.success) return showSectionFeedback(feedbackKey, json.error || 'Errore', 'error');
+        applySettings(json.data);
+        showSectionFeedback(feedbackKey, 'Valore rimosso.', 'success');
+    } catch (err) {
+        showSectionFeedback(feedbackKey, err.message, 'error');
+    }
 }
 
 function fillBranding(b) {
@@ -82,12 +195,17 @@ function fillMail(m) {
     document.getElementById('set-smtp-host').value = m.smtp_host || '';
     document.getElementById('set-smtp-port').value = m.smtp_port || 587;
     document.getElementById('set-smtp-user').value = m.smtp_user || '';
-    document.getElementById('set-smtp-pass').value = m.smtp_pass || '';
-    document.getElementById('set-smtp-secure').value = m.smtp_secure || 'tls';
-    document.getElementById('set-mailgun-webhook-key').value = m.mailgun_webhook_key || '';
+    // `?? 'tls'` e non `|| 'tls'`: la stringa vuota è la scelta "Nessuna", non
+    // un valore mancante — con `||` l'opzione era impossibile da selezionare.
+    document.getElementById('set-smtp-secure').value = m.smtp_secure ?? 'tls';
+    fillSecret('smtp_pass', 'mail', m);
+    fillSecret('mailgun_webhook_key', 'mail', m, 'mailgun');
+    updateMailHint(!!m.mail_enabled);
+
     // Show the webhook URL so the user can copy it into Mailgun
     const urlEl = document.getElementById('mailgun-webhook-url');
-    if (urlEl) {
+    if (urlEl && !urlEl.dataset.bound) {
+        urlEl.dataset.bound = '1';
         const base = window.location.origin + window.location.pathname.replace(/index\.php.*/, '');
         const webhookUrl = base + 'api/email_inbound.php';
         urlEl.textContent = webhookUrl;
@@ -97,11 +215,16 @@ function fillMail(m) {
     }
 }
 
+function updateMailHint(enabled) {
+    const hint = document.getElementById('mail-disabled-hint');
+    if (hint) hint.hidden = enabled;
+}
+
 function fillWhatsApp(w) {
     document.getElementById('set-wa-enabled').checked = !!w.whatsapp_enabled;
     document.getElementById('set-twilio-sid').value = w.twilio_account_sid || '';
-    document.getElementById('set-twilio-token').value = w.twilio_auth_token || '';
     document.getElementById('set-twilio-from').value = w.twilio_whatsapp_from || '';
+    fillSecret('twilio_auth_token', 'whatsapp', w);
 }
 
 function fillBackup(b) {
@@ -110,13 +233,13 @@ function fillBackup(b) {
     document.getElementById('set-s3-bucket').value = b.backup_s3_bucket || '';
     document.getElementById('set-s3-region').value = b.backup_s3_region || 'eu-central-1';
     document.getElementById('set-s3-key').value = b.backup_s3_key || '';
-    document.getElementById('set-s3-secret').value = b.backup_s3_secret || '';
     document.getElementById('set-s3-prefix').value = b.backup_s3_prefix || 'gestionale-backups/';
+    fillSecret('backup_s3_secret', 'backup', b);
 }
 
 function fillMeta(m) {
     document.getElementById('set-meta-app-id').value = m.meta_app_id || '';
-    document.getElementById('set-meta-app-secret').value = m.meta_app_secret || '';
+    fillSecret('meta_app_secret', 'meta', m);
 }
 
 function fillFatturazione(f) {
@@ -137,6 +260,7 @@ function fillFatturazione(f) {
 function bindForms() {
     document.getElementById('form-branding').addEventListener('submit', e => saveSection(e, 'branding', collectBranding));
     document.getElementById('form-mail').addEventListener('submit', e => saveSection(e, 'mail', collectMail));
+    document.getElementById('form-mailgun').addEventListener('submit', e => saveSection(e, 'mail', collectMailgun, 'mailgun'));
     document.getElementById('form-whatsapp').addEventListener('submit', e => saveSection(e, 'whatsapp', collectWhatsApp));
     document.getElementById('form-backup').addEventListener('submit', e => saveSection(e, 'backup', collectBackup));
     document.getElementById('form-meta').addEventListener('submit', e => saveSection(e, 'meta', collectMeta));
@@ -145,6 +269,7 @@ function bindForms() {
     document.getElementById('btn-test-email').addEventListener('click', testEmail);
     document.getElementById('set-logo-file').addEventListener('change', uploadLogo);
     document.getElementById('btn-backup-now').addEventListener('click', triggerBackup);
+    document.getElementById('set-mail-enabled').addEventListener('change', e => updateMailHint(e.target.checked));
 }
 
 function collectBranding() {
@@ -165,9 +290,15 @@ function collectMail() {
         smtp_host:            document.getElementById('set-smtp-host').value,
         smtp_port:            document.getElementById('set-smtp-port').value,
         smtp_user:            document.getElementById('set-smtp-user').value,
-        smtp_pass:            document.getElementById('set-smtp-pass').value,
         smtp_secure:          document.getElementById('set-smtp-secure').value,
-        mailgun_webhook_key:  document.getElementById('set-mailgun-webhook-key').value,
+        // Vuoto = invariata. Per cancellarla c'è "rimuovi" accanto al campo.
+        smtp_pass:            document.getElementById('set-smtp-pass').value,
+    };
+}
+
+function collectMailgun() {
+    return {
+        mailgun_webhook_key: document.getElementById('set-mailgun-webhook-key').value,
     };
 }
 
@@ -247,49 +378,131 @@ function collectMeta() {
     };
 }
 
-async function saveSection(e, section, collector) {
+async function saveSection(e, section, collector, feedbackKey = section) {
     e.preventDefault();
-    const body = { section, ...collector() };
-    const res = await fetch(API, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const json = await res.json();
-    if (json.success) {
-        showAlert('Impostazioni salvate.', 'success');
-        settings = json.data;
-        document.querySelector('link[href="branding.css.php"]')?.remove();
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'branding.css.php?' + Date.now();
-        document.head.appendChild(link);
-    } else {
-        showAlert(json.error || 'Errore', 'error');
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    clearFieldErrors(e.target);
+
+    try {
+        const json = await request(API, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section, ...collector() }),
+        });
+
+        if (json.success) {
+            applySettings(json.data);
+            reloadBranding();
+            showSectionFeedback(feedbackKey, 'Impostazioni salvate.', 'success');
+            return;
+        }
+
+        // 422 → il server dice QUALE campo è sbagliato: l'errore va lì sotto.
+        if (json.fields) {
+            showFieldErrors(json.fields);
+            showSectionFeedback(feedbackKey, json.error || 'Controlla i campi evidenziati.', 'error');
+            return;
+        }
+        showSectionFeedback(feedbackKey, json.error || 'Errore', 'error');
+    } catch (err) {
+        showSectionFeedback(feedbackKey, err.message, 'error');
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }
 
-async function testEmail() {
-    const email = document.getElementById('set-agency-email').value;
-    const res = await fetch(API + '?test_email=1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+function clearFieldErrors(scope) {
+    (scope || document).querySelectorAll('.field-error').forEach(el => el.remove());
+    (scope || document).querySelectorAll('.form-input--invalid').forEach(el => el.classList.remove('form-input--invalid'));
+}
+
+function showFieldErrors(fields) {
+    let first = null;
+    Object.entries(fields).forEach(([key, message]) => {
+        const input = document.getElementById(FIELD_IDS[key] || '');
+        if (!input) return;
+        input.classList.add('form-input--invalid');
+        const hint = document.createElement('small');
+        hint.className = 'field-error';
+        hint.textContent = message;
+        (input.parentElement || input).appendChild(hint);
+        if (!first) first = input;
     });
-    const json = await res.json();
-    showAlert(json.success ? json.data.message : json.error, json.success ? 'success' : 'error');
+    if (first) {
+        first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        first.focus({ preventScroll: true });
+    }
+}
+
+// Il CSS dei colori è generato da PHP: dopo un salvataggio va richiesto di
+// nuovo, e il nome/logo in sidebar vanno aggiornati a mano — sono stampati dal
+// server al primo caricamento e non si ridisegnano da soli.
+function reloadBranding() {
+    document.querySelector('link[href^="branding.css.php"]')?.remove();
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'branding.css.php?' + Date.now();
+    document.head.appendChild(link);
+
+    const b = settings?.branding;
+    if (!b) return;
+    const name = document.querySelector('.sb-brand__name');
+    if (name && b.agency_tagline) name.textContent = b.agency_tagline;
+    const eyebrow = document.querySelector('.sb-brand__eyebrow');
+    if (eyebrow && b.agency_name) eyebrow.textContent = b.agency_name;
+    const brandLink = document.querySelector('.sb-brand');
+    if (brandLink && b.agency_name) brandLink.title = b.agency_name;
+    const logo = document.querySelector('.sb-brand__logo');
+    if (logo && b.logo_path) logo.src = b.logo_path + '?' + Date.now();
+}
+
+/**
+ * Prova la configurazione che l'utente ha DAVANTI, non quella già salvata:
+ * cambiare host e premere "Invia test" prima interrogava ancora il vecchio
+ * server. La password, se il campo è vuoto, la riusa il server da quella
+ * memorizzata.
+ */
+async function testEmail() {
+    const btn = document.getElementById('btn-test-email');
+    const email = document.getElementById('set-agency-email').value;
+    btn.disabled = true;
+    try {
+        const json = await request(API + '?test_email=1', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, config: collectMail() }),
+        });
+        if (!json.success) return showSectionFeedback('mail', json.error, 'error');
+        // Invio simulato = niente è partito: non va annunciato come successo.
+        showSectionFeedback('mail', json.data.message, json.data.simulated ? 'info' : 'success');
+    } catch (err) {
+        showSectionFeedback('mail', err.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function uploadLogo() {
-    const file = document.getElementById('set-logo-file').files[0];
+    const input = document.getElementById('set-logo-file');
+    const file = input.files[0];
     if (!file) return;
-    const fd = new FormData();
-    fd.append('logo', file);
-    const res = await fetch(LOGO_API, { method: 'POST', body: fd });
-    const json = await res.json();
-    if (json.success) {
+    try {
+        const fd = new FormData();
+        fd.append('logo', file);
+        const json = await request(LOGO_API, { method: 'POST', body: fd });
+        if (!json.success) {
+            input.value = '';
+            return showSectionFeedback('branding', json.error, 'error');
+        }
         const img = document.getElementById('set-logo-preview');
         img.src = json.data.logo_path + '?' + Date.now();
         img.style.display = 'block';
-        showAlert('Logo caricato.', 'success');
-    } else {
-        showAlert(json.error, 'error');
+        if (settings?.branding) settings.branding.logo_path = json.data.logo_path;
+        reloadBranding();
+        showSectionFeedback('branding', 'Logo caricato.', 'success');
+    } catch (err) {
+        showSectionFeedback('branding', err.message, 'error');
     }
 }
 
@@ -308,18 +521,64 @@ async function loadUsers() {
     const parsed = Pagination.parseResponse(json);
     const users = parsed.items;
     const tbody = document.getElementById('users-tbody');
+    // Attiva/disattiva ed elimina esistevano nell'API ma non nella pagina: la
+    // colonna "Stato" mostrava un valore che nessuno poteva cambiare.
     tbody.innerHTML = users.map(u => `
         <tr>
             <td data-label="Username">${esc(u.username)}</td>
             <td data-label="Email">${esc(u.email || '—')}</td>
             <td data-label="Ruolo"><span class="badge">${esc(u.role)}</span></td>
-            <td data-label="Stato">${u.is_active ? 'Attivo' : 'Disattivo'}</td>
-            <td class="col-actions" data-label="Azioni"><button class="btn btn--sm btn--ghost" data-edit-user="${u.id}"><i data-lucide="pencil"></i></button></td>
+            <td data-label="Stato">${u.is_active ? 'Attivo' : '<span class="text-muted">Disattivo</span>'}</td>
+            <td class="col-actions" data-label="Azioni">
+                <button class="btn btn--sm btn--ghost" data-edit-user="${u.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                <button class="btn btn--sm btn--ghost" data-toggle-user="${u.id}" title="${u.is_active ? 'Disattiva' : 'Riattiva'}"><i data-lucide="${u.is_active ? 'user-x' : 'user-check'}"></i></button>
+                <button class="btn btn--sm btn--ghost" data-del-user="${u.id}" title="Elimina" style="color:var(--color-danger)"><i data-lucide="trash-2"></i></button>
+            </td>
         </tr>`).join('');
+
     tbody.querySelectorAll('[data-edit-user]').forEach(btn => {
         btn.addEventListener('click', () => openUserModal(users.find(u => u.id == btn.dataset.editUser)));
     });
+    tbody.querySelectorAll('[data-toggle-user]').forEach(btn => {
+        btn.addEventListener('click', () => toggleUser(users.find(u => u.id == btn.dataset.toggleUser)));
+    });
+    tbody.querySelectorAll('[data-del-user]').forEach(btn => {
+        btn.addEventListener('click', () => deleteUser(users.find(u => u.id == btn.dataset.delUser)));
+    });
+
     Pagination.render(document.getElementById('users-pagination'), parsed, (p) => { usersPage = p; loadUsers(); });
+    if (window.lucide) window.lucide.createIcons();
+}
+
+async function toggleUser(user) {
+    if (!user) return;
+    const action = user.is_active ? 'Disattivare' : 'Riattivare';
+    if (!await confirmDialog(`${action} l'utente ${user.username}?`, { title: action + ' utente' })) return;
+    try {
+        const json = await request(`${USERS_API}?id=${user.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: !user.is_active }),
+        });
+        if (!json.success) return showAlert(json.error || 'Errore', 'error');
+        await loadUsers();
+        showAlert(user.is_active ? 'Utente disattivato.' : 'Utente riattivato.', 'success');
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
+
+async function deleteUser(user) {
+    if (!user) return;
+    if (!await confirmDialog(`Eliminare definitivamente l'utente ${user.username}?`, { title: 'Elimina utente' })) return;
+    try {
+        const json = await request(`${USERS_API}?id=${user.id}`, { method: 'DELETE' });
+        if (!json.success) return showAlert(json.error || 'Errore', 'error');
+        await loadUsers();
+        showAlert('Utente eliminato.', 'success');
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
 }
 
 function openUserModal(user = null) {
@@ -379,84 +638,30 @@ async function saveUser(e) {
     }
 }
 
-// -------------------------------------------------------------------------
-// 2FA
-// -------------------------------------------------------------------------
-
-let totpSecret = null;
-
-function bind2fa() {
-    document.getElementById('btn-2fa-start').addEventListener('click', start2fa);
-    document.getElementById('btn-2fa-confirm').addEventListener('click', confirm2fa);
-    document.getElementById('btn-2fa-disable').addEventListener('click', disable2fa);
-}
-
-function render2fa() {
-    const enabled = !!(settings && settings.twofa && settings.twofa.enabled);
-    document.getElementById('totp-enabled-view').hidden = !enabled;
-    document.getElementById('totp-disabled-view').hidden = enabled;
-}
-
-async function start2fa() {
-    const res = await fetch(API + '?action=2fa_setup');
-    const json = await res.json();
-    if (!json.success) return showAlert(json.error, 'error');
-    totpSecret = json.data.secret;
-    document.getElementById('totp-qr').src = json.data.qr_image;
-    document.getElementById('totp-uri').textContent = json.data.otpauth;
-    document.getElementById('totp-setup-panel').hidden = false;
-    document.getElementById('totp-backup-panel').hidden = true;
-}
-
-async function confirm2fa() {
-    const code = document.getElementById('totp-verify-code').value.trim();
-    if (!totpSecret || !code) return showAlert('Inserisci il codice.', 'error');
-    const res = await fetch(API + '?action=2fa_enable', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: totpSecret, code }),
-    });
-    const json = await res.json();
-    if (!json.success) return showAlert(json.error, 'error');
-    document.getElementById('totp-setup-panel').hidden = true;
-    document.getElementById('totp-backup-codes').textContent = json.data.backup_codes.join('\n');
-    document.getElementById('totp-backup-panel').hidden = false;
-    if (settings) settings.twofa = { enabled: true };
-    showAlert('2FA attivata.', 'success');
-    setTimeout(render2fa, 100);
-}
-
-async function disable2fa() {
-    const password = document.getElementById('totp-disable-pass').value;
-    if (!password) return showAlert('Inserisci la password.', 'error');
-    const res = await fetch(API + '?action=2fa_disable', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-    });
-    const json = await res.json();
-    if (!json.success) return showAlert(json.error, 'error');
-    if (settings) settings.twofa = { enabled: false };
-    document.getElementById('totp-disable-pass').value = '';
-    render2fa();
-    showAlert('2FA disattivata.', 'success');
-}
+// La 2FA vive in "Il mio account" (views/account.html): è sicurezza del singolo
+// utente, e questa pagina la vede solo il super_admin.
 
 async function triggerBackup() {
     const btn = document.getElementById('btn-backup-now');
     btn.disabled = true;
     btn.textContent = 'Backup in corso…';
     try {
-        const res = await fetch(BACKUP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        const json = await res.json();
+        const json = await request(BACKUP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         if (json.success) {
-            showAlert(`Backup completato: ${json.data.filename} (${json.data.size_kb} KB)`, 'success');
+            const cloud = json.data.cloud || {};
+            // Un upload sul cloud fallito non è un backup riuscito a metà da
+            // annunciare in verde: il file è rimasto solo su questo server.
+            const level = cloud.attempted && !cloud.success ? 'error' : 'success';
+            showSectionFeedback('backup', `${json.data.message} (${json.data.size_kb} KB)`, level);
         } else {
-            showAlert(json.error || 'Errore backup.', 'error');
+            showSectionFeedback('backup', json.error || 'Errore backup.', 'error');
         }
     } catch (err) {
-        showAlert('Errore di rete durante il backup.', 'error');
+        showSectionFeedback('backup', 'Errore durante il backup: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="save"></i> Backup ora';
+        if (window.lucide) window.lucide.createIcons();
     }
 }
 
@@ -708,6 +913,26 @@ async function saveIstatManual() {
     document.getElementById('istat-manual-value').value = '';
     await loadIstat();
     showAlert(`Indice ${json.data.period} salvato.`, 'success');
+}
+
+/**
+ * Esito accanto al pulsante che l'ha prodotto. L'avviso unico in cima alla
+ * pagina resta per gli errori che non appartengono a una scheda: salvando
+ * Fatturazione (una scheda lunga) il messaggio in alto era fuori schermo, e il
+ * salvataggio sembrava non aver risposto niente.
+ */
+function showSectionFeedback(section, msg, type) {
+    const el = document.getElementById('feedback-' + (SECTION_FEEDBACK[section] || section));
+    if (!el) return showAlert(msg, type);
+    el.textContent = msg;
+    el.className = 'settings-feedback settings-feedback--' + type;
+    el.hidden = false;
+    clearTimeout(el._timer);
+    // Gli errori restano finché non si risalva: sparire dopo 5 secondi mentre
+    // l'utente sta ancora correggendo il campo non aiuta nessuno.
+    if (type === 'success') {
+        el._timer = setTimeout(() => { el.hidden = true; }, 5000);
+    }
 }
 
 function showAlert(msg, type) {

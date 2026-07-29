@@ -74,18 +74,49 @@ function createUser(PDO $db): void
     if (!in_array($role, USER_ROLES, true)) {
         apiError('Ruolo non valido.');
     }
+    if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        apiError('Email non valida.');
+    }
 
     $stmt = $db->prepare(
         'INSERT INTO admin_users (username, password_hash, email, role) VALUES (:u, :p, :e, :r)'
     );
-    $stmt->execute([
-        'u' => $username,
-        'p' => appPasswordHash($password),
-        'e' => $email,
-        'r' => $role,
-    ]);
 
+    // Lo username è UNIQUE: senza questo, un nome già preso usciva dal catch
+    // generale come "Errore database." 500 — vero ma inutilizzabile per chi sta
+    // compilando il modulo.
+    try {
+        $stmt->execute([
+            'u' => $username,
+            'p' => appPasswordHash($password),
+            'e' => $email,
+            'r' => $role,
+        ]);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            apiError('Esiste già un utente con questo username.', 409);
+        }
+        throw $e;
+    }
+
+    logActivity('create', 'admin_user', (int) $db->lastInsertId(), "Nuovo utente {$username} ({$role})");
     getUser($db, (int) $db->lastInsertId());
+}
+
+/**
+ * Quanti super_admin ATTIVI restano oltre a quello indicato.
+ *
+ * Serve perché il super_admin è l'unico ruolo che apre le Impostazioni e la
+ * gestione utenti: togliere l'ultimo (declassandolo, disattivandolo o
+ * cancellandolo) chiude la porta dall'interno e non la riapre nessuno.
+ */
+function otherActiveSuperAdmins(PDO $db, int $excludeId): int
+{
+    $stmt = $db->prepare(
+        "SELECT COUNT(*) FROM admin_users WHERE role = 'super_admin' AND is_active = 1 AND id <> :id"
+    );
+    $stmt->execute(['id' => $excludeId]);
+    return (int) $stmt->fetchColumn();
 }
 
 function updateUser(PDO $db, int $id): void
@@ -107,12 +138,25 @@ function updateUser(PDO $db, int $id): void
         }
     }
 
+    // Ultimo super_admin attivo: né declassabile né disattivabile.
+    $losesSuperAdmin = ($existing['role'] === 'super_admin')
+        && ((isset($data['role']) && $data['role'] !== 'super_admin')
+            || (isset($data['is_active']) && !$data['is_active']));
+
+    if ($losesSuperAdmin && otherActiveSuperAdmins($db, $id) === 0) {
+        apiError('Deve restare almeno un super admin attivo: nessuno potrebbe più accedere a Impostazioni e Utenti.');
+    }
+
     $fields = [];
     $params = ['id' => $id];
 
     if (isset($data['email'])) {
+        $email = trim((string) $data['email']);
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            apiError('Email non valida.');
+        }
         $fields[] = 'email = :email';
-        $params['email'] = trim($data['email']) ?: null;
+        $params['email'] = $email ?: null;
     }
     if (isset($data['role']) && in_array($data['role'], USER_ROLES, true)) {
         $fields[] = 'role = :role';
@@ -132,6 +176,7 @@ function updateUser(PDO $db, int $id): void
     }
 
     $db->prepare('UPDATE admin_users SET ' . implode(', ', $fields) . ' WHERE id = :id')->execute($params);
+    logActivity('update', 'admin_user', $id, "Utente {$existing['username']} aggiornato");
     getUser($db, $id);
 }
 
@@ -140,11 +185,23 @@ function deleteUser(PDO $db, int $id): void
     if ($id === getCurrentAdminId()) {
         apiError('Non puoi eliminare il tuo account.');
     }
+
+    $stmt = $db->prepare('SELECT username, role FROM admin_users WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $target = $stmt->fetch();
+    if (!$target) {
+        apiError('Utente non trovato.', 404);
+    }
+
     $count = (int) $db->query('SELECT COUNT(*) FROM admin_users')->fetchColumn();
     if ($count <= 1) {
         apiError('Deve restare almeno un amministratore.');
     }
-    $stmt = $db->prepare('DELETE FROM admin_users WHERE id = :id');
-    $stmt->execute(['id' => $id]);
+    if ($target['role'] === 'super_admin' && otherActiveSuperAdmins($db, $id) === 0) {
+        apiError('Deve restare almeno un super admin attivo: nessuno potrebbe più accedere a Impostazioni e Utenti.');
+    }
+
+    $db->prepare('DELETE FROM admin_users WHERE id = :id')->execute(['id' => $id]);
+    logActivity('delete', 'admin_user', $id, "Utente {$target['username']} eliminato");
     apiSuccess(['deleted' => true]);
 }

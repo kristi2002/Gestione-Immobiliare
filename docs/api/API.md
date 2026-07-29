@@ -688,11 +688,28 @@ Body: `{ key: value, ... }`
 
 **`POST /api/settings.php?test_email=1`** — send a test email with current SMTP settings
 
-**`POST /api/settings.php?action=2fa_enable`** — enable 2FA (requires TOTP code to confirm)  
-Body: `{ code }`
+Validation errors answer **422** with the offending fields:
+`{ success: false, error, fields: { agency_iban: "IBAN non valido…" } }`
 
-**`POST /api/settings.php?action=2fa_disable`** — disable 2FA  
-Body: `{ code }`
+Secrets (`smtp_pass`, `twilio_auth_token`, `backup_s3_secret`, `meta_app_secret`,
+`mailgun_webhook_key`) are **never returned**. The payload exposes only
+`<key>_set` (bool) and `<key>_hint` (masked tail). On save: an empty value means
+*unchanged*; send `<key>_clear: true` to erase one.
+
+### Account (own user — every role)
+
+**`GET /api/account.php?action=status`** — username, email, role, 2FA state
+
+**`GET /api/account.php?action=2fa_setup`** — new secret + QR (stores nothing)
+
+**`POST /api/account.php?action=2fa_enable`** — enable 2FA  
+Body: `{ secret, code }` → returns one-time backup codes
+
+**`POST /api/account.php?action=2fa_disable`** — disable 2FA  
+Body: `{ password }`
+
+These act only on the logged-in account (id from the session), so they are
+allowed for `readonly` too — see `API_SELF_SERVICE` in `config/api_bootstrap.php`.
 
 ---
 

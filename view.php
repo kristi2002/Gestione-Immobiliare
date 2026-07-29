@@ -14,7 +14,7 @@ $allowed = [
     'property_profile', 'agent_profile', 'client_edit', 'property_edit', 'tenant_profile', 'building_profile',
     'aml', 'scadenzario', 'portal_sync', 'valuation',
     'contract_edit', 'invoice_edit', 'lead_edit', 'tenant_edit', 'appointment_edit', 'expense_edit', 'payment_edit',
-    'appointment_profile', 'entity_edit',
+    'appointment_profile', 'entity_edit', 'account',
 ];
 $name    = basename($_GET['name'] ?? '');
 

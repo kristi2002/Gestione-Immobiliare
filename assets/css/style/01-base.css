@@ -74,6 +74,24 @@ body {
 .settings-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
 .settings-tab { padding: 8px 16px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius); cursor: pointer; font-size: 14px; }
 .settings-tab--active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+/* Riga di comando in fondo a ogni scheda: l'esito del salvataggio nasce QUI,
+   accanto al pulsante premuto. L'unico avviso in cima alla pagina restava fuori
+   schermo quando si salvava una scheda lunga (Fatturazione), e il salvataggio
+   sembrava non aver risposto. */
+.settings-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.settings-feedback { font-size: 13px; padding: 6px 10px; border-radius: var(--radius); }
+.settings-feedback--success { color: var(--color-success, #16a34a); background: rgba(22, 163, 74, .10); }
+.settings-feedback--error   { color: var(--color-danger, #dc2626);  background: rgba(220, 38, 38, .10); }
+.settings-feedback--info    { color: var(--color-warning, #d97706); background: rgba(217, 119, 6, .10); }
+
+/* Errore del singolo campo, sotto l'input che lo ha causato. */
+.field-error { display: block; margin-top: 4px; font-size: 12px; color: var(--color-danger, #dc2626); }
+.form-input--invalid { border-color: var(--color-danger, #dc2626); }
+
+/* Stato di un segreto: c'è / non c'è, mai il valore. */
+.secret-state { display: block; }
+.secret-state__clear { background: none; border: 0; padding: 0 0 0 6px; color: var(--color-danger, #dc2626); cursor: pointer; font-size: 12px; text-decoration: underline; }
 .form-check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .app-layout {
     display: flex;
