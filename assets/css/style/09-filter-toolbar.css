@@ -143,13 +143,45 @@
 }
 .view-cols-row .btn.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
-/* --- Docked filter bar (scrolled up into the topbar) → keep it COMPACT ---
-   filters.js pins the page's filter toolbar into the topbar on scroll (see
-   setupMergeToTopbar). While merged we hide the search + saved-search controls
-   (the topbar already has a global search) so Azioni / Filtri / sort stay on
-   one clean line. The full bar returns when scrolled back to the top. */
-.toolbar--merged .fb-group--left { display: none; }
-.toolbar--merged .filter-bar__controls.fb-ref { justify-content: flex-end; }
+/* --- The filter bar follows you down the page ------------------------------
+   It pins to the top of the scroller (#app-content) and stays THE SAME BAR:
+   same search, same "Ricerche salvate", same Azioni / Filtri / Ordina, same
+   fields, same height — on every page. Nothing is hidden, nothing is resized,
+   the element never leaves the page. (This replaces the old docking, which
+   moved the toolbar into the topbar and dropped the whole left group.)
+
+   `.toolbar--sticky` is added by filters.js setupSticky(); `.is-stuck` only
+   marks the moment it detaches, and only drives the shadow that lifts it off
+   the list scrolling underneath. z-index: below the pinned page sub-nav (1000)
+   and the topbar (1050) — see the ladder in theme-orlandi.css. */
+.toolbar--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+.toolbar--sticky.is-stuck { box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10); }
+
+/* Inside a .list-card the resting bar is transparent and borderless
+   (theme-orlandi.css .list-card .toolbar) — pinned, that would let the rows
+   scroll straight through it. Give it back a surface once it detaches.
+   The box-shadow is repeated here because that same rule zeroes it at equal
+   specificity from a later file. */
+.list-card .toolbar--sticky.is-stuck {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10);
+}
+
+/* Phones stack the controls into a column (see the 720px block above): pinned,
+   that column would swallow the viewport. Keep the exact behaviour the bar has
+   today there — it scrolls with the page instead of turning into something
+   else. Must sit AFTER the rules it cancels: same specificity, last one wins. */
+@media (max-width: 720px) {
+    .toolbar--sticky { position: static; }
+    .toolbar--sticky.is-stuck,
+    .list-card .toolbar--sticky.is-stuck { box-shadow: none; border-bottom: 0; }
+    .list-card .toolbar--sticky.is-stuck { background: transparent; }
+}
 
 /* ---- Card alignment: one shared left edge, no wrapping headers ---- */
 .entity-card__prop-header { padding-left: 16px; padding-right: 16px; flex-wrap: nowrap; }

@@ -247,7 +247,6 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                     <input type="search" id="global-search-input" class="global-search__input" placeholder="Cerca proprietari, immobili, inquilini, lead…" autocomplete="off" aria-label="Ricerca globale">
                     <div class="global-search__results" id="global-search-results" hidden></div>
                 </div>
-                <div class="topbar-filters" id="topbar-filters" aria-label="Filtri pagina"></div>
                 <div class="topbar-actions">
                     <a href="view.php?name=communications" class="topbar-link topbar-icon-btn" data-view="communications" title="Messaggi" aria-label="Messaggi"><i data-lucide="mail"></i></a>
                     <?php if (canAccessView('whatsapp_inbox')): ?>

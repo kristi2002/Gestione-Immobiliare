@@ -138,9 +138,11 @@
     async function save(e) {
         e.preventDefault();
         clearError();
+        // Una data obbligatoria non la blocca il browser: datepicker.js la mette
+        // in sola lettura, e un controllo readonly esce dalla validazione HTML.
+        const missingDate = window.FormGuard.checkReadonlyRequired($('lde-form'));
+        if (missingDate) { showError(window.FormGuard.labelOf(missingDate) + ' è obbligatorio.'); return; }
 
-        // If they typed something in the property box that didn't match a listing,
-        // don't silently drop it — ask them to pick one or clear the field.
         // Ne' il modulo ne' l'API confrontavano i due estremi: un lead con
         // budget 300.000–30.000 si salvava e non corrispondeva a niente.
         const bMin = parseFloat($('lde-budget-min').value);
@@ -151,6 +153,8 @@
             return;
         }
 
+        // If they typed something in the property box that didn't match a listing,
+        // don't silently drop it — ask them to pick one or clear the field.
         const propTxt = $('lde-property-search').value.trim();
         if (propTxt !== '' && !$('lde-property-id').value) {
             showError('Immobile richiesto: seleziona una voce dall\'elenco oppure svuota il campo.');

@@ -675,6 +675,15 @@
         e.preventDefault();
         clearError();
         const id  = $('pe-id').value;
+        // Le date obbligatorie non le controlla il browser: datepicker.js le
+        // mette in sola lettura, e un controllo readonly e' escluso dalla
+        // validazione HTML. Nessun evento `invalid` arriva mai per una data.
+        const missingDate = window.FormGuard.checkReadonlyRequired($('pe-form'));
+        if (missingDate) {
+            showError(window.FormGuard.labelOf(missingDate) + ' è obbligatorio.');
+            return;
+        }
+
         const btn = $('pe-save');
         saving = true;
         btn.disabled = true; btn.textContent = 'Salvataggio...';

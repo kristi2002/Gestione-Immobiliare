@@ -148,6 +148,33 @@
         },
 
         /**
+         * Enforce `required` on the controls the browser refuses to check.
+         *
+         * datepicker.js sets readOnly on every input[type=date] to suppress the
+         * native picker and the mobile keyboard — which also bars the control
+         * from HTML constraint validation. `required` on a date is therefore
+         * decorative everywhere in this app, and no `invalid` event ever fires
+         * for one. (min/max still hold: the calendar greys out-of-range days,
+         * and setValue() clamps.)
+         *
+         * Returns the first offending element, or null.
+         */
+        checkReadonlyRequired(form) {
+            const bad = [...form.querySelectorAll('input[required][readonly]')]
+                .find(el => String(el.value || '').trim() === '');
+            if (!bad) return null;
+            this.revealField(bad);
+            bad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return bad;
+        },
+
+        /** The visible label text for a control, for use in an error message. */
+        labelOf(el) {
+            const lab = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null;
+            return (lab ? lab.textContent : '').replace('*', '').trim() || 'Il campo';
+        },
+
+        /**
          * Make a control reachable before focusing or complaining about it:
          * a field inside a closed <details> can't be focused and its error
          * message renders inside a collapsed box.

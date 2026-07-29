@@ -231,6 +231,10 @@
     async function save(e) {
         e.preventDefault();
         clearError();
+        // Una data obbligatoria non la blocca il browser: datepicker.js la mette
+        // in sola lettura, e un controllo readonly esce dalla validazione HTML.
+        const missingDate = window.FormGuard.checkReadonlyRequired($('ce-form'));
+        if (missingDate) { showError(window.FormGuard.labelOf(missingDate) + ' è obbligatorio.'); return; }
         const data = {
             person_type:    $('ce-person-type').value,
             company_name:   $('ce-company-name').value.trim() || null,

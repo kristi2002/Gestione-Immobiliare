@@ -239,12 +239,26 @@
             panel.style.right = 'auto';
         }
         function togglePanel(btn, panel, align) {
+            if (!panel._fbRegistered) { panel._fbRegistered = true; _panels.push({ btn, panel, align }); }
             const willOpen = !panel.classList.contains('open');
             closeAllPanels();
             if (willOpen) { panel.classList.add('open'); placePanel(btn, panel, align); }
         }
+        // The bar pins to the top of the scroller, so an open panel's trigger
+        // stays put: follow it instead of closing the panel out from under the
+        // pointer. (While the bar is still scrolling with the page, following
+        // keeps the panel glued to its button just the same.)
+        const _panels = [];
+        function repositionPanels() {
+            _panels.forEach(p => { if (p.panel.classList.contains('open')) placePanel(p.btn, p.panel, p.align); });
+        }
         const _fbScroller = document.getElementById('app-content');
-        if (_fbScroller) _fbScroller.addEventListener('scroll', closeAllPanels, { passive: true });
+        const onFbScroll = () => {
+            // The view was swapped out: this bar is gone, stop listening.
+            if (!document.body.contains(bar)) { _fbScroller.removeEventListener('scroll', onFbScroll); return; }
+            repositionPanels();
+        };
+        if (_fbScroller) _fbScroller.addEventListener('scroll', onFbScroll, { passive: true });
         window.addEventListener('resize', closeAllPanels);
 
         const left  = document.createElement('div'); left.className  = 'fb-group fb-group--left';
@@ -479,66 +493,40 @@
         updateVisibility();
     }
 
-    // On scroll-down, the filter bar becomes ONE with the top bar: it pins over
-    // the topbar (fixed) instead of sitting under it — matching the property-
-    // profile sub-nav. A spacer holds its place so content doesn't jump.
     /**
-     * On scroll, merge the page's local filter toolbar UP into the global-search
-     * topbar so search + filters read as one bar. Scrolling back drops it home.
+     * The filter bar follows you down the page: it pins to the top of the
+     * scroller and stays THE SAME BAR — same search, same "Ricerche salvate",
+     * same Azioni/Filtri/Ordina, same fields, same height, on every page.
      *
-     * We portal the actual <div class="toolbar"> element (not a clone), so every
-     * input keeps its id and its bound listeners — the page modules keep working.
+     * This deliberately replaces the old behaviour, which portalled the toolbar
+     * into the topbar (#topbar-filters) and restyled it into a compact row with
+     * the whole left group hidden: the filter section you scrolled away from was
+     * not the one that came back. Here the element never moves and never changes
+     * shape — CSS `position: sticky` does the work, JS only marks the moment it
+     * detaches so it can cast a shadow over the list running underneath.
      */
-    function setupMergeToTopbar(bar) {
-        if (bar._mergeBound) return;
+    function setupSticky(bar) {
+        if (bar.dataset.stickyBound === '1') return;
         // Same opt-out as setupBar: a "pick an entity first" gate is not a list
-        // filter, so it doesn't belong in the topbar's filter slot either.
+        // filter, so it has no business pinning over the page it gates.
         if (bar.hasAttribute('data-no-filterbar')) return;
-        // Skip toolbars nested in their own scroll context (modals, side panels)
-        // or inside a card — those are inline form rows, not page-level filter bars.
-        if (bar.closest('.modal, .modal-overlay, .chat-sidebar, .card, [data-no-sticky]')) return;
-        const topbar   = document.querySelector('.topbar');
-        const slot     = document.getElementById('topbar-filters');
+        // Bars living in their own scroll context (modal, side panel) have no
+        // page scroll to follow.
+        if (bar.closest('.modal, .modal-overlay, .chat-sidebar, [data-no-sticky]')) return;
+        // No `is-open` → the collapse CSS holds the bar at max-height:0. There is
+        // nothing to pin, and pinning it would reserve space for a hidden bar.
+        if (!bar.classList.contains('is-open')) return;
         const scroller = document.getElementById('app-content');
-        if (!topbar || !slot || !scroller) return;
-        bar._mergeBound = true;
+        if (!scroller) return;
 
-        // The "Filtri" collapse toggle (if any) sits right before the bar; hide it
-        // while merged so it doesn't dangle in the page with the fields gone.
-        let toggle = bar.previousElementSibling;
-        if (!toggle || !toggle.classList.contains('toolbar-toggle')) toggle = null;
+        bar.dataset.stickyBound = '1';
+        bar.classList.add('toolbar--sticky');
 
-        // Anchor marks the home position; spacer holds the vacated height so the
-        // scroll position doesn't jump when the (open) toolbar leaves the flow.
-        const anchor = document.createComment('toolbar-home');
-        bar.parentNode.insertBefore(anchor, bar);
-        const spacer = document.createElement('div');
-        spacer.className = 'toolbar-spacer';
-        spacer.hidden = true;
-        bar.parentNode.insertBefore(spacer, bar);
-
-        let merged = false;
         const onScroll = () => {
-            if (!document.body.contains(anchor)) { scroller.removeEventListener('scroll', onScroll); return; }
-            const th  = topbar.getBoundingClientRect().bottom;
-            const ref = merged ? spacer.getBoundingClientRect().top : bar.getBoundingClientRect().top;
-            if (!merged && ref <= th) {
-                const mb = parseFloat(getComputedStyle(bar).marginBottom) || 0;
-                spacer.style.height = (bar.offsetHeight + mb) + 'px';
-                spacer.hidden = false;
-                slot.appendChild(bar);
-                bar.classList.add('toolbar--merged');
-                topbar.classList.add('topbar--has-filters');
-                if (toggle) toggle.hidden = true;
-                merged = true;
-            } else if (merged && ref > th) {
-                anchor.parentNode.insertBefore(bar, anchor.nextSibling);
-                bar.classList.remove('toolbar--merged');
-                if (!slot.children.length) topbar.classList.remove('topbar--has-filters');
-                spacer.hidden = true;
-                if (toggle) toggle.hidden = false;
-                merged = false;
-            }
+            // The view was swapped out: this bar is gone, stop listening.
+            if (!document.body.contains(bar)) { scroller.removeEventListener('scroll', onScroll); return; }
+            const stuck = bar.getBoundingClientRect().top <= scroller.getBoundingClientRect().top + 1;
+            bar.classList.toggle('is-stuck', stuck);
         };
         scroller.addEventListener('scroll', onScroll, { passive: true });
         onScroll();
@@ -547,15 +535,9 @@
     window.FilterBar = {
         setupIn(root) {
             const scope = root || document;
-            // New view: a toolbar merged from the previous view would be stranded in
-            // the topbar slot (it lives outside #app-content). Clear it first.
-            const slot = document.getElementById('topbar-filters');
-            if (slot && slot.children.length) slot.innerHTML = '';
-            const topbar = document.querySelector('.topbar');
-            if (topbar) topbar.classList.remove('topbar--has-filters');
-
             scope.querySelectorAll(BAR_SELECTORS).forEach(setupBar);
-            scope.querySelectorAll('.toolbar').forEach(setupMergeToTopbar);
+            // After setupBar: it is the one that adds `is-open`, which setupSticky reads.
+            scope.querySelectorAll('.toolbar, .filter-bar').forEach(setupSticky);
         },
     };
 })();

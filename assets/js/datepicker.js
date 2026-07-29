@@ -142,8 +142,28 @@
             b.addEventListener('click', () => commit(viewY, viewM, +b.dataset.d)));
     }
 
+    /**
+     * Setting readOnly (above, to suppress the native picker and the mobile
+     * keyboard) also bars the input from HTML constraint validation: on a
+     * readonly control `required`, `min` and `max` are inert, and the browser
+     * will happily submit a date outside the declared range. Every date field in
+     * the app is enhanced, so every date constraint in the app was decorative —
+     * including "anno di costruzione" and "data di nascita non nel futuro".
+     *
+     * Since the picker is now the only way to set the value, enforcing the range
+     * here restores the guarantee: an out-of-range value never lands in the field.
+     */
+    function clamp(input, v) {
+        if (!v) return v;
+        const min = input.getAttribute('min');
+        const max = input.getAttribute('max');
+        if (min && v < min) return min;
+        if (max && v > max) return max;
+        return v;
+    }
+
     function setValue(input, v) {
-        input.value = v;
+        input.value = clamp(input, v);
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
     }
