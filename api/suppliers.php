@@ -14,7 +14,7 @@ apiHandleOptions();
 
 // 'amministratore' (phase77): l'amministratore di condominio vive qui, non piu'
 // come testo libero su ogni edificio — vedi buildings.administrator_supplier_id.
-const SUPPLIER_CATEGORIES = ['idraulico','elettricista','muratore','falegname','imbianchino','giardiniere','giardinaggio','pulizie','ascensore','serrature','amministratore','altro'];
+const SUPPLIER_CATEGORIES = ['idraulico','elettricista','muratore','falegname','imbianchino','giardiniere','giardinaggio','pulizie','ascensore','serrature','amministratore','fornitore_utenze','altro'];
 
 try {
     $db     = getDB();
