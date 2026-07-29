@@ -393,10 +393,17 @@ function validateSettings(array $pairs): array
         $raw = array_key_exists($key, $pairs) ? $pairs[$key] : getSetting($key, 'false');
         return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
     };
+    // Il controllo di coerenza riguarda SOLO la sezione che si sta salvando:
+    // altrimenti salvando Fatturazione si riceveva un errore su smtp_host, un
+    // campo che quel modulo non contiene e che l'utente non può correggere lì.
+    $touches = static function (array $keys) use ($pairs): bool {
+        return (bool) array_intersect($keys, array_keys($pairs));
+    };
 
     // Invio reale senza host SMTP: il messaggio partirebbe con mail() di PHP,
     // che su questo server non è configurato. Meglio dirlo adesso.
-    if ($effectiveFlag('mail_enabled')) {
+    if ($touches(['mail_enabled', 'smtp_host', 'agency_email', 'smtp_user', 'smtp_pass', 'smtp_port', 'smtp_secure'])
+        && $effectiveFlag('mail_enabled')) {
         if ($effective('smtp_host') === '') {
             $errors['smtp_host'] = 'Con l\'invio reale attivo serve un host SMTP.';
         }
@@ -410,7 +417,8 @@ function validateSettings(array $pairs): array
         $errors['twilio_whatsapp_from'] = 'Numero WhatsApp in formato internazionale, es. +393331234567.';
     }
 
-    if ($effectiveFlag('whatsapp_enabled')) {
+    if ($touches(['whatsapp_enabled', 'twilio_account_sid', 'twilio_auth_token', 'twilio_whatsapp_from'])
+        && $effectiveFlag('whatsapp_enabled')) {
         $required = [
             'twilio_account_sid'   => 'Account SID',
             'twilio_auth_token'    => 'Auth Token',
@@ -428,7 +436,8 @@ function validateSettings(array $pairs): array
         $errors['backup_s3_endpoint'] = 'Endpoint: URL completo, es. https://s3.eu-central-1.amazonaws.com.';
     }
 
-    if ($effectiveFlag('backup_cloud_enabled')) {
+    if ($touches(['backup_cloud_enabled', 'backup_s3_endpoint', 'backup_s3_bucket', 'backup_s3_key', 'backup_s3_secret', 'backup_s3_region', 'backup_s3_prefix'])
+        && $effectiveFlag('backup_cloud_enabled')) {
         $required = [
             'backup_s3_endpoint' => 'Endpoint',
             'backup_s3_bucket'   => 'Bucket',

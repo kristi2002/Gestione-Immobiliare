@@ -153,6 +153,21 @@ class SettingsValidationTest extends TestCase
         ]));
     }
 
+    public function testSavingAnUnrelatedSectionDoesNotRaiseMailErrors(): void
+    {
+        // Trovato provando dal vivo: con l'invio email attivo ma senza host,
+        // salvare Fatturazione rispondeva 422 su smtp_host — un campo che quel
+        // modulo non contiene e che l'utente non poteva correggere da lì.
+        $_ENV['TEST_SETTING_MAIL_ENABLED'] = 'true';
+        $_ENV['TEST_SETTING_SMTP_HOST']    = '';
+        try {
+            $errors = validateSettings(['agency_comune' => 'Civitanova Marche']);
+            $this->assertSame([], $errors);
+        } finally {
+            unset($_ENV['TEST_SETTING_MAIL_ENABLED'], $_ENV['TEST_SETTING_SMTP_HOST']);
+        }
+    }
+
     public function testEnablingWhatsAppWithoutCredentialsIsRejected(): void
     {
         $errors = validateSettings([

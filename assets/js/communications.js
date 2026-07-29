@@ -43,11 +43,6 @@
         delivered: { text: '✓✓',          cls: 'is-delivered' },
         read:      { text: '✓✓',          cls: 'is-read' },
         failed:    { text: 'Fallita',     cls: 'is-failed' },
-        // Integrazione spenta: il messaggio non e' partito e non partira'. Con
-        // MAIL_ENABLED=false finiva in archivio come "inviata", e questo e'
-        // l'elenco che si guarda per dire a un proprietario "le ho scritto il
-        // 14". Detto per esteso, non con una spunta.
-        simulated: { text: 'Non inviata — integrazione spenta', cls: 'is-simulated' },
     };
 
     const els = {};
