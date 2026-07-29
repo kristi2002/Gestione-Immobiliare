@@ -167,14 +167,50 @@ sequenceDiagram
 ## Dockerfile summary
 
 ```dockerfile
-FROM php:8.3-apache-bookworm
+FROM php:8.4-apache-bookworm
 
-# Extensions: pdo_mysql, mbstring, gd, zip, intl, curl
-# Apache: mod_rewrite, mod_headers enabled
+# Extensions: pdo, pdo_mysql, zip, intl, mbstring, gd, exif, apcu (PECL)
+# Apache: mod_rewrite, mod_headers, mod_deflate enabled
 # Custom entrypoint handles PORT env var for Coolify compatibility
 ```
 
+This block used to say `php:8.3` and list `gd` among the extensions. Neither was
+true: the base image is 8.4, and `gd` was never in the `docker-php-ext-install`
+line — the property photo pipeline that needs it was added later. Both now match
+the Dockerfile. If you change extensions, change them here too, or the next
+person debugging a missing function will trust this list and lose an hour.
+
+`gd` must be **configured before installing** (`docker-php-ext-configure gd
+--with-jpeg --with-webp`): without those flags it compiles PNG-only and every
+JPEG silently skips resizing. `exif` is what keeps portrait phone photos from
+coming out sideways.
+
 The `docker-entrypoint.sh` script reads `$PORT` and updates Apache's Listen directive before starting Apache. This is required because Coolify assigns a random port for the proxy.
+
+---
+
+## One-off after deploying the image pipeline (phase82)
+
+New uploads are resized and get a thumbnail automatically. Photos already in the
+archive keep their original size until backfilled — the migration adds the column
+but deliberately does not generate files (a long resize loop inside the container
+entrypoint would risk a deploy timeout).
+
+Same container-name rule as the cron jobs below — filter on the app UUID prefix
+and `| head -n1`, never a literal name.
+
+```bash
+APP=bs555w5mvdeffngi7vxab4qo
+docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/scripts/backfill_media_thumbnails.php --dry-run
+```
+
+The dry run writes nothing and reports what it would touch. Then run it for real
+— idempotent, resumable, batchable with `--limit=N`, and `--thumbs-only` leaves
+the originals untouched:
+
+```bash
+docker exec $(docker ps -qf name=$APP | head -n1) php /var/www/html/scripts/backfill_media_thumbnails.php
+```
 
 ---
 

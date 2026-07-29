@@ -157,13 +157,13 @@ function listProperties(PDO $db): void
                       AND (c2.end_date IS NULL OR c2.end_date >= CURDATE())
                     ORDER BY c2.start_date DESC LIMIT 1) AS monthly_rent,
                    COALESCE(
-                       (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
-                       (SELECT fm.file_path FROM property_media fm
+                       (SELECT COALESCE(cm.thumb_path, cm.file_path) FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                       (SELECT COALESCE(fm.thumb_path, fm.file_path) FROM property_media fm
                         WHERE fm.property_id = p.id
                           AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
                           AND fm.mime_type LIKE 'image/%'
                         ORDER BY fm.sort_order ASC, fm.created_at ASC LIMIT 1),
-                       (SELECT im.file_path FROM property_media im
+                       (SELECT COALESCE(im.thumb_path, im.file_path) FROM property_media im
                         WHERE im.property_id = p.id AND im.mime_type LIKE 'image/%'
                         ORDER BY im.sort_order ASC, im.created_at ASC LIMIT 1)
                    ) AS cover_url
@@ -213,8 +213,8 @@ function listPropertiesForMap(PDO $db): void
                    p.status, p.price, p.price_type,
                    p.latitude, p.longitude, p.geo_confidence,
                    COALESCE(
-                       (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
-                       (SELECT fm.file_path FROM property_media fm
+                       (SELECT COALESCE(cm.thumb_path, cm.file_path) FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                       (SELECT COALESCE(fm.thumb_path, fm.file_path) FROM property_media fm
                         WHERE fm.property_id = p.id
                           AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
                           AND fm.mime_type LIKE 'image/%'
@@ -245,8 +245,8 @@ function getProperty(PDO $db, int $id): void
                 COUNT(m.id) AS media_count,
                 SUM(CASE WHEN m.media_type = 'photo' THEN 1 ELSE 0 END) AS photo_count,
                 COALESCE(
-                    (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
-                    (SELECT fm.file_path FROM property_media fm
+                    (SELECT COALESCE(cm.thumb_path, cm.file_path) FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                    (SELECT COALESCE(fm.thumb_path, fm.file_path) FROM property_media fm
                      WHERE fm.property_id = p.id
                        AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
                        AND fm.mime_type LIKE 'image/%'

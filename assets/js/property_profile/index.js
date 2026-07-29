@@ -437,7 +437,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         document.getElementById('pp-social-caption').textContent = buildSocialCaption(currentProperty);
         const imgEl = document.getElementById('pp-social-image');
         imgEl.innerHTML = first
-            ? `<img src="${esc(first.file_path)}" alt="">${imgs.length > 1 ? `<span class="pp-social-count">+${imgs.length - 1}</span>` : ''}`
+            ? `<img src="${esc(first.thumb_url || first.file_path)}" alt="">${imgs.length > 1 ? `<span class="pp-social-count">+${imgs.length - 1}</span>` : ''}`
             : '<div class="pp-social-preview__noimg">Nessuna foto disponibile — il post andrà solo su Facebook.</div>';
 
         const fotoTxt = imgs.length === 0 ? 'senza foto'
@@ -911,7 +911,9 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         grid.innerHTML = pageItems.map((m) => {
             const isPhoto = isPhotoFn(m);
             const lightIdx = isPhoto ? photos.indexOf(m) : -1; // global photo index
-            const thumb = isPhoto ? `<img src="${esc(m.file_path)}" alt="" loading="lazy">` : `<div class="gallery-item-icon"><i data-lucide="file-text"></i></div>`;
+            // thumb_url e' la miniatura generata all'upload; l'API ricade su
+            // file_path quando non esiste (video, PDF, GIF, righe pre-phase82).
+            const thumb = isPhoto ? `<img src="${esc(m.thumb_url || m.file_path)}" alt="" loading="lazy">` : `<div class="gallery-item-icon"><i data-lucide="file-text"></i></div>`;
             const coverBadge = m.is_cover ? '<span class="gallery-cover-badge">Copertina</span>' : '';
             return `<div class="gallery-item" data-id="${m.id}">
                 <div class="gallery-item-thumb"${isPhoto ? ` data-lightbox="${lightIdx}"` : ''}>${thumb}${coverBadge}</div>
@@ -1035,7 +1037,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
 
         const isPhoto = media && (!media.media_type || media.media_type === 'photo' || media.media_type === 'image');
         if (isPhoto && media?.file_path) {
-            preview.innerHTML = `<img src="${esc(media.file_path)}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+            preview.innerHTML = `<img src="${esc(media.thumb_url || media.file_path)}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
         } else {
             preview.innerHTML = '<i data-lucide="file-text"></i>';
         }

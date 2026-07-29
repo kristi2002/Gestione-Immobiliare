@@ -737,7 +737,9 @@ import {
                     return;
                 }
                 picker.innerHTML = media.map((m, i) =>
-                    `<button type="button" class="social-thumb${i === 0 ? ' selected' : ''}" data-media-id="${m.id}"><img src="${escapeHtml(m.file_path)}" alt=""></button>`
+                    // Solo l'anteprima usa la miniatura: al post va media_id, e
+                    // l'immagine vera la risolve il backend da file_path.
+                    `<button type="button" class="social-thumb${i === 0 ? ' selected' : ''}" data-media-id="${m.id}"><img src="${escapeHtml(m.thumb_url || m.file_path)}" alt=""></button>`
                 ).join('');
                 document.getElementById('social-media-id').value = media[0].id;
                 picker.querySelectorAll('.social-thumb').forEach(btn => {

@@ -53,8 +53,8 @@ try {
                    p.energy_class,
                    p.price, p.price_on_request, p.price_type, p.latitude, p.longitude,
                    COALESCE(
-                       (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
-                       (SELECT fm.file_path FROM property_media fm
+                       (SELECT COALESCE(cm.thumb_path, cm.file_path) FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                       (SELECT COALESCE(fm.thumb_path, fm.file_path) FROM property_media fm
                         WHERE fm.property_id = p.id
                           AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
                           AND fm.mime_type LIKE 'image/%'

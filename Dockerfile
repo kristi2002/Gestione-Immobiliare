@@ -19,16 +19,29 @@ RUN npm run build:assets
 # ── Runtime stage ────────────────────────────────────────────────────────────
 FROM php:8.4-apache-bookworm
 
-# System dependencies + PHP extensions
+# System dependencies + PHP extensions.
+#
+# gd + exif serve lib/image_processing.php: le foto degli immobili arrivano dal
+# telefono a 4000px e diversi MB, e senza ridimensionamento la griglia annunci
+# scarica gli originali. gd va CONFIGURATA prima di installarla (--with-jpeg
+# --with-webp), altrimenti si compila in versione solo-PNG e ogni JPEG viene
+# saltato in silenzio. exif e' quello che raddrizza gli scatti verticali: GD
+# scrive file senza metadati, quindi l'orientamento va applicato ai pixel prima
+# di salvare, o le foto in verticale escono coricate.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         default-mysql-client \
         libzip-dev \
         libicu-dev \
         libonig-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libwebp-dev \
+        libfreetype6-dev \
         unzip \
         curl \
         git \
-    && docker-php-ext-install pdo pdo_mysql zip intl mbstring \
+    && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
+    && docker-php-ext-install pdo pdo_mysql zip intl mbstring gd exif \
     && a2enmod rewrite headers deflate \
     && rm -rf /var/lib/apt/lists/*
 

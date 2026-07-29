@@ -191,8 +191,8 @@ function getBuilding(PDO $db, int $id): void
                 c.name AS client_name, c.surname AS client_surname,
                 (" . OCCUPANCY_EXISTS_SQL . ") AS is_occupied,
                 COALESCE(
-                    (SELECT cm.file_path FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
-                    (SELECT fm.file_path FROM property_media fm
+                    (SELECT COALESCE(cm.thumb_path, cm.file_path) FROM property_media cm WHERE cm.id = p.cover_media_id LIMIT 1),
+                    (SELECT COALESCE(fm.thumb_path, fm.file_path) FROM property_media fm
                      WHERE fm.property_id = p.id
                        AND fm.media_type IN ('photo', 'floor_plan', 'house_map')
                        AND fm.mime_type LIKE 'image/%'
