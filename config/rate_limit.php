@@ -121,17 +121,16 @@ function initRateLimitTable(PDO $db): void
     $initialised = true;
 }
 
-/** Return caller IP, respecting Cloudflare / proxy headers. */
+/**
+ * Indirizzo del chiamante. Le intestazioni di inoltro valgono solo se a
+ * scriverle e' stato un proxy nostro: leggerle sempre significava lasciare che
+ * il chiamante scegliesse il proprio secchiello, e quindi nessun limite.
+ * Vedi config/client_ip.php.
+ */
 function getRateLimitIp(): string
 {
-    // Cloudflare sets CF-Connecting-IP; behind Traefik X-Forwarded-For works too.
-    foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $key) {
-        $val = $_SERVER[$key] ?? '';
-        if ($val !== '') {
-            return trim(explode(',', $val)[0]);
-        }
-    }
-    return '0.0.0.0';
+    require_once __DIR__ . '/client_ip.php';
+    return clientIpAddress();
 }
 
 /** Return the logged-in admin user ID or NULL for unauthenticated callers. */

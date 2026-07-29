@@ -23,8 +23,10 @@ function logDataAccess(
     ?string $detail      = null
 ): void {
     try {
-        $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
-            ?? ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? null));
+        // Vedi config/client_ip.php: un'intestazione di inoltro scritta dal
+        // chiamante non e' una prova di provenienza.
+        require_once __DIR__ . '/client_ip.php';
+        $ip = clientIpAddress();
         if ($ip !== null && str_contains($ip, ',')) {
             $ip = trim(explode(',', $ip)[0]);
         }
@@ -95,8 +97,10 @@ function logConsent(
 ): void {
     try {
         if ($ip === null) {
-            $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
-                ?? ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? null));
+            // Registro dei consensi: l'indirizzo qui e' una prova, quindi vale
+            // solo se non se lo e' scritto il chiamante. Vedi config/client_ip.php.
+            require_once __DIR__ . '/client_ip.php';
+            $ip = clientIpAddress();
             if ($ip !== null && str_contains($ip, ',')) {
                 $ip = trim(explode(',', $ip)[0]);
             }

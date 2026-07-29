@@ -6,7 +6,9 @@
 #    DigitalOcean Managed MySQL, Railway, etc.) and set DB_* env vars in the Dashboard.
 # 2. Set APP_URL to your Render URL (e.g. https://gestionale-immobiliare.onrender.com)
 # 3. Generate strong APP_SECRET and CRON_SECRET
-# 4. Run setup once: visit /setup.php then set SETUP_ENABLED=false
+# 4. Run setup once: flip SETUP_ENABLED to true in the Render dashboard, visit
+#    /setup.php to create the first admin, then set it back to false. It ships
+#    as false on purpose — see the note beside that key below.
 #
 # Apply: https://dashboard.render.com/blueprint/new?repo=https://github.com/kristi2002/Gestione-Immobiliare
 
@@ -29,8 +31,14 @@ services:
         value: false
       - key: FORCE_HTTPS
         value: true
+      # Chiuso di partenza, e non e' pignoleria: /setup.php crea il PRIMO
+      # amministratore e si auto-blocca solo dopo (adminUserExists()). Fra il
+      # momento in cui il servizio risponde e quello in cui qualcuno esegue
+      # l'installazione, con questo a `true` l'installatore e' pubblico: chi
+      # arriva primo diventa super_admin dell'agenzia. Metterlo a `true` dal
+      # cruscotto Render per il tempo dell'installazione, poi rimetterlo a false.
       - key: SETUP_ENABLED
-        value: true
+        value: false
       - key: SESSION_NAME
         value: gestionale_session
       - key: DB_CHARSET

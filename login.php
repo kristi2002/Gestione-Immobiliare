@@ -55,7 +55,12 @@ if (!adminUserExists() && SETUP_ENABLED) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/theme-orlandi.css">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- Ospitato in casa, non da CDN. Questa e' la pagina che tratta le
+         credenziali, e ci caricava `lucide@latest`: senza versione fissata e
+         senza SRI, cioe' qualunque cosa unpkg servisse quel giorno, eseguita
+         nella pagina del login. Vale anche quando la CDN e' semplicemente
+         irraggiungibile: il login non deve dipendere da terzi per aprirsi. -->
+    <script src="assets/vendor/lucide-1.27.0.min.js?v=<?= @filemtime(__DIR__ . '/assets/vendor/lucide-1.27.0.min.js') ?: time() ?>"></script>
     <style>
         .auth { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; background: #eef2f7; font-family: 'Inter', sans-serif; }
         @media (max-width: 860px) { .auth { grid-template-columns: 1fr; } .auth__brand { display: none; } }

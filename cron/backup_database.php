@@ -18,6 +18,36 @@ if (!is_dir($backupDir)) {
     mkdir($backupDir, 0750, true);
 }
 
+// Il .htaccess se lo scrive la cartella da sola, a ogni giro.
+//
+// backups/ e' ignorato da git (.gitignore:5) ed escluso dall'immagine
+// (.dockerignore), quindi un file di protezione messo nel repository non
+// arriverebbe mai dove servono i backup: la cartella nasce qui, a runtime, la
+// prima volta che il job gira. L'unica regola che la copriva viveva nel
+// .htaccess di radice dentro <IfModule mod_rewrite.c> — cioe' niente, su un
+// host senza mod_rewrite o se quel file si perde in un deploy.
+//
+// Dentro ci sono i dump completi: admin_users con gli hash delle password,
+// clienti e inquilini con codici fiscali, indirizzi e telefoni. Un solo file
+// leggibile qui e' l'intero archivio dell'agenzia.
+$guard = $backupDir . '/.htaccess';
+if (!is_file($guard)) {
+    file_put_contents($guard, <<<HTACCESS
+# Generato da cron/backup_database.php — non modificare a mano.
+# Dump completi del database: nessun accesso web, mai.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+Options -Indexes -ExecCGI
+
+HTACCESS);
+    @chmod($guard, 0640);
+}
+
 $host = (string) env('DB_HOST', 'localhost');
 $port = '';
 if (str_contains($host, ':')) {

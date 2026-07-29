@@ -6,14 +6,18 @@
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MINUTES = 15;
 
+require_once __DIR__ . '/client_ip.php';
+
+/**
+ * Prendeva il primo valore di X-Forwarded-For senza guardare da dove arrivasse
+ * la richiesta: un'intestazione diversa a ogni tentativo = un secchiello nuovo a
+ * ogni tentativo, e il blocco dopo cinque tentativi non scattava mai. Ora
+ * l'inoltro conta solo se a scriverlo e' stato un proxy nostro — vedi
+ * config/client_ip.php.
+ */
 function getClientIp(): string
 {
-    $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
-    if ($forwarded !== '') {
-        return trim(explode(',', $forwarded)[0]);
-    }
-
-    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    return clientIpAddress();
 }
 
 /**
