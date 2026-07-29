@@ -133,55 +133,6 @@
 
 </div>
 
-<!-- ── Edit client modal ──────────────────────────────────────── -->
-<div class="modal-overlay" id="profile-edit-modal" hidden>
-    <div class="modal modal--lg" role="dialog" aria-labelledby="profile-edit-title">
-        <div class="modal-header">
-            <h3 id="profile-edit-title">Modifica Proprietario</h3>
-            <button class="modal-close" id="profile-edit-close" aria-label="Chiudi">&times;</button>
-        </div>
-        <form id="profile-edit-form" class="modal-body">
-            <input type="hidden" id="profile-edit-id">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="profile-edit-name">Nome <span class="required">*</span></label>
-                    <input type="text" id="profile-edit-name" class="form-input" required maxlength="100">
-                </div>
-                <div class="form-group">
-                    <label for="profile-edit-surname">Cognome <span class="required">*</span></label>
-                    <input type="text" id="profile-edit-surname" class="form-input" required maxlength="100">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="profile-edit-phone">Telefono</label>
-                    <input type="tel" id="profile-edit-phone" class="form-input" maxlength="30">
-                </div>
-                <div class="form-group">
-                    <label for="profile-edit-email">Email</label>
-                    <input type="email" id="profile-edit-email" class="form-input" maxlength="255">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="profile-edit-status">Stato</label>
-                <select id="profile-edit-status" class="form-select">
-                    <option value="active">Attivo</option>
-                    <option value="inactive">Inattivo</option>
-                    <option value="archived">Archiviato</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="profile-edit-notes">Note interne</label>
-                <textarea id="profile-edit-notes" class="form-textarea" rows="4"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn--ghost" id="profile-edit-cancel">Annulla</button>
-                <button type="submit" class="btn btn--primary" id="profile-edit-save">Salva</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- ── New / Edit Reminder modal ──────────────────────────────── -->
 <div class="modal-overlay" id="profile-reminder-modal" hidden>
     <div class="modal modal--lg" role="dialog">

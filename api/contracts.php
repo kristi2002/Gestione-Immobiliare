@@ -301,6 +301,10 @@ function deleteContract(PDO $db, int $id): void
         $n = $rel['documents']['total'];
         $blockers[] = "$n document" . ($n === 1 ? 'o allegato' : 'i allegati');
     }
+    if ($rel['snapshots']['settled'] > 0) {
+        $n = $rel['snapshots']['settled'];
+        $blockers[] = "$n verbal" . ($n === 1 ? 'e di consegna firmato' : 'i di consegna firmati');
+    }
 
     if ($blockers) {
         apiError(
@@ -318,6 +322,11 @@ function deleteContract(PDO $db, int $id): void
     // schedule has already been deleted.
     $db->beginTransaction();
     try {
+        // inventory_snapshots prima di tutto: i suoi items sono in CASCADE su di
+        // esso, quindi cancellare il verbale in bozza porta via anche le righe.
+        $db->prepare("DELETE FROM inventory_snapshots WHERE contract_id = :cid AND status <> 'locked'")
+           ->execute(['cid' => $id]);
+
         foreach (['payments', 'agent_commissions', 'esign_requests'] as $table) {
             $del = $db->prepare("DELETE FROM $table WHERE contract_id = :cid");
             $del->execute(['cid' => $id]);
@@ -338,6 +347,7 @@ function deleteContract(PDO $db, int $id): void
         'payments'    => $rel['payments']['unsettled'],
         'commissions' => $rel['commissions']['unsettled'],
         'esign'       => $rel['esign']['unsettled'],
+        'snapshots'   => $rel['snapshots']['unsettled'],
     ];
     $plural = static fn(int $n, string $one, string $many): string => "$n " . ($n === 1 ? $one : $many);
 
@@ -345,6 +355,7 @@ function deleteContract(PDO $db, int $id): void
     if ($removed['payments'])    $parts[] = $plural($removed['payments'], 'rata non incassata', 'rate non incassate');
     if ($removed['commissions']) $parts[] = $plural($removed['commissions'], 'provvigione non liquidata', 'provvigioni non liquidate');
     if ($removed['esign'])       $parts[] = $plural($removed['esign'], 'richiesta di firma non completata', 'richieste di firma non completate');
+    if ($removed['snapshots'])   $parts[] = $plural($removed['snapshots'], 'verbale in bozza', 'verbali in bozza');
 
     logActivity('delete', 'contract', $id, 'Contratto eliminato #' . $id
         . ($parts ? ' (rimosse: ' . implode(', ', $parts) . ')' : ''));
@@ -399,6 +410,16 @@ function contractRelatedRecords(PDO $db, int $id): array
             $stmt->execute(['cid' => $id]);
             return $stmt->fetchColumn();
         })()],
+        // Verbali di consegna (phase78). Un verbale `locked` e' congelato con
+        // content_hash, locked_at e spesso una firma: e' il documento con cui si
+        // discute una trattenuta sulla cauzione, quindi e' prova come una rata
+        // incassata. Un `draft` non lo e'. Fino a phase85 la FK era in CASCADE e
+        // nessuno li contava: sparivano in silenzio insieme al contratto.
+        'snapshots' => $count(
+            "SELECT SUM(status = 'locked')      AS settled,
+                    SUM(NOT (status = 'locked')) AS unsettled
+             FROM inventory_snapshots WHERE contract_id = :cid"
+        ),
     ];
 }
 

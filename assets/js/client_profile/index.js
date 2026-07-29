@@ -52,14 +52,6 @@ function bindEvents() {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // Edit form
-    document.getElementById('profile-edit-close').addEventListener('click', closeEditModal);
-    document.getElementById('profile-edit-cancel').addEventListener('click', closeEditModal);
-    document.getElementById('profile-edit-modal').addEventListener('click', e => {
-        if (e.target === document.getElementById('profile-edit-modal')) closeEditModal();
-    });
-    document.getElementById('profile-edit-form').addEventListener('submit', saveClient);
-
     // Reminder form
     document.getElementById('profile-reminder-close').addEventListener('click', closeReminderModal);
     document.getElementById('profile-reminder-cancel').addEventListener('click', closeReminderModal);
@@ -634,53 +626,6 @@ async function deleteReminder(id) {
         loadReminders();
     } else {
         showAlert(json.error, 'error');
-    }
-}
-
-// ── Edit client ──────────────────────────────────────────────────
-
-function openEditModal() {
-    if (!client) return;
-    document.getElementById('profile-edit-id').value      = client.id;
-    document.getElementById('profile-edit-name').value    = client.name;
-    document.getElementById('profile-edit-surname').value = client.surname;
-    document.getElementById('profile-edit-phone').value   = client.phone || '';
-    document.getElementById('profile-edit-email').value   = client.email || '';
-    document.getElementById('profile-edit-status').value  = client.status;
-    document.getElementById('profile-edit-notes').value   = client.internal_notes || '';
-    document.getElementById('profile-edit-modal').hidden  = false;
-    document.getElementById('profile-edit-name').focus();
-}
-
-function closeEditModal() {
-    document.getElementById('profile-edit-modal').hidden = true;
-}
-
-async function saveClient(e) {
-    e.preventDefault();
-    const id  = document.getElementById('profile-edit-id').value;
-    const btn = document.getElementById('profile-edit-save');
-    btn.disabled = true; btn.textContent = 'Salvataggio...';
-    const data = {
-        name:           document.getElementById('profile-edit-name').value.trim(),
-        surname:        document.getElementById('profile-edit-surname').value.trim(),
-        phone:          document.getElementById('profile-edit-phone').value.trim(),
-        email:          document.getElementById('profile-edit-email').value.trim(),
-        status:         document.getElementById('profile-edit-status').value,
-        internal_notes: document.getElementById('profile-edit-notes').value.trim(),
-    };
-    try {
-        const res  = await fetch(`${API}?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        client = json.data;
-        renderHero();
-        closeEditModal();
-        showAlert('Proprietario aggiornato.', 'success');
-    } catch (err) {
-        showAlert(err.message, 'error');
-    } finally {
-        btn.disabled = false; btn.textContent = 'Salva';
     }
 }
 

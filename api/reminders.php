@@ -387,7 +387,33 @@ function updateReminder(PDO $db, int $id): void
         apiError('Promemoria non trovato.', 404);
     }
 
-    $data      = apiGetJsonBody();
+    $data = apiGetJsonBody();
+
+    // SEMANTICA DI MERGE, non di sovrascrittura — la stessa scelta gia' fatta
+    // per updateProperty (f17fb9a).
+    //
+    // L'UPDATE qui sotto scrive 21 colonne, ma non tutti i chiamanti ne mandano
+    // 21. La finestrella "Promemoria" nella scheda di un proprietario ne manda
+    // sei (assets/js/client_profile/index.js:594) — e le altre quindici
+    // finivano ai valori di ripiego di validateReminderInput(): l'agente
+    // assegnato tornava a nessuno, le notifiche si spegnevano, oggetto e corpo
+    // dell'email venivano azzerati, immobile e inquilino perdevano il
+    // collegamento e un promemoria a evento tornava "scheduled". Le automazioni
+    // sono righe `reminders`: modificarne una dalla scheda cliente ne
+    // cancellava il messaggio e l'innesco.
+    //
+    // Le chiavi assenti dal corpo della richiesta prendono ora il valore che la
+    // riga ha gia'; solo quelle presenti vengono cambiate.
+    $current = $db->prepare('SELECT * FROM reminders WHERE id = :id');
+    $current->execute(['id' => $id]);
+    $existing = $current->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    foreach ($existing as $col => $val) {
+        if ($col !== 'id' && !array_key_exists($col, $data)) {
+            $data[$col] = $val;
+        }
+    }
+
     $validated = validateReminderInput($db, $data);
 
     $stmt = $db->prepare(
