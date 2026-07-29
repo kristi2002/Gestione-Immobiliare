@@ -29,6 +29,10 @@ const VIEW_MIN_ROLE = [
     'activity_log' => 'super_admin',
     'reports'      => 'admin',
     'agents'       => 'admin',
+    // La scheda si apre dal Portafoglio: stessa soglia della lista, e stessa
+    // soglia di api/agent_portfolio.php. Senza questa riga cadeva su
+    // ROLE_PERMISSIONS, dove non compare per nessun ruolo: 403 anche per admin.
+    'agent_profile' => 'admin',
     'invoices'     => 'admin',
 ];
 
