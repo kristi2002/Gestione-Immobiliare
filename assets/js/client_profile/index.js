@@ -52,16 +52,6 @@ function bindEvents() {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // Dati personali: api/gdpr.php e' requireRole('super_admin') — il ruolo che
-    // in un'agenzia fa da titolare/responsabile del trattamento. Agli altri la
-    // linguetta non compare affatto, invece di comparire e rispondere 403.
-    if (window.userRole === 'super_admin') {
-        const gdprTab = document.getElementById('profile-tab-gdpr');
-        if (gdprTab) gdprTab.hidden = false;
-        document.getElementById('gdpr-export')?.addEventListener('click', gdprExport);
-        document.getElementById('gdpr-erase')?.addEventListener('click', gdprErase);
-    }
-
     // Reminder form
     document.getElementById('profile-reminder-close').addEventListener('click', closeReminderModal);
     document.getElementById('profile-reminder-cancel').addEventListener('click', closeReminderModal);
@@ -148,7 +138,6 @@ function loadTab(tab) {
     else if (tab === 'documents')      loadDocuments();
     else if (tab === 'communications') loadCommunications();
     else if (tab === 'reminders')      loadReminders();
-    else if (tab === 'gdpr')           loadGdpr();
 }
 
 // ── Properties ───────────────────────────────────────────────────
@@ -711,133 +700,3 @@ function showAlert(msg, type) {
 }
 
 init();
-
-// ── Dati personali (GDPR) ────────────────────────────────────────
-//
-// api/gdpr.php era completo e non aveva un solo bottone: esportazione Art. 15/20,
-// richiesta di cancellazione Art. 17, registro dei consensi, tracciato degli
-// accessi. Un diritto che l'interessato non puo' esercitare non e' un diritto.
-
-const GDPR_API = 'api/gdpr.php';
-
-/** Il tracciato salva il verbo tecnico; qui si legge in italiano. */
-const ACCESS_LABELS = {
-    export: 'Esportazione dei dati',
-    view:   'Consultazione',
-    erase:  'Cancellazione',
-    update: 'Modifica',
-    consent: 'Consenso registrato',
-};
-
-/** Chiave del soggetto: qui la scheda e' sempre di un proprietario. */
-function gdprSubject() {
-    return `subject_type=client&subject_id=${encodeURIComponent(clientId)}`;
-}
-
-async function gdprExport() {
-    const btn = document.getElementById('gdpr-export');
-    const old = btn.innerHTML;
-    btn.disabled = true; btn.textContent = 'Preparazione…';
-    try {
-        const res  = await fetch(`${GDPR_API}?action=export&${gdprSubject()}`);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-
-        // Il file si scarica dal browser: il contenuto e' gia' qui e passare da
-        // un secondo endpoint significherebbe registrare due accessi per una
-        // sola richiesta dell'interessato.
-        const name = [client?.surname, client?.name].filter(Boolean).join('_') || `cliente_${clientId}`;
-        const blob = new Blob([JSON.stringify(json.data, null, 2)], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url;
-        a.download = `dati-personali_${name}_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
-
-        showAlert("Esportazione scaricata. La richiesta e stata registrata.", 'success');
-        tabsLoaded.delete('gdpr'); loadGdpr();   // l'accesso appena registrato deve comparire
-    } catch (err) {
-        showAlert(err.message, 'error');
-    } finally {
-        btn.disabled = false; btn.innerHTML = old;
-        if (window.lucide) window.lucide.createIcons();
-    }
-}
-
-async function gdprErase() {
-    const who = [client?.name, client?.surname].filter(Boolean).join(' ') || `#${clientId}`;
-    const reason = window.prompt(
-        [
-            `Richiesta di cancellazione per ${who}.`,
-            '',
-            'Viene REGISTRATA, non eseguita: la cancellazione effettiva è un\'azione separata,',
-            'perché fatture e contratti hanno obblighi di conservazione fiscale che il diritto',
-            'all\'oblio non supera.',
-            '',
-            'Motivo della richiesta:',
-        ].join('\n')
-    );
-    if (reason === null) return;   // annullato
-
-    const btn = document.getElementById('gdpr-erase');
-    btn.disabled = true;
-    try {
-        const res = await fetch(`${GDPR_API}?action=erase`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // confirm:false = registra la richiesta e basta. L'esecuzione vera
-            // passa da una decisione umana, non da un bottone in una scheda.
-            body: JSON.stringify({ subject_type: 'client', subject_id: Number(clientId), reason: reason.trim() || null, confirm: false }),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        showAlert('Richiesta di cancellazione registrata.', 'success');
-    } catch (err) {
-        showAlert(err.message, 'error');
-    } finally {
-        btn.disabled = false;
-    }
-}
-
-async function loadGdpr() {
-    const consentsEl = document.getElementById('gdpr-consents');
-    const logEl      = document.getElementById('gdpr-log');
-    if (!consentsEl || !logEl) return;
-
-    const render = (el, rows, empty, line) => {
-        if (!rows || !rows.length) { el.innerHTML = `<p class="text-muted">${empty}</p>`; return; }
-        el.innerHTML = rows.map(line).join('');
-    };
-
-    try {
-        const [c, l] = await Promise.all([
-            fetch(`${GDPR_API}?action=consents&${gdprSubject()}`).then(r => r.json()),
-            fetch(`${GDPR_API}?action=log&${gdprSubject()}`).then(r => r.json()),
-        ]);
-
-        // Entrambe le azioni rispondono con `data` = array nudo
-        // (api/gdpr.php:99 e :123 fanno apiSuccess($stmt->fetchAll())).
-        render(consentsEl, c.success ? (c.data ?? []) : [],
-            'Nessun consenso registrato per questa persona.',
-            r => `<div class="gdpr-row">
-                    <span class="gdpr-row__main">${esc(r.purpose || '—')}</span>
-                    <span class="badge ${Number(r.granted) ? 'badge--success' : 'badge--muted'}">${Number(r.granted) ? 'Concesso' : 'Revocato'}</span>
-                    <span class="text-muted">${esc(r.legal_basis || '')}</span>
-                    <span class="text-muted">${fmtDate(r.created_at)}</span>
-                  </div>`);
-
-        // Campi reali del tracciato: action, detail, actor_label, ip_address.
-        render(logEl, l.success ? (l.data ?? []) : [],
-            'Nessun accesso registrato.',
-            r => `<div class="gdpr-row">
-                    <span class="gdpr-row__main">${esc(ACCESS_LABELS[r.action] || r.action || '—')}</span>
-                    <span class="text-muted">${esc(r.actor_label || '')}</span>
-                    <span class="text-muted">${esc(r.detail || '')}</span>
-                    <span class="text-muted">${fmtDateTime(r.created_at)}</span>
-                  </div>`);
-    } catch (err) {
-        consentsEl.innerHTML = `<p class="text-muted">Impossibile caricare: ${esc(err.message)}</p>`;
-        logEl.innerHTML = '';
-    }
-}

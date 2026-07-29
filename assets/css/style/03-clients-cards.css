@@ -246,14 +246,7 @@
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.45);
-    /* Era 99, cioe' sotto tutto quello che avrebbe dovuto coprire: la barra
-       laterale sta a 1100 (01-base.css:131) e la topbar a 1050
-       (theme-orlandi.css:171). Ad apertura del menu su telefono il velo
-       scuriva solo il contenuto, mentre la topbar restava illuminata e
-       cliccabile — e toccarla non chiudeva il menu, perche' il velo che
-       intercetta il click non era li' sopra. 1090: sotto il pannello che deve
-       restare in chiaro, sopra tutto il resto. */
-    z-index: 1090;
+    z-index: 99;
 }
 
 .sidebar-backdrop:not([hidden]) {
