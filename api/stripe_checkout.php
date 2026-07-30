@@ -41,8 +41,15 @@ try {
 
     // ── Resolve payment ─────────────────────────────────────────────────────────
     // NOTE: tenants columns are name/surname (not first_name/last_name).
+    // `p.notes` e non `p.description`: quella colonna non esiste in `payments`
+    // (id, tenant_id, property_id, contract_id, amount, due_date, paid_date,
+    // status, method, notes, ...). La query moriva con SQLSTATE 42S22 alla
+    // prima riga utile, quindi OGNI creazione di sessione Stripe rispondeva
+    // "Errore database." — il pagamento online non ha mai potuto funzionare,
+    // nemmeno con le chiavi configurate. Non se n'era accorto nessuno perche'
+    // senza STRIPE_SECRET_KEY si esce prima, alla guardia 503 qui sopra.
     $stmt = $db->prepare(
-        "SELECT p.id, p.amount, p.description, p.tenant_id,
+        "SELECT p.id, p.amount, p.notes, p.due_date, p.tenant_id,
                 t.name AS first_name, t.surname AS last_name, t.email AS tenant_email
            FROM payments p
            LEFT JOIN tenants t ON t.id = p.tenant_id
@@ -59,8 +66,15 @@ try {
     $amountCents = (int) round((float) $payment['amount'] * 100);
     $currency    = 'eur';
 
-    $description = $payment['description']
-        ?: ('Pagamento affitto — ' . trim(($payment['first_name'] ?? '') . ' ' . ($payment['last_name'] ?? '')));
+    // Questa stringa la legge l'inquilino sulla pagina di pagamento Stripe:
+    // senza la scadenza non saprebbe quale mensilita' sta pagando.
+    $description = trim((string) ($payment['notes'] ?? ''));
+    if ($description === '') {
+        $who = trim(($payment['first_name'] ?? '') . ' ' . ($payment['last_name'] ?? ''));
+        $description = 'Pagamento affitto'
+            . ($payment['due_date'] ? ' — scadenza ' . date('d/m/Y', strtotime($payment['due_date'])) : '')
+            . ($who !== '' ? ' — ' . $who : '');
+    }
 
     // ── Call Stripe API via cURL ────────────────────────────────────────────────
     $postFields = http_build_query([

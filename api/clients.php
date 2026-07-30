@@ -206,17 +206,58 @@ function updateClient(PDO $db, int $id): void
     $data      = apiGetJsonBody();
     $validated = validateClientInput($db, $data);
 
-    $stmt = $db->prepare(
-        "UPDATE clients
+    $sql = "UPDATE clients
          SET name = :name, surname = :surname, person_type = :person_type,
              company_name = :company_name, vat_number = :vat_number, codice_fiscale = :codice_fiscale,
              birth_place = :birth_place, birth_date = :birth_date,
              phone = :phone, email = :email, pec_email = :pec_email,
              address = :address, city = :city, cap = :cap, province = :province,
-             internal_notes = :internal_notes, status = :status, assigned_agent_id = :assigned_agent_id
-         WHERE id = :id"
-    );
-    $stmt->execute(array_merge($validated, ['id' => $id]));
+             internal_notes = :internal_notes, status = :status, assigned_agent_id = :assigned_agent_id";
+    $params = array_merge($validated, ['id' => $id]);
+
+    // `portal_email` non fa parte dell'anagrafica: si imposta dalla scheda del
+    // proprietario, riquadro "Portale". Il pulsante "Salva indirizzo" lo mandava
+    // gia', ma questa UPDATE non lo elencava: la chiamata rispondeva success,
+    // la scheda diceva "Indirizzo del portale salvato" e in tabella non
+    // cambiava niente — l'accesso al portale restava sul vecchio indirizzo.
+    //
+    // Non basta aggiungerlo all'elenco fisso: questo endpoint sovrascrive per
+    // intero le colonne che nomina, e il modulo del proprietario
+    // (assets/js/client_edit.js) NON manda portal_email. Finirebbe azzerato a
+    // ogni salvataggio dell'anagrafica, cioe' un utente perderebbe l'accesso al
+    // portale per aver corretto un numero di telefono. Si aggiorna quindi solo
+    // se la chiave e' presente nel corpo della richiesta.
+    if (array_key_exists('portal_email', $data)) {
+        $portalEmail = trim((string) ($data['portal_email'] ?? ''));
+
+        if ($portalEmail === '') {
+            $portalEmail = null;
+        } elseif (!filter_var($portalEmail, FILTER_VALIDATE_EMAIL)) {
+            apiError('Indirizzo del portale non valido.');
+        } else {
+            // owner/auth.php:66 autentica con `WHERE portal_email = :email` e
+            // prende la prima riga: su un indirizzo condiviso l'accesso sarebbe
+            // ambiguo e finirebbe nella scheda del proprietario sbagliato.
+            // Non c'e' un indice unico in tabella, quindi il controllo va qui.
+            $dup = $db->prepare(
+                "SELECT id FROM clients
+                  WHERE portal_email = :email AND id != :id AND status != 'archived'
+                  LIMIT 1"
+            );
+            $dup->execute(['email' => $portalEmail, 'id' => $id]);
+            if ($dup->fetch()) {
+                apiError('Questo indirizzo è già usato per l\'accesso al portale da un altro proprietario.', 409);
+            }
+        }
+
+        $sql .= ", portal_email = :portal_email";
+        $params['portal_email'] = $portalEmail;
+    }
+
+    $sql .= " WHERE id = :id";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
 
     logActivity('update', 'client', $id, 'Proprietario aggiornato #' . $id);
     getClient($db, $id);

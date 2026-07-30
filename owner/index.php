@@ -45,9 +45,27 @@ $paymentsStmt = $db->prepare(
 $paymentsStmt->execute(['id' => $ownerId]);
 $payments = $paymentsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Payment totals
-$paidTotal   = array_sum(array_column(array_filter($payments, fn($p) => $p['status'] === 'paid'), 'amount'));
-$pendingTotal = array_sum(array_column(array_filter($payments, fn($p) => in_array($p['status'], ['pending','late'])), 'amount'));
+// Payment totals — calcolati dal DATABASE, non dalle 48 righe qui sopra.
+//
+// Prima erano un array_sum() su $payments, che e' l'elenco impaginato
+// (ORDER BY due_date DESC LIMIT 48). Su un contratto 4+4 lo scadenzario ha
+// quasi cento righe e le 48 piu' RECENTI sono quelle FUTURE, cioe' ancora da
+// incassare: il proprietario apriva il portale e leggeva "Totale incassato
+// 0,00 €" dopo due anni di affitti riscossi regolarmente. Un totale mostrato
+// al cliente non puo' dipendere da quante righe ci stanno in una pagina.
+$totalsStmt = $db->prepare(
+    "SELECT
+        COALESCE(SUM(CASE WHEN pay.status = 'paid' THEN pay.amount END), 0)              AS paid_total,
+        COALESCE(SUM(CASE WHEN pay.status IN ('pending','late') THEN pay.amount END), 0) AS pending_total
+     FROM payments pay
+     INNER JOIN properties p ON p.id = pay.property_id
+     WHERE p.client_id = :id"
+);
+$totalsStmt->execute(['id' => $ownerId]);
+$totals = $totalsStmt->fetch(PDO::FETCH_ASSOC) ?: ['paid_total' => 0, 'pending_total' => 0];
+
+$paidTotal    = (float) $totals['paid_total'];
+$pendingTotal = (float) $totals['pending_total'];
 
 // Recent documents
 $docsStmt = $db->prepare(
@@ -60,10 +78,23 @@ $docsStmt = $db->prepare(
 $docsStmt->execute(['id' => $ownerId, 'id2' => $ownerId]);
 $documents = $docsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Recent communications
+// Recent communications — SOLO i messaggi mandati davvero al proprietario.
+//
+// `communications.channel` comprende 'nota', che in Comunicazioni si chiama
+// "Nota interna": e' l'appunto che l'agenzia scrive SUL cliente, per se stessa
+// ("tratta al ribasso", "non risponde mai", "cliente difficile"). Questa query
+// non filtrava il canale, quindi il portale mostrava quegli appunti alla
+// persona di cui parlano, dentro l'elenco dei "messaggi" — e nessuno
+// scrivendoli poteva immaginarlo.
+//
+// Whitelist e non blacklist: se domani si aggiunge un canale interno all'enum,
+// l'errore sara' che non compare in portale, non che il cliente legge una nota
+// riservata.
 $commStmt = $db->prepare(
-    "SELECT * FROM communications WHERE client_id = :id
-     ORDER BY created_at DESC LIMIT 10"
+    "SELECT * FROM communications
+      WHERE client_id = :id
+        AND channel IN ('email', 'whatsapp', 'sms', 'chiamata')
+      ORDER BY created_at DESC LIMIT 10"
 );
 $commStmt->execute(['id' => $ownerId]);
 $communications = $commStmt->fetchAll(PDO::FETCH_ASSOC);
