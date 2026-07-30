@@ -327,12 +327,22 @@
         padding    .3s  cubic-bezier(.4,0,.2,1),
         margin     .3s  cubic-bezier(.4,0,.2,1);
 }
-/* `is-open` is added by filters.js. A bar that opts out of the filter-bar
-   treatment (data-no-filterbar) never gets it, so it must never collapse —
-   otherwise the page's only control is invisible. */
-.toolbar:not(.is-open):not([data-no-filterbar]),
-.reports-toolbar:not(.is-open),
-.filter-bar:not(.is-open) {
+/* Collapsing is OPT-IN: `is-collapsible` is added by filters.js in
+   setupCollapsible(), at the same moment it builds the "Filtri" toggle that
+   opens the bar again. Only a bar with that toggle can be collapsed.
+
+   It used to be opt-out — every .toolbar/.reports-toolbar/.filter-bar started
+   collapsed and was un-collapsed only once JS added `is-open`. That fails in
+   the wrong direction. Any early return in setupBar() (a bar with no filter
+   controls, an unrecognised bar) or JS not running at all left the toolbar at
+   max-height:0: still in the DOM, still focusable by search, but invisible,
+   with nothing on screen to explain where the page's controls went. A
+   stylesheet must not be able to make a control disappear on its own.
+
+   It also made the escape hatch unreliable: `:not([data-no-filterbar])` was
+   written into the .toolbar selector only, so the same attribute on a
+   .reports-toolbar or .filter-bar was ignored and the bar vanished anyway. */
+.is-collapsible:not(.is-open) {
     max-height: 0;
     opacity: 0;
     pointer-events: none;
@@ -340,9 +350,7 @@
     padding-bottom: 0;
     margin-bottom: 0;
 }
-.toolbar.is-open,
-.reports-toolbar.is-open,
-.filter-bar.is-open {
+.is-collapsible.is-open {
     max-height: 600px;
     opacity: 1;
     pointer-events: auto;

@@ -116,6 +116,13 @@
         if (bar.dataset.collapsibleBound === '1') return;
         bar.dataset.collapsibleBound = '1';
 
+        // The class that lets the CSS collapse this bar, added in the same
+        // breath as the toggle that opens it again. Nothing else may add it:
+        // that is what guarantees a hidden bar always has a visible control to
+        // bring it back, and that every other bar stays on screen no matter
+        // how setupBar() exits.
+        bar.classList.add('is-collapsible');
+
         const storageKey = 'filterBar:' + (bar.id || [...bar.classList].join('.'));
         const wasOpen = sessionStorage.getItem(storageKey) === 'true';
 
@@ -428,13 +435,15 @@
 
     function setupBar(bar) {
         // Opt-out for toolbars that aren't list filters — e.g. a mandatory
-        // "pick an entity first" selector that gates all page content. Reflowing
-        // those into the collapsed "Filtri" popover hides the only control the
-        // page has, breaking the primary interaction instead of just tidying it.
-        // `is-open` still has to go on: the collapse CSS hides every .toolbar
-        // that lacks it, so returning without it would leave the bar at
-        // max-height:0 — invisible, which is the opposite of the intent here.
-        if (bar.hasAttribute('data-no-filterbar')) { bar.classList.add('is-open'); return; }
+        // "pick an entity first" selector that gates all page content, or the
+        // year picker on Reports. Reflowing those into the "Filtri" popover
+        // hides the only control the page has, breaking the primary
+        // interaction instead of just tidying it.
+        //
+        // Every return below leaves the bar exactly as authored: visible, with
+        // its own markup and its own controls. Collapsing needs `is-collapsible`
+        // (see setupCollapsible), which none of these paths adds.
+        if (bar.hasAttribute('data-no-filterbar')) return;
         if (!hasFilters(bar)) return;
         if (bar.dataset.filterBarBound === '1') return;
         bar.dataset.filterBarBound = '1';
@@ -513,8 +522,11 @@
         // Bars living in their own scroll context (modal, side panel) have no
         // page scroll to follow.
         if (bar.closest('.modal, .modal-overlay, .chat-sidebar, [data-no-sticky]')) return;
-        // No `is-open` → the collapse CSS holds the bar at max-height:0. There is
-        // nothing to pin, and pinning it would reserve space for a hidden bar.
+        // Only a bar that went through the full filter-bar treatment gets
+        // `is-open`. Without it this is either a bar with no filter controls or
+        // one still collapsed behind its "Filtri" toggle — in both cases there
+        // is nothing worth pinning, and pinning would reserve space at the top
+        // of every page for a bar the user cannot see.
         if (!bar.classList.contains('is-open')) return;
         const scroller = document.getElementById('app-content');
         if (!scroller) return;

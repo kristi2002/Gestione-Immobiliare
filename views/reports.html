@@ -4,7 +4,12 @@
             <h2>Report &amp; Statistiche</h2>
             <p>Riepiloghi su immobili, incassi e spese. Esporta i dati in CSV.</p>
         </div>
-        <div class="view-header__actions reports-toolbar">
+        <!-- data-no-filterbar: l'anno non e' un filtro di elenco, e' il
+             parametro che comanda ogni KPI e ogni esportazione di questa
+             pagina. Senza questo attributo finiva chiuso dietro un pulsante
+             "Filtri" piazzato nell'intestazione, e la pagina si apriva con il
+             suo unico comando invisibile. -->
+        <div class="view-header__actions reports-toolbar" data-no-filterbar>
             <label for="report-year" class="reports-toolbar__label">Anno</label>
             <input type="number" id="report-year" class="form-input reports-toolbar__year" min="2000" max="2100">
         </div>
