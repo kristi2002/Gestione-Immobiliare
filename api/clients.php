@@ -10,6 +10,7 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+require_once __DIR__ . '/../config/consent.php';
 
 apiHandleOptions();
 
@@ -171,6 +172,11 @@ function getClient(PDO $db, int $id): void
     $client['portal_enabled'] = !empty($client['portal_password_hash']);
     unset($client['portal_password_hash']);
 
+    // Il form ragiona per sì/no, la tabella conserva una data. La verità sta nel
+    // registro dei consensi (una revoca dal link di disiscrizione la scrive lì),
+    // quindi il valore mostrato si legge da lì e non dalla colonna.
+    $client['marketing_consent'] = consentGranted($db, 'client', $id);
+
     apiSuccess($client);
 }
 
@@ -192,6 +198,7 @@ function createClient(PDO $db): void
     $stmt->execute($validated);
 
     $newId = (int) $db->lastInsertId();
+    consentApplyFromInput($db, 'client', $newId, $data);
     logActivity('create', 'client', $newId, 'Proprietario creato: ' . trim(($validated['name'] ?? '') . ' ' . ($validated['surname'] ?? '')));
     getClient($db, $newId);
 }
@@ -259,6 +266,7 @@ function updateClient(PDO $db, int $id): void
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
 
+    consentApplyFromInput($db, 'client', $id, $data);
     logActivity('update', 'client', $id, 'Proprietario aggiornato #' . $id);
     getClient($db, $id);
 }

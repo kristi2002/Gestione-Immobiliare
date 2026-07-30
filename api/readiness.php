@@ -121,6 +121,18 @@ if (!$mailOn || $smtpHost === '') {
     }
 }
 
+// ── Consenso marketing: il testo dell'informativa è configurato? ────────────
+// consent_records conserva il testo ESATTO mostrato al contatto: è quello che
+// trasforma una spunta in un consenso dimostrabile. Se il testo non è
+// configurato, i consensi si raccolgono lo stesso ma restano senza prova di
+// cosa sia stato accettato — e se ne accorge solo chi riceve un reclamo.
+$consentText = trim((string) getSetting('marketing_consent_text', ''));
+if ($consentText === '') {
+    $add('marketing_consent', 'warn', 'Testo del consenso marketing non configurato in Impostazioni: i consensi raccolti non registrano a cosa il contatto ha acconsentito. Le campagne restano bloccate finché non c\'è un consenso valido.');
+} else {
+    $add('marketing_consent', 'ok', 'Testo del consenso marketing configurato.');
+}
+
 // ── WhatsApp: il mittente configurato è davvero un canale WhatsApp? ─────────
 // Non esisteva alcun controllo, ed è per questo che l'integrazione è rimasta
 // "attiva" per settimane mentre ogni singolo invio moriva con l'errore 63007.

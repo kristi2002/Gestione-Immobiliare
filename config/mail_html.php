@@ -5,7 +5,12 @@
 
 require_once __DIR__ . '/settings.php';
 
-function wrapHtmlEmail(string $subject, string $bodyText): string
+/**
+ * $footerHtml è HTML GIÀ pronto, aggiunto in fondo al piè di pagina: serve al
+ * link di disiscrizione, che deve stare dentro il messaggio e non può passare
+ * da $bodyText (che viene escapato riga per riga, giustamente).
+ */
+function wrapHtmlEmail(string $subject, string $bodyText, string $footerHtml = ''): string
 {
     $branding = getPublicBranding();
     $agency   = htmlspecialchars($branding['agency_name'] ?: 'Gestionale Immobiliare', ENT_QUOTES, 'UTF-8');
@@ -29,6 +34,7 @@ function wrapHtmlEmail(string $subject, string $bodyText): string
     }
 
     $subjectEsc = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
+    $footerExtra = $footerHtml !== '' ? '<div style="margin-top:8px">' . $footerHtml . '</div>' : '';
 
     return <<<HTML
 <!DOCTYPE html>
@@ -43,7 +49,7 @@ function wrapHtmlEmail(string $subject, string $bodyText): string
 </td></tr>
 <tr><td style="padding:24px">{$paragraphs}</td></tr>
 <tr><td style="padding:16px 24px;background:#f8fafc;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0">
-Messaggio automatico da {$agency}. Non rispondere a questa email se non necessario.
+Messaggio automatico da {$agency}. Non rispondere a questa email se non necessario.{$footerExtra}
 </td></tr>
 </table>
 </td></tr>

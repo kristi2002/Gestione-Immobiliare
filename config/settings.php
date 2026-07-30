@@ -34,6 +34,14 @@ const SETTINGS_DEFAULTS = [
     'meta_app_id'           => '',
     'meta_app_secret'       => '',
     'mailgun_webhook_key'   => '',
+    // Consenso marketing. Il testo è quello ESATTO mostrato o letto al contatto
+    // al momento della raccolta e finisce dentro consent_records: è la prova di
+    // "a cosa" ha acconsentito. Vuoto di proposito — lo fornisce l'agenzia con
+    // la propria informativa, non lo inventiamo noi.
+    'marketing_consent_text'  => '',
+    'privacy_policy_version'  => '',
+    // Generata al primo uso da config/consent.php, non si configura a mano.
+    'unsubscribe_signing_key' => '',
     // Fatturazione elettronica (identità fiscale cedente/prestatore)
     'agency_piva'           => '',
     'agency_cf'             => '',

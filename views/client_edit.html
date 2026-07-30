@@ -105,6 +105,23 @@
             </fieldset>
 
             <fieldset class="form-section">
+                <legend>Consensi</legend>
+                <label class="form-check">
+                    <input type="checkbox" id="ce-marketing-consent">
+                    Acconsente a ricevere comunicazioni commerciali
+                </label>
+                <p class="form-hint" style="margin:8px 0 0">
+                    Spuntare solo se il consenso è stato effettivamente raccolto (modulo firmato, mandato,
+                    dichiarazione in sede). Senza questa spunta il gestionale non invia alcuna comunicazione
+                    commerciale al contatto. Le comunicazioni legate ai contratti partono comunque.
+                </p>
+                <p class="form-hint" id="ce-consent-missing-text" style="margin:8px 0 0;display:none">
+                    ⚠ Il testo del consenso non è configurato in Impostazioni: il consenso verrebbe registrato
+                    senza indicare a cosa il contatto ha acconsentito.
+                </p>
+            </fieldset>
+
+            <fieldset class="form-section">
                 <legend id="ce-residence-legend">Residenza</legend>
                 <div class="form-group">
                     <label for="ce-address">Indirizzo</label>

@@ -6,13 +6,37 @@
 require_once __DIR__ . '/settings.php';
 
 /**
+ * Ripulisce gli header aggiuntivi.
+ *
+ * Un "\r\n" dentro il valore di un header chiude l'header e apre quello dopo:
+ * è l'header injection classica, con cui una stringa che finisce in un
+ * `List-Unsubscribe` potrebbe aggiungere un Bcc. Oggi questi valori li
+ * costruiamo noi, ma la funzione è pubblica e domani potrebbe non essere così.
+ *
+ * @param string[] $headers
+ * @return string[]
+ */
+function mailSanitizeHeaders(array $headers): array
+{
+    $clean = [];
+    foreach ($headers as $header) {
+        $header = trim(str_replace(["\r", "\n"], '', (string) $header));
+        if ($header !== '' && str_contains($header, ':')) {
+            $clean[] = $header;
+        }
+    }
+    return $clean;
+}
+
+/**
  * $cfgOverride serve all'invio di prova dalle Impostazioni: prova la
  * configurazione che l'utente ha davanti, non quella già salvata. Tutti gli
  * altri chiamanti passano null e leggono da app_settings.
  */
-function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null, array $attachments = [], ?array $cfgOverride = null): array
+function sendClientEmail(string $to, string $subject, string $body, ?string $htmlBody = null, array $attachments = [], ?array $cfgOverride = null, array $extraHeaders = []): array
 {
     $cfg = $cfgOverride ?? getMailConfig();
+    $extraHeaders = mailSanitizeHeaders($extraHeaders);
 
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'Email destinatario non valida.'];
@@ -37,11 +61,14 @@ function sendClientEmail(string $to, string $subject, string $body, ?string $htm
     }
 
     if ($cfg['smtp_host'] !== '') {
-        return sendViaSmtp($to, $subject, $body, $cfg, $htmlBody, $attachments);
+        return sendViaSmtp($to, $subject, $body, $cfg, $htmlBody, $attachments, $extraHeaders);
     }
 
     $from = $cfg['agency_name'] . ' <' . $cfg['agency_email'] . '>';
-    $headers = ['From: ' . $from, 'Reply-To: ' . $cfg['agency_email'], 'MIME-Version: 1.0'];
+    $headers = array_merge(
+        ['From: ' . $from, 'Reply-To: ' . $cfg['agency_email'], 'MIME-Version: 1.0'],
+        $extraHeaders
+    );
 
     if ($attachments) {
         [$contentType, $message] = buildMixedMimeBody($body, $htmlBody, $attachments);
@@ -210,9 +237,10 @@ function smtpAuthProbe(?array $cfg = null, int $timeout = 8): array
     return ['ok' => true, 'error' => null];
 }
 
-function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null, array $attachments = []): array
+function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null, array $attachments = [], array $extraHeaders = []): array
 {
     $cfg ??= getMailConfig();
+    $extraHeaders = mailSanitizeHeaders($extraHeaders);
 
     $opened = smtpOpenAuthenticated($cfg);
     if ($opened['socket'] === null) {
@@ -245,6 +273,9 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
     $message .= "To: <{$to}>\r\n";
     $message .= "Subject: {$subject}\r\n";
     $message .= "MIME-Version: 1.0\r\n";
+    foreach ($extraHeaders as $header) {
+        $message .= $header . "\r\n";
+    }
 
     if ($attachments) {
         [$contentType, $mimeBody] = buildMixedMimeBody($body, $htmlBody, $attachments);

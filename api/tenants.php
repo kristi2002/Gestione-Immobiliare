@@ -12,6 +12,7 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/consent.php';
 
 apiHandleOptions();
 requireViewAccess('tenants');
@@ -138,6 +139,9 @@ function getTenant(PDO $db, int $id): void
     $row['lease_end']        = $contract['lease_end'] ?? null;
     $row['monthly_rent']     = $contract['monthly_rent'] ?? null;
     $row['has_portal_access'] = tenantHasPortal($db, $id);
+    // Letto dal registro, non dalla colonna: una revoca dal link di
+    // disiscrizione vive lì, e la scheda deve mostrarla.
+    $row['marketing_consent'] = consentGranted($db, 'tenant', $id);
     apiSuccess($row);
 }
 
@@ -202,6 +206,7 @@ function createTenant(PDO $db): void
         createTenantPortalUser($tenantId, $password);
     }
 
+    consentApplyFromInput($db, 'tenant', $tenantId, $data);
     logActivity('create', 'tenant', $tenantId, 'Inquilino creato: ' . $name . ' ' . $surname);
     getTenant($db, $tenantId);
 }
@@ -262,6 +267,7 @@ function updateTenant(PDO $db, int $id): void
         createTenantPortalUser($id, $data['portal_password']);
     }
 
+    consentApplyFromInput($db, 'tenant', $id, $data);
     logActivity('update', 'tenant', $id, 'Inquilino aggiornato #' . $id);
     getTenant($db, $id);
 }

@@ -171,6 +171,7 @@
             $('ce-province').value     = c.province || '';
             $('ce-status').value       = c.status || 'active';
             $('ce-notes').value        = c.internal_notes || '';
+            $('ce-marketing-consent').checked = c.marketing_consent === true;
             applyPersonType();
             await loadAgents(c.assigned_agent_id);
         } catch (err) {
@@ -256,6 +257,7 @@
             status:         $('ce-status').value,
             internal_notes: $('ce-notes').value.trim(),
             assigned_agent_id: $('ce-agent').value ? Number($('ce-agent').value) : null,
+            marketing_consent: $('ce-marketing-consent').checked ? 1 : 0,
         };
 
         const saveBtn = $('ce-save');
