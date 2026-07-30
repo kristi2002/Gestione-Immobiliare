@@ -58,6 +58,12 @@
     }
 
     function bindEvents() {
+        // Un intervento e' una riga `reminders` con request_type='maintenance':
+        // stessa cosa che scrive il portale inquilino, aperta dall'agenzia.
+        document.getElementById('btn-new-maintenance')?.addEventListener('click', () => {
+            if (window.App) window.App.navigateTo('entity_edit', { entity: 'maintenance' });
+        });
+
         document.querySelectorAll('.mw-view-toggle').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.mw-view-toggle').forEach(b => b.classList.remove('active'));

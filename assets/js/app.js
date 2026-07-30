@@ -216,6 +216,7 @@
             valuation:    { create: 'Nuova Valutazione',  edit: 'Modifica Valutazione' },
             applications: { create: 'Nuova Candidatura',  edit: 'Modifica Candidatura' },
             inventory:    { create: 'Nuovo bene',         edit: 'Modifica bene' },
+            maintenance:  { create: 'Nuovo intervento',   edit: 'Modifica intervento' },
         },
 
         /**

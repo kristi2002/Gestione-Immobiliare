@@ -20,6 +20,7 @@ import aml        from './aml.js';
 import valuation  from './valuation.js';
 import applications from './applications.js';
 import inventory  from './inventory.js';
+import maintenance from './maintenance.js';
 
 // Keep this list, ENTITY_FORM_VIEWS in config/roles.php and
 // App.entityFormTitles in assets/js/app.js in step: un'entita' presente qui ma
@@ -34,6 +35,7 @@ const REGISTRY = {
     valuation,
     applications,
     inventory,
+    maintenance,
 };
 
 export function getSchema(entity) {

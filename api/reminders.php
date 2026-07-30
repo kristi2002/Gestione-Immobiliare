@@ -20,6 +20,19 @@ apiHandleOptions();
 
 const REMINDER_STATUSES = ['pending', 'completed', 'cancelled'];
 
+/**
+ * Valori ammessi per `request_type`. La colonna e' un varchar libero (phase
+ * originaria) ma la bacheca cerca esattamente 'maintenance': una stringa
+ * qualunque creerebbe un intervento che nessuna schermata mostra.
+ */
+const REMINDER_REQUEST_TYPES = ['maintenance'];
+
+/** enum reminders.maintenance_status. */
+const REMINDER_MAINTENANCE_STATUSES = ['aperta', 'in_lavorazione', 'completata', 'chiusa'];
+
+/** `priority` e' varchar libero, ma la bacheca colora solo questi. */
+const REMINDER_PRIORITIES = ['bassa', 'media', 'alta', 'urgente'];
+
 /** Regola del giorno: dom:<1-31|last>, nth:<1-4|last>:<1-7>, dow:<1-7>. */
 const REMINDER_DAY_RULE_PATTERN = '/^(dom:(last|[1-9]|[12]\d|3[01])|nth:(last|[1-4]):[1-7]|dow:[1-7])$/';
 
@@ -68,6 +81,11 @@ try {
             apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
+    // Il messaggio all'utente resta generico (un errore SQL non si mostra a chi
+    // sta lavorando), ma finora non finiva NEMMENO nei log: un 500 senza
+    // nessuna traccia da nessuna parte, impossibile da diagnosticare se non
+    // rimettendo le mani nel codice.
+    error_log('reminders.php: ' . $e->getMessage());
     apiError('Errore database.', 500);
 }
 
@@ -366,12 +384,14 @@ function createReminder(PDO $db): void
             (title, description, reminder_date, end_date, frequency, schedule_time, day_rule,
              trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, status,
              client_id, lead_id, property_id, tenant_id, assigned_agent_id,
-             notify_admin, notify_client, email_subject, email_body)
+             notify_admin, notify_client, email_subject, email_body, request_type,
+             maintenance_status, priority)
          VALUES
             (:title, :description, :reminder_date, :end_date, :frequency, :schedule_time, :day_rule,
              :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :status,
              :client_id, :lead_id, :property_id, :tenant_id, :assigned_agent_id,
-             :notify_admin, :notify_client, :email_subject, :email_body)"
+             :notify_admin, :notify_client, :email_subject, :email_body, :request_type,
+             :maintenance_status, :priority)"
     );
     $stmt->execute($validated);
 
@@ -426,7 +446,9 @@ function updateReminder(PDO $db, int $id): void
              client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
              tenant_id = :tenant_id, assigned_agent_id = :assigned_agent_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
-             email_subject = :email_subject, email_body = :email_body
+             email_subject = :email_subject, email_body = :email_body,
+             request_type = :request_type, maintenance_status = :maintenance_status,
+             priority = :priority
          WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -577,6 +599,28 @@ function validateReminderInput(PDO $db, array $data): array
     $agentId      = !empty($data['assigned_agent_id']) ? (int) $data['assigned_agent_id'] : null;
     $notifyAdmin  = !empty($data['notify_admin']) ? 1 : 0;
     $notifyClient = !empty($data['notify_client']) ? 1 : 0;
+    // Un intervento di manutenzione E' un promemoria con request_type='maintenance':
+    // e' cosi' che la bacheca lo trova (riga 182). Finora quella colonna la
+    // scriveva SOLO il portale inquilino (tenant/api_maintenance.php:67), quindi
+    // l'agenzia poteva leggere la bacheca ma non aprirci un intervento — nemmeno
+    // per una segnalazione ricevuta al telefono.
+    $requestType = trim($data['request_type'] ?? '') ?: null;
+    if ($requestType !== null && !in_array($requestType, REMINDER_REQUEST_TYPES, true)) {
+        apiError('Tipo di richiesta non valido.');
+    }
+
+    // Stato e priorita' si filtravano ma non si scrivevano: si potevano
+    // cambiare solo con la PATCH dedicata, quindi un intervento nasceva sempre
+    // senza priorita' — anche quando era urgente.
+    $maintStatus = trim($data['maintenance_status'] ?? '') ?: null;
+    if ($maintStatus !== null && !in_array($maintStatus, REMINDER_MAINTENANCE_STATUSES, true)) {
+        apiError('Stato manutenzione non valido.');
+    }
+    $priority = trim($data['priority'] ?? '') ?: null;
+    if ($priority !== null && !in_array($priority, REMINDER_PRIORITIES, true)) {
+        apiError('Priorità non valida.');
+    }
+
     $emailSubject = trim($data['email_subject'] ?? '') ?: null;
     $emailBody    = trim($data['email_body'] ?? '') ?: null;
     $endDateRaw   = trim($data['end_date'] ?? '');
@@ -717,6 +761,13 @@ function validateReminderInput(PDO $db, array $data): array
         'notify_client'     => $notifyClient,
         'email_subject'     => $emailSubject,
         'email_body'        => $emailBody,
+        // Manutenzione: e' `request_type` a far comparire la riga nella bacheca
+        // (vedi il filtro in listReminders). Finora la scriveva solo il portale
+        // inquilino, quindi l'agenzia poteva leggere la bacheca ma non aprirci
+        // un intervento — nemmeno per una segnalazione ricevuta al telefono.
+        'request_type'       => $requestType,
+        'maintenance_status' => $maintStatus,
+        'priority'           => $priority,
     ];
 }
 
