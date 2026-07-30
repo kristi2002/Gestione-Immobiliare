@@ -17,7 +17,6 @@
     let deleteTargetId   = null;
     let selectedProperty = null;
     let categories       = [];
-    let editingItemId    = null;   // articolo aperto nel modal (serve per le foto)
     let currentSnapshot  = null;   // verbale aperto nel modal
     let lockTargetId     = null;
     const els            = {};
@@ -31,8 +30,6 @@
         els.conditionFilter = document.getElementById('inventory-condition-filter');
         els.placeholder = document.getElementById('inventory-placeholder');
         els.content     = document.getElementById('inventory-content');
-        els.modal       = document.getElementById('inventory-modal');
-        els.form        = document.getElementById('inventory-form');
         els.delModal    = document.getElementById('inventory-delete-modal');
         els.contractsTbody = document.getElementById('inventory-contracts-tbody');
         els.snapModal   = document.getElementById('snapshot-modal');
@@ -40,7 +37,6 @@
         els.compModal   = document.getElementById('comparison-modal');
 
         bindEvents();
-        initStarSelector('inventory-condition-stars', 'inventory-condition');
         loadCategories();
         loadProperties();
     }
@@ -67,15 +63,10 @@
         els.categoryFilter.addEventListener('change', () => { currentPage = 1; loadItems(); });
         els.conditionFilter.addEventListener('change', () => { currentPage = 1; loadItems(); });
 
-        document.getElementById('btn-new-item').addEventListener('click', () => openModal());
+        document.getElementById('btn-new-item').addEventListener('click', () => openForm());
         document.getElementById('btn-print-inventory').addEventListener('click', printReport);
 
-        document.getElementById('inventory-modal-close').addEventListener('click', closeModal);
-        document.getElementById('inventory-modal-cancel').addEventListener('click', closeModal);
-        els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
-        els.form.addEventListener('submit', handleSubmit);
 
-        document.getElementById('inventory-photo-upload-btn').addEventListener('click', uploadPhoto);
 
         document.getElementById('inventory-delete-close').addEventListener('click', closeDeleteModal);
         document.getElementById('inventory-delete-cancel').addEventListener('click', closeDeleteModal);
@@ -103,34 +94,6 @@
         els.compModal.addEventListener('click', e => { if (e.target === els.compModal) closeComparison(); });
     }
 
-    function initStarSelector(containerId, inputId) {
-        const stars = document.querySelectorAll(`#${containerId} .star`);
-        const input = document.getElementById(inputId);
-
-        function setStars(val) {
-            stars.forEach(s => {
-                const active = parseInt(s.dataset.value) <= val;
-                s.textContent  = active ? '★' : '☆';
-                s.style.color  = active ? '#f5a623' : '#ccc';
-            });
-        }
-
-        setStars(parseInt(input.value) || 3);
-
-        stars.forEach(star => {
-            star.addEventListener('mouseover', () => setStars(parseInt(star.dataset.value)));
-            star.addEventListener('mouseout',  () => setStars(parseInt(input.value) || 0));
-            star.addEventListener('click', () => {
-                input.value = star.dataset.value;
-                setStars(parseInt(star.dataset.value));
-            });
-        });
-
-        // expose setter
-        input._setDisplay = setStars;
-    }
-
-    // ---- Categorie: la lista vive nel database ----------------------------
     async function loadCategories() {
         try {
             const res  = await fetch(`${API}?action=categories`);
@@ -141,11 +104,9 @@
             categories = [];
         }
 
-        const formSelect = document.getElementById('inventory-category');
-        categories.forEach(c => {
-            els.categoryFilter.appendChild(new Option(c.label, c.slug));
-            formSelect.appendChild(new Option(c.label, c.slug));
-        });
+        // Solo il filtro dell'elenco: la tendina della scheda la riempie
+        // lookups.js dalla stessa sorgente (`inventoryCategories`).
+        categories.forEach(c => els.categoryFilter.appendChild(new Option(c.label, c.slug)));
     }
 
     function categoryLabel(slug) {
@@ -239,7 +200,7 @@
                     const json = await res.json();
                     if (!json.success) throw new Error(json.error);
                     const item = Array.isArray(json.data) ? json.data[0] : json.data;
-                    openModal(item);
+                    openForm(item.id);
                 } catch (e) { showAlert(e.message, 'error'); }
             });
         });
@@ -253,184 +214,22 @@
         });
     }
 
-    function openModal(item = null) {
-        els.form.reset();
-        document.getElementById('inventory-id').value = '';
-        document.getElementById('inventory-modal-title').textContent = item ? 'Modifica Articolo' : 'Aggiungi Articolo';
-
-        const condInput = document.getElementById('inventory-condition');
-        condInput.value = 3;
-        if (condInput._setDisplay) condInput._setDisplay(3);
-
-        if (!item) {
-            document.getElementById('inventory-check-in-date').value = window.Fmt.today();
-            document.getElementById('inventory-quantity').value = 1;
-        }
-
-        editingItemId = item ? item.id : null;
-
-        if (item) {
-            document.getElementById('inventory-id').value            = item.id;
-            document.getElementById('inventory-item-name').value     = item.item_name || '';
-            document.getElementById('inventory-category').value      = item.category || '';
-            document.getElementById('inventory-quantity').value      = item.quantity || 1;
-            document.getElementById('inventory-check-in-date').value = item.check_in_date ? item.check_in_date.substring(0, 10) : '';
-            document.getElementById('inventory-notes').value         = item.notes || '';
-            document.getElementById('inventory-brand').value         = item.brand || '';
-            document.getElementById('inventory-model').value         = item.model || '';
-            document.getElementById('inventory-serial').value        = item.serial_number || '';
-            document.getElementById('inventory-value').value         = item.estimated_value ?? '';
-            document.getElementById('inventory-warranty').value      = item.warranty_until ? item.warranty_until.substring(0, 10) : '';
-            const rating = parseInt(item.condition_rating) || 3;
-            condInput.value = rating;
-            if (condInput._setDisplay) condInput._setDisplay(rating);
-        }
-
-        renderPhotos(item ? (item.photos || []) : []);
-
-        els.modal.hidden = false;
-        document.getElementById('inventory-item-name').focus();
+    /**
+     * La scheda del bene e' una pagina (entity_edit), non piu' una finestra: ha
+     * un suo indirizzo, entra nelle briciole e il tasto Indietro del browser ci
+     * torna sopra. L'immobile, che qui e' la tendina di pagina, diventa un campo
+     * del modulo — precompilato con quello selezionato.
+     * Schema: assets/js/entity_edit/schemas/inventory.js
+     */
+    function openForm(id) {
+        if (!window.App) return;
+        const params = { entity: 'inventory' };
+        if (id) params.id = id;
+        if (selectedProperty) params.property_id = selectedProperty;
+        window.App.navigateTo('entity_edit', params);
     }
 
-    // ---- Foto del bene -----------------------------------------------------
-    function renderPhotos(photos) {
-        const list     = document.getElementById('inventory-photos-list');
-        const uploader = document.getElementById('inventory-photos-upload');
-        const empty    = document.getElementById('inventory-photos-empty');
-
-        // Senza id non c'è a cosa allegare la foto: si carica dopo il salvataggio.
-        uploader.style.display = editingItemId ? '' : 'none';
-        empty.style.display    = editingItemId ? 'none' : '';
-        document.getElementById('inventory-photo-file').value = '';
-
-        if (!editingItemId || !photos.length) {
-            list.innerHTML = editingItemId
-                ? '<span class="text-muted" style="font-size:0.85rem;">Nessuna foto allegata.</span>'
-                : '';
-            return;
-        }
-
-        list.innerHTML = photos.map(p => `
-            <span class="badge" style="display:inline-flex;align-items:center;gap:6px;">
-                <a href="${p.download_url}" target="_blank" rel="noopener">${esc(p.original_name)}</a>
-                <button type="button" class="btn-photo-del" data-id="${p.id}" title="Elimina foto"
-                        style="border:none;background:none;cursor:pointer;color:var(--color-danger,#c0392b);">&times;</button>
-            </span>`).join('');
-
-        list.querySelectorAll('.btn-photo-del').forEach(btn => {
-            btn.addEventListener('click', () => deletePhoto(btn.dataset.id));
-        });
-    }
-
-    async function refreshPhotos() {
-        if (!editingItemId) return;
-        try {
-            const res  = await fetch(`${API}?id=${editingItemId}`);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            const item = Array.isArray(json.data) ? json.data[0] : json.data;
-            renderPhotos(item.photos || []);
-        } catch (e) { showAlert(e.message, 'error'); }
-    }
-
-    async function uploadPhoto() {
-        const input = document.getElementById('inventory-photo-file');
-        if (!editingItemId || !input.files.length) {
-            showAlert('Seleziona un file da caricare.', 'error');
-            return;
-        }
-
-        const btn = document.getElementById('inventory-photo-upload-btn');
-        btn.disabled = true;
-
-        const fd = new FormData();
-        fd.append('file', input.files[0]);
-        fd.append('doc_type', 'inventario');
-        fd.append('inventory_item_id', editingItemId);
-        fd.append('property_id', selectedProperty);
-        fd.append('title', 'Foto inventario');
-
-        try {
-            const res  = await fetch(DOCS_API, { method: 'POST', body: fd });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            showAlert('Foto caricata.', 'success');
-            await refreshPhotos();
-            loadItems();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false;
-        }
-    }
-
-    async function deletePhoto(photoId) {
-        try {
-            const res  = await fetch(`${DOCS_API}?id=${photoId}`, { method: 'DELETE' });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            await refreshPhotos();
-            loadItems();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        }
-    }
-
-    function closeModal() { els.modal.hidden = true; editingItemId = null; }
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        const id  = document.getElementById('inventory-id').value;
-        const btn = document.getElementById('inventory-modal-save');
-        btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-        const value = document.getElementById('inventory-value').value;
-
-        const data = {
-            property_id:      selectedProperty,
-            item_name:        document.getElementById('inventory-item-name').value.trim(),
-            category:         document.getElementById('inventory-category').value,
-            quantity:         parseInt(document.getElementById('inventory-quantity').value) || 1,
-            condition_rating: parseInt(document.getElementById('inventory-condition').value) || 3,
-            check_in_date:    document.getElementById('inventory-check-in-date').value || null,
-            notes:            document.getElementById('inventory-notes').value.trim(),
-            brand:            document.getElementById('inventory-brand').value.trim(),
-            model:            document.getElementById('inventory-model').value.trim(),
-            serial_number:    document.getElementById('inventory-serial').value.trim(),
-            estimated_value:  value === '' ? null : parseFloat(value),
-            warranty_until:   document.getElementById('inventory-warranty').value || null,
-        };
-
-        try {
-            const res  = await fetch(id ? `${API}?id=${id}` : API, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-
-            const saved = Array.isArray(json.data) ? json.data[0] : json.data;
-            showAlert('Articolo salvato con successo.', 'success');
-            loadItems();
-
-            // Articolo nuovo: resta aperto sul record appena creato, così le foto
-            // si allegano subito invece di dover riaprire la scheda.
-            if (!id && saved && saved.id) {
-                document.getElementById('inventory-id').value = saved.id;
-                document.getElementById('inventory-modal-title').textContent = 'Modifica Articolo';
-                editingItemId = saved.id;
-                renderPhotos([]);
-            } else {
-                closeModal();
-            }
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Salva';
-        }
-    }
 
     async function confirmDelete() {
         if (!deleteTargetId) return;

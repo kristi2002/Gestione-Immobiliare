@@ -63,7 +63,7 @@ const attr = (name, val) =>
     (val === undefined || val === null || val === false || val === '') ? '' : ` ${name}="${esc(val)}"`;
 
 /** Fields that never carry a control (no value, no validation). */
-const DECORATIVE = new Set(['static']);
+const DECORATIVE = new Set(['static', 'custom']);
 
 /** Fields whose serialised value is numeric. */
 const NUMERIC = new Set(['number', 'money', 'integer', 'stars']);
@@ -145,6 +145,14 @@ function renderControl(f, uid) {
 
         case 'static':
             return `<div class="ef-static" data-ef-static="${esc(f.name)}">—</div>`;
+
+        case 'custom':
+            // Uno sportello per i pezzi che non sono campi: una galleria di foto,
+            // un riquadro di sola lettura, un widget con una logica sua. Lo
+            // schema fornisce il markup con `html` e ci si aggancia con
+            // `onMount(contenitore, form)` — vedi schemas/inventory.js.
+            // Non entra nel payload e non viene validato.
+            return `<div class="ef-custom" data-ef-custom="${esc(f.name)}">${f.html || ''}</div>`;
 
         case 'money':
         case 'number':
@@ -248,6 +256,7 @@ export class EntityForm {
         this.saveBtn = this.mountEl.querySelector('[data-ef="save"]');
 
         this.bind();
+        this.mountCustom();
         if (window.lucide) window.lucide.createIcons();
 
         // Options first: populating a <select> before its options exist silently
@@ -278,10 +287,6 @@ export class EntityForm {
 
         return `
 <div class="entity-edit-view ef-view" data-ef-entity="${esc(this.schema.entity)}">
-    <div class="profile-topbar">
-        <button type="button" class="btn btn--ghost" data-ef="back"><i data-lucide="arrow-left"></i> Indietro</button>
-    </div>
-
     <div class="view-header">
         <div class="view-header__text">
             <h2 data-ef="title">${esc(title)}</h2>
@@ -309,7 +314,9 @@ export class EntityForm {
     /* ---------------------------------------------------------------- bind */
 
     bind() {
-        this.mountEl.querySelector('[data-ef="back"]').addEventListener('click', () => this.leave());
+        // Il modulo non ha più un suo "Indietro": si esce dalle briciole, dalla
+        // freccia o dalla barra laterale, e il router chiede qui prima di farlo.
+        if (window.App) window.App.setLeaveGuard(() => this.confirmLeave());
         this.mountEl.querySelector('[data-ef="cancel"]').addEventListener('click', () => this.leave());
         this.formEl.addEventListener('submit', (e) => { e.preventDefault(); this.save(); });
 
@@ -335,6 +342,14 @@ export class EntityForm {
 
         this.bindStars();
         this.bindPickers();
+    }
+
+    /** Da' la parola ai campi `custom`, una volta che il loro nodo esiste. */
+    mountCustom() {
+        this._fields.filter(f => f.type === 'custom' && typeof f.onMount === 'function').forEach(f => {
+            const box = this.mountEl.querySelector(`[data-ef-custom="${CSS.escape(f.name)}"]`);
+            if (box) f.onMount(box, this);
+        });
     }
 
     bindStars() {
@@ -436,6 +451,11 @@ export class EntityForm {
             if (f.type === 'static') {
                 const box = this.mountEl.querySelector(`[data-ef-static="${CSS.escape(f.name)}"]`);
                 if (box) box.textContent = f.render ? f.render(data) : (data?.[f.name] ?? '—');
+                return;
+            }
+            if (f.type === 'custom') {
+                const box = this.mountEl.querySelector(`[data-ef-custom="${CSS.escape(f.name)}"]`);
+                if (box && typeof f.onPopulate === 'function') f.onPopulate(box, data, this);
                 return;
             }
             const el = this.el(f.name);
@@ -714,14 +734,18 @@ export class EntityForm {
 
     /* ---------------------------------------------------------------- exit */
 
+    /** Ask before discarding edits. Shared by the exits below and the router. */
+    confirmLeave() {
+        if (!this.dirty) return true;
+        return window.confirm('Ci sono modifiche non salvate. Vuoi uscire e perderle?');
+    }
+
     leave(opts = {}) {
-        if (!opts.force && this.dirty) {
-            const ok = window.confirm('Ci sono modifiche non salvate. Vuoi uscire e perderle?');
-            if (!ok) return;
-        }
+        if (!opts.force && !this.confirmLeave()) return;
         this.dirty = false;
         this.destroy();
-        if (window.App) window.App.back(this.schema.listView);
+        // Chiesto qui: il router non deve richiederlo una seconda volta.
+        if (window.App) { window.App.setLeaveGuard(null); window.App.back(this.schema.listView); }
     }
 
     goToList() {

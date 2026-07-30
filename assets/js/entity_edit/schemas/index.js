@@ -19,12 +19,11 @@ import buildings  from './buildings.js';
 import aml        from './aml.js';
 import valuation  from './valuation.js';
 import applications from './applications.js';
+import inventory  from './inventory.js';
 
-// Inventario is NOT here yet: its list controller still owns the create/edit
-// modal. A missing import would take the whole module down — and with it every
-// other form on this route — so the entity stays out of the registry until its
-// schema exists. Keep this list, ENTITY_FORM_VIEWS in config/roles.php and
-// App.entityFormTitles in assets/js/app.js in step.
+// Keep this list, ENTITY_FORM_VIEWS in config/roles.php and
+// App.entityFormTitles in assets/js/app.js in step: un'entita' presente qui ma
+// non in roles.php e' 404 per tutti, che e' la direzione sicura.
 const REGISTRY = {
     suppliers,
     insurance,
@@ -34,6 +33,7 @@ const REGISTRY = {
     aml,
     valuation,
     applications,
+    inventory,
 };
 
 export function getSchema(entity) {

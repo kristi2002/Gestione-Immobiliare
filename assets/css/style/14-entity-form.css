@@ -299,3 +299,42 @@
 @media (max-width: 900px) {
     .ef-view .form-actions .ef-kbd-hint { display: none; }
 }
+
+/* ---------------------------------------------------------------------
+   Campi `custom` — lo sportello per i pezzi che non sono campi.
+   Qui serve alla galleria foto dell'inventario: le foto si allegano solo
+   dopo il salvataggio, perché hanno bisogno dell'id della riga, e finché
+   quell'id non c'è la sezione lo dice invece di offrire un caricamento
+   che fallirebbe.
+   --------------------------------------------------------------------- */
+.ef-view .ef-photo-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.ef-view .ef-photo-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 260px;
+    padding: 5px 11px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-bg);
+    font-size: 12.5px;
+    color: var(--color-text);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ef-view .ef-photo-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.ef-view .ef-photo-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ef-view .ef-photo-upload .form-input { flex: 1 1 260px; }
+.ef-view .ef-photo-empty { font-size: 12.5px; }

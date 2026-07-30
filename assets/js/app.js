@@ -116,6 +116,30 @@
         trailIdx: 0,
         _seq: 0,
 
+        // ── Unsaved-changes guard ────────────────────────────────────────────
+        // The exit from an edit form used to be the form's own "Indietro"
+        // button, so that button was the only place that could ask before
+        // discarding a half-filled record — the crumbs, the back arrow and the
+        // whole sidebar walked away from a dirty form in silence. The guard now
+        // lives on the router instead of on one button: a form registers it
+        // once, and every way out goes through it. loadView() clears it, so it
+        // can never outlive the page that set it.
+        _leaveGuard: null,
+
+        /** A form asks to be consulted before the user navigates away. */
+        setLeaveGuard(fn) { this._leaveGuard = typeof fn === 'function' ? fn : null; },
+
+        /** True if we may navigate away now (asks the current form if any). */
+        canLeave() {
+            if (!this._leaveGuard) return true;
+            let ok = true;
+            try { ok = this._leaveGuard() !== false; } catch (e) { ok = true; }
+            // Answered once: the user has decided, so the follow-up hop this
+            // navigation makes (back → goToTrailIndex) must not ask again.
+            if (ok) this._leaveGuard = null;
+            return ok;
+        },
+
         /** Human-readable titles for each view */
         viewTitles: {
             dashboard:      'Dashboard',
@@ -191,6 +215,50 @@
             aml:          { create: 'Nuova Verifica AML', edit: 'Modifica Verifica AML' },
             valuation:    { create: 'Nuova Valutazione',  edit: 'Modifica Valutazione' },
             applications: { create: 'Nuova Candidatura',  edit: 'Modifica Candidatura' },
+            inventory:    { create: 'Nuovo bene',         edit: 'Modifica bene' },
+        },
+
+        /**
+         * The list a detail/edit page belongs to.
+         *
+         * The trail is the path actually walked, so it normally supplies the
+         * crumbs. But a pasted link, a reload three steps deep or a redirect
+         * lands on a page with a one-step trail and no path to show — and now
+         * that the pages no longer carry their own "Indietro" button, that page
+         * would have no way out but the sidebar. This map is the fallback: it
+         * names the section the page hangs off, so the bar can still render
+         * "Inquilini › Mario Rossi" and Back still has somewhere to go.
+         *
+         * It is NOT a hierarchy: it is only consulted when there is no trail.
+         */
+        parentViews: {
+            client_profile: 'clients',        client_edit: 'clients',
+            property_profile: 'properties',   property_edit: 'properties',
+            tenant_profile: 'tenants',        tenant_edit: 'tenants',
+            appointment_profile: 'appointments', appointment_edit: 'appointments',
+            building_profile: 'buildings',
+            agent_profile: 'agents',
+            lead_edit: 'leads',
+            contract_edit: 'contracts',
+            invoice_edit: 'invoices',
+            payment_edit: 'payments',
+            expense_edit: 'expenses',
+        },
+
+        /** entity_edit is one route for many forms — its parent is the entity's list. */
+        entityParents: {
+            suppliers: 'suppliers',   insurance: 'insurance',
+            commissions: 'commissions', keys: 'keys',
+            buildings: 'buildings',   aml: 'aml',
+            valuation: 'valuation',   applications: 'property_applications',
+        },
+
+        /** The list view a page belongs to, or null for a top-level page. */
+        parentOf(viewKey, params) {
+            const key = viewKey === 'entity_edit'
+                ? this.entityParents[params && params.entity]
+                : this.parentViews[viewKey];
+            return key && key !== viewKey ? key : null;
         },
 
         // Edit views that serve BOTH create and edit: the static viewTitles label
@@ -321,7 +389,12 @@
             document.getElementById('crumb-back')?.addEventListener('click', () => this.back());
             document.getElementById('crumbs')?.addEventListener('click', (e) => {
                 const btn = e.target.closest('.crumb__link');
-                if (btn) this.goToTrailIndex(Number(btn.dataset.i));
+                if (!btn) return;
+                // data-root: the stand-in section crumb on a page with no trail.
+                // It is a destination, not a step we came through, so it starts
+                // a fresh trail instead of pretending to rewind into one.
+                if (btn.dataset.root) this.navigateTo(btn.dataset.root, {}, { root: true });
+                else this.goToTrailIndex(Number(btn.dataset.i));
             });
         },
 
@@ -460,6 +533,9 @@
         async loadView(url, viewKey) {
             const token = ++this._viewToken;
             this.currentView = viewKey;
+            // The outgoing page's guard dies with it; the incoming view script
+            // registers its own (if it has a form) during executeScripts().
+            this._leaveGuard = null;
             // Hide the compare bar when leaving the properties view
             if (viewKey !== 'properties') {
                 const compareBar = document.getElementById('compare-float-bar');
@@ -616,6 +692,7 @@
          *                  history entry, so Back skips it).
          */
         navigateTo(viewKey, params = {}, opts = {}) {
+            if (!this.canLeave()) return;
             const entry = { view: viewKey, params: this.scalarParams(params), label: null };
             const key   = this.entryKey(entry);
 
@@ -657,13 +734,18 @@
          * parent. fallbackView is used only when this is the first page opened.
          */
         back(fallbackView, fallbackParams) {
+            if (!this.canLeave()) return;
             if (this.trailIdx > 0) { this.goToTrailIndex(this.trailIdx - 1); return; }
             if (this._seq > 0) { history.back(); return; }
-            if (fallbackView) this.navigateTo(fallbackView, fallbackParams || {}, { root: true });
+            // No trail and no history of our own (pasted link, redirect): fall
+            // back to the section this page belongs to rather than dead-ending.
+            const fb = fallbackView || this.parentOf(this.currentView, this.viewParams);
+            if (fb) this.navigateTo(fb, fallbackView ? (fallbackParams || {}) : {}, { root: true });
         },
 
         /** Jump to an ancestor step (crumb click / back arrow). */
         goToTrailIndex(i) {
+            if (!this.canLeave()) return;
             const target = this.trail[i];
             if (!target || i === this.trailIdx) return;
 
@@ -790,14 +872,29 @@
             const list = document.getElementById('crumbs');
             if (!bar || !list) return;
 
-            // A single step is not a path — no bar on a plain list page.
+            const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+            const cur = this.trail[this.trailIdx];
+
             if (this.trail.length < 2) {
-                bar.hidden = true;
-                list.innerHTML = '';
+                // No path walked. On a list page that is simply the top level —
+                // no bar. On a detail page (pasted link, reload, redirect) the
+                // section it belongs to stands in for the missing step, so the
+                // page is still placed and still has a way out.
+                const parent = cur ? this.parentOf(cur.view, cur.params) : null;
+                if (!parent) {
+                    bar.hidden = true;
+                    list.innerHTML = '';
+                    return;
+                }
+                list.innerHTML =
+                    `<li class="crumb"><button type="button" class="crumb__link" data-root="${esc(parent)}">`
+                    + `${esc(this.viewTitles[parent] || parent)}</button></li>`
+                    + `<li class="crumb crumb--current" aria-current="page">${esc(this.crumbLabel(cur))}</li>`;
+                bar.hidden = false;
+                list.scrollLeft = list.scrollWidth;
                 return;
             }
 
-            const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
             list.innerHTML = this.trail.map((e, i) => {
                 const label = esc(this.crumbLabel(e));
                 return i === this.trailIdx

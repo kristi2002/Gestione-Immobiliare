@@ -89,6 +89,16 @@ export const SOURCES = {
         label: r => [r.name, r.address].filter(Boolean).join(' — ') || `#${r.id}`,
         meta:  r => ({ city: r.city || '' }),
     },
+    // Le categorie inventario NON sono una costante: vivono in
+    // `inventory_categories` e l'API valida su quella tabella
+    // (inventoryCategorySlugs). La chiave e' lo `slug`, non l'id — per questo
+    // esiste il mapper `value` qui sotto.
+    inventoryCategories: {
+        url:   'api/inventory.php?action=categories',
+        value: r => String(r.slug),
+        label: r => r.name || r.label || r.slug,
+        meta:  r => ({ slug: r.slug }),
+    },
     agents: {
         // NOT api/admin_users.php — that endpoint is requireRole('super_admin'),
         // so an `admin` or `agent` asking for the agent list got a 403 and a
@@ -114,7 +124,10 @@ export function load(sourceKey) {
     if (!cache.has(sourceKey)) {
         const p = fetchAll(src.url)
             .then(rows => rows.map(r => ({
-                value: String(r.id),
+                // `value` di default e' l'id, ma non tutte le liste sono
+                // indicizzate cosi': le categorie inventario si identificano
+                // per slug, ed e' quello che l'API si aspetta indietro.
+                value: src.value ? src.value(r) : String(r.id),
                 label: src.label(r),
                 meta:  src.meta ? src.meta(r) : {},
             })))

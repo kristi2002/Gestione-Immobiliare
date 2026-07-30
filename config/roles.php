@@ -39,6 +39,7 @@ const ENTITY_FORM_VIEWS = [
     'aml'          => 'aml',
     'valuation'    => 'valuation',
     'applications' => 'property_applications',
+    'inventory'    => 'inventory',
 ];
 
 function entityFormListView(string $entity): ?string
