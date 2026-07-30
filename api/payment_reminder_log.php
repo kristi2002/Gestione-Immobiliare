@@ -10,19 +10,17 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../config/mail_html.php';
 require_once __DIR__ . '/../config/settings.php';
+// Selezione, finestra temporale, periodo di attesa e testo del messaggio: uno
+// solo, condiviso con cron/send_payment_reminders.php.
+require_once __DIR__ . '/../config/payment_reminders.php';
 apiHandleOptions();
 
 requireRole('admin', 'super_admin');
 
-// Quanti giorni devono passare prima di risollecitare lo stesso pagamento.
-// Deve restare allineato a $cooldownDays in cron/send_payment_reminders.php:
-// sono due implementazioni dello stesso lavoro (vedi nota in fondo al file).
-// Le costanti stanno qui in cima e non accanto a chi le usa: uno `const` non e'
-// hoistato come una funzione, e lo switch che smista la richiesta gira prima.
-const REMINDER_COOLDOWN_DAYS = 7;
-
 // Oltre questo silenzio il cron va considerato fermo, non solo "tranquillo".
 // Il job e' giornaliero: 26 ore e' la stessa soglia usata da api/readiness.php.
+// La costante sta qui in cima e non accanto a chi la usa: uno `const` non e'
+// hoistato come una funzione, e lo switch che smista la richiesta gira prima.
 const REMINDER_CRON_STALE_AFTER = 26 * 3600;
 
 try {
@@ -90,58 +88,6 @@ function listReminderLog(PDO $db): void
 }
 
 /**
- * I pagamenti in ritardo, ciascuno gia' giudicato: si sollecita o no, e perche'.
- *
- * Esiste per una ragione precisa: l'anteprima e l'invio devono guardare la
- * STESSA lista. Se il conteggio mostrato prima di premere "Invia" lo calcolasse
- * per conto suo, prometterebbe un numero e ne spedirebbe un altro — e questo e'
- * un pulsante che scrive a decine di inquilini in una volta sola.
- *
- * Il controllo del periodo di attesa era anche una query per riga: qui diventa
- * una sottoquery sola, quindi l'anteprima resta immediata anche con
- * l'archivio pieno.
- */
-function collectReminderCandidates(PDO $db): array
-{
-    $stmt = $db->query(
-        "SELECT pay.id AS payment_id, pay.amount, pay.due_date, pay.tenant_id, pay.property_id,
-                t.name AS tenant_name, t.surname AS tenant_surname, t.email AS tenant_email,
-                p.address AS property_address, p.city AS property_city,
-                p.client_id,
-                DATEDIFF(CURDATE(), pay.due_date) AS days_overdue,
-                (SELECT MAX(rl.sent_at) FROM payment_reminder_log rl
-                  WHERE rl.payment_id = pay.id AND rl.status = 'sent') AS last_sent_at
-         FROM payments pay
-         INNER JOIN tenants t ON t.id = pay.tenant_id
-         INNER JOIN properties p ON p.id = pay.property_id
-         WHERE pay.status IN ('pending', 'late')
-           AND pay.due_date < CURDATE()
-         ORDER BY days_overdue DESC"
-    );
-
-    $rows = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $email = trim($row['tenant_email'] ?? '');
-
-        $skip = null;
-        if ($row['last_sent_at'] !== null
-            && strtotime($row['last_sent_at']) >= strtotime('-' . REMINDER_COOLDOWN_DAYS . ' days')) {
-            $skip = 'Gia\' sollecitato il ' . date('d/m/Y', strtotime($row['last_sent_at']));
-        } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $skip = 'Nessun indirizzo email valido';
-        }
-
-        $row['tenant_full_name'] = trim($row['tenant_name'] . ' ' . $row['tenant_surname']);
-        $row['property_label']   = trim($row['property_address'] . ', ' . $row['property_city'], ', ');
-        $row['eligible']         = $skip === null;
-        $row['skip_reason']      = $skip;
-        $rows[] = $row;
-    }
-
-    return $rows;
-}
-
-/**
  * Cosa succederebbe premendo "Invia", piu' lo stato del cron che fa lo stesso
  * lavoro ogni notte.
  *
@@ -153,7 +99,7 @@ function collectReminderCandidates(PDO $db): array
  */
 function previewReminders(PDO $db): void
 {
-    $candidates = collectReminderCandidates($db);
+    $candidates = collectPaymentReminderCandidates($db);
 
     $eligible = array_values(array_filter($candidates, static fn ($r) => $r['eligible']));
     $skipped  = array_values(array_filter($candidates, static fn ($r) => !$r['eligible']));
@@ -168,7 +114,8 @@ function previewReminders(PDO $db): void
             'would_send'     => count($eligible),
             'would_skip'     => count($skipped),
             'amount_due'     => array_sum(array_map(static fn ($r) => (float) $r['amount'], $candidates)),
-            'cooldown_days'  => REMINDER_COOLDOWN_DAYS,
+            'cooldown_days'  => PAYMENT_REMINDER_COOLDOWN_DAYS,
+            'max_overdue_days' => PAYMENT_REMINDER_MAX_OVERDUE_DAYS,
         ],
         'cron' => [
             'last_run'   => $lastRun !== '' ? $lastRun : null,
@@ -185,7 +132,7 @@ function previewReminders(PDO $db): void
 
 function sendReminders(PDO $db): void
 {
-    $candidates = collectReminderCandidates($db);
+    $candidates = collectPaymentReminderCandidates($db);
 
     $sent      = 0;
     $failed    = 0;
@@ -210,19 +157,11 @@ function sendReminders(PDO $db): void
         $tenantEmail = trim($payment['tenant_email']);
         $daysOverdue = (int) $payment['days_overdue'];
         $tenantName  = $payment['tenant_full_name'];
-        $amount      = number_format((float) $payment['amount'], 2, ',', '.');
-        $dueDate     = $payment['due_date'];
-        $property    = $payment['property_label'];
 
-        $subject = "Sollecito pagamento — Scadenza {$dueDate}";
-        $body    = "Gentile {$tenantName},\n\n"
-            . "Le ricordiamo che il pagamento di € {$amount} relativo all'immobile\n"
-            . "{$property} era in scadenza il {$dueDate} ({$daysOverdue} giorni fa) e risulta ancora non pagato.\n\n"
-            . "La preghiamo di procedere al pagamento quanto prima.\n\n"
-            . "Per qualsiasi informazione, non esiti a contattarci.\n\n"
-            . "Cordiali saluti,\nGestione Immobiliare";
-
-        $result = sendHtmlEmail($tenantEmail, $subject, $body);
+        // Stesso testo del cron notturno: prima erano due messaggi diversi, e
+        // lo stesso inquilino poteva riceverli entrambi con parole differenti.
+        $mail   = buildPaymentReminderEmail($payment);
+        $result = sendClientEmail($tenantEmail, $mail['subject'], $mail['text'], $mail['html']);
 
         // Con l'invio spento sendHtmlEmail() risponde success=true per un
         // messaggio che non e' partito. Registrarlo come 'sent' riempiva il
