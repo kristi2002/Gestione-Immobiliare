@@ -24,10 +24,6 @@ function init() {
 }
 
 function bindEvents() {
-    document.getElementById('btn-back-to-clients').addEventListener('click', () => {
-        if (window.App) window.App.navigateTo('clients');
-    });
-
     document.getElementById('btn-profile-edit').addEventListener('click', () => {
         if (window.App) window.App.navigateTo('client_edit', { clientId });
     });
@@ -61,6 +57,9 @@ function bindEvents() {
         document.getElementById('gdpr-export')?.addEventListener('click', gdprExport);
         document.getElementById('gdpr-erase')?.addEventListener('click', gdprErase);
     }
+
+    document.getElementById('portal-save-email')?.addEventListener('click', savePortalEmail);
+    document.getElementById('portal-send-link')?.addEventListener('click', sendPortalLink);
 
     // Reminder form
     document.getElementById('profile-reminder-close').addEventListener('click', closeReminderModal);
@@ -149,6 +148,7 @@ function loadTab(tab) {
     else if (tab === 'communications') loadCommunications();
     else if (tab === 'reminders')      loadReminders();
     else if (tab === 'gdpr')           loadGdpr();
+    else if (tab === 'portale')        loadPortal();
 }
 
 // ── Properties ───────────────────────────────────────────────────
@@ -839,5 +839,90 @@ async function loadGdpr() {
     } catch (err) {
         consentsEl.innerHTML = `<p class="text-muted">Impossibile caricare: ${esc(err.message)}</p>`;
         logEl.innerHTML = '';
+    }
+}
+
+// ── Accesso al portale proprietario ──────────────────────────────
+//
+// Il portale (owner/index.php) e la sua API esistevano da tempo, ma non c'era
+// una sola schermata da cui attivarlo per qualcuno: un proprietario non poteva
+// entrarci, e nessuno poteva farcelo entrare.
+//
+// Il portale non si apre digitando una password. api/owner_portal.php lo
+// permetterebbe, ma significherebbe che l'agenzia conosce la password con cui
+// quella persona apre i propri contratti e documenti — e se il portale venisse
+// aperto da qualcun altro, non ci sarebbe modo di sostenere che l'agenzia non
+// c'entri. Si manda un link a uso singolo: l'agente invia, l'interessato
+// sceglie, nessuno dei due vede la password dell'altro.
+
+function loadPortal() {
+    const state = document.getElementById('portal-state');
+    const email = document.getElementById('portal-email');
+    if (!state || !email) return;
+
+    // `portal_enabled` è un booleano calcolato dall'API: l'hash della password
+    // non lascia più il server (api/clients.php:163).
+    const attivo = !!client?.portal_enabled;
+    state.textContent = attivo
+        ? 'Attivo: il proprietario può entrare nel portale.'
+        : 'Non ancora attivo: il proprietario non ha una password.';
+    state.className = attivo ? 'text-muted' : 'text-muted';
+    email.value = client?.portal_email || client?.email || '';
+}
+
+async function savePortalEmail() {
+    const email = document.getElementById('portal-email').value.trim();
+    if (!email) { showAlert('Inserisci l\u2019indirizzo del portale.', 'error'); return; }
+
+    const btn = document.getElementById('portal-save-email');
+    btn.disabled = true;
+    try {
+        // portal_email è un campo di `clients`: si salva dall'endpoint dei
+        // proprietari, che fa sovrascrittura completa — quindi si rimanda il
+        // record intero con il solo indirizzo cambiato.
+        const res = await fetch(`${API}?id=${clientId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...client, portal_email: email }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        client = json.data || client;
+        showAlert('Indirizzo del portale salvato.', 'success');
+        loadPortal();
+    } catch (err) {
+        showAlert(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function sendPortalLink() {
+    const btn  = document.getElementById('portal-send-link');
+    const hint = document.getElementById('portal-link-hint');
+    btn.disabled = true;
+    try {
+        const res = await fetch('api/password_reset.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subject_type: 'owner', subject_id: Number(clientId) }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        if (json.data?.simulated) {
+            // In sviluppo l'email non parte davvero: dirlo, e mostrare il link,
+            // invece di far cercare per mezz'ora un messaggio che non esiste.
+            hint.hidden = false;
+            hint.textContent = 'Invio simulato (email non attiva). Link: ' + (json.data.link || '—');
+            showAlert('Invio simulato: l\u2019email non è attiva in questo ambiente.', 'warning');
+        } else {
+            hint.hidden = true;
+            showAlert('Link inviato. Scade il ' + fmtDateTime(json.data?.expires_at), 'success');
+        }
+    } catch (err) {
+        showAlert(err.message, 'error');
+    } finally {
+        btn.disabled = false;
     }
 }

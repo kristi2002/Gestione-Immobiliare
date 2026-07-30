@@ -162,6 +162,15 @@ function getClient(PDO $db, int $id): void
         apiError('Proprietario non trovato.', 404);
     }
 
+    // `SELECT c.*` porta con sé anche portal_password_hash. Finché nessun
+    // proprietario ha un accesso al portale il campo è NULL e non si nota, ma
+    // appena se ne attiva uno quell'hash argon2id parte verso il browser a ogni
+    // apertura della scheda — leggibile da chiunque possa aprirla, ruoli agent e
+    // readonly compresi, e attaccabile con comodo fuori linea. Alla scheda serve
+    // sapere SE l'accesso esiste, non com'è fatto.
+    $client['portal_enabled'] = !empty($client['portal_password_hash']);
+    unset($client['portal_password_hash']);
+
     apiSuccess($client);
 }
 
