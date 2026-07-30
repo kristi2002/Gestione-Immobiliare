@@ -166,7 +166,6 @@
     }
 
     async function init() {
-        $('pye-back').addEventListener('click', leave);
         $('pye-cancel').addEventListener('click', leave);
         $('pye-form').addEventListener('submit', save);
         $('pye-tenant').addEventListener('change', onTenantChange);

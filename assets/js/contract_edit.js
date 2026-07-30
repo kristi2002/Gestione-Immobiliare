@@ -245,7 +245,6 @@
     }
 
     async function init() {
-        $('cte-back').addEventListener('click', leave);
         $('cte-cancel').addEventListener('click', leave);
         $('cte-form').addEventListener('submit', save);
         const istatBtn = $('cte-istat-calc');

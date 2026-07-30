@@ -274,10 +274,13 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                 </div>
             </header>
             <!-- Percorso di navigazione: lo riempie app.js con il cammino
-                 realmente percorso (Proprietari › Mario Rossi › Via Roma 1),
-                 non con una gerarchia fissa. Resta nascosto su un solo passo. -->
+                 realmente percorso (Proprietari / Mario Rossi / Via Roma 1),
+                 non con una gerarchia fissa. Resta nascosto solo sulle pagine
+                 di primo livello. È l'unico ritorno indietro dell'app: le
+                 pagine non hanno più un loro bottone "Indietro". La freccia non
+                 porta più la scritta — il passo accanto dice già dove torna. -->
             <nav class="crumbbar" id="crumbbar" hidden aria-label="Percorso di navigazione">
-                <button type="button" class="crumbbar__back" id="crumb-back" title="Torna indietro" aria-label="Torna indietro"><i data-lucide="arrow-left"></i><span>Indietro</span></button>
+                <button type="button" class="crumbbar__back" id="crumb-back" title="Torna indietro" aria-label="Torna indietro"><i data-lucide="arrow-left"></i></button>
                 <ol class="crumbs" id="crumbs"></ol>
             </nav>
             <main id="app-content" class="app-content">

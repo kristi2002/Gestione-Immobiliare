@@ -111,7 +111,6 @@
     }
 
     async function init() {
-        $('ive-back').addEventListener('click', leave);
         $('ive-cancel').addEventListener('click', leave);
         $('ive-form').addEventListener('submit', save);
 

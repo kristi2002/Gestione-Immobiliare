@@ -179,27 +179,42 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 @media (max-width: 1100px) { .topbar-sub { display: none; } .topbar-title h1 { font-size: 18px; } }
 
 /* --- Breadcrumb bar: the path actually walked, + a Back that retraces it ---
-   Sits between the topbar and the content, and only appears once there is more
-   than one step (app.js keeps it [hidden] otherwise), so list pages reached from
-   the sidebar look exactly as before. */
+   Sits between the topbar and the content. It is the ONLY way back in the app:
+   the pages used to carry their own "Indietro" button as well, which put two
+   back controls one above the other, and the in-page one always lied about
+   where it went (a fixed parent, not the way you came). On a page with no path
+   walked (a pasted link, a reload) app.js stands the section in for the missing
+   step, so the bar still appears; on a top-level list it stays [hidden].
+
+   The back arrow is deliberately quiet — a bordered, shadowed pill read as the
+   page's primary action and drowned out the crumbs next to it, which are the
+   part that actually says where you are. */
 .crumbbar {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 4px;
     margin: 4px var(--shell-gap) 0 calc(var(--shell-gap) / 2 + 4px);
     padding: 2px 2px 0;
     min-width: 0;
 }
 .crumbbar[hidden] { display: none; }
 .crumbbar__back {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 11px 5px 9px;
-    border: 1px solid var(--color-border); border-radius: 999px;
-    background: var(--color-surface); color: var(--color-text);
-    font-size: 12.5px; font-weight: 600; cursor: pointer;
-    box-shadow: var(--shadow);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
+    border: 0; border-radius: 8px;
+    background: none; color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
 }
-.crumbbar__back:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.crumbbar__back:hover { background: var(--color-primary-light); color: var(--color-primary); }
+.crumbbar__back:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
 /* La classe sta sull'<i>, e createIcons() la ricopia sull'<svg> che lo sostituisce. */
-.crumbbar__back [data-lucide], .crumbbar__back svg { width: 15px; height: 15px; }
+.crumbbar__back [data-lucide], .crumbbar__back svg { width: 16px; height: 16px; }
+/* Separatore fra la freccia e il percorso: dice che sono due cose diverse
+   senza aggiungere un bordo intero. */
+.crumbbar__back + .crumbs::before {
+    content: ""; flex: 0 0 auto;
+    width: 1px; height: 14px; margin: 0 8px 0 2px;
+    background: var(--color-border);
+}
 
 /* Una riga sola, che scorre: un percorso lungo non deve far crescere la barra
    di tre righe su mobile né spingere la pagina in larghezza. */
@@ -211,25 +226,30 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 .crumbs::-webkit-scrollbar { display: none; }
 .crumb {
     display: inline-flex; align-items: center; flex: 0 0 auto;
-    font-size: 12.5px; color: var(--color-text-muted);
+    font-size: 13px; color: var(--color-text-muted);
 }
+/* Il separatore non è un carattere da leggere: sta più in basso di un ">" di
+   testo, quindi lo si allinea a mano invece di lasciarlo sulla linea di base. */
 .crumb + .crumb::before {
-    content: "›"; margin: 0 6px; color: var(--color-text-muted); opacity: .6;
+    content: "/"; margin: 0 2px; color: var(--color-border);
+    font-weight: 400;
 }
 .crumb__link, .crumb--current {
-    padding: 2px 4px; border-radius: 6px; max-width: 32ch;
+    padding: 3px 6px; border-radius: 6px; max-width: 32ch;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .crumb__link {
     border: 0; background: none;
     font: inherit; color: var(--color-text-muted); cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
 }
 .crumb__link:hover { color: var(--color-primary); background: var(--color-primary-light); }
-.crumb--current { font-weight: 700; color: var(--color-text); }
+.crumb__link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+/* La pagina corrente è un'etichetta, non un bersaglio: stesso peso del titolo
+   ma non cliccabile, così il percorso finisce visibilmente dove sei. */
+.crumb--current { font-weight: 600; color: var(--color-text); }
 @media (max-width: 768px) {
-    .crumbbar { margin: 4px 10px 0; gap: 8px; }
-    .crumbbar__back span { display: none; }
-    .crumbbar__back { padding: 6px 8px; }
+    .crumbbar { margin: 4px 10px 0; }
 }
 
 /* --app-content-pad-b mirrors the padding-bottom below. Sticky footers inside

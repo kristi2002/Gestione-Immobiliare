@@ -254,7 +254,6 @@
     }
 
     async function init() {
-        $('ape-back').addEventListener('click', leave);
         $('ape-cancel').addEventListener('click', leave);
         $('ape-form').addEventListener('submit', save);
 

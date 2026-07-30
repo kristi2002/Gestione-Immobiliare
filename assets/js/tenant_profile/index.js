@@ -23,10 +23,6 @@ function init() {
 }
 
 function bindEvents() {
-    document.getElementById('btn-back-to-tenants').addEventListener('click', () => {
-        if (window.App) window.App.navigateTo('tenants');
-    });
-
     document.getElementById('btn-profile-edit').addEventListener('click', () => {
         if (window.App) window.App.navigateTo('tenant_edit', { tenantId });
     });

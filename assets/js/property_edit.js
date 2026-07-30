@@ -51,6 +51,8 @@
         // Forty filled-in fields used to disappear on one stray click.
         if (guard && !guard.confirmLeave()) return;
         if (guard) guard.detach();
+        // Chiesto qui: il router non deve richiederlo una seconda volta.
+        window.App.setLeaveGuard(null);
         if (isEdit) window.App.back('property_profile', { propertyId });
         else window.App.back('properties');
     }
@@ -856,7 +858,6 @@
         $('pe-other-rooms').addEventListener('input', updateLocali);
         $('pe-surface-add').addEventListener('click', () => addSurfaceRow(null));
 
-        $('pe-back').addEventListener('click', leave);
         $('pe-cancel').addEventListener('click', leave);
         $('pe-form').addEventListener('submit', save);
         // Un campo obbligatorio dentro una sezione chiusa non e' focalizzabile:
@@ -865,6 +866,9 @@
             window.FormGuard.revealField(e.target);
         }, true);
         guard = window.FormGuard.guardUnsaved($('pe-form'), { isSaving: () => saving });
+        // La pagina non ha più un suo "Indietro": si esce dalle briciole, dalla
+        // freccia o dalla barra laterale, e il router chiede qui prima di farlo.
+        window.App?.setLeaveGuard(() => guard.confirmLeave());
         setupAutoGeocode();
         $('pe-mandato').addEventListener('click', generateMandato);
         setupAddressAutocomplete();

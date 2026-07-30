@@ -285,7 +285,6 @@
     }
 
     function init() {
-        $('apr-back').addEventListener('click', goBack);
         $('apr-edit').addEventListener('click', () => {
             if (window.App) window.App.navigateTo('appointment_edit', { appointmentId: Number(appointmentId) });
         });

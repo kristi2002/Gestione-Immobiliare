@@ -106,7 +106,6 @@
     }
 
     async function init() {
-        $('exe-back').addEventListener('click', leave);
         $('exe-cancel').addEventListener('click', leave);
         $('exe-form').addEventListener('submit', save);
 

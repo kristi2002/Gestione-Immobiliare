@@ -1321,10 +1321,6 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
     // ── Event binding ──────────────────────────────────────────────────────────
 
     function bindStaticEvents() {
-        document.getElementById('btn-back-to-properties').addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('properties');
-        });
-
         document.getElementById('property-profile-tabs').addEventListener('click', e => {
             const tab = e.target.closest('[data-tab]');
             if (tab) switchTab(tab.dataset.tab);

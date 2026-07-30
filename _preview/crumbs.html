@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>crumbbar test</title>
+<!-- Gli stessi fogli, nello stesso ordine, di index.php. -->
+<link rel="stylesheet" href="/assets/dist/app.min.css">
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/theme-orlandi.css">
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><a class="sb-brand" href="#"><span class="sb-brand__word"><span class="sb-brand__eyebrow">IMMOBILIARE</span><b class="sb-brand__name">ORLANDI</b></span></a></div>
+    <nav class="sidebar-nav"><ul><li><a href="#" class="nav-link active"><span class="nav-label">Inquilini</span></a></li></ul></nav>
+  </aside>
+  <div class="main-wrapper">
+    <header class="topbar">
+      <button class="sidebar-toggle" id="sidebar-toggle"><span></span><span></span><span></span></button>
+      <div class="topbar-title"><h1 id="page-title">Modifica Inquilino</h1><p class="topbar-sub">Dati del conduttore, immobile, durata della locazione e canone.</p></div>
+      <div class="global-search"><i class="global-search__icon" data-lucide="search"></i><input type="search" class="global-search__input" placeholder="Cerca proprietari, immobili…"></div>
+      <div class="topbar-actions"><a href="#" class="topbar-link topbar-icon-btn"><i data-lucide="mail"></i></a><button class="notif-bell">&#128276;</button></div>
+    </header>
+
+    <!-- markup identico a index.php -->
+    <nav class="crumbbar" id="crumbbar" aria-label="Percorso di navigazione">
+      <button type="button" class="crumbbar__back" id="crumb-back" title="Torna indietro" aria-label="Torna indietro"><i data-lucide="arrow-left"></i></button>
+      <ol class="crumbs" id="crumbs"></ol>
+    </nav>
+
+    <main id="app-content" class="app-content">
+      <div class="view-header"><div class="view-header__text"><h2>Modifica Inquilino</h2></div></div>
+      <div class="card" style="padding:20px">
+        <p class="text-muted" style="margin:0">Corpo della pagina. Sopra non c'è più nessun secondo bottone «Indietro».</p>
+      </div>
+
+      <div class="card" style="padding:20px;margin-top:20px">
+        <h3 style="margin-top:0">Stati della barra</h3>
+        <p class="text-muted">Ogni riga è l'HTML che <code>renderCrumbs()</code> produce davvero per quello stato.</p>
+        <div id="states"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// Le stesse due forme prodotte da App.renderCrumbs() in assets/js/app.js.
+const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
+function crumbsHtml(steps) {
+  return steps.map((s, i) => i === steps.length - 1
+    ? `<li class="crumb crumb--current" aria-current="page">${esc(s)}</li>`
+    : `<li class="crumb"><button type="button" class="crumb__link" data-i="${i}">${esc(s)}</button></li>`
+  ).join('');
+}
+
+const CASES = [
+  ['Percorso senza cammino (link incollato / ricarica): la sezione fa da primo passo',
+   ['Inquilini', 'Inquilino']],
+  ['Due passi', ['Inquilini', 'Mario Rossi']],
+  ['Tre passi', ['Proprietari', 'Mario Rossi', 'Via Roma 1']],
+  ['Quattro passi, etichette lunghe',
+   ['Immobili', 'Appartamento in Via Giacomo Matteotti 118', 'Contratto di locazione 2026/114', 'Modifica Pagamento']],
+];
+
+// La barra in cima mostra il primo caso, cioè lo scenario dello screenshot.
+document.getElementById('crumbs').innerHTML = crumbsHtml(CASES[0][1]);
+
+document.getElementById('states').innerHTML = CASES.map(([label, steps]) => `
+  <p style="margin:18px 0 4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted)">${esc(label)}</p>
+  <nav class="crumbbar" style="margin-left:0;margin-right:0" aria-label="${esc(label)}">
+    <button type="button" class="crumbbar__back" title="Torna indietro" aria-label="Torna indietro"><i data-lucide="arrow-left"></i></button>
+    <ol class="crumbs">${crumbsHtml(steps)}</ol>
+  </nav>`).join('');
+
+if (window.lucide) lucide.createIcons();
+</script>
+</body></html>

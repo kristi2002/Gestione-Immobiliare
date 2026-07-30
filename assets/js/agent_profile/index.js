@@ -109,10 +109,6 @@ function init() {
         showAlert('Nessun agente selezionato.');
         return;
     }
-    document.getElementById('btn-back-to-agents')?.addEventListener('click', () => {
-        if (window.App) window.App.navigateTo('agents');
-    });
-
     // Tabs
     document.querySelectorAll('.agent-profile-view .profile-tab').forEach(tab => {
         tab.addEventListener('click', () => activateTab(tab.dataset.tab));

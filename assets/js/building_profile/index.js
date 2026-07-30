@@ -31,9 +31,6 @@
     }
 
     function bindEvents() {
-        document.getElementById('btn-back-to-buildings').addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('buildings');
-        });
         document.getElementById('btn-profile-edit').addEventListener('click', () => openModal(building));
         document.getElementById('btn-profile-link').addEventListener('click', () => openLinkModal());
         document.getElementById('btn-profile-generate').addEventListener('click', () => {

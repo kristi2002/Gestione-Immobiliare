@@ -86,8 +86,6 @@
 /* ── Scheda Cliente (Client Profile) ─────────────────────────────── */
 .client-profile-view { max-width: 1200px; }
 
-.profile-topbar { margin-bottom: 16px; }
-
 .profile-hero {
     display: flex;
     align-items: flex-start;

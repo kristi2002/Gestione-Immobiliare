@@ -108,6 +108,8 @@
         if (!window.App) return;
         if (guard && !guard.confirmLeave()) return;
         if (guard) guard.detach();
+        // Chiesto qui: il router non deve richiederlo una seconda volta.
+        window.App.setLeaveGuard(null);
         if (isEdit) window.App.back('client_profile', { clientId });
         else window.App.back('clients');
     }
@@ -331,10 +333,12 @@
     }
 
     function init() {
-        $('ce-back').addEventListener('click', leave);
         $('ce-cancel').addEventListener('click', leave);
         $('ce-form').addEventListener('submit', save);
         guard = window.FormGuard.guardUnsaved($('ce-form'), { isSaving: () => saving });
+        // La pagina non ha più un suo "Indietro": si esce dalle briciole, dalla
+        // freccia o dalla barra laterale, e il router chiede qui prima di farlo.
+        window.App?.setLeaveGuard(() => guard.confirmLeave());
         // Nascere domani non e' previsto. Il campo (e l'API) accettavano date future.
         const birth = $('ce-birth-date');
         if (birth) birth.max = new Date().toISOString().slice(0, 10);

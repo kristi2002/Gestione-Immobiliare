@@ -198,10 +198,12 @@
     let saving = false;
 
     async function init() {
-        $('lde-back').addEventListener('click', leave);
         $('lde-cancel').addEventListener('click', leave);
         $('lde-form').addEventListener('submit', save);
         guard = window.FormGuard.guardUnsaved($('lde-form'), { isSaving: () => saving });
+        // La pagina non ha più un suo "Indietro": si esce dalle briciole, dalla
+        // freccia o dalla barra laterale, e il router chiede qui prima di farlo.
+        window.App?.setLeaveGuard(() => guard.confirmLeave());
         // Il Codice Fiscale vive in un <details> chiuso: se l'API lo rifiuta, il
         // messaggio puntava a un campo che l'utente non poteva nemmeno vedere.
         $('lde-form').addEventListener('invalid', (e) => window.FormGuard.revealField(e.target), true);

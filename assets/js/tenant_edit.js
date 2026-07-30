@@ -213,7 +213,6 @@
     }
 
     async function init() {
-        $('tne-back').addEventListener('click', leave);
         $('tne-cancel').addEventListener('click', leave);
         $('tne-form').addEventListener('submit', save);
         $('tne-pdf').addEventListener('click', generatePdf);
