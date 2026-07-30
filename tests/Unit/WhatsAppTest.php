@@ -76,6 +76,13 @@ class WhatsAppTest extends TestCase
             'leading 00 international'   => ['00393331234567',  '+393331234567'],
             'short 10-digit no prefix'   => ['3331234567',      '+393331234567'],
             'whatsapp: prefix stripped'  => ['3331234567',      '+393331234567'],
+            // I fissi italiani TENGONO lo zero in formato internazionale: il
+            // prefisso di Civitanova è 0733, non 733. Toglierlo (come faceva la
+            // vecchia regola "via lo zero iniziale, sempre") produceva
+            // +39733123456, che non è il numero di nessuno.
+            'Italian landline keeps 0'   => ['0733123456',      '+390733123456'],
+            'Milan landline keeps 0'     => ['021234567',       '+39021234567'],
+            'landline with 00 prefix'    => ['00390733123456',  '+390733123456'],
         ];
     }
 

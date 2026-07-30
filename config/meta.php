@@ -73,7 +73,7 @@ function publicSocialSettings(array $settings): array
 /**
  * Publish a social post to Meta platforms.
  *
- * @return array{success: bool, facebook_post_id: ?string, instagram_media_id: ?string, simulated: bool, error: ?string}
+ * @return array{success: bool, partial: bool, facebook_post_id: ?string, instagram_media_id: ?string, simulated: bool, error: ?string}
  */
 function publishSocialPost(PDO $db, array $post): array
 {
@@ -94,6 +94,7 @@ function publishSocialPost(PDO $db, array $post): array
             'facebook_post_id'    => 'sim-fb-' . uniqid(),
             'instagram_media_id'  => in_array($platform, ['instagram', 'both'], true)
                 ? 'sim-ig-' . uniqid() : null,
+            'partial'             => false,
             'simulated'           => true,
             'error'               => null,
         ];
@@ -133,13 +134,24 @@ function publishSocialPost(PDO $db, array $post): array
         }
     }
 
-    $success = empty($errors) || ($fbPostId || $igMediaId);
+    // Un invio parziale non è un successo pieno. Con platform 'both', se
+    // Instagram falliva e Facebook riusciva, `success` diventava true e il
+    // motivo del fallimento veniva buttato via insieme all'errore: la riga
+    // restava 'published' senza traccia di cosa non fosse uscito, e l'agente
+    // credeva che l'annuncio fosse su entrambi i canali.
+    //
+    // `success` resta vero se ALMENO un canale ha pubblicato — la riga non va
+    // ritentata, il post su Facebook esiste davvero e ripubblicarlo creerebbe un
+    // doppione — ma gli errori ora sopravvivono comunque, e `partial` dice che
+    // non è uscito tutto.
+    $anyDelivered = $fbPostId !== null || $igMediaId !== null;
 
     return [
-        'success'            => $success,
+        'success'            => $anyDelivered,
+        'partial'            => $anyDelivered && $errors !== [],
         'facebook_post_id'   => $fbPostId,
         'instagram_media_id' => $igMediaId,
         'simulated'          => false,
-        'error'              => $success ? null : implode(' ', $errors),
+        'error'              => $errors === [] ? null : implode(' ', $errors),
     ];
 }

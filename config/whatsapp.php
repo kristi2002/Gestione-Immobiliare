@@ -362,11 +362,16 @@ function normalizeWhatsAppNumber(string $phone): string
     if (str_starts_with($digits, '00')) {
         $digits = substr($digits, 2);
     }
-    // Lo zero iniziale dei fissi italiani NON è un prefisso interurbano da
-    // togliere: in formato internazionale resta (+39 0733 123456 per Civitanova).
-    // Rimuovendolo si otteneva +39733123456, un numero che non esiste.
+    // Lo zero iniziale va tolto o tenuto a seconda di cosa segue, perché in
+    // Italia i cellulari iniziano per 3 e i prefissi dei fissi per 0:
+    //   "0333 1234567" → zero di troppo scritto per abitudine, si toglie
+    //   "0733 123456"  → prefisso di Civitanova, in formato internazionale RESTA
+    // Toglierlo sempre (com'era prima) trasformava i fissi in +39733123456,
+    // un numero che non esiste.
     if (str_starts_with($digits, '0')) {
-        $digits = '39' . $digits;
+        $digits = str_starts_with($digits, '03')
+            ? '39' . substr($digits, 1)
+            : '39' . $digits;
     }
     if (!str_starts_with($digits, '39') && strlen($digits) <= 10) {
         $digits = '39' . $digits;

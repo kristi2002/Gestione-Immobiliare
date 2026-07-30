@@ -30,22 +30,34 @@ function publishAndUpdatePost(PDO $db, array $post): array
     $result = publishSocialPost($db, $post);
 
     if ($result['success']) {
+        // `error_message = NULL` cancellava il motivo di un invio solo parziale
+        // (Facebook sì, Instagram no): la riga risultava pubblicata e nessuno
+        // poteva più sapere che metà annuncio non era uscito, né perché.
         $update = $db->prepare(
             "UPDATE social_posts
              SET status = 'published', published_at = NOW(),
                  facebook_post_id = :fb_id, instagram_media_id = :ig_id,
-                 error_message = NULL
+                 error_message = :error
              WHERE id = :id"
         );
         $update->execute([
             'id'    => $post['id'],
             'fb_id' => $result['facebook_post_id'],
             'ig_id' => $result['instagram_media_id'],
+            'error' => $result['error'],
         ]);
+
+        // Un canale caduto per token scaduto va segnalato anche quando l'altro
+        // è passato, altrimenti l'avviso arriva solo quando falliscono entrambi.
+        if (!empty($result['error']) && isMetaTokenExpiredError($result['error'])) {
+            sendMetaTokenExpiryAlert($db, $result['error']);
+        }
 
         return [
             'id'        => $post['id'],
             'status'    => 'published',
+            'partial'   => !empty($result['partial']),
+            'error'     => $result['error'],
             'simulated' => $result['simulated'],
         ];
     }
