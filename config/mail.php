@@ -104,59 +104,124 @@ function buildMixedMimeBody(string $body, ?string $htmlBody, array $attachments)
     return ['multipart/mixed; boundary="' . $mixed . '"', $out];
 }
 
-function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null, array $attachments = []): array
+/** Legge una risposta SMTP completa (l'ultima riga ha uno spazio in 4ª posizione). */
+function smtpRead($socket): string
 {
-    $cfg ??= getMailConfig();
+    $data = '';
+    while ($line = fgets($socket, 515)) {
+        $data .= $line;
+        if (isset($line[3]) && $line[3] === ' ') break;
+    }
+    return $data;
+}
+
+/** Manda un comando e dice se il codice di risposta è fra quelli attesi. */
+function smtpCmd($socket, string $command, array $expectCodes): bool
+{
+    fwrite($socket, $command . "\r\n");
+    $code = (int) substr(smtpRead($socket), 0, 3);
+    return in_array($code, $expectCodes, true);
+}
+
+/**
+ * Apre la connessione SMTP e arriva fino all'autenticazione compresa.
+ *
+ * Sta in una funzione sola perché la usano sia l'invio vero sia la sonda di
+ * `readiness.php`: due implementazioni della stessa stretta di mano vorrebbero
+ * dire una sonda che dice "ok" mentre l'invio fallisce, che è esattamente il
+ * problema che la sonda dovrebbe scoprire.
+ *
+ * @return array{socket: resource|null, error: string|null}
+ */
+function smtpOpenAuthenticated(array $cfg, int $timeout = 15): array
+{
+    $fail = static function ($socket, string $error): array {
+        if ($socket) {
+            fclose($socket);
+        }
+        return ['socket' => null, 'error' => $error];
+    };
 
     $errno  = 0;
     $errstr = '';
     $host   = ($cfg['smtp_secure'] === 'ssl' ? 'ssl://' : '') . $cfg['smtp_host'];
-    $socket = @fsockopen($host, $cfg['smtp_port'], $errno, $errstr, 15);
+    $socket = @fsockopen($host, $cfg['smtp_port'], $errno, $errstr, $timeout);
 
     if (!$socket) {
-        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => "SMTP: {$errstr}"];
+        return ['socket' => null, 'error' => "SMTP: {$errstr}"];
     }
+    stream_set_timeout($socket, $timeout);
 
-    $read = function () use ($socket): string {
-        $data = '';
-        while ($line = fgets($socket, 515)) {
-            $data .= $line;
-            if (isset($line[3]) && $line[3] === ' ') break;
-        }
-        return $data;
-    };
-
-    $cmd = function (string $command, array $expectCodes) use ($socket, $read): bool {
-        fwrite($socket, $command . "\r\n");
-        $resp = $read();
-        $code = (int) substr($resp, 0, 3);
-        return in_array($code, $expectCodes, true);
-    };
-
-    $read();
-    if (!$cmd('EHLO localhost', [250])) {
-        fclose($socket);
-        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP EHLO fallito.'];
+    smtpRead($socket);
+    if (!smtpCmd($socket, 'EHLO localhost', [250])) {
+        return $fail($socket, 'SMTP EHLO fallito.');
     }
 
     if ($cfg['smtp_secure'] === 'tls') {
-        if (!$cmd('STARTTLS', [220])) {
-            fclose($socket);
-            return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP STARTTLS fallito.'];
+        if (!smtpCmd($socket, 'STARTTLS', [220])) {
+            return $fail($socket, 'SMTP STARTTLS fallito.');
         }
-        stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT);
-        if (!$cmd('EHLO localhost', [250])) {
-            fclose($socket);
-            return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP EHLO post-TLS fallito.'];
+        // Se il TLS non si stabilisce la connessione resta APERTA e in chiaro: senza
+        // questo controllo si proseguiva lo stesso fino ad `AUTH LOGIN`, spedendo
+        // utente e password SMTP in chiaro sulla rete. Meglio chiudere e fallire.
+        if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
+            return $fail($socket, 'SMTP: negoziazione TLS fallita.');
+        }
+        if (!smtpCmd($socket, 'EHLO localhost', [250])) {
+            return $fail($socket, 'SMTP EHLO post-TLS fallito.');
         }
     }
 
-    if ($cfg['smtp_user'] !== '') {
-        if (!$cmd('AUTH LOGIN', [334]) || !$cmd(base64_encode($cfg['smtp_user']), [334]) || !$cmd(base64_encode($cfg['smtp_pass']), [235])) {
-            fclose($socket);
-            return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'SMTP autenticazione fallita.'];
+    if (($cfg['smtp_user'] ?? '') !== '') {
+        if (!smtpCmd($socket, 'AUTH LOGIN', [334])
+            || !smtpCmd($socket, base64_encode($cfg['smtp_user']), [334])
+            || !smtpCmd($socket, base64_encode((string) $cfg['smtp_pass']), [235])) {
+            return $fail($socket, 'SMTP autenticazione fallita.');
         }
     }
+
+    return ['socket' => $socket, 'error' => null];
+}
+
+/**
+ * Verifica host, porta, TLS e credenziali SMTP senza spedire alcun messaggio:
+ * arriva fino al 235 di `AUTH LOGIN` e chiude con QUIT. Serve ai controlli di
+ * stato, che devono poter dire "le credenziali non funzionano" senza recapitare
+ * posta a nessuno.
+ *
+ * @return array{ok: bool, error: string|null}
+ */
+function smtpAuthProbe(?array $cfg = null, int $timeout = 8): array
+{
+    $cfg ??= getMailConfig();
+
+    if (($cfg['smtp_host'] ?? '') === '') {
+        return ['ok' => false, 'error' => 'Nessun host SMTP configurato.'];
+    }
+
+    $opened = smtpOpenAuthenticated($cfg, $timeout);
+    if ($opened['socket'] === null) {
+        return ['ok' => false, 'error' => $opened['error']];
+    }
+
+    smtpCmd($opened['socket'], 'QUIT', [221]);
+    fclose($opened['socket']);
+
+    return ['ok' => true, 'error' => null];
+}
+
+function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null, array $attachments = []): array
+{
+    $cfg ??= getMailConfig();
+
+    $opened = smtpOpenAuthenticated($cfg);
+    if ($opened['socket'] === null) {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => $opened['error']];
+    }
+    $socket = $opened['socket'];
+
+    $read = static fn(): string => smtpRead($socket);
+    $cmd  = static fn(string $command, array $expectCodes): bool => smtpCmd($socket, $command, $expectCodes);
 
     $agencyEmail = $cfg['agency_email'];
     if (!$cmd('MAIL FROM:<' . $agencyEmail . '>', [250])) {
@@ -199,10 +264,22 @@ function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = nu
         $message .= str_replace(["\r\n.", "\n."], ["\r\n..", "\n.."], $body) . "\r\n.\r\n";
     }
 
+    // La risposta al punto finale è QUELLA che dice se il messaggio è stato
+    // accettato: il server può rifiutarlo qui (mittente non verificato, quota,
+    // dimensione, contenuto) dopo aver detto 250 a tutti i comandi precedenti.
+    // Prima veniva letta e buttata via, quindi un rifiuto tornava come
+    // `status: 'sent'` e il gestionale registrava come inviato un messaggio che
+    // non è mai partito.
     fwrite($socket, $message);
-    $read();
+    $finalResp = $read();
+    $finalCode = (int) substr($finalResp, 0, 3);
     $cmd('QUIT', [221]);
     fclose($socket);
+
+    if ($finalCode !== 250) {
+        $finalText = trim(substr($finalResp, 4));
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => "SMTP: messaggio rifiutato dal server ({$finalCode}: {$finalText})."];
+    }
 
     return ['success' => true, 'status' => 'sent', 'external_id' => 'smtp-' . uniqid(), 'error' => null];
 }

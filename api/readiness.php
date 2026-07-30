@@ -102,21 +102,35 @@ if ($cronSecret === '') {
     $add('cron_secret', 'ok', 'CRON_SECRET impostato.');
 }
 
-// ── Mail configured ─────────────────────────────────────────────────────────
+// ── Mail: non basta che sia "configurata", deve autenticarsi ────────────────
+// Prima qui bastava un host non vuoto per scrivere "ok": la configurazione è
+// rimasta verde per settimane mentre OGNI invio falliva, perché host e password
+// venivano da due provider diversi. Ora la sonda apre davvero la connessione e
+// tenta l'autenticazione — senza spedire nulla a nessuno.
 $mailOn   = filter_var(getSetting('mail_enabled', 'false'), FILTER_VALIDATE_BOOLEAN);
 $smtpHost = (string) getSetting('smtp_host', '');
-if ($mailOn && $smtpHost !== '') {
-    $add('email', 'ok', "SMTP configurato ($smtpHost). Esegui un invio di prova per confermare la consegna.");
-} else {
+if (!$mailOn || $smtpHost === '') {
     $add('email', 'warn', 'Email non configurata: notifiche/promemoria via email non partiranno. Configura SMTP in Impostazioni.');
+} else {
+    require_once __DIR__ . '/../config/mail.php';
+    $probe = smtpAuthProbe();
+    if ($probe['ok']) {
+        $add('email', 'ok', "SMTP $smtpHost: connessione e autenticazione riuscite.");
+    } else {
+        $add('email', 'fail', "SMTP $smtpHost non funzionante: {$probe['error']} Nessuna email (promemoria, scadenze, comunicazioni) sta partendo.");
+    }
 }
 
 // ── Webhook secrets (fail-closed already, but flag missing) ─────────────────
+// Un segnaposto copiato da .env.example (`whsec_...`, `sk_live_...`) non è vuoto,
+// quindi passava il controllo e il webhook risultava "configurato" mentre il
+// provider avrebbe rifiutato la chiave. Vale come mancante.
+$isPlaceholder = static fn(string $v): bool => $v === '' || str_ends_with($v, '...') || preg_match('/^(sk|pk|rk)_(live|test)_\.{3}$/', $v) === 1;
 $twilio = (string) (getSetting('twilio_auth_token') ?: getenv('TWILIO_AUTH_TOKEN'));
 $stripe = (string) (getSetting('stripe_webhook_secret') ?: getenv('STRIPE_WEBHOOK_SECRET'));
 $whMsg = [];
-if ($twilio === '') $whMsg[] = 'Twilio';
-if ($stripe === '') $whMsg[] = 'Stripe';
+if ($isPlaceholder($twilio)) $whMsg[] = 'Twilio';
+if ($isPlaceholder($stripe)) $whMsg[] = 'Stripe';
 $add('webhooks', empty($whMsg) ? 'ok' : 'warn',
     empty($whMsg)
         ? 'Firme webhook configurate; richieste non firmate rifiutate.'
