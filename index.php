@@ -38,9 +38,20 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     <?php endif; ?>
     <link rel="stylesheet" href="branding.css.php">
     <link rel="stylesheet" href="assets/css/theme-orlandi.css?v=<?= @filemtime(__DIR__ . '/assets/css/theme-orlandi.css') ?: time() ?>">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H"
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+          integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV"
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Ospitato in casa, come su login.php. Prima era `lucide@latest` da unpkg:
+         nessuna versione fissata e nessun SRI, cioe' qualunque cosa la CDN
+         servisse quel giorno eseguita dentro il gestionale — che tiene contratti,
+         documenti d'identita' e anagrafiche. Vale anche quando unpkg e'
+         semplicemente irraggiungibile: senza le icone la barra laterale resta
+         una colonna di parole senza simboli, ma soprattutto non e' accettabile
+         che l'apertura dell'applicazione dipenda da un terzo. -->
+    <script src="assets/vendor/lucide-1.27.0.min.js?v=<?= @filemtime(__DIR__ . '/assets/vendor/lucide-1.27.0.min.js') ?: time() ?>"></script>
     <script>
         // Expose role + write permission to all view scripts.
         // canWrite is false only for the 'readonly' role — API enforces the same.
@@ -274,13 +285,26 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
             </main>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+        <!-- integrity= su tutto quello che resta su CDN. La versione era gia' fissata,
+         quindi il problema non era "cambia sotto i piedi" ma "nessuno verifica
+         cosa arriva": senza SRI il browser esegue qualunque cosa la CDN
+         restituisca a quell'URL. crossorigin e' obbligatorio perche' SRI possa
+         essere controllato. Se un file non corrisponde all'hash il browser lo
+         scarta: la mappa degrada (map.js gestisce gia' l'assenza del cluster) e
+         i grafici non si disegnano, ma non gira codice non verificato. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+            integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt"
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- Raggruppamento marker. map.js degrada a layerGroup se questo script non
          arriva, quindi la mappa resta utilizzabile anche senza CDN. Il tema
          (assets/css/theme-orlandi.css) sostituisce le icone di default del
          plugin, per questo NON carichiamo MarkerCluster.Default.css. -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+            integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr"
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- format.js prima di tutti: ogni controller ci appoggia le date. -->
     <script src="assets/js/format.js?v=<?= @filemtime(__DIR__ . '/assets/js/format.js') ?: time() ?>"></script>
     <script src="assets/js/geocode.js"></script>
