@@ -148,6 +148,9 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                         <?php if (canAccessView('invoices')): ?>
                         <li><a href="view.php?name=invoices" class="nav-link" data-view="invoices"><i class="nav-icon" data-lucide="receipt"></i><span class="nav-label">Fatture</span></a></li>
                         <?php endif; ?>
+                        <?php if (canAccessView('esign')): ?>
+                        <li><a href="view.php?name=esign" class="nav-link" data-view="esign"><i class="nav-icon" data-lucide="pen-tool"></i><span class="nav-label">Firme digitali</span></a></li>
+                        <?php endif; ?>
                     </ul>
                 </details>
 
@@ -171,6 +174,9 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                         <?php endif; ?>
                         <?php if (canAccessView('scadenzario')): ?>
                         <li><a href="view.php?name=scadenzario" class="nav-link" data-view="scadenzario"><i class="nav-icon" data-lucide="calendar-clock"></i><span class="nav-label">Scadenzario fiscale</span></a></li>
+                        <?php endif; ?>
+                        <?php if (canAccessView('payment_reminders')): ?>
+                        <li><a href="view.php?name=payment_reminders" class="nav-link" data-view="payment_reminders"><i class="nav-icon" data-lucide="bell-ring"></i><span class="nav-label">Solleciti pagamenti</span></a></li>
                         <?php endif; ?>
                     </ul>
                 </details>

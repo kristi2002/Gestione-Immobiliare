@@ -15,6 +15,7 @@ $allowed = [
     'aml', 'scadenzario', 'portal_sync', 'valuation',
     'contract_edit', 'invoice_edit', 'lead_edit', 'tenant_edit', 'appointment_edit', 'expense_edit', 'payment_edit',
     'appointment_profile', 'entity_edit', 'account',
+    'esign', 'payment_reminders',
 ];
 $name    = basename($_GET['name'] ?? '');
 

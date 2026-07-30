@@ -125,3 +125,21 @@
 @media (max-width: 640px) {
     .gdpr-action--danger { background: var(--color-surface); }
 }
+
+/* ===== Stato dell'invio automatico (Solleciti pagamenti) ==================
+   Il pallino accanto a "Invio automatico" dice a colpo d'occhio se il cron
+   sta girando. Serve perche' il guasto tipico di un job notturno non e' un
+   errore ma il silenzio: in produzione il crontab ha gia' filtrato i
+   container sul nome sbagliato e ogni job e' fallito per mesi senza che
+   nessuno se ne accorgesse. */
+.pr-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: var(--color-text-muted, #94a3b8);
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, .18);
+}
+.pr-dot--ok   { background: var(--color-success, #16a34a); box-shadow: 0 0 0 3px rgba(22, 163, 74, .18); }
+.pr-dot--warn { background: var(--color-warning, #d97706); box-shadow: 0 0 0 3px rgba(217, 119, 6, .18); }
+.pr-dot--bad  { background: var(--color-danger,  #dc2626); box-shadow: 0 0 0 3px rgba(220, 38, 38, .18); }

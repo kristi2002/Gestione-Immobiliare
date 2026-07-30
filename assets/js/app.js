@@ -195,6 +195,8 @@
             scadenzario:           'Scadenzario Fiscale',
             portal_sync:           'Pubblicazioni Portali',
             valuation:             'Valutazioni OMI',
+            esign:                 'Firme digitali',
+            payment_reminders:     'Solleciti pagamenti',
             // One route, many forms — the real label comes from entityFormTitles
             // below via resolveTitle(). This entry exists so parseUrl() accepts
             // the view on a reload or a pasted link.

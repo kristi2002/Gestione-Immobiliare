@@ -56,11 +56,13 @@ SQL;
 $payments = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
 $stats = [
-    'total'   => count($payments),
-    'sent'    => 0,
-    'skipped' => 0,
-    'failed'  => 0,
-    'errors'  => [],
+    'total'     => count($payments),
+    'sent'      => 0,
+    'skipped'   => 0,
+    'failed'    => 0,
+    // Accettati dal mailer ma mai spediti, perche' l'invio email e' spento.
+    'simulated' => 0,
+    'errors'    => [],
 ];
 
 $cooldownDays = 7;
@@ -132,7 +134,13 @@ HTML;
     $result = sendClientEmail($recipientEmail, $subject, $textBody, $htmlBody);
 
     // ── Log ────────────────────────────────────────────────────────────────────
-    $logStatus = $result['success'] ? 'sent' : 'failed';
+    // Con l'invio email spento sendClientEmail() risponde success=true senza
+    // spedire niente. Questo job gira ogni notte: registrandolo come 'sent'
+    // riempiva da solo il registro di solleciti mai partiti, e ogni riga finta
+    // bloccava per sette giorni (il periodo di attesa qui sotto, che conta solo
+    // le righe 'sent') il sollecito vero che sarebbe partito a invio riacceso.
+    $wasSimulated = !empty($result['simulated']);
+    $logStatus = $wasSimulated ? 'simulated' : ($result['success'] ? 'sent' : 'failed');
     $errorMsg  = $result['error'] ?? null;
 
     $logStmt = $db->prepare(
@@ -151,7 +159,9 @@ HTML;
         ':err'     => $errorMsg,
     ]);
 
-    if ($result['success']) {
+    if ($wasSimulated) {
+        $stats['simulated']++;
+    } elseif ($result['success']) {
         $stats['sent']++;
     } else {
         $stats['failed']++;

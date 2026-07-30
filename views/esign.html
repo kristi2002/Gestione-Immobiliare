@@ -1,0 +1,90 @@
+<div class="esign-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Firme digitali</h2>
+            <p>Le richieste di firma inviate: chi deve ancora firmare, chi ha firmato, cosa è scaduto.</p>
+        </div>
+    </div>
+
+    <div id="esign-alert" class="alert" style="display:none;"></div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="esign-search" class="form-input" placeholder="Cerca per firmatario o email…" autocomplete="off">
+        </div>
+        <select id="esign-status-filter" class="form-select">
+            <option value="">Tutti gli stati</option>
+            <option value="pending">In attesa di firma</option>
+            <option value="signed">Firmate</option>
+            <option value="expired">Scadute</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="esign-table">
+            <thead>
+                <tr>
+                    <th>Firmatario</th>
+                    <th>Documento</th>
+                    <th>Stato</th>
+                    <th>Inviata</th>
+                    <th>Scadenza / Firma</th>
+                    <th class="col-actions">Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="esign-tbody">
+                <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="esign-pagination" class="pagination-container"></div>
+
+    <p class="text-muted" style="margin-top:1.25rem;font-size:.85rem;">
+        Una richiesta di firma si crea dalla scheda di un contratto, con il pulsante
+        <i data-lucide="pen-tool" style="width:14px;height:14px;vertical-align:-2px;"></i> Firma digitale.
+    </p>
+</div>
+
+<!-- Revoca: conferma esplicita, il link smette di funzionare -->
+<div class="modal-overlay" id="esign-revoke-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="esign-revoke-title">
+        <div class="modal-header">
+            <h3 id="esign-revoke-title">Revoca richiesta di firma</h3>
+            <button class="modal-close" id="esign-revoke-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Vuoi revocare la richiesta inviata a <strong id="esign-revoke-name"></strong>?</p>
+            <p class="text-muted" style="margin-bottom:0;">
+                Il link smette immediatamente di funzionare. Se la persona sta per firmare, si troverà davanti a un errore.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="esign-revoke-cancel">Annulla</button>
+            <button type="button" class="btn btn--danger" id="esign-revoke-confirm">Revoca</button>
+        </div>
+    </div>
+</div>
+
+<!-- Link di firma: serve quando l'email non parte -->
+<div class="modal-overlay" id="esign-link-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="esign-link-title">
+        <div class="modal-header">
+            <h3 id="esign-link-title">Link di firma</h3>
+            <button class="modal-close" id="esign-link-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted">
+                Chiunque abbia questo link può firmare come <strong id="esign-link-signer"></strong>. Invialo solo a lei.
+            </p>
+            <div style="display:flex;gap:.5rem;align-items:center;">
+                <input type="text" id="esign-link-url" class="form-input" readonly style="flex:1;min-width:0;font-family:monospace;font-size:.8rem;">
+                <button type="button" class="btn btn--secondary" id="esign-link-copy">Copia</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="esign-link-done">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/esign.js"></script>

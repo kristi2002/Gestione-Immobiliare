@@ -1,0 +1,124 @@
+<div class="payment-reminders-view">
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Solleciti pagamenti</h2>
+            <p>Chi è in ritardo, chi è già stato avvisato, e cosa ha fatto l'invio automatico.</p>
+        </div>
+    </div>
+
+    <div id="pr-alert" class="alert" style="display:none;"></div>
+
+    <!-- Stato dell'invio automatico. Sta in cima perche' il modo tipico in cui
+         questa funzione smette di funzionare non e' un errore: e' il silenzio. -->
+    <div class="card" id="pr-cron-card" style="padding:1rem 1.25rem;margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+            <span id="pr-cron-dot" class="pr-dot"></span>
+            <div style="flex:1;min-width:220px;">
+                <div style="font-weight:600;">Invio automatico</div>
+                <div class="text-muted" style="font-size:.85rem;" id="pr-cron-text">Verifica in corso…</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="db-stats" id="pr-kpi">
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="alert-circle"></i></div>
+            <div class="db-stat__label">Pagamenti in ritardo</div>
+            <div class="db-stat__value" id="pr-kpi-overdue">—</div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="send"></i></div>
+            <div class="db-stat__label">Da sollecitare ora</div>
+            <div class="db-stat__value" id="pr-kpi-send">—</div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="pause-circle"></i></div>
+            <div class="db-stat__label">Saltati</div>
+            <div class="db-stat__value" id="pr-kpi-skip">—</div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat__chip"><i data-lucide="banknote"></i></div>
+            <div class="db-stat__label">Importo scaduto</div>
+            <div class="db-stat__value" id="pr-kpi-amount">—</div>
+        </div>
+    </div>
+
+    <div class="card" style="padding:1.25rem;margin-top:1rem;">
+        <h3 style="margin:0 0 .5rem;">Pagamenti in ritardo</h3>
+        <p class="text-muted" style="margin:0 0 1rem;font-size:.88rem;">
+            Chi ha <strong>Da sollecitare</strong> riceverà un'email premendo il pulsante qui sotto.
+            Gli altri vengono saltati per il motivo indicato.
+        </p>
+
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Inquilino</th>
+                        <th>Immobile</th>
+                        <th>Scadenza</th>
+                        <th>Ritardo</th>
+                        <th>Importo</th>
+                        <th>Esito previsto</th>
+                    </tr>
+                </thead>
+                <tbody id="pr-candidates">
+                    <tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+            <button class="btn btn--primary" id="pr-run" data-requires-write disabled>
+                <i data-lucide="send"></i> Invia solleciti
+            </button>
+        </div>
+    </div>
+
+    <div class="card" style="padding:1.25rem;margin-top:1.25rem;">
+        <h3 style="margin:0 0 1rem;">Registro solleciti</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Destinatario</th>
+                        <th>Canale</th>
+                        <th>Ritardo</th>
+                        <th>Esito</th>
+                    </tr>
+                </thead>
+                <tbody id="pr-log">
+                    <tr><td colspan="5" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="pr-log-pagination" class="pagination-container"></div>
+    </div>
+</div>
+
+<!-- Conferma: e' un pulsante che scrive a molte persone in una volta sola -->
+<div class="modal-overlay" id="pr-confirm-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="pr-confirm-title">
+        <div class="modal-header">
+            <h3 id="pr-confirm-title">Invia solleciti</h3>
+            <button class="modal-close" id="pr-confirm-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Stai per inviare un'email di sollecito a <strong id="pr-confirm-count"></strong>.</p>
+            <p class="text-muted" style="margin-bottom:0;">
+                Ognuno riceverà un solo messaggio, e non verrà risollecitato per
+                <strong id="pr-confirm-cooldown"></strong> giorni.
+            </p>
+            <p id="pr-confirm-mailoff" class="alert alert--warning" style="display:none;margin-top:1rem;">
+                L'invio email è disattivato: non partirà nessun messaggio.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="pr-confirm-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="pr-confirm-ok">Invia</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/payment_reminders.js"></script>

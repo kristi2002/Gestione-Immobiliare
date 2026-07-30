@@ -7,9 +7,9 @@ const ADMIN_ROLES = ['super_admin', 'admin', 'agent', 'readonly'];
 
 const ROLE_PERMISSIONS = [
     'super_admin' => ['*'],
-    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','agents','reports','social','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
-    'agent'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation'],
-    'readonly'    => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','tenants','tenant_edit','tenant_profile','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','forecast','property_applications','invoices','invoice_edit','aml','scadenzario','portal_sync','valuation'],
+    'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','agents','reports','social','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation','esign'],
+    'agent'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','maintenance_workflow','whatsapp_inbox','property_applications','aml','scadenzario','portal_sync','valuation','esign'],
+    'readonly'    => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','tenants','tenant_edit','tenant_profile','buildings','building_profile','insurance','meters','suppliers','inventory','surveys','forecast','property_applications','invoices','invoice_edit','aml','scadenzario','portal_sync','valuation','esign'],
 ];
 
 // Features present in code but intentionally turned off — no working backend
@@ -66,6 +66,10 @@ const VIEW_MIN_ROLE = [
     // ROLE_PERMISSIONS, dove non compare per nessun ruolo: 403 anche per admin.
     'agent_profile' => 'admin',
     'invoices'     => 'admin',
+    // Stessa soglia di api/payment_reminder_log.php, che è requireRole('admin',
+    // 'super_admin'): la pagina fa partire un invio a TUTTI gli inquilini in
+    // ritardo, quindi chi non può eseguirlo non deve nemmeno trovarne il tasto.
+    'payment_reminders' => 'admin',
 ];
 
 function getCurrentRole(): string
