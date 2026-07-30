@@ -48,10 +48,38 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     const originalFetch = window.fetch.bind(window);
+    const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
     window.fetch = async function (url, options = {}) {
         const opts = { ...options };
         const method = (opts.method || 'GET').toUpperCase();
-        if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+
+        // ── Blocco sola-lettura, al livello giusto ────────────────────────────
+        // Prima si nascondevano i bottoni il cui id iniziava per "btn-new-", e
+        // basta. Ma i controlli che scrivono sono un'altra quarantina con nomi
+        // di ogni tipo — btn-backup-now, btn-doc-upload, ape-save,
+        // btn-millesimi-save, i "Elimina" dentro le finestre di conferma… — e
+        // tutti restavano vivi. L'API li rifiuta comunque (requireWriteAccess),
+        // quindi non era un buco: era un utente in sola lettura che preme un
+        // bottone e riceve un errore crudo, senza capire perche'.
+        //
+        // Elencare altri prefissi avrebbe solo spostato il problema al prossimo
+        // bottone con un nome nuovo. Il punto in cui TUTTE le scritture passano
+        // davvero e' questo: il metodo HTTP. Nessun elenco da tenere aggiornato,
+        // niente che possa sfuggire, e il messaggio arriva prima della richiesta
+        // invece che come 403 di ritorno.
+        if (!window.canWrite && WRITE_METHODS.includes(method)) {
+            const message = 'Account in sola lettura: questa operazione non è consentita.';
+            // Si restituisce una risposta vera, non un throw: i chiamanti fanno
+            // tutti `const json = await res.json()` e leggono `json.error`, quindi
+            // il messaggio finisce nell'avviso che quella schermata usa già.
+            return new Response(
+                JSON.stringify({ success: false, error: message }),
+                { status: 403, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
+
+        if (csrfToken && WRITE_METHODS.includes(method)) {
             opts.headers = new Headers(opts.headers || {});
             if (!opts.headers.has('X-CSRF-Token')) {
                 opts.headers.set('X-CSRF-Token', csrfToken);
@@ -483,12 +511,21 @@
                     DatePicker.setupIn(this.contentEl);
                 }
 
-                // Hide write-only static controls for readonly users.
-                // Dynamic card buttons are gated inside each module's renderCards().
+                // Sola lettura: si nascondono i controlli che non porterebbero
+                // da nessuna parte. `btn-new-*` per convenzione storica,
+                // `[data-requires-write]` per dirlo esplicitamente su un
+                // bottone che non segue quel nome.
+                //
+                // Questo e' solo cosmetico e vale per quello che c'e' nel
+                // markup al momento del caricamento: i bottoni disegnati dopo
+                // (le schede di un elenco) non passano di qui. Il divieto vero
+                // e' nel wrapper di window.fetch in cima a questo file, che
+                // ferma ogni POST/PUT/PATCH/DELETE prima che parta — li' non
+                // c'e' niente che possa sfuggire.
                 if (!window.canWrite) {
-                    this.contentEl.querySelectorAll('[id^="btn-new-"]').forEach(el => {
-                        el.hidden = true;
-                    });
+                    this.contentEl
+                        .querySelectorAll('[id^="btn-new-"], [data-requires-write]')
+                        .forEach(el => { el.hidden = true; });
                 }
 
             } catch (err) {
