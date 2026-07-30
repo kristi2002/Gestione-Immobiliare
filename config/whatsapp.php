@@ -68,6 +68,102 @@ function sendWhatsAppMessage(string $toPhone, string $body): array
 }
 
 /**
+ * Verifica che il numero mittente configurato sia DAVVERO un mittente WhatsApp
+ * registrato su questo account Twilio, senza spedire alcun messaggio.
+ *
+ * Serve perché un numero Twilio qualsiasi ha `sms`/`voice` ma non il canale
+ * WhatsApp: configurarlo come mittente non dà nessun errore in fase di
+ * salvataggio, e ogni invio muore poi con l'errore 63007 ("nessun canale per
+ * questo mittente") dentro i log di Twilio, dove nessuno guarda. È esattamente
+ * così che questa integrazione è rimasta rotta per settimane sembrando attiva.
+ *
+ * Distingue anche i due casi che *sembrano* funzionanti ma non sono utilizzabili
+ * da un cliente reale: la sandbox (nessun WABA: scrive solo a chi ha mandato
+ * "join <codice>") e l'account Trial (tetto giornaliero, destinatari verificati).
+ *
+ * @return array{ok: bool, usable: bool, error: ?string, detail: ?string}
+ */
+function whatsappSenderProbe(?array $cfg = null, int $timeout = 10): array
+{
+    $cfg ??= getWhatsAppConfig();
+
+    if ($cfg['account_sid'] === '' || $cfg['auth_token'] === '') {
+        return ['ok' => false, 'usable' => false, 'error' => 'Credenziali Twilio mancanti.', 'detail' => null];
+    }
+    if ($cfg['from'] === '') {
+        return ['ok' => false, 'usable' => false, 'error' => 'Nessun numero mittente WhatsApp configurato.', 'detail' => null];
+    }
+
+    $get = static function (string $url) use ($cfg, $timeout): array {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_USERPWD        => $cfg['account_sid'] . ':' . $cfg['auth_token'],
+            CURLOPT_TIMEOUT        => $timeout,
+        ]);
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+        return [$code, json_decode((string) $raw, true), ($raw === false || $code === 0) ? ($err ?: 'connessione fallita') : null];
+    };
+
+    // Una connessione fallita NON è una risposta: senza questo controllo un
+    // errore di rete o di certificato lasciava la lista dei mittenti vuota e la
+    // sonda concludeva "il numero non è un mittente WhatsApp" — una diagnosi
+    // sbagliata e credibile, il modo peggiore di sbagliare.
+    [$code, $data, $transport] = $get('https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=50');
+    if ($transport !== null) {
+        return ['ok' => false, 'usable' => false, 'error' => "Impossibile interrogare Twilio: {$transport}.", 'detail' => 'Stato del mittente WhatsApp non verificato.'];
+    }
+    if ($code >= 400) {
+        $msg = $data['message'] ?? "HTTP {$code}";
+        return ['ok' => false, 'usable' => false, 'error' => "Twilio non raggiungibile o credenziali rifiutate: {$msg}", 'detail' => null];
+    }
+
+    $from   = str_starts_with($cfg['from'], 'whatsapp:') ? $cfg['from'] : 'whatsapp:' . $cfg['from'];
+    $sender = null;
+    foreach (($data['senders'] ?? []) as $s) {
+        if (($s['sender_id'] ?? '') === $from) {
+            $sender = $s;
+            break;
+        }
+    }
+
+    if ($sender === null) {
+        $known = array_filter(array_map(static fn(array $s): string => (string) ($s['sender_id'] ?? ''), $data['senders'] ?? []));
+        return [
+            'ok'     => false,
+            'usable' => false,
+            'error'  => "Il numero {$cfg['from']} non è un mittente WhatsApp su questo account Twilio: ogni invio fallirà con l'errore 63007.",
+            'detail' => $known ? 'Mittenti WhatsApp disponibili: ' . implode(', ', $known) . '.' : 'Nessun mittente WhatsApp registrato sull\'account.',
+        ];
+    }
+
+    $status  = strtoupper((string) ($sender['status'] ?? 'UNKNOWN'));
+    $isSandbox = ((string) ($sender['configuration']['waba_id'] ?? '')) === '';
+
+    [, $acct, $acctErr] = $get('https://api.twilio.com/2010-04-01/Accounts/' . $cfg['account_sid'] . '.json');
+    $isTrial = $acctErr === null && strtolower((string) ($acct['type'] ?? '')) === 'trial';
+
+    $blockers = [];
+    if ($status !== 'ONLINE')  $blockers[] = "mittente in stato {$status}";
+    if ($isSandbox)            $blockers[] = 'è la sandbox (scrive solo a chi ha inviato "join <codice>")';
+    if ($isTrial)              $blockers[] = 'account Twilio in prova (tetto giornaliero, solo destinatari verificati)';
+
+    if ($blockers) {
+        return [
+            'ok'     => true,
+            'usable' => false,
+            'error'  => 'Mittente WhatsApp registrato ma non utilizzabile con clienti reali: ' . implode('; ', $blockers) . '.',
+            'detail' => 'Serve un numero WhatsApp Business (WABA) e un account Twilio a pagamento.',
+        ];
+    }
+
+    return ['ok' => true, 'usable' => true, 'error' => null, 'detail' => "Mittente {$cfg['from']} attivo."];
+}
+
+/**
  * URL pubblico dello status callback, o null se APP_URL non è configurato
  * (in locale Twilio non potrebbe comunque raggiungerci).
  */
@@ -266,8 +362,11 @@ function normalizeWhatsAppNumber(string $phone): string
     if (str_starts_with($digits, '00')) {
         $digits = substr($digits, 2);
     }
+    // Lo zero iniziale dei fissi italiani NON è un prefisso interurbano da
+    // togliere: in formato internazionale resta (+39 0733 123456 per Civitanova).
+    // Rimuovendolo si otteneva +39733123456, un numero che non esiste.
     if (str_starts_with($digits, '0')) {
-        $digits = '39' . substr($digits, 1);
+        $digits = '39' . $digits;
     }
     if (!str_starts_with($digits, '39') && strlen($digits) <= 10) {
         $digits = '39' . $digits;

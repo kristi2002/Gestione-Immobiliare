@@ -121,6 +121,24 @@ if (!$mailOn || $smtpHost === '') {
     }
 }
 
+// ── WhatsApp: il mittente configurato è davvero un canale WhatsApp? ─────────
+// Non esisteva alcun controllo, ed è per questo che l'integrazione è rimasta
+// "attiva" per settimane mentre ogni singolo invio moriva con l'errore 63007.
+$waOn = filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN);
+if (!$waOn) {
+    $add('whatsapp', 'warn', 'WhatsApp disattivato: i messaggi vengono registrati come "simulati", non spediti.');
+} else {
+    require_once __DIR__ . '/../config/whatsapp.php';
+    $wa = whatsappSenderProbe();
+    if ($wa['usable']) {
+        $add('whatsapp', 'ok', (string) $wa['detail']);
+    } else {
+        // Mittente inesistente = rotto (fail). Sandbox/trial = tecnicamente
+        // funzionante ma non proponibile a un cliente (warn).
+        $add('whatsapp', $wa['ok'] ? 'warn' : 'fail', $wa['error'] . ($wa['detail'] ? ' ' . $wa['detail'] : ''));
+    }
+}
+
 // ── Webhook secrets (fail-closed already, but flag missing) ─────────────────
 // Un segnaposto copiato da .env.example (`whsec_...`, `sk_live_...`) non è vuoto,
 // quindi passava il controllo e il webhook risultava "configurato" mentre il
