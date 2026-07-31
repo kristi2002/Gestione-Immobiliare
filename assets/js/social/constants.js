@@ -19,6 +19,10 @@ export const STATUS_LABELS = {
     scheduled: 'Programmato',
     published: 'Pubblicato',
     failed:    'Fallito',
+    // Accettato dal simulatore ma mai uscito, perche' l'integrazione Meta e'
+    // spenta. Senza questa voce la riga mostrerebbe un'etichetta vuota, che si
+    // legge come "non lo so" invece che come "non e' stato pubblicato".
+    simulated: 'Non pubblicato — integrazione spenta',
 };
 
 export const PAGE_LIMIT = 25;

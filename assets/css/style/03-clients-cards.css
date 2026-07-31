@@ -180,6 +180,16 @@
     color: var(--color-danger);
 }
 
+/* Accettato dal simulatore ma mai uscito: l'integrazione Meta e' spenta.
+   Ambra e non verde — l'annuncio non e' stato pubblicato — ma nemmeno rosso,
+   perche' non e' un guasto da riparare: e' una funzione da configurare.
+   Senza questa regola il badge resterebbe senza colore, e in una colonna di
+   pastiglie colorate l'unica grigia si legge come un errore di rendering. */
+.badge--social-simulated {
+    background: #fef3c7;
+    color: #b45309;
+}
+
 .post-caption-cell {
     display: flex;
     align-items: flex-start;

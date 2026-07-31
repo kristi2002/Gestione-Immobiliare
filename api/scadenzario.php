@@ -18,6 +18,14 @@ apiHandleOptions();
 try {
     $db      = getDB();
     $horizon = isset($_GET['horizon']) ? max(30, min(1825, (int) $_GET['horizon'])) : 365;
+    // Finestra all'INDIETRO. Prima non esisteva: ogni query aveva solo il
+    // limite superiore, quindi una scadenza passata restava nel elenco per
+    // sempre. Un contratto finito nel 2019 compariva accanto a uno in scadenza
+    // la settimana prossima, e la lista non poteva che allungarsi ogni anno --
+    // senza LIMIT, tutta caricata in memoria e resa in un colpo solo.
+    // Un anno indietro copre cio' su cui si puo' ancora agire (un'imposta non
+    // versata, un APE da rifare); piu' indietro e' archivio, non scadenzario.
+    $lookback = isset($_GET['lookback']) ? max(30, min(1825, (int) $_GET['lookback'])) : 365;
     $typeF   = trim($_GET['type'] ?? '');
 
     $items = [];
@@ -29,6 +37,7 @@ try {
          LEFT JOIN properties p ON p.id = c.property_id
          WHERE c.end_date IS NOT NULL
            AND c.end_date <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)
+           AND c.end_date >= DATE_SUB(CURDATE(), INTERVAL $lookback DAY)
            AND (c.status IS NULL OR c.status NOT IN ('cancelled'))"
     )->fetchAll();
     foreach ($rows as $r) {
@@ -42,7 +51,8 @@ try {
          LEFT JOIN properties p ON p.id = c.property_id
          WHERE c.imposta_registro_due_date IS NOT NULL
            AND c.cedolare_secca = 0
-           AND c.imposta_registro_due_date <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)"
+           AND c.imposta_registro_due_date <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)
+           AND c.imposta_registro_due_date >= DATE_SUB(CURDATE(), INTERVAL $lookback DAY)"
     )->fetchAll();
     foreach ($rows as $r) {
         $items[] = makeItem('registration', 'Imposta di registro', $r['title'], $r['address'], $r['d'], 'contracts', (int) $r['id']);
@@ -54,6 +64,7 @@ try {
          FROM properties
          WHERE ape_expiry_date IS NOT NULL
            AND ape_expiry_date <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)
+           AND ape_expiry_date >= DATE_SUB(CURDATE(), INTERVAL $lookback DAY)
            AND status != 'archived'"
     )->fetchAll();
     foreach ($rows as $r) {
@@ -66,7 +77,8 @@ try {
          FROM property_insurance pi
          LEFT JOIN properties p ON p.id = pi.property_id
          WHERE pi.end_date IS NOT NULL
-           AND pi.end_date <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)"
+           AND pi.end_date <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)
+           AND pi.end_date >= DATE_SUB(CURDATE(), INTERVAL $lookback DAY)"
     )->fetchAll();
     foreach ($rows as $r) {
         $items[] = makeItem('insurance', 'Scadenza assicurazione', $r['insurer_name'], $r['address'], $r['d'], 'insurance', (int) $r['id']);
@@ -77,7 +89,8 @@ try {
         "SELECT id, subject_name, retention_until AS d
          FROM aml_records
          WHERE retention_until IS NOT NULL
-           AND retention_until <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)"
+           AND retention_until <= DATE_ADD(CURDATE(), INTERVAL $horizon DAY)
+           AND retention_until >= DATE_SUB(CURDATE(), INTERVAL $lookback DAY)"
     )->fetchAll();
     foreach ($rows as $r) {
         $items[] = makeItem('aml', 'Conservazione antiriciclaggio', $r['subject_name'], null, $r['d'], 'aml', (int) $r['id']);
@@ -95,7 +108,24 @@ try {
         $stats[$it['severity']]++;
     }
 
-    apiSuccess(['items' => $items, 'stats' => $stats, 'horizon' => $horizon]);
+    // Le statistiche restano calcolate sull'insieme COMPLETO della finestra:
+    // troncare anche quelle farebbe sparire scadenze dai contatori, che e'
+    // peggio che non mostrarle in elenco. L'elenco invece ha un tetto, e quando
+    // lo tocca la risposta lo dichiara invece di far credere che sia tutto.
+    $cap       = 500;
+    $truncated = count($items) > $cap;
+    if ($truncated) {
+        $items = array_slice($items, 0, $cap);
+    }
+
+    apiSuccess([
+        'items'     => $items,
+        'stats'     => $stats,
+        'horizon'   => $horizon,
+        'lookback'  => $lookback,
+        'truncated' => $truncated,
+        'shown'     => count($items),
+    ]);
 } catch (PDOException $e) {
     apiError('Errore database.', 500);
 }

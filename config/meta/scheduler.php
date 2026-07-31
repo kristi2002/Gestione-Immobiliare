@@ -30,21 +30,30 @@ function publishAndUpdatePost(PDO $db, array $post): array
     $result = publishSocialPost($db, $post);
 
     if ($result['success']) {
+        // A integrazione Meta spenta publishSocialPost() risponde success con
+        // simulated=true e identificativi inventati: niente e' uscito. Scrivere
+        // 'published' riempiva lo storico — l'unico posto dove l'agenzia
+        // verifica cosa e' stato pubblicato — di annunci che nessuno ha visto,
+        // e una volta collegato Meta sarebbero rimasti li' indistinguibili da
+        // quelli veri. Vedi phase89.
+        $publishStatus = !empty($result['simulated']) ? 'simulated' : 'published';
+
         // `error_message = NULL` cancellava il motivo di un invio solo parziale
         // (Facebook sì, Instagram no): la riga risultava pubblicata e nessuno
         // poteva più sapere che metà annuncio non era uscito, né perché.
         $update = $db->prepare(
             "UPDATE social_posts
-             SET status = 'published', published_at = NOW(),
+             SET status = :status, published_at = NOW(),
                  facebook_post_id = :fb_id, instagram_media_id = :ig_id,
                  error_message = :error
              WHERE id = :id"
         );
         $update->execute([
-            'id'    => $post['id'],
-            'fb_id' => $result['facebook_post_id'],
-            'ig_id' => $result['instagram_media_id'],
-            'error' => $result['error'],
+            'id'     => $post['id'],
+            'status' => $publishStatus,
+            'fb_id'  => $result['facebook_post_id'],
+            'ig_id'  => $result['instagram_media_id'],
+            'error'  => $result['error'],
         ]);
 
         // Un canale caduto per token scaduto va segnalato anche quando l'altro
@@ -55,7 +64,7 @@ function publishAndUpdatePost(PDO $db, array $post): array
 
         return [
             'id'        => $post['id'],
-            'status'    => 'published',
+            'status'    => $publishStatus,
             'partial'   => !empty($result['partial']),
             'error'     => $result['error'],
             'simulated' => $result['simulated'],
