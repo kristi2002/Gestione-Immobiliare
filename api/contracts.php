@@ -239,6 +239,12 @@ function updateContract(PDO $db, int $id): void
     $validated = validateContractInput($data);
     assertNoOverlappingLease($db, $validated, $id);
 
+    // Il canone PRIMA della modifica: serve subito dopo per capire se e' stato
+    // cambiato e quindi se lo scadenzario gia' emesso e' rimasto indietro.
+    $prevRentStmt = $db->prepare("SELECT monthly_rent FROM contracts WHERE id = :id");
+    $prevRentStmt->execute(['id' => $id]);
+    $prevRent = (float) $prevRentStmt->fetchColumn();
+
     $stmt = $db->prepare(
         "UPDATE contracts
          SET property_id = :property_id, tenant_id = :tenant_id, client_id = :client_id,
@@ -263,6 +269,7 @@ function updateContract(PDO $db, int $id): void
     // is a no-op when a schedule already exists, so repeated saves are harmless.
     autoGeneratePaymentSchedule($db, $id);
     syncPropertyOccupancy($db, $id);
+    syncFuturePaymentAmounts($db, $id, $prevRent, (float) $validated['monthly_rent']);
 
     getContract($db, $id);
 }
@@ -316,8 +323,58 @@ function setContractStatus(PDO $db, int $id): void
     // diversi dal salvataggio completo.
     autoGeneratePaymentSchedule($db, $id);
     syncPropertyOccupancy($db, $id);
+    // Nessun allineamento dei canoni qui: questa via non tocca monthly_rent.
 
     getContract($db, $id);
+}
+
+/**
+ * Porta il canone nuovo sulle rate ancora da emettere.
+ *
+ * Senza questo, cambiare il canone non arrivava mai allo scadenzario gia'
+ * generato, e non c'era modo di rimediare:
+ *
+ *   - insertPaymentSchedule() esce con -1 appena esiste una riga in `payments`
+ *     per quel contratto, quindi "Genera scadenzario" non rigenera nulla;
+ *   - in tutto il codice non esiste una DELETE FROM payments: le rate si
+ *     annullano (status='cancelled'), non si cancellano.
+ *
+ * Risultato: dopo un adeguamento ISTAT — che e' proprio il momento in cui il
+ * canone cambia — la scheda del contratto diceva 735 e l'agenzia continuava a
+ * incassare 700, per tutti gli anni rimanenti, senza un avviso da nessuna
+ * parte. Le due cifre stavano in due schermate diverse e nessuno le confrontava.
+ *
+ * Tocca SOLO le rate 'pending' con scadenza futura. Una rata pagata e' un
+ * fatto avvenuto; una gia' scaduta e' un importo che e' stato chiesto davvero:
+ * riscriverli sarebbe falsificare la contabilita' all'indietro. Il canone nuovo
+ * vale da qui in avanti, che e' anche come funziona un adeguamento ISTAT.
+ */
+function syncFuturePaymentAmounts(PDO $db, int $id, float $prevRent, float $newRent): int
+{
+    // Confronto in centesimi: due float uguali possono non esserlo (700.00).
+    if ((int) round($prevRent * 100) === (int) round($newRent * 100)) {
+        return 0;
+    }
+    if ($newRent <= 0) {
+        return 0;
+    }
+
+    $stmt = $db->prepare(
+        "UPDATE payments
+            SET amount = :amount
+          WHERE contract_id = :cid
+            AND status = 'pending'
+            AND due_date >= CURDATE()"
+    );
+    $stmt->execute(['amount' => $newRent, 'cid' => $id]);
+    $n = $stmt->rowCount();
+
+    if ($n > 0) {
+        logActivity('update', 'contract', $id,
+            "Canone aggiornato da {$prevRent} a {$newRent}: {$n} rate future allineate (contratto #{$id})");
+    }
+
+    return $n;
 }
 
 function deleteContract(PDO $db, int $id): void
