@@ -34,7 +34,6 @@
     let currentPage  = 1;
     const PAGE_LIMIT = 25;
     let currentView  = 'table'; // 'table' | 'kanban'
-    let allItems     = [];
     let suppliers    = [];
     const els        = {};
 
@@ -71,7 +70,13 @@
                 currentView = btn.dataset.view;
                 els.tableView.style.display  = currentView === 'table'  ? '' : 'none';
                 els.kanbanView.style.display = currentView === 'kanban' ? '' : 'none';
-                if (currentView === 'kanban') renderKanban(allItems);
+                // Ricarica invece di ridisegnare la pagina gia' in memoria: le
+                // due viste chiedono un numero diverso di righe (25 la tabella,
+                // che ha l'impaginatore; 100 la bacheca, che non ce l'ha).
+                // Ridisegnando `allItems` la bacheca ereditava le 25 della
+                // tabella e restava monca comunque.
+                currentPage = 1;
+                loadRequests();
             });
         });
 
@@ -136,7 +141,14 @@
         if (status)   params.set('maintenance_status', status);
         if (priority) params.set('priority', priority);
         params.set('page', currentPage);
-        params.set('limit', PAGE_LIMIT);
+        // La bacheca non ha un impaginatore — il suo `#mw-pagination` vive
+        // dentro `#mw-table-view`, che in vista kanban e' nascosto. Chiedendo
+        // 25 righe come la tabella, i biglietti dal 26esimo in poi non erano
+        // raggiungibili in nessun modo: nessun pulsante, nessun avviso, e le
+        // colonne mostravano il conteggio della sola pagina come se fosse il
+        // totale. 100 e' il tetto vero di apiGetPagination(): chiederne di piu'
+        // verrebbe tagliato in silenzio.
+        params.set('limit', currentView === 'kanban' ? 100 : PAGE_LIMIT);
 
         softLoad(els.tbody, '<tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
@@ -146,7 +158,6 @@
             if (!json.success) throw new Error(json.error);
 
             const parsed = window.Pagination.parseResponse(json);
-            allItems = parsed.items;
 
             if (currentView === 'table') {
                 renderTable(parsed.items);
@@ -154,6 +165,9 @@
             } else {
                 els.tbody.classList.remove('is-loading');
                 renderKanban(parsed.items);
+                // Se il tetto scatta lo si dice, invece di lasciar credere che
+                // la bacheca sia tutto il lavoro aperto.
+                renderKanbanNotice(parsed.items.length, parsed.total);
             }
         } catch (err) {
             els.tbody.classList.remove('is-loading');
@@ -239,6 +253,34 @@
 
         return `<strong>${esc(r.asset_name)}</strong>`
              + (bits.length ? `<div class="text-muted" style="font-size:0.75rem;">${bits.join(' · ')}</div>` : '');
+    }
+
+    /**
+     * Avviso di troncamento della bacheca.
+     *
+     * Le pastiglie sulle colonne contano le schede DISEGNATE, non quelle
+     * esistenti: senza questa riga un "3" su "Aperta" con dieci ticket aperti
+     * oltre il centesimo si legge come "ne restano tre", che e' esattamente la
+     * conclusione sbagliata da far trarre a chi smista la manutenzione.
+     */
+    function renderKanbanNotice(shown, total) {
+        const host = document.getElementById('mw-kanban-view');
+        if (!host) return;
+
+        let el = document.getElementById('mw-kanban-notice');
+        if (total > shown) {
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'mw-kanban-notice';
+                el.className = 'alert alert--warning';
+                el.style.margin = '0 0 1rem';
+                host.insertBefore(el, host.firstChild);
+            }
+            el.textContent = `Mostrati i primi ${shown} interventi di ${total}. `
+                + 'Restringi con i filtri, oppure passa alla vista tabella per scorrerli tutti.';
+        } else if (el) {
+            el.remove();
+        }
     }
 
     function renderKanban(items) {

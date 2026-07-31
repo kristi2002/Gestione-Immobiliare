@@ -12,6 +12,9 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/gdpr.php';
+// Per CONSENT_SUBJECT_TYPES: config/gdpr.php non lo carica, e una costante
+// mancante non la vede `php -l` — esplode solo alla richiesta.
+require_once __DIR__ . '/../config/consent.php';
 
 apiHandleOptions();
 
@@ -44,12 +47,31 @@ try {
 
 // ---------------------------------------------------------------------------
 
-function readSubject(): array
+/**
+ * Il soggetto della richiesta, con l'elenco dei tipi ammessi dall'azione.
+ *
+ * Il limite a client|tenant e' giusto per esportazione e cancellazione, che
+ * sono implementate solo per quelle due entita'. Era pero' l'unico limite
+ * esistente e valeva anche per la lettura dei consensi — dove e' sbagliato:
+ * `consent_records.subject_type` e' un ENUM di QUATTRO valori
+ * (client, tenant, lead, application), config/consent.php li scrive tutti e
+ * quattro, ma il registro di un lead o di una candidatura non si poteva
+ * rileggere: la richiesta veniva respinta prima di arrivare alla query.
+ *
+ * Conseguenza concreta: un lead che avesse dato o revocato il consenso
+ * commerciale restava senza risposta possibile alla domanda "quali consensi
+ * avete su di me" — la riga c'era, la schermata non poteva mostrarla.
+ *
+ * L'elenco e' un parametro e non una costante unica proprio perche' le due
+ * azioni hanno confini diversi: allargare anche export/erase significherebbe
+ * promettere una cancellazione che il codice sotto non sa eseguire.
+ */
+function readSubject(array $allowed = ['client', 'tenant']): array
 {
     $type = trim($_GET['subject_type'] ?? ($_POST['subject_type'] ?? ''));
     $id   = (int) ($_GET['subject_id'] ?? ($_POST['subject_id'] ?? 0));
-    if (!in_array($type, ['client', 'tenant'], true) || $id <= 0) {
-        apiError('subject_type (client|tenant) e subject_id obbligatori.');
+    if (!in_array($type, $allowed, true) || $id <= 0) {
+        apiError('subject_type (' . implode('|', $allowed) . ') e subject_id obbligatori.');
     }
     return [$type, $id];
 }
@@ -89,7 +111,9 @@ function subjectLog(PDO $db): void
 
 function subjectConsents(PDO $db): void
 {
-    [$type, $id] = readSubject();
+    // Tutti e quattro i tipi previsti dall'ENUM: qui si legge soltanto, e il
+    // registro dei consensi esiste anche per lead e candidature.
+    [$type, $id] = readSubject(CONSENT_SUBJECT_TYPES);
     $stmt = $db->prepare(
         "SELECT * FROM consent_records
           WHERE subject_type = :t AND subject_id = :id
