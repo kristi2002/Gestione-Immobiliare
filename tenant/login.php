@@ -10,17 +10,23 @@ if (isTenantLoggedIn()) {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isLoginLocked()) {
+    $email = trim($_POST['email'] ?? '');
+    $pass  = $_POST['password'] ?? '';
+
+    // L'identificativo va passato al blocco tentativi, come fa ogni ingresso
+    // amministratore (login.php, api/login.php, login_2fa.php). Senza, di
+    // config/login_throttle.php restava attivo il solo asse per IP: l'asse per
+    // account — quello che ferma chi ruota indirizzi contro una sola casella —
+    // non e' mai entrato in funzione su questo portale.
+    if (isLoginLocked(null, $email)) {
         $error = loginLockoutMessage();
     } else {
-        $email = trim($_POST['email'] ?? '');
-        $pass  = $_POST['password'] ?? '';
         if ($email && $pass && attemptTenantLogin($email, $pass)) {
-            recordLoginAttempt(true);
+            recordLoginAttempt(true, null, $email);
             header('Location: index.php');
             exit;
         }
-        recordLoginAttempt(false);
+        recordLoginAttempt(false, null, $email);
         $error = 'Credenziali non valide.';
     }
 }

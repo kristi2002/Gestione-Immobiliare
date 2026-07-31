@@ -282,10 +282,28 @@ function updateBuilding(PDO $db, int $id): void
     $data      = apiGetJsonBody();
     $validated = validateBuildingInput($db, $data);
 
+    // Le coordinate sopravvivono a un salvataggio che non le manda.
+    //
+    // Nessun modulo di modifica espone latitudine e longitudine: le scrive il
+    // geocoder ("Genera unita'", riga 490). Ma qui l'UPDATE le riscriveva
+    // sempre, e validateBuildingInput() le mette a null quando la chiave manca
+    // (riga 957): salvare l'edificio dalla sua scheda — cambiare una nota, il
+    // nome dell'amministratore — cancellava il posizionamento sulla mappa, e
+    // l'edificio spariva dalla mappa senza che nessuno avesse toccato la mappa.
+    //
+    // Stessa semantica di updateProperty (f17fb9a): chiave assente = "non la
+    // tocco", chiave presente = valore nuovo. Chi vuole azzerarle puo' ancora
+    // mandarle esplicitamente a null.
+    if (!array_key_exists('latitude', $data))  { unset($validated['latitude']); }
+    if (!array_key_exists('longitude', $data)) { unset($validated['longitude']); }
+
+    $latSql = array_key_exists('latitude', $validated)  ? 'latitude = :latitude, '   : '';
+    $lngSql = array_key_exists('longitude', $validated) ? 'longitude = :longitude, ' : '';
+
     $stmt = $db->prepare(
         "UPDATE buildings
          SET name = :name, address = :address, city = :city, cap = :cap, province = :province,
-             latitude = :latitude, longitude = :longitude,
+             {$latSql}{$lngSql}
              total_units = :total_units, notes = :notes,
              administrator_supplier_id = :administrator_supplier_id,
              administrator_name = :administrator_name, administrator_phone = :administrator_phone,

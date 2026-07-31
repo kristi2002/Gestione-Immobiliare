@@ -76,7 +76,12 @@ try {
         'client_id'   => $clientId ?: null,
         'tenant_id'   => $tenantId ?: null,
         'lead_id'     => $leadId,
-        'status'      => $result['status'],
+        // $savedStatus, non $result['status']: due righe piu' sotto la stessa
+        // richiesta scrive 'simulated' in `communications` (riga 100), e qui
+        // scriveva 'sent' per lo stesso identico messaggio. La Inbox WhatsApp
+        // legge questa tabella, Comunicazioni legge l'altra: lo stesso messaggio
+        // risultava spedito in una schermata e non spedito nell'altra.
+        'status'      => $savedStatus,
     ]);
 } catch (PDOException) {
     // Non-fatal — il messaggio è già partito, non si può disfare.

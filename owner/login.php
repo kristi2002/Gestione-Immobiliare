@@ -11,17 +11,21 @@ if (isOwnerLoggedIn()) {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isLoginLocked()) {
+    $email = trim($_POST['email'] ?? '');
+    $pass  = $_POST['password'] ?? '';
+
+    // Stesso motivo di tenant/login.php: senza identificativo il blocco per
+    // account non scatta, e su questo portale si entra nei dati di un
+    // proprietario. Ogni ingresso amministratore lo passa gia'.
+    if (isLoginLocked(null, $email)) {
         $error = loginLockoutMessage();
     } else {
-        $email = trim($_POST['email'] ?? '');
-        $pass  = $_POST['password'] ?? '';
         if ($email && $pass && attemptOwnerLogin($email, $pass)) {
-            recordLoginAttempt(true);
+            recordLoginAttempt(true, null, $email);
             header('Location: index.php');
             exit;
         }
-        recordLoginAttempt(false);
+        recordLoginAttempt(false, null, $email);
         $error = 'Credenziali non valide.';
     }
 }

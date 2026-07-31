@@ -114,7 +114,7 @@ function processSingleReminder(PDO $db, array $reminder): array
 
         if ($result['success']) {
             $outcome = !empty($result['simulated']) ? 'simulated' : 'sent';
-            logClientNotification($db, $reminder, $subject, $body, $recipient['email']);
+            logClientNotification($db, $reminder, $subject, $body, $recipient['email'], $outcome);
             logReminderDispatch($db, $reminder, $outcome, $recipient, $subject, $body,
                 $outcome === 'simulated' ? 'mail_enabled=false: email non spedita.' : null);
             $actions['client'] = $outcome;
@@ -322,7 +322,7 @@ function buildDefaultClientEmailBody(array $reminder): string
     return implode("\n", $lines);
 }
 
-function logClientNotification(PDO $db, array $reminder, string $subject, string $body, ?string $toEmail = null): void
+function logClientNotification(PDO $db, array $reminder, string $subject, string $body, ?string $toEmail = null, string $status = 'sent'): void
 {
     // communications.client_id is NOT NULL, so a lead/tenant-addressed
     // reminder has nowhere to log — skip rather than blow up the cron run.
@@ -330,11 +330,21 @@ function logClientNotification(PDO $db, array $reminder, string $subject, string
         return;
     }
 
+    // `status` era la stringa 'sent' scritta a mano nella query, quindi non
+    // guardava affatto com'era andato l'invio. Il chiamante aveva gia' in mano
+    // l'esito giusto ($outcome, riga 116) e lo passava solo al registro di
+    // dispatch: in Comunicazioni finiva 'sent' comunque, anche con l'invio email
+    // spento. Ed e' Comunicazioni l'archivio che l'agente apre davanti al
+    // proprietario per dire "le ho scritto il 14".
+    //
+    // La colonna `direction` resta 'sent' — li' significa "in uscita", non
+    // "consegnato": sono due sensi diversi della stessa parola nella stessa
+    // riga, ed e' il motivo per cui la svista era invisibile.
     $stmt = $db->prepare(
         "INSERT INTO communications
             (client_id, direction, channel, subject, body, from_email, to_email, status)
          VALUES
-            (:client_id, 'sent', 'email', :subject, :body, :from_email, :to_email, 'sent')"
+            (:client_id, 'sent', 'email', :subject, :body, :from_email, :to_email, :status)"
     );
     $stmt->execute([
         'client_id'  => $reminder['client_id'],
@@ -342,6 +352,7 @@ function logClientNotification(PDO $db, array $reminder, string $subject, string
         'body'       => $body,
         'from_email' => getMailConfig()['agency_email'],
         'to_email'   => $toEmail ?: $reminder['client_email'],
+        'status'     => $status,
     ]);
 }
 
