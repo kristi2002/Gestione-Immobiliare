@@ -462,10 +462,16 @@ function reloadBranding() {
  * cambiare host e premere "Invia test" prima interrogava ancora il vecchio
  * server. La password, se il campo è vuoto, la riusa il server da quella
  * memorizzata.
+ *
+ * Mittente e destinatario sono due cose diverse: il mittente deve stare sul
+ * dominio autorizzato dal server SMTP (un `noreply@` che non è una casella
+ * vera va benissimo), ma il test finiva proprio lì e non lo leggeva nessuno.
+ * Il destinatario ha quindi un campo suo, e ripiega sull'email agenzia.
  */
 async function testEmail() {
     const btn = document.getElementById('btn-test-email');
-    const email = document.getElementById('set-agency-email').value;
+    const email = document.getElementById('set-test-email').value.trim()
+        || document.getElementById('set-agency-email').value;
     btn.disabled = true;
     try {
         const json = await request(API + '?test_email=1', {

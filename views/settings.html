@@ -87,9 +87,16 @@
                     <small class="form-hint secret-state" id="state-smtp_pass"></small>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="set-smtp-secure">Sicurezza</label>
-                <select id="set-smtp-secure" class="form-input"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="">Nessuna</option></select>
+            <div class="form-row form-row--2">
+                <div class="form-group">
+                    <label for="set-smtp-secure">Sicurezza</label>
+                    <select id="set-smtp-secure" class="form-input"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="">Nessuna</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="set-test-email">Invia il test a</label>
+                    <input type="email" id="set-test-email" class="form-input" placeholder="Lascia vuoto per usare l'email agenzia">
+                    <small class="form-hint">Il mittente resta l'email agenzia, che deve stare sul dominio autorizzato dal server SMTP. Qui va invece una casella che puoi davvero aprire.</small>
+                </div>
             </div>
             <div class="settings-actions">
                 <button type="submit" class="btn btn--primary">Salva email</button>
