@@ -116,6 +116,36 @@
         if (window.lucide) window.lucide.createIcons();
     }
 
+    /**
+     * Stacca un immobile dall'edificio.
+     *
+     * Scollegare non cancella niente: l'immobile resta, perde solo
+     * l'appartenenza al condominio (e con essa i documenti condominiali
+     * ereditati e la quota millesimale). Vale la pena dirlo nella conferma,
+     * perche' "scollega" accanto a una scheda si puo' leggere come "elimina".
+     */
+    async function unlinkProperty(propertyId, label) {
+        const ok = window.confirm(
+            `Scollegare "${label}" da questo edificio?\n\n`
+            + "L'immobile non viene eliminato: perde l'appartenenza al condominio, "
+            + 'quindi i documenti condominiali ereditati e la sua quota millesimale.'
+        );
+        if (!ok) return;
+
+        try {
+            const res = await fetch(
+                `${API}?id=${buildingId}&action=unlink_property&property_id=${encodeURIComponent(propertyId)}`,
+                { method: 'DELETE' }
+            );
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert('Immobile scollegato dall\'edificio.', 'success');
+            await loadBuilding();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        }
+    }
+
     function renderProperties() {
         const grid = document.getElementById('profile-props-grid');
         const props = building.properties || [];
@@ -146,8 +176,25 @@
                     </div>
                     ${owner ? `<div style="margin-top:4px;">${owner}</div>` : ''}
                 </div>
+                ${window.canWrite !== false ? `
+                <button type="button" class="btn btn--sm btn--ghost bp-unlink" data-unlink-id="${p.id}"
+                        data-unlink-label="${esc(p.address)}, ${esc(p.city)}"
+                        title="Scollega dall'edificio">
+                    <i data-lucide="unlink"></i>
+                </button>` : ''}
             </div>`;
         }).join('');
+
+        // "Collega immobile" esisteva, scollegare no: api/buildings.php aveva gia'
+        // ?action=unlink_property, implementato e documentato, ma senza un solo
+        // chiamante in tutto il progetto — e nessun modulo espone building_id.
+        // Un immobile attaccato all'edificio sbagliato ci restava per sempre.
+        grid.querySelectorAll('.bp-unlink').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();   // la scheda sotto e' cliccabile e naviga
+                unlinkProperty(btn.dataset.unlinkId, btn.dataset.unlinkLabel);
+            });
+        });
 
         grid.querySelectorAll('[data-prop-id]').forEach(card => {
             card.addEventListener('click', () => {
