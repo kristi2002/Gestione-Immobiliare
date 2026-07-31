@@ -58,7 +58,11 @@ try {
             break;
         case 'PUT':
             if (!$id) apiError('ID contratto mancante.');
-            updateContract($db, $id);
+            if (trim($_GET['action'] ?? '') === 'set_status') {
+                setContractStatus($db, $id);
+            } else {
+                updateContract($db, $id);
+            }
             break;
         case 'DELETE':
             if (!$id) apiError('ID contratto mancante.');
@@ -257,6 +261,59 @@ function updateContract(PDO $db, int $id): void
     // Covers the common path where a lease is drafted first and signed later: at
     // creation it wasn't in force yet, so nothing was generated. insertPaymentSchedule
     // is a no-op when a schedule already exists, so repeated saves are harmless.
+    autoGeneratePaymentSchedule($db, $id);
+    syncPropertyOccupancy($db, $id);
+
+    getContract($db, $id);
+}
+
+/**
+ * Cambia SOLO lo stato del contratto.
+ *
+ * Esiste perche' "Avanza stato" e' un pulsante da un clic sull'elenco, mentre
+ * updateContract() scrive 24 colonne. Il chiamante ne mandava 11 (titolo, tipo,
+ * stato, immobile, inquilino, proprietario, date, canone, deposito, note) e le
+ * altre 13 venivano riscritte con i valori di ripiego del validatore:
+ *
+ *   sale_price, contract_subtype, registration_number, registration_date,
+ *   registration_office, cedolare_secca, registration_tax_annual, stamp_duty,
+ *   imposta_registro_due_date, istat_update_enabled, istat_baseline_index,
+ *   istat_baseline_month, last_istat_update
+ *
+ * Cioe': il prezzo di una compravendita, tutta la registrazione RLI con la
+ * cedolare secca, e la base ISTAT da cui si calcola l'adeguamento del canone.
+ * Un clic per portare il contratto da "inviato" a "firmato" — il momento in cui
+ * quei dati contano di piu' — li azzerava tutti, senza un errore e senza che
+ * niente in pagina lo facesse sospettare.
+ *
+ * Qui l'UPDATE tocca una colonna sola: quello che non viene mandato non puo'
+ * essere cancellato.
+ */
+function setContractStatus(PDO $db, int $id): void
+{
+    if (!contractExists($db, $id)) {
+        apiError('Contratto non trovato.', 404);
+    }
+
+    $data   = apiGetJsonBody();
+    $status = trim((string) ($data['status'] ?? ''));
+
+    if ($status === '') {
+        apiError('Stato mancante.');
+    }
+    if (!in_array($status, CONTRACT_STATUSES, true)) {
+        apiError('Stato non valido: ' . $status);
+    }
+
+    $db->prepare("UPDATE contracts SET status = :status WHERE id = :id")
+       ->execute(['status' => $status, 'id' => $id]);
+
+    logActivity('update', 'contract', $id, 'Stato contratto #' . $id . ' -> ' . $status);
+
+    // Le due conseguenze che dipendono davvero dallo stato: una locazione che
+    // entra in vigore genera lo scadenzario e segna l'immobile come affittato.
+    // Restano qui, altrimenti cambiare stato da questa via avrebbe effetti
+    // diversi dal salvataggio completo.
     autoGeneratePaymentSchedule($db, $id);
     syncPropertyOccupancy($db, $id);
 

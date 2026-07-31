@@ -525,22 +525,22 @@ async function advanceStatus(id) {
     const next = nextStatus(c.status);
     if (!next) return;
 
-    const data = {
-        title:         c.title,
-        contract_type: c.contract_type,
-        status:        next,
-        property_id:   c.property_id,
-        tenant_id:     c.tenant_id || null,
-        client_id:     c.client_id || null,
-        start_date:    c.start_date || null,
-        end_date:      c.end_date || null,
-        monthly_rent:  c.monthly_rent ?? '',
-        deposit:       c.deposit ?? '',
-        notes:         c.notes || '',
-    };
-
     try {
-        await saveContract(data, id);
+        // Endpoint dedicato: manda SOLO lo stato.
+        //
+        // Prima questo pulsante rimandava indietro l'oggetto contratto cosi'
+        // com'era in memoria — undici campi — a un UPDATE che ne scrive
+        // ventiquattro. Le tredici colonne assenti venivano azzerate: prezzo di
+        // vendita, registrazione RLI, cedolare secca e base ISTAT. Portare un
+        // contratto da "inviato" a "firmato" cancellava proprio i dati che a
+        // quel punto servono.
+        const res = await fetch(`${API}?action=set_status&id=${id}`, {
+            method:  'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ status: next }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
         showAlert('Stato aggiornato a: ' + STATUS_LABELS[next], 'success');
         loadContracts();
     } catch (err) {
