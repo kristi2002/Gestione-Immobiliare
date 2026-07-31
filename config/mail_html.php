@@ -15,12 +15,26 @@ function wrapHtmlEmail(string $subject, string $bodyText, string $footerHtml = '
     $branding = getPublicBranding();
     $agency   = htmlspecialchars($branding['agency_name'] ?: 'Gestionale Immobiliare', ENT_QUOTES, 'UTF-8');
     $color    = htmlspecialchars($branding['primary_color'] ?? '#2563eb', ENT_QUOTES, 'UTF-8');
-    $logo     = $branding['logo_path'] ?? '';
+    $logo     = trim((string) ($branding['logo_path'] ?? ''));
     $logoHtml = '';
 
+    // Il logo va indirizzato in modo ASSOLUTO. `logo_path` è un percorso
+    // relativo al sito ("assets/img/orlandi_logo.jpg") e dentro un client di
+    // posta non c'è alcuna pagina rispetto a cui risolverlo: finiva in OGNI
+    // email come immagine rotta — promemoria, solleciti, reset password,
+    // campagne. Se APP_URL non è configurato non si ripiega sul relativo (che è
+    // rotto per definizione): si omette il logo e resta il nome dell'agenzia.
     if ($logo !== '') {
-        $logoUrl  = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
-        $logoHtml = "<img src=\"{$logoUrl}\" alt=\"{$agency}\" style=\"max-height:48px;margin-bottom:16px\">";
+        $logoSrc = preg_match('#^https?://#i', $logo) === 1
+            ? $logo
+            : (defined('APP_URL') && APP_URL !== ''
+                ? rtrim((string) APP_URL, '/') . '/' . ltrim($logo, '/')
+                : '');
+
+        if ($logoSrc !== '') {
+            $logoUrl  = htmlspecialchars($logoSrc, ENT_QUOTES, 'UTF-8');
+            $logoHtml = "<img src=\"{$logoUrl}\" alt=\"{$agency}\" style=\"max-height:48px;margin-bottom:16px\">";
+        }
     }
 
     $paragraphs = '';
