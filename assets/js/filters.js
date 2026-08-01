@@ -442,7 +442,7 @@
             list.forEach((it, idx) => {
                 const b = document.createElement('button'); b.type = 'button';
                 const name = document.createElement('span'); name.textContent = it.name;
-                const del = document.createElement('span'); del.textContent = 'âœ•'; del.style.opacity = '.45';
+                const del = document.createElement('span'); del.textContent = '✕'; del.style.opacity = '.45';
                 b.append(name, del);
                 b.addEventListener('click', () => { applySnapshot(it.values); saveMenu.classList.remove('open'); });
                 del.addEventListener('click', (e) => { e.stopPropagation(); const l = readSaved(); l.splice(idx, 1); writeSaved(l); renderSaveMenu(); });
