@@ -373,7 +373,19 @@ function normalizeWhatsAppNumber(string $phone): string
             ? '39' . substr($digits, 1)
             : '39' . $digits;
     }
-    if (!str_starts_with($digits, '39') && strlen($digits) <= 10) {
+    // Un cellulare italiano scritto in formato nazionale e' 3xx xxx xxxx: nove o
+    // dieci cifre che iniziano per 3. Va riconosciuto PRIMA della regola
+    // generale, perche' i prefissi 391/392/393 (Wind Tre, Very Mobile) iniziano
+    // per "39" e sembravano numeri che il prefisso internazionale ce l'avevano
+    // gia': "393 1234567" diventava +3931234567, dieci cifre che non esistono.
+    // Twilio rifiutava l'invio, e la risposta dell'agente finiva sotto un numero
+    // diverso da quello del cliente — la stessa persona in due conversazioni.
+    $len = strlen($digits);
+    if (str_starts_with($digits, '3') && ($len === 9 || $len === 10)) {
+        return '+39' . $digits;
+    }
+
+    if (!str_starts_with($digits, '39') && $len <= 10) {
         $digits = '39' . $digits;
     }
     return '+' . $digits;
@@ -381,10 +393,124 @@ function normalizeWhatsAppNumber(string $phone): string
 
 function parseTwilioWebhook(array $post): array
 {
+    // Gli allegati arrivano come MediaUrl0/MediaContentType0 (NumMedia dice
+    // quanti). Qui non c'erano affatto, e il webhook leggeva una chiave
+    // 'media_url' che questa funzione non ha mai restituito: la colonna restava
+    // NULL e ogni foto inviata dai clienti spariva senza lasciare traccia.
+    $media = [];
+    for ($i = 0, $n = (int) ($post['NumMedia'] ?? 0); $i < $n; $i++) {
+        $url = trim((string) ($post['MediaUrl' . $i] ?? ''));
+        if ($url === '') {
+            continue;
+        }
+        $media[] = ['url' => $url, 'mime' => trim((string) ($post['MediaContentType' . $i] ?? ''))];
+    }
+
     return [
         'from'        => $post['From'] ?? '',
         'to'          => $post['To'] ?? '',
         'body'        => $post['Body'] ?? '',
         'external_id' => $post['MessageSid'] ?? null,
+        'media'       => $media,
+    ];
+}
+
+/**
+ * Estensioni ammesse per un allegato in arrivo, per tipo dichiarato da Twilio.
+ *
+ * Whitelist e non mappa aperta: il nome del file finisce su disco, e prendere
+ * l'estensione da quello che dice la controparte significa lasciarle scegliere
+ * come il server tratta il file. Un tipo sconosciuto diventa .bin.
+ */
+const WA_MEDIA_EXTENSIONS = [
+    'image/jpeg'      => 'jpg',
+    'image/png'       => 'png',
+    'image/webp'      => 'webp',
+    'image/gif'       => 'gif',
+    'application/pdf' => 'pdf',
+    'audio/ogg'       => 'ogg',
+    'audio/mpeg'      => 'mp3',
+    'audio/amr'       => 'amr',
+    'video/mp4'       => 'mp4',
+    'video/3gpp'      => '3gp',
+    'text/vcard'      => 'vcf',
+];
+
+/** Tetto di 16 MB: e' il limite di WhatsApp, oltre non puo' arrivare nulla di legittimo. */
+const WA_MEDIA_MAX_BYTES = 16 * 1024 * 1024;
+
+/**
+ * Scarica un allegato da Twilio e lo salva nell'albero protetto.
+ *
+ * Le URL dei media Twilio richiedono le credenziali dell'account e non vivono
+ * per sempre: salvare il link invece del file avrebbe dato una foto che si
+ * apre oggi e non fra sei mesi, quando serve davvero (una perdita d'acqua
+ * documentata, lo stato di un immobile alla riconsegna).
+ *
+ * Ritorna null se il download fallisce: il messaggio va salvato comunque, un
+ * allegato mancante e' meno grave di un messaggio perso.
+ *
+ * @param array{url:string, mime:string} $media
+ * @return array{path:string, mime:string, name:string}|null
+ */
+function waStoreInboundMedia(array $media, ?string $sid = null): ?array
+{
+    $cfg = getWhatsAppConfig();
+    if ($cfg['account_sid'] === '' || $cfg['auth_token'] === '') {
+        error_log('[whatsapp] allegato non scaricato: credenziali Twilio assenti.');
+        return null;
+    }
+
+    $ch = curl_init($media['url']);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS      => 3,
+        CURLOPT_USERPWD        => $cfg['account_sid'] . ':' . $cfg['auth_token'],
+        // Twilio chiude il webhook dopo 15 secondi: se il download non sta in
+        // piedi entro 10 si rinuncia all'allegato, non alla risposta.
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_BUFFERSIZE     => 65536,
+        CURLOPT_NOPROGRESS     => false,
+        CURLOPT_PROGRESSFUNCTION => static fn($res, $dlTotal, $dlNow) => $dlNow > WA_MEDIA_MAX_BYTES ? 1 : 0,
+    ]);
+
+    $bytes = curl_exec($ch);
+    $code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err   = curl_error($ch);
+    // Niente curl_close(): dal PHP 8.0 non fa nulla e dal 8.5 e' deprecata,
+    // cioe' una riga di avviso nel log a ogni allegato ricevuto.
+
+    if ($bytes === false || $code >= 400 || $bytes === '') {
+        error_log('[whatsapp] allegato non scaricato (HTTP ' . $code . ') ' . $err);
+        return null;
+    }
+    if (strlen($bytes) > WA_MEDIA_MAX_BYTES) {
+        error_log('[whatsapp] allegato oltre il limite consentito, scartato.');
+        return null;
+    }
+
+    $mime = strtolower(trim(explode(';', $media['mime'])[0]));
+    $ext  = WA_MEDIA_EXTENSIONS[$mime] ?? 'bin';
+
+    $relDir = 'uploads/documents/whatsapp/' . date('Y/m');
+    $absDir = dirname(__DIR__) . '/' . $relDir;
+    if (!is_dir($absDir) && !mkdir($absDir, 0775, true) && !is_dir($absDir)) {
+        error_log('[whatsapp] impossibile creare ' . $absDir);
+        return null;
+    }
+
+    // Nome generato da noi: quello di Twilio non esiste, e il SID da solo
+    // renderebbe indovinabile il percorso di un allegato altrui.
+    $name = 'wa_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+    if (file_put_contents($absDir . '/' . $name, $bytes) === false) {
+        error_log('[whatsapp] scrittura fallita: ' . $absDir . '/' . $name);
+        return null;
+    }
+
+    return [
+        'path' => $relDir . '/' . $name,
+        'mime' => $mime !== '' ? $mime : 'application/octet-stream',
+        'name' => ($sid !== null && $sid !== '' ? $sid : 'allegato') . '.' . $ext,
     ];
 }

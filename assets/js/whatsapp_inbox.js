@@ -247,12 +247,43 @@
         els.unknownBar.style.display = thread && thread.is_unknown ? 'flex' : 'none';
     }
 
+    /**
+     * L'allegato non e' un link a Twilio: quelle URL chiedono le credenziali
+     * dell'account e scadono. Il file sta nell'albero protetto e passa da
+     * api/whatsapp_media.php, che lo serve solo a chi ha una sessione di staff.
+     */
+    function renderMedia(m) {
+        if (!m.media_url) return '';
+        const src  = `api/whatsapp_media.php?id=${encodeURIComponent(m.id)}`;
+        const mime = m.media_mime || '';
+
+        if (mime.startsWith('image/')) {
+            return `<a class="wa-bubble-media" href="${src}" target="_blank" rel="noopener">
+                <img src="${src}" alt="Allegato" loading="lazy">
+            </a>`;
+        }
+        if (mime.startsWith('audio/')) {
+            return `<audio class="wa-bubble-audio" controls preload="none" src="${src}"></audio>`;
+        }
+        if (mime.startsWith('video/')) {
+            return `<video class="wa-bubble-media" controls preload="none" src="${src}"></video>`;
+        }
+        // Niente <i data-lucide> qui: le bolle vengono riscritte a ogni
+        // caricamento e in questa pagina nessuno richiama createIcons(), quindi
+        // l'icona resterebbe un elemento vuoto.
+        return `<a class="wa-bubble-file" href="${src}" target="_blank" rel="noopener">
+            ${esc(m.media_name || 'Allegato')}
+        </a>`;
+    }
+
     function renderBubbles(messages) {
         return messages.map(m => {
             const isOut = m.direction === 'outbound' || m.direction === 'sent';
             const time  = m.received_at || m.created_at;
+            const text  = m.body || m.message || '';
             return `<div class="wa-bubble wa-bubble--${isOut ? 'out' : 'in'}">
-                ${esc(m.body || m.message || '')}
+                ${renderMedia(m)}
+                ${text ? esc(text) : ''}
                 <div class="wa-bubble-time">${esc(time ? formatTime(time) : '')}</div>
             </div>`;
         }).join('');

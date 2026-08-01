@@ -227,6 +227,32 @@
     margin-top: 2px;
 }
 .wa-bubble-time { font-size: 0.65rem; color: #999; }
+
+/* ── Allegati ──
+   Larghezza piena della bolla: una foto di un guasto si guarda, non si sbircia.
+   La bolla ha gia' il suo padding, quindi il media lo compensa per arrivare ai
+   bordi come fa WhatsApp. */
+.wa-bubble-media {
+    display: block;
+    margin: -0.5rem -0.9rem 0.4rem;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+}
+.wa-bubble-media img,
+.wa-bubble-media video { display: block; width: 100%; height: auto; max-height: 340px; object-fit: cover; }
+.wa-bubble-audio { display: block; width: 100%; margin-bottom: 0.35rem; }
+.wa-bubble-file {
+    display: inline-block;
+    margin-bottom: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.05);
+    color: inherit;
+    font-size: 0.82rem;
+    text-decoration: none;
+    word-break: break-all;
+}
+.wa-bubble-file:hover { background: rgba(0,0,0,0.09); }
 .wa-tick { font-size: 0.7rem; color: #53bdeb; }
 
 /* ── Reply bar ── */
