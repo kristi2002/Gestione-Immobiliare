@@ -54,14 +54,92 @@ function initTenantSession(): void
     session_start();
 }
 
+/**
+ * La sessione porta con se' chi sei e cosa puoi fare dal momento del login. Senza
+ * un ricontrollo, revocare un accesso non ha alcun effetto finche' quella persona
+ * non esce da sola: un utente cancellato o disattivato continua a lavorare, e un
+ * ruolo abbassato conserva i privilegi di prima. Qui la sessione viene
+ * riverificata contro la riga vera, una volta per richiesta.
+ *
+ * Se la banca dati non risponde la sessione resta valida: senza database la
+ * richiesta non puo' comunque leggere nulla, e sloggare tutti a ogni singhiozzo
+ * sarebbe un danno senza guadagno.
+ */
+function adminSessionIsCurrent(): bool
+{
+    static $current = null;
+    if ($current !== null) {
+        return $current;
+    }
+
+    require_once __DIR__ . '/db.php';
+
+    try {
+        $stmt = getDB()->prepare(
+            'SELECT username, role, is_active FROM admin_users WHERE id = :id LIMIT 1'
+        );
+        $stmt->execute(['id' => (int) $_SESSION['admin_id']]);
+        $user = $stmt->fetch();
+    } catch (Throwable $e) {
+        return $current = true;
+    }
+
+    if (!$user || !(int) $user['is_active']) {
+        clearSession();
+        return $current = false;
+    }
+
+    // Ruolo e nome possono essere cambiati dopo il login.
+    $_SESSION['admin_role']     = $user['role'];
+    $_SESSION['admin_username'] = $user['username'];
+
+    return $current = true;
+}
+
+/** Come sopra, per il portale inquilini: stessa condizione del login. */
+function tenantSessionIsCurrent(): bool
+{
+    static $current = null;
+    if ($current !== null) {
+        return $current;
+    }
+
+    require_once __DIR__ . '/db.php';
+
+    try {
+        $stmt = getDB()->prepare(
+            'SELECT 1 FROM tenant_users tu
+             INNER JOIN tenants t ON t.id = tu.tenant_id
+             WHERE tu.id = :id AND tu.tenant_id = :tenant_id AND t.status = \'active\'
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'id'        => (int) $_SESSION['tenant_user_id'],
+            'tenant_id' => (int) $_SESSION['tenant_id'],
+        ]);
+        $row = $stmt->fetch();
+    } catch (Throwable $e) {
+        return $current = true;
+    }
+
+    if (!$row) {
+        clearSession();
+        return $current = false;
+    }
+
+    return $current = true;
+}
+
 function isLoggedIn(): bool
 {
-    return !empty($_SESSION['admin_id']) && !empty($_SESSION['admin_username']);
+    return !empty($_SESSION['admin_id']) && !empty($_SESSION['admin_username'])
+        && adminSessionIsCurrent();
 }
 
 function isTenantLoggedIn(): bool
 {
-    return !empty($_SESSION['tenant_user_id']) && !empty($_SESSION['tenant_id']);
+    return !empty($_SESSION['tenant_user_id']) && !empty($_SESSION['tenant_id'])
+        && tenantSessionIsCurrent();
 }
 
 function getCurrentUsername(): string
@@ -90,7 +168,10 @@ function requireAuthWeb(): void
 function requireTenantAuthWeb(): void
 {
     if (!isTenantLoggedIn()) {
-        header('Location: tenant/login.php');
+        // Relativa alla pagina che chiama, che sta dentro /tenant/: scrivere
+        // 'tenant/login.php' mandava l'inquilino su /tenant/tenant/login.php,
+        // cioe' un 404 al posto del modulo di accesso.
+        header('Location: login.php');
         exit;
     }
 }
@@ -219,6 +300,25 @@ function attemptTenantLogin(string $email, string $password): bool
     return true;
 }
 
+/**
+ * Butta via la sessione corrente e il suo cookie. Senza traccia sul registro
+ * attivita': serve anche quando l'utente dietro la sessione non esiste piu', e
+ * un "logout" attribuito a un id cancellato racconterebbe un'uscita mai avvenuta.
+ */
+function clearSession(): void
+{
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+    }
+
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
+}
+
 function logoutUser(): void
 {
     // Audit before the session is torn down (logActivity reads the actor from it).
@@ -227,24 +327,12 @@ function logoutUser(): void
         logActivity('logout', 'admin_user', (int) $_SESSION['admin_id'], 'Logout: ' . ($_SESSION['admin_username'] ?? ''));
     }
 
-    $_SESSION = [];
-
-    if (ini_get('session.use_cookies')) {
-        $p = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
-    }
-
-    session_destroy();
+    clearSession();
 }
 
 function logoutTenant(): void
 {
-    $_SESSION = [];
-    if (ini_get('session.use_cookies')) {
-        $p = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
-    }
-    session_destroy();
+    clearSession();
 }
 
 function requireCronAuth(): void

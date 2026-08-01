@@ -35,9 +35,45 @@ function initOwnerSession(): void
     session_start();
 }
 
+/**
+ * Come per gli altri due portali (config/auth.php): la sessione va riverificata
+ * contro la riga vera, altrimenti togliere l'accesso a un proprietario —
+ * archiviarlo, o azzerargli la password del portale — non ha effetto finche' non
+ * esce da solo. Errore di banca dati: la sessione resta, non c'e' niente da
+ * proteggere se non si legge nulla.
+ */
+function ownerSessionIsCurrent(): bool
+{
+    static $current = null;
+    if ($current !== null) {
+        return $current;
+    }
+
+    try {
+        $stmt = getDB()->prepare(
+            "SELECT name, surname FROM clients
+             WHERE id = :id AND status != 'archived' AND portal_password_hash IS NOT NULL
+             LIMIT 1"
+        );
+        $stmt->execute(['id' => (int) $_SESSION['owner_client_id']]);
+        $row = $stmt->fetch();
+    } catch (Throwable $e) {
+        return $current = true;
+    }
+
+    if (!$row) {
+        clearSession();
+        return $current = false;
+    }
+
+    $_SESSION['owner_name'] = $row['name'] . ' ' . $row['surname'];
+
+    return $current = true;
+}
+
 function isOwnerLoggedIn(): bool
 {
-    return !empty($_SESSION['owner_client_id']);
+    return !empty($_SESSION['owner_client_id']) && ownerSessionIsCurrent();
 }
 
 function getCurrentOwnerId(): int
@@ -92,10 +128,5 @@ function attemptOwnerLogin(string $email, string $password): bool
 
 function logoutOwner(): void
 {
-    $_SESSION = [];
-    if (ini_get('session.use_cookies')) {
-        $p = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
-    }
-    session_destroy();
+    clearSession();
 }
