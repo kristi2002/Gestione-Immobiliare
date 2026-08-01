@@ -230,7 +230,18 @@
         // pattern with a Filtri popover), so keep it out of the collapsed state.
         bar.classList.add('is-open');
 
-        const pageKey = 'fbSaved:' + (bar.id || (location.pathname + '|' + [...bar.classList].join('.')));
+        // Saved searches are per-list. The SPA keeps the view in the query
+        // string (index.php?view=...), so location.pathname is the same on
+        // every page and no toolbar carries an id — keying on those alone put
+        // every list's saved searches in one bucket, where the entries from
+        // other pages listed fine and then applied nothing. App.currentView is
+        // assigned at the top of loadView(), well before FilterBar runs.
+        const viewKey = (window.App && App.currentView) ||
+                        new URLSearchParams(location.search).get('view') ||
+                        location.pathname;
+        const barKey  = bar.id || [...bar.classList].join('.');
+        const pageKey = 'fbSaved:' + viewKey + '|' + barKey;
+        const legacyKey = 'fbSaved:' + (bar.id || (location.pathname + '|' + barKey));
 
         // Panels are position:fixed and placed via JS so they escape the toolbar's
         // overflow:hidden and any stacking context — never render behind the list.
@@ -398,6 +409,25 @@
         const readSaved  = () => { try { return JSON.parse(localStorage.getItem(pageKey) || '[]'); } catch { return []; } };
         const writeSaved = v  => { try { localStorage.setItem(pageKey, JSON.stringify(v)); } catch (_) {} };
         const savedFields = () => [searchInput, ...fields].filter(Boolean);
+
+        // Rescue what this list had stored under the old shared key, once: an
+        // entry is ours only if every field it holds is a named field of this
+        // bar. Anything else (other pages' entries, positional keys that could
+        // mean anything) is left behind with the stale key.
+        (function migrateLegacyKey() {
+            try {
+                if (legacyKey === pageKey || localStorage.getItem(pageKey) !== null) return;
+                const legacy = JSON.parse(localStorage.getItem(legacyKey) || '[]');
+                if (!Array.isArray(legacy) || !legacy.length) return;
+                const ids = new Set(savedFields().map(f => f.id).filter(Boolean));
+                const mine = legacy.filter(it => {
+                    const keys = Object.keys((it && it.values) || {});
+                    return keys.length && keys.every(k => ids.has(k));
+                });
+                if (mine.length) writeSaved(mine);
+            } catch (_) { /* unreadable storage — start clean */ }
+        })();
+
         function snapshot() { const s = {}; savedFields().forEach((f, i) => { s[f.id || ('f' + i)] = f.value; }); return s; }
         function applySnapshot(s) {
             savedFields().forEach((f, i) => {
