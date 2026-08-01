@@ -375,7 +375,11 @@ function linkThreadToContact(PDO $db): void
            ->execute(['phone' => $phone, 'id' => $id]);
     }
 
-    logActivity('update', 'whatsapp_message', $id,
+    // Registrato sul CONTATTO, non su 'whatsapp_message': $id e' l'id del
+    // proprietario/inquilino/lead, e scriverlo come id di un messaggio faceva
+    // puntare la voce del registro a un messaggio che non esiste. Chi cerca la
+    // storia di un contatto trova la riga dove si aspetta di trovarla.
+    logActivity('update', $type, $id,
         "Conversazione WhatsApp {$phone} associata a {$meta['label']} #{$id} ({$affected} messaggi)");
 
     apiSuccess(['phone' => $phone, 'type' => $type, 'id' => $id, 'messages_linked' => $affected]);

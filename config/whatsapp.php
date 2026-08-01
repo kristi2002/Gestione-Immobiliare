@@ -440,12 +440,19 @@ function resolveWhatsAppContact(PDO $db, string $phone): array
         $stmt = $db->prepare($sql);
         $stmt->execute(['p' => $suffix]);
         $row = $stmt->fetch();
-        if ($row) {
-            $out[$key] = (int) $row['id'];
-            if ($out['name'] === null) {
-                $out['name'] = trim(($row['name'] ?? '') . ' ' . ($row['surname'] ?? '')) ?: null;
-            }
+        if (!$row) {
+            continue;
         }
+
+        // Il primo che risponde vince, e si smette di cercare: senza questa
+        // uscita un numero presente in due anagrafiche riempiva DUE colonne
+        // sullo stesso messaggio, che quindi risultava appartenere a due
+        // persone diverse. La precedenza dichiarata qui sopra c'era solo nel
+        // commento, e waApplyLink() dice l'opposto: un messaggio e' di uno solo.
+        $out[$key] = (int) $row['id'];
+        $out['name'] = trim(($row['name'] ?? '') . ' ' . ($row['surname'] ?? '')) ?: null;
+
+        return $out;
     }
 
     return $out;
