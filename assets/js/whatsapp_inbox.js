@@ -60,7 +60,7 @@
     }
 
     /**
-     * A scheda nascosta il polling è puro spreco (e su Twilio nemmeno serve:
+     * A scheda nascosta il polling è puro spreco (e col webhook nemmeno serve:
      * i messaggi arrivano comunque al DB). Al rientro si ricarica subito, così
      * l'agente non aspetta il prossimo tick per vedere cosa è successo.
      */
@@ -248,7 +248,7 @@
     }
 
     /**
-     * L'allegato non e' un link a Twilio: quelle URL chiedono le credenziali
+     * L'allegato non e' un link a Meta: quelle URL chiedono il token di accesso
      * dell'account e scadono. Il file sta nell'albero protetto e passa da
      * api/whatsapp_media.php, che lo serve solo a chi ha una sessione di staff.
      */

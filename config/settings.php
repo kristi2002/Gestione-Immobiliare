@@ -21,9 +21,11 @@ const SETTINGS_DEFAULTS = [
     'smtp_pass'             => '',
     'smtp_secure'           => 'tls',
     'whatsapp_enabled'      => 'false',
-    'twilio_account_sid'    => '',
-    'twilio_auth_token'     => '',
-    'twilio_whatsapp_from'  => '',
+    'meta_wa_phone_number_id' => '',
+    'meta_wa_access_token'    => '',
+    'meta_wa_app_secret'      => '',
+    'meta_wa_verify_token'    => '',
+    'whatsapp_from'           => '',
     'backup_cloud_enabled'  => 'false',
     'backup_s3_endpoint'    => '',
     'backup_s3_bucket'      => '',
@@ -105,9 +107,11 @@ function getSetting(string $key, ?string $default = null): ?string
         'smtp_secure'      => 'SMTP_SECURE',
         'meta_app_id'      => 'META_APP_ID',
         'meta_app_secret'  => 'META_APP_SECRET',
-        'twilio_account_sid'   => 'TWILIO_ACCOUNT_SID',
-        'twilio_auth_token'    => 'TWILIO_AUTH_TOKEN',
-        'twilio_whatsapp_from' => 'TWILIO_WHATSAPP_FROM',
+        'meta_wa_phone_number_id' => 'META_WA_PHONE_NUMBER_ID',
+        'meta_wa_access_token'    => 'META_WA_ACCESS_TOKEN',
+        'meta_wa_app_secret'      => 'META_WA_APP_SECRET',
+        'meta_wa_verify_token'    => 'META_WA_VERIFY_TOKEN',
+        'whatsapp_from'           => 'WHATSAPP_FROM',
         'backup_s3_endpoint'   => 'BACKUP_S3_ENDPOINT',
         'backup_s3_bucket'     => 'BACKUP_S3_BUCKET',
         'backup_s3_region'     => 'BACKUP_S3_REGION',
@@ -186,13 +190,22 @@ function getMailConfig(): array
 }
 } // if (!function_exists('getMailConfig'))
 
+/**
+ * WhatsApp Business Platform, presa direttamente da Meta (Cloud API).
+ *
+ * `phone_number_id` NON e' il numero: e' l'identificativo che Meta assegna al
+ * mittente e l'unica cosa che finisce nell'URL delle chiamate. Il numero in
+ * chiaro (`from`) serve solo a scrivere il mittente in archivio e nella chat.
+ */
 function getWhatsAppConfig(): array
 {
     return [
-        'enabled'    => filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
-        'account_sid'=> getSetting('twilio_account_sid'),
-        'auth_token' => getSetting('twilio_auth_token'),
-        'from'       => getSetting('twilio_whatsapp_from'),
+        'enabled'         => filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
+        'phone_number_id' => getSetting('meta_wa_phone_number_id'),
+        'access_token'    => getSetting('meta_wa_access_token'),
+        'app_secret'      => getSetting('meta_wa_app_secret'),
+        'verify_token'    => getSetting('meta_wa_verify_token'),
+        'from'            => getSetting('whatsapp_from'),
     ];
 }
 
@@ -220,7 +233,9 @@ function getBackupCloudConfig(): array
 const SETTINGS_SECRET_KEYS = [
     'smtp_pass',
     'mailgun_webhook_key',
-    'twilio_auth_token',
+    'meta_wa_access_token',
+    'meta_wa_app_secret',
+    'meta_wa_verify_token',
     'backup_s3_secret',
     'meta_app_secret',
 ];
@@ -255,10 +270,10 @@ function publicSettingsPayload(): array
             'smtp_secure'         => getSetting('smtp_secure', 'tls'),
         ], secretState('smtp_pass'), secretState('mailgun_webhook_key')),
         'whatsapp' => array_merge([
-            'whatsapp_enabled'     => filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
-            'twilio_account_sid'   => getSetting('twilio_account_sid'),
-            'twilio_whatsapp_from' => getSetting('twilio_whatsapp_from'),
-        ], secretState('twilio_auth_token')),
+            'whatsapp_enabled'        => filter_var(getSetting('whatsapp_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
+            'meta_wa_phone_number_id' => getSetting('meta_wa_phone_number_id'),
+            'whatsapp_from'           => getSetting('whatsapp_from'),
+        ], secretState('meta_wa_access_token'), secretState('meta_wa_app_secret'), secretState('meta_wa_verify_token')),
         'backup' => array_merge([
             'backup_cloud_enabled' => filter_var(getSetting('backup_cloud_enabled', 'false'), FILTER_VALIDATE_BOOLEAN),
             'backup_s3_endpoint'   => getSetting('backup_s3_endpoint'),
@@ -330,12 +345,20 @@ function normalizeSettings(array $pairs): array
         }
     }
 
-    // Twilio vuole il numero in E.164; il prefisso `whatsapp:` lo aggiunge il
-    // client al momento dell'invio, quindi qui va tolto se l'utente lo incolla.
-    if (isset($pairs['twilio_whatsapp_from'])) {
-        $from = preg_replace('/\s+/', '', (string) $pairs['twilio_whatsapp_from']);
+    // Il numero si scrive in E.164. Il prefisso `whatsapp:` non serve a Meta
+    // (era la forma di Twilio), ma chi lo incolla dalla vecchia configurazione
+    // non deve vedersi rifiutare il campo.
+    if (isset($pairs['whatsapp_from'])) {
+        $from = preg_replace('/\s+/', '', (string) $pairs['whatsapp_from']);
         $from = preg_replace('/^whatsapp:/i', '', $from);
-        $pairs['twilio_whatsapp_from'] = $from;
+        $pairs['whatsapp_from'] = $from;
+    }
+
+    // L'identificativo del mittente e' solo cifre: incollarlo da Meta si porta
+    // dietro spazi, e un ID con uno spazio dentro fa fallire ogni invio con un
+    // 404 di Graph che non dice nulla di utile.
+    if (isset($pairs['meta_wa_phone_number_id'])) {
+        $pairs['meta_wa_phone_number_id'] = preg_replace('/\D+/', '', (string) $pairs['meta_wa_phone_number_id']);
     }
 
     // La chiave S3 è un percorso: senza `/` finale i backup finiscono in una
@@ -420,17 +443,22 @@ function validateSettings(array $pairs): array
         }
     }
 
-    if ($has('twilio_whatsapp_from') && $val('twilio_whatsapp_from') !== ''
-        && !preg_match('/^\+[1-9]\d{7,14}$/', $val('twilio_whatsapp_from'))) {
-        $errors['twilio_whatsapp_from'] = 'Numero WhatsApp in formato internazionale, es. +393331234567.';
+    if ($has('whatsapp_from') && $val('whatsapp_from') !== ''
+        && !preg_match('/^\+[1-9]\d{7,14}$/', $val('whatsapp_from'))) {
+        $errors['whatsapp_from'] = 'Numero WhatsApp in formato internazionale, es. +393331234567.';
     }
 
-    if ($touches(['whatsapp_enabled', 'twilio_account_sid', 'twilio_auth_token', 'twilio_whatsapp_from'])
+    if ($touches(['whatsapp_enabled', 'meta_wa_phone_number_id', 'meta_wa_access_token', 'meta_wa_app_secret', 'meta_wa_verify_token', 'whatsapp_from'])
         && $effectiveFlag('whatsapp_enabled')) {
         $required = [
-            'twilio_account_sid'   => 'Account SID',
-            'twilio_auth_token'    => 'Auth Token',
-            'twilio_whatsapp_from' => 'Numero WhatsApp',
+            'meta_wa_phone_number_id' => 'Phone number ID',
+            'meta_wa_access_token'    => 'Token di accesso',
+            // Senza app secret la firma dei webhook non e' verificabile, e
+            // whatsapp_webhook.php in produzione rifiuta tutto: WhatsApp
+            // sembrerebbe attivo e non arriverebbe un solo messaggio.
+            'meta_wa_app_secret'      => 'App secret',
+            'meta_wa_verify_token'    => 'Verify token',
+            'whatsapp_from'           => 'Numero WhatsApp',
         ];
         foreach ($required as $key => $label) {
             if ($effective($key) === '') {

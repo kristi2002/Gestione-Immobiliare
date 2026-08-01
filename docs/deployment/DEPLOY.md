@@ -65,9 +65,11 @@ SMTP_SECURE=tls
 SMTP_USER=postmaster@mail.testdemo.it
 SMTP_PASS=<mailgun-smtp-pass>
 
-TWILIO_ACCOUNT_SID=<sid>
-TWILIO_AUTH_TOKEN=<token>
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886   # Sandbox number
+META_WA_PHONE_NUMBER_ID=<id del mittente, solo cifre>
+META_WA_ACCESS_TOKEN=<token>
+META_WA_APP_SECRET=<app secret>              # firma i webhook in arrivo
+META_WA_VERIFY_TOKEN=<stringa scelta da te>  # da ripetere nel pannello Meta
+WHATSAPP_FROM=+393331234567                  # numero mostrato come mittente
 
 META_APP_ID=<id>
 META_APP_SECRET=<secret>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Send a WhatsApp message via Twilio.
+ * Send a WhatsApp message via Meta Cloud API.
  * POST { phone, message, [tenant_id], [reminder_id] }
  */
 require_once __DIR__ . '/../config/api_bootstrap.php';
@@ -11,7 +11,7 @@ apiHandleOptions();
 apiRequireMethod('POST');
 requireRole('admin', 'agent', 'super_admin');
 
-// Rate limit: 20 outbound WhatsApp messages per user per minute (no admin bypass — Twilio costs money)
+// Rate limit: 20 outbound WhatsApp messages per user per minute (no admin bypass — ogni conversazione si paga)
 checkRateLimit('whatsapp_send', 20, 60, false);
 
 $data    = apiGetJsonBody();
@@ -36,7 +36,7 @@ $clientId = isset($data['client_id']) ? (int)$data['client_id'] : null;
 // Senza questa INSERT il messaggio partiva davvero ma non esisteva da nessuna
 // parte: l'agente rispondeva dall'inbox, la chat si ricaricava e la sua stessa
 // risposta non c'era. Il thread mostrava solo i messaggi in arrivo.
-// Il numero viene normalizzato come lo scrive Twilio in entrata, altrimenti
+// Il numero viene normalizzato nella stessa forma che arriva dal webhook, altrimenti
 // "333 1234567" e "+393331234567" diventerebbero due conversazioni distinte.
 // Con WhatsApp spento config/whatsapp.php risponde success=true (per non
 // bloccare i flussi) ma marca simulated=true. Scrivere 'sent' in archivio per un
@@ -65,7 +65,7 @@ try {
 
     $db->prepare(
         "INSERT INTO whatsapp_messages
-            (direction, from_number, to_number, body, twilio_sid, client_id, tenant_id, lead_id, status, is_read, received_at)
+            (direction, from_number, to_number, body, external_id, client_id, tenant_id, lead_id, status, is_read, received_at)
          VALUES
             ('outbound', :from_number, :to_number, :body, :sid, :client_id, :tenant_id, :lead_id, :status, 1, NOW())"
     )->execute([
@@ -93,7 +93,7 @@ try {
 if ($clientId) {
     try {
         $db = getDB();
-        // external_id: senza il SID Twilio lo status callback non ha modo di
+        // external_id: senza il wamid di Meta lo stato di consegna non ha modo di
         // ritrovare questa riga e lo stato resterebbe congelato all'invio.
         $db->prepare(
             'INSERT INTO communications (client_id, direction, channel, subject, body, status, status_updated_at, external_id, created_at)

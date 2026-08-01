@@ -481,7 +481,7 @@ function saveOutboundMessage(PDO $db): void
     $toNumber   = trim($data['to_number'] ?? '');
     $body       = trim($data['body'] ?? '');
     $mediaUrl   = trim($data['media_url'] ?? '') ?: null;
-    $twilioSid  = trim($data['twilio_sid'] ?? '') ?: null;
+    $externalId = trim($data['external_id'] ?? '') ?: null;
     $clientId   = !empty($data['client_id']) ? (int) $data['client_id'] : null;
     $tenantId   = !empty($data['tenant_id']) ? (int) $data['tenant_id'] : null;
     $leadId     = !empty($data['lead_id'])   ? (int) $data['lead_id']   : null;
@@ -490,16 +490,16 @@ function saveOutboundMessage(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO whatsapp_messages
-            (direction, from_number, to_number, body, media_url, twilio_sid, client_id, tenant_id, lead_id, is_read, received_at)
+            (direction, from_number, to_number, body, media_url, external_id, client_id, tenant_id, lead_id, is_read, received_at)
          VALUES
-            ('outbound', :from_number, :to_number, :body, :media_url, :twilio_sid, :client_id, :tenant_id, :lead_id, 1, NOW())"
+            ('outbound', :from_number, :to_number, :body, :media_url, :external_id, :client_id, :tenant_id, :lead_id, 1, NOW())"
     );
     $stmt->execute([
         'from_number' => $fromNumber,
         'to_number'   => $toNumber,
         'body'        => $body,
         'media_url'   => $mediaUrl,
-        'twilio_sid'  => $twilioSid,
+        'external_id' => $externalId,
         'client_id'   => $clientId,
         'tenant_id'   => $tenantId,
         'lead_id'     => $leadId,

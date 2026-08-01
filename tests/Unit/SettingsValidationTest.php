@@ -171,14 +171,20 @@ class SettingsValidationTest extends TestCase
     public function testEnablingWhatsAppWithoutCredentialsIsRejected(): void
     {
         $errors = validateSettings([
-            'whatsapp_enabled'     => true,
-            'twilio_account_sid'   => '',
-            'twilio_auth_token'    => '',
-            'twilio_whatsapp_from' => '',
+            'whatsapp_enabled'        => true,
+            'meta_wa_phone_number_id' => '',
+            'meta_wa_access_token'    => '',
+            'meta_wa_app_secret'      => '',
+            'meta_wa_verify_token'    => '',
+            'whatsapp_from'           => '',
         ]);
-        $this->assertArrayHasKey('twilio_account_sid', $errors);
-        $this->assertArrayHasKey('twilio_auth_token', $errors);
-        $this->assertArrayHasKey('twilio_whatsapp_from', $errors);
+        $this->assertArrayHasKey('meta_wa_phone_number_id', $errors);
+        $this->assertArrayHasKey('meta_wa_access_token', $errors);
+        // Senza app secret il webhook rifiuta tutto in produzione: WhatsApp
+        // sembrerebbe attivo e non arriverebbe un solo messaggio.
+        $this->assertArrayHasKey('meta_wa_app_secret', $errors);
+        $this->assertArrayHasKey('meta_wa_verify_token', $errors);
+        $this->assertArrayHasKey('whatsapp_from', $errors);
     }
 
     // ── Branding / integrazioni ─────────────────────────────────────────────
@@ -203,14 +209,25 @@ class SettingsValidationTest extends TestCase
 
     public function testWhatsAppNumberMustBeInternational(): void
     {
-        $this->assertSame([], validateSettings(['twilio_whatsapp_from' => '+14155238886']));
-        $this->assertArrayHasKey('twilio_whatsapp_from', validateSettings(['twilio_whatsapp_from' => '3331234567']));
+        $this->assertSame([], validateSettings(['whatsapp_from' => '+393331234567']));
+        $this->assertArrayHasKey('whatsapp_from', validateSettings(['whatsapp_from' => '3331234567']));
     }
 
     public function testWhatsAppPrefixIsStrippedOnNormalisation(): void
     {
-        $pairs = normalizeSettings(['twilio_whatsapp_from' => 'whatsapp:+14155238886']);
-        $this->assertSame('+14155238886', $pairs['twilio_whatsapp_from']);
+        $pairs = normalizeSettings(['whatsapp_from' => 'whatsapp:+393331234567']);
+        $this->assertSame('+393331234567', $pairs['whatsapp_from']);
+    }
+
+    /**
+     * Il phone number id incollato dal pannello Meta si porta dietro spazi, e un
+     * id con uno spazio dentro fa fallire ogni invio con un 404 di Graph che non
+     * dice nulla di utile.
+     */
+    public function testPhoneNumberIdKeepsOnlyDigits(): void
+    {
+        $pairs = normalizeSettings(['meta_wa_phone_number_id' => ' 1234 5678 90 ']);
+        $this->assertSame('1234567890', $pairs['meta_wa_phone_number_id']);
     }
 
     public function testBackupPrefixAlwaysEndsWithASlash(): void

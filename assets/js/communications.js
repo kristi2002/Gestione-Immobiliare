@@ -20,8 +20,8 @@
     let currentPage   = 1;
     const PAGE_LIMIT  = 25;
 
-    // Ogni quanto ricontrollare gli stati di consegna del thread aperto. Twilio
-    // notifica via api/twilio_status_callback.php, ma la pagina non ha modo di
+    // Ogni quanto ricontrollare gli stati di consegna del thread aperto. Meta
+    // notifica dentro api/whatsapp_webhook.php, ma la pagina non ha modo di
     // saperlo: senza questo refresh le spunte resterebbero ferme all'invio.
     const STATUS_POLL_MS = 20000;
 
@@ -135,7 +135,7 @@
         if (tplBtn) tplBtn.hidden = !(mode === 'send' && sendChannel === 'whatsapp');
 
         if (mode === 'send' && sendChannel === 'whatsapp') {
-            els.composeHint.textContent = 'Il messaggio verrà inviato via WhatsApp (Twilio) e salvato nello storico.';
+            els.composeHint.textContent = 'Il messaggio verrà inviato via WhatsApp (Meta) e salvato nello storico.';
             els.submitBtn.textContent = 'Invia WhatsApp';
         } else if (mode === 'send') {
             els.composeHint.textContent = 'Il messaggio verrà inviato via email e salvato nello storico.';

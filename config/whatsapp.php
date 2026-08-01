@@ -1,9 +1,97 @@
 <?php
 /**
- * WhatsApp via Twilio API.
+ * WhatsApp Business Platform — Cloud API di Meta, senza intermediari.
+ *
+ * Si parlava con Twilio, che rivende l'accesso a questa stessa piattaforma
+ * aggiungendo una tariffa per messaggio. Qui si chiama Meta direttamente: si
+ * paga solo la conversazione, e non c'e' un secondo fornitore a cui chiedere
+ * conto quando un messaggio non arriva.
+ *
+ * Le tre differenze che contano rispetto a prima:
+ *   - l'invio e' JSON su graph.facebook.com, autenticato con un token Bearer;
+ *   - il webhook arriva in JSON (non piu' form-encoded) e porta con se' ANCHE
+ *     gli stati di consegna, che prima erano una chiamata separata;
+ *   - un messaggio libero si puo' mandare solo entro 24 ore dall'ultimo
+ *     messaggio del cliente. Fuori da quella finestra Meta accetta solo
+ *     template approvati: vedi sendWhatsAppTemplate().
  */
 
 require_once __DIR__ . '/settings.php';
+
+const META_GRAPH_VERSION = 'v21.0';
+
+/** Errori Meta che significano "finestra di 24 ore chiusa", non "guasto". */
+const META_WINDOW_ERRORS = [131047, 131051, 131026];
+
+/**
+ * Chiamata a Graph. Ritorna [codice HTTP, corpo decodificato, errore di rete].
+ */
+function metaGraphRequest(string $url, ?array $json = null, int $timeout = 30): array
+{
+    $cfg = getWhatsAppConfig();
+
+    $ch   = curl_init($url);
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $cfg['access_token']],
+    ];
+    if ($json !== null) {
+        $opts[CURLOPT_POST]         = true;
+        $opts[CURLOPT_POSTFIELDS]   = json_encode($json, JSON_UNESCAPED_UNICODE);
+        $opts[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
+    }
+    curl_setopt_array($ch, $opts);
+
+    $raw  = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+
+    // Una connessione fallita non e' una risposta: distinguerla da un 200 evita
+    // di leggere un corpo vuoto come "tutto a posto".
+    $transport = ($raw === false || $code === 0) ? ($err ?: 'connessione fallita') : null;
+
+    return [$code, json_decode((string) $raw, true), $transport];
+}
+
+/** L'errore di Meta tradotto in qualcosa su cui si puo' agire. */
+function metaErrorMessage(?array $data, int $code): string
+{
+    $err     = $data['error'] ?? [];
+    $subCode = (int) ($err['code'] ?? 0);
+    $detail  = $err['error_user_msg'] ?? $err['message'] ?? "HTTP {$code}";
+
+    if (in_array($subCode, META_WINDOW_ERRORS, true)) {
+        return 'Sono passate piu di 24 ore dall\'ultimo messaggio del cliente: fuori da quella '
+             . 'finestra WhatsApp accetta solo un template approvato da Meta. (' . $detail . ')';
+    }
+    if ($subCode === 190) {
+        return 'Token di accesso Meta scaduto o revocato: va rigenerato in Impostazioni. (' . $detail . ')';
+    }
+    if ($subCode === 131030) {
+        return 'Numero non fra i destinatari consentiti: finche l\'app Meta e in sviluppo si scrive '
+             . 'solo ai numeri di prova. (' . $detail . ')';
+    }
+
+    return (string) $detail;
+}
+
+/**
+ * La risposta di invio nella forma che i chiamanti gia' conoscono.
+ *
+ * @param array<string,mixed> $data
+ */
+function metaSendResult(array $data): array
+{
+    return [
+        'success'     => true,
+        // Meta prende in carico e mette in coda: la consegna vera arriva dopo,
+        // come stato dentro il webhook. Scrivere 'sent' qui sarebbe una promessa.
+        'status'      => 'queued',
+        'external_id' => $data['messages'][0]['id'] ?? ('wa-' . uniqid()),
+        'error'       => null,
+    ];
+}
 
 function sendWhatsAppMessage(string $toPhone, string $body): array
 {
@@ -17,69 +105,95 @@ function sendWhatsAppMessage(string $toPhone, string $body): array
         return ['success' => true, 'status' => 'sent', 'external_id' => 'wa-sim-' . uniqid(), 'simulated' => true, 'error' => null];
     }
 
-    if ($cfg['account_sid'] === '' || $cfg['auth_token'] === '' || $cfg['from'] === '') {
-        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'WhatsApp/Twilio non configurato.'];
+    if ($cfg['phone_number_id'] === '' || $cfg['access_token'] === '') {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'WhatsApp (Meta Cloud API) non configurato.'];
     }
 
-    $to   = normalizeWhatsAppNumber($toPhone);
-    $from = $cfg['from'];
-    if (!str_starts_with($from, 'whatsapp:')) {
-        $from = 'whatsapp:' . $from;
+    [$code, $data, $transport] = metaGraphRequest(
+        'https://graph.facebook.com/' . META_GRAPH_VERSION . '/' . $cfg['phone_number_id'] . '/messages',
+        [
+            'messaging_product' => 'whatsapp',
+            // Meta vuole E.164 senza il "+".
+            'to'                => ltrim(normalizeWhatsAppNumber($toPhone), '+'),
+            'type'              => 'text',
+            'text'              => ['preview_url' => false, 'body' => $body],
+        ]
+    );
+
+    if ($transport !== null) {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'Meta non raggiungibile: ' . $transport];
+    }
+    if ($code >= 400) {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => metaErrorMessage($data, $code)];
     }
 
-    $url    = 'https://api.twilio.com/2010-04-01/Accounts/' . $cfg['account_sid'] . '/Messages.json';
-    $fields = ['From' => $from, 'To' => 'whatsapp:' . $to, 'Body' => $body];
-
-    // Senza StatusCallback Twilio non ci dice mai se il messaggio è stato
-    // consegnato o letto: la riga in communications resterebbe 'sent' per sempre.
-    $callback = twilioStatusCallbackUrl();
-    if ($callback !== null) {
-        $fields['StatusCallback'] = $callback;
-    }
-
-    $post = http_build_query($fields);
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $post,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_USERPWD        => $cfg['account_sid'] . ':' . $cfg['auth_token'],
-        CURLOPT_TIMEOUT        => 30,
-    ]);
-
-    $raw  = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($raw === false || $code >= 400) {
-        $data = json_decode((string) $raw, true);
-        $msg  = $data['message'] ?? "HTTP {$code}";
-        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => $msg];
-    }
-
-    $data = json_decode($raw, true);
-    return [
-        'success'     => true,
-        'status'      => twilioStatusToCommStatus($data['status'] ?? 'sent'),
-        'external_id' => $data['sid'] ?? ('wa-' . uniqid()),
-        'error'       => null,
-    ];
+    return metaSendResult($data ?? []);
 }
 
 /**
- * Verifica che il numero mittente configurato sia DAVVERO un mittente WhatsApp
- * registrato su questo account Twilio, senza spedire alcun messaggio.
+ * Invio di un template approvato: l'unico modo di scrivere per primi.
  *
- * Serve perché un numero Twilio qualsiasi ha `sms`/`voice` ma non il canale
- * WhatsApp: configurarlo come mittente non dà nessun errore in fase di
- * salvataggio, e ogni invio muore poi con l'errore 63007 ("nessun canale per
- * questo mittente") dentro i log di Twilio, dove nessuno guarda. È esattamente
- * così che questa integrazione è rimasta rotta per settimane sembrando attiva.
+ * Ogni messaggio che parte da noi — un sollecito, una scadenza, un avviso — cade
+ * fuori dalla finestra di 24 ore e ha bisogno di un template gia' approvato da
+ * Meta. Nome e lingua sono quelli registrati nel Business Manager, NON i modelli
+ * locali di whatsapp_templates, che restano testo pronto per l'agente.
  *
- * Distingue anche i due casi che *sembrano* funzionanti ma non sono utilizzabili
- * da un cliente reale: la sandbox (nessun WABA: scrive solo a chi ha mandato
- * "join <codice>") e l'account Trial (tetto giornaliero, destinatari verificati).
+ * @param string[] $params valori del corpo, nell'ordine del template
+ */
+function sendWhatsAppTemplate(string $toPhone, string $templateName, array $params = [], string $lang = 'it'): array
+{
+    $cfg = getWhatsAppConfig();
+
+    if (!$cfg['enabled']) {
+        error_log('[whatsapp] SIMULATED template send (whatsapp disabled) to ' . $toPhone);
+        return ['success' => true, 'status' => 'sent', 'external_id' => 'wa-sim-' . uniqid(), 'simulated' => true, 'error' => null];
+    }
+    if ($cfg['phone_number_id'] === '' || $cfg['access_token'] === '') {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'WhatsApp (Meta Cloud API) non configurato.'];
+    }
+
+    $template = ['name' => $templateName, 'language' => ['code' => $lang]];
+    if ($params) {
+        $template['components'] = [[
+            'type'       => 'body',
+            'parameters' => array_map(
+                static fn($p): array => ['type' => 'text', 'text' => (string) $p],
+                array_values($params)
+            ),
+        ]];
+    }
+
+    [$code, $data, $transport] = metaGraphRequest(
+        'https://graph.facebook.com/' . META_GRAPH_VERSION . '/' . $cfg['phone_number_id'] . '/messages',
+        [
+            'messaging_product' => 'whatsapp',
+            'to'                => ltrim(normalizeWhatsAppNumber($toPhone), '+'),
+            'type'              => 'template',
+            'template'          => $template,
+        ]
+    );
+
+    if ($transport !== null) {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => 'Meta non raggiungibile: ' . $transport];
+    }
+    if ($code >= 400) {
+        return ['success' => false, 'status' => 'failed', 'external_id' => null, 'error' => metaErrorMessage($data, $code)];
+    }
+
+    return metaSendResult($data ?? []);
+}
+
+/**
+ * Verifica che il mittente configurato sia davvero utilizzabile, senza spedire
+ * niente: si interroga il phone number id su Graph e si guarda cosa risponde.
+ *
+ * Serve perche' una configurazione sbagliata non da' alcun errore al salvataggio
+ * e ogni invio muore poi dentro i log, dove nessuno guarda. E' esattamente cosi'
+ * che questa integrazione e' rimasta rotta per settimane sembrando attiva.
+ *
+ * Distingue anche i casi che *sembrano* funzionanti ma non lo sono per un
+ * cliente reale: numero non verificato, qualita' bassa o messaggistica limitata
+ * da Meta.
  *
  * @return array{ok: bool, usable: bool, error: ?string, detail: ?string}
  */
@@ -87,113 +201,80 @@ function whatsappSenderProbe(?array $cfg = null, int $timeout = 10): array
 {
     $cfg ??= getWhatsAppConfig();
 
-    if ($cfg['account_sid'] === '' || $cfg['auth_token'] === '') {
-        return ['ok' => false, 'usable' => false, 'error' => 'Credenziali Twilio mancanti.', 'detail' => null];
+    if ($cfg['access_token'] === '') {
+        return ['ok' => false, 'usable' => false, 'error' => 'Token di accesso Meta mancante.', 'detail' => null];
     }
-    if ($cfg['from'] === '') {
-        return ['ok' => false, 'usable' => false, 'error' => 'Nessun numero mittente WhatsApp configurato.', 'detail' => null];
+    if ($cfg['phone_number_id'] === '') {
+        return ['ok' => false, 'usable' => false, 'error' => 'Phone number ID mancante: e\' l\'identificativo del mittente, non il numero.', 'detail' => null];
     }
 
-    $get = static function (string $url) use ($cfg, $timeout): array {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_USERPWD        => $cfg['account_sid'] . ':' . $cfg['auth_token'],
-            CURLOPT_TIMEOUT        => $timeout,
-        ]);
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-        curl_close($ch);
-        return [$code, json_decode((string) $raw, true), ($raw === false || $code === 0) ? ($err ?: 'connessione fallita') : null];
-    };
+    $fields = 'display_phone_number,verified_name,quality_rating,code_verification_status,throughput';
+    [$code, $data, $transport] = metaGraphRequest(
+        'https://graph.facebook.com/' . META_GRAPH_VERSION . '/' . $cfg['phone_number_id'] . '?fields=' . $fields,
+        null,
+        $timeout
+    );
 
-    // Una connessione fallita NON è una risposta: senza questo controllo un
-    // errore di rete o di certificato lasciava la lista dei mittenti vuota e la
-    // sonda concludeva "il numero non è un mittente WhatsApp" — una diagnosi
-    // sbagliata e credibile, il modo peggiore di sbagliare.
-    [$code, $data, $transport] = $get('https://messaging.twilio.com/v2/Channels/Senders?Channel=whatsapp&PageSize=50');
+    // Una connessione fallita NON e' una risposta: senza questa distinzione un
+    // errore di rete o di certificato diventerebbe "il mittente non esiste" —
+    // una diagnosi sbagliata e credibile, il modo peggiore di sbagliare.
     if ($transport !== null) {
-        return ['ok' => false, 'usable' => false, 'error' => "Impossibile interrogare Twilio: {$transport}.", 'detail' => 'Stato del mittente WhatsApp non verificato.'];
+        return ['ok' => false, 'usable' => false, 'error' => "Impossibile interrogare Meta: {$transport}.", 'detail' => 'Stato del mittente WhatsApp non verificato.'];
     }
     if ($code >= 400) {
-        $msg = $data['message'] ?? "HTTP {$code}";
-        return ['ok' => false, 'usable' => false, 'error' => "Twilio non raggiungibile o credenziali rifiutate: {$msg}", 'detail' => null];
+        return ['ok' => false, 'usable' => false, 'error' => 'Meta ha rifiutato la richiesta: ' . metaErrorMessage($data, $code), 'detail' => null];
     }
 
-    $from   = str_starts_with($cfg['from'], 'whatsapp:') ? $cfg['from'] : 'whatsapp:' . $cfg['from'];
-    $sender = null;
-    foreach (($data['senders'] ?? []) as $s) {
-        if (($s['sender_id'] ?? '') === $from) {
-            $sender = $s;
-            break;
-        }
-    }
-
-    if ($sender === null) {
-        $known = array_filter(array_map(static fn(array $s): string => (string) ($s['sender_id'] ?? ''), $data['senders'] ?? []));
-        return [
-            'ok'     => false,
-            'usable' => false,
-            'error'  => "Il numero {$cfg['from']} non è un mittente WhatsApp su questo account Twilio: ogni invio fallirà con l'errore 63007.",
-            'detail' => $known ? 'Mittenti WhatsApp disponibili: ' . implode(', ', $known) . '.' : 'Nessun mittente WhatsApp registrato sull\'account.',
-        ];
-    }
-
-    $status  = strtoupper((string) ($sender['status'] ?? 'UNKNOWN'));
-    $isSandbox = ((string) ($sender['configuration']['waba_id'] ?? '')) === '';
-
-    [, $acct, $acctErr] = $get('https://api.twilio.com/2010-04-01/Accounts/' . $cfg['account_sid'] . '.json');
-    $isTrial = $acctErr === null && strtolower((string) ($acct['type'] ?? '')) === 'trial';
+    $display  = (string) ($data['display_phone_number'] ?? '');
+    $verified = strtoupper((string) ($data['code_verification_status'] ?? 'UNKNOWN'));
+    $quality  = strtoupper((string) ($data['quality_rating'] ?? 'UNKNOWN'));
 
     $blockers = [];
-    if ($status !== 'ONLINE')  $blockers[] = "mittente in stato {$status}";
-    if ($isSandbox)            $blockers[] = 'è la sandbox (scrive solo a chi ha inviato "join <codice>")';
-    if ($isTrial)              $blockers[] = 'account Twilio in prova (tetto giornaliero, solo destinatari verificati)';
+    if ($verified !== 'VERIFIED') {
+        $blockers[] = "numero non verificato (stato {$verified})";
+    }
+    if ($quality === 'RED') {
+        $blockers[] = 'qualita\' del numero segnalata come bassa da Meta: la messaggistica puo\' essere limitata';
+    }
+
+    // Il numero scritto in Impostazioni compare in archivio come mittente: se non
+    // e' quello vero, la chat attribuisce i messaggi a un numero che non esiste.
+    $configured = preg_replace('/\D+/', '', (string) $cfg['from']);
+    $real       = preg_replace('/\D+/', '', $display);
+    if ($configured !== '' && $real !== '' && $configured !== $real) {
+        $blockers[] = "il numero in Impostazioni ({$cfg['from']}) non e' quello del mittente ({$display})";
+    }
 
     if ($blockers) {
         return [
             'ok'     => true,
             'usable' => false,
-            'error'  => 'Mittente WhatsApp registrato ma non utilizzabile con clienti reali: ' . implode('; ', $blockers) . '.',
-            'detail' => 'Serve un numero WhatsApp Business (WABA) e un account Twilio a pagamento.',
+            'error'  => 'Mittente WhatsApp raggiungibile ma non utilizzabile con clienti reali: ' . implode('; ', $blockers) . '.',
+            'detail' => 'Serve un numero verificato su un WhatsApp Business Account attivo.',
         ];
     }
 
-    return ['ok' => true, 'usable' => true, 'error' => null, 'detail' => "Mittente {$cfg['from']} attivo."];
+    $name = (string) ($data['verified_name'] ?? '');
+    return ['ok' => true, 'usable' => true, 'error' => null, 'detail' => trim("Mittente {$display} {$name}") . ' attivo.'];
 }
 
 /**
- * URL pubblico dello status callback, o null se APP_URL non è configurato
- * (in locale Twilio non potrebbe comunque raggiungerci).
+ * Mappa lo stato Meta sull'enum communications.status.
+ * Meta: accepted|sent|delivered|read|failed (dentro statuses[] del webhook)
  */
-function twilioStatusCallbackUrl(): ?string
+function metaStatusToCommStatus(string $status): string
 {
-    $appUrl = defined('APP_URL') ? rtrim((string) APP_URL, '/') : '';
-    if ($appUrl === '' || !str_starts_with($appUrl, 'http')) {
-        return null;
-    }
-    return $appUrl . '/api/twilio_status_callback.php';
-}
-
-/**
- * Mappa il MessageStatus di Twilio sull'enum communications.status.
- * Twilio: accepted|queued|sending|sent|delivered|read|undelivered|failed|received
- */
-function twilioStatusToCommStatus(string $twilioStatus): string
-{
-    return match (strtolower(trim($twilioStatus))) {
-        'accepted', 'queued', 'sending' => 'queued',
-        'delivered'                     => 'delivered',
-        'read'                          => 'read',
-        'undelivered', 'failed'         => 'failed',
-        'received'                      => 'received',
-        default                         => 'sent',
+    return match (strtolower(trim($status))) {
+        'accepted', 'queued' => 'queued',
+        'delivered'          => 'delivered',
+        'read'               => 'read',
+        'failed', 'warning'  => 'failed',
+        default              => 'sent',
     };
 }
 
 /**
- * Ordine di avanzamento degli stati. I callback Twilio possono arrivare fuori
+ * Ordine di avanzamento degli stati. Gli stati di Meta possono arrivare fuori
  * sequenza (il 'sent' dopo il 'delivered'): senza questo confronto un ritardo
  * di rete farebbe tornare indietro le spunte già mostrate all'agente.
  */
@@ -211,52 +292,66 @@ function commStatusRank(string $status): int
 }
 
 /**
- * Verifica la firma HMAC-SHA1 con cui Twilio firma ogni webhook.
+ * Verifica la firma con cui Meta firma ogni webhook: HMAC-SHA256 del corpo
+ * GREZZO, con l'app secret, nell'intestazione X-Hub-Signature-256.
+ *
+ * Il corpo va preso cosi' com'e' arrivato (php://input): ricostruirlo dal JSON
+ * decodificato cambierebbe anche solo l'ordine di una chiave, e la firma non
+ * tornerebbe mai piu'.
  *
  * Ritorna:
  *   'ok'           — firma valida
  *   'invalid'      — firma assente o non corrispondente
- *   'unconfigured' — nessun auth token in produzione: non possiamo verificare,
+ *   'unconfigured' — nessun app secret in produzione: non possiamo verificare,
  *                    quindi la richiesta va RIFIUTATA (fail closed)
- *   'skipped'      — nessun auth token fuori produzione: check saltato (dev)
- *
- * @param string $endpointPath percorso dell'endpoint come lo vede Twilio,
- *                             es. '/api/twilio_status_callback.php'
+ *   'skipped'      — nessun app secret fuori produzione: check saltato (dev)
  */
-function verifyTwilioRequest(string $endpointPath, array $post): string
+function verifyMetaWebhook(string $rawBody): string
 {
-    $authToken = getSetting('twilio_auth_token') ?: (getenv('TWILIO_AUTH_TOKEN') ?: '');
+    $secret = getWhatsAppConfig()['app_secret'];
 
-    if ($authToken === '') {
+    if ($secret === '') {
         $isProd = strtolower((string) env('APP_ENV', 'production')) === 'production';
         return $isProd ? 'unconfigured' : 'skipped';
     }
 
-    $signature = $_SERVER['HTTP_X_TWILIO_SIGNATURE'] ?? '';
-    if ($signature === '') {
+    $header = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
+    if ($header === '' || !str_starts_with($header, 'sha256=')) {
         return 'invalid';
     }
 
-    // Algoritmo Twilio: URL canonico + parametri POST ordinati per chiave,
-    // concatenati chiave+valore, poi HMAC-SHA1 con l'auth token.
-    $appUrl = defined('APP_URL') ? rtrim((string) APP_URL, '/') : '';
-    $sigBase = $appUrl . $endpointPath;
+    $expected = 'sha256=' . hash_hmac('sha256', $rawBody, $secret);
 
-    ksort($post);
-    foreach ($post as $key => $value) {
-        $sigBase .= $key . $value;
+    return hash_equals($expected, $header) ? 'ok' : 'invalid';
+}
+
+/**
+ * Risposta alla verifica del webhook (GET) con cui Meta attiva la sottoscrizione.
+ * Ritorna la challenge da restituire, o null se il token non corrisponde.
+ */
+function metaWebhookChallenge(array $query): ?string
+{
+    $expected = getWhatsAppConfig()['verify_token'];
+    if ($expected === '') {
+        return null;
     }
 
-    $expected = base64_encode(hash_hmac('sha1', $sigBase, $authToken, true));
+    $mode      = (string) ($query['hub_mode'] ?? '');
+    $token     = (string) ($query['hub_verify_token'] ?? '');
+    $challenge = (string) ($query['hub_challenge'] ?? '');
 
-    return hash_equals($expected, $signature) ? 'ok' : 'invalid';
+    if ($mode !== 'subscribe' || !hash_equals($expected, $token)) {
+        return null;
+    }
+
+    return $challenge;
 }
 
 /**
  * Suffisso LIKE per confrontare due numeri scritti in modo diverso.
  *
  * In anagrafica lo stesso numero compare come "+39 333 1234567", "3331234567",
- * "0039 333 1234567"; Twilio lo consegna sempre come "+393331234567". Le ultime
+ * "0039 333 1234567"; Meta lo consegna sempre come "393331234567". Le ultime
  * 9 cifre sono la parte che non cambia mai (prefisso internazionale e zero
  * iniziale a parte), quindi sono la chiave di riconoscimento.
  *
@@ -378,7 +473,7 @@ function normalizeWhatsAppNumber(string $phone): string
     // generale, perche' i prefissi 391/392/393 (Wind Tre, Very Mobile) iniziano
     // per "39" e sembravano numeri che il prefisso internazionale ce l'avevano
     // gia': "393 1234567" diventava +3931234567, dieci cifre che non esistono.
-    // Twilio rifiutava l'invio, e la risposta dell'agente finiva sotto un numero
+    // L'invio veniva rifiutato, e la risposta dell'agente finiva sotto un numero
     // diverso da quello del cliente — la stessa persona in due conversazioni.
     $len = strlen($digits);
     if (str_starts_with($digits, '3') && ($len === 9 || $len === 10)) {
@@ -391,32 +486,73 @@ function normalizeWhatsAppNumber(string $phone): string
     return '+' . $digits;
 }
 
-function parseTwilioWebhook(array $post): array
+/**
+ * Legge il payload del webhook Meta.
+ *
+ * Forma: entry[].changes[].value, dove `messages[]` sono i messaggi in arrivo e
+ * `statuses[]` gli avanzamenti di consegna dei nostri. Arrivano nello STESSO
+ * webhook: con Twilio erano due endpoint distinti.
+ *
+ * Il testo sta in posti diversi a seconda del tipo: `text.body` per un
+ * messaggio scritto, `caption` per una foto con didascalia. L'allegato non e'
+ * una URL ma un id da riscattare con un secondo giro (vedi waStoreInboundMedia).
+ *
+ * @return array{messages: list<array>, statuses: list<array>}
+ */
+function parseMetaWebhook(array $payload): array
 {
-    // Gli allegati arrivano come MediaUrl0/MediaContentType0 (NumMedia dice
-    // quanti). Qui non c'erano affatto, e il webhook leggeva una chiave
-    // 'media_url' che questa funzione non ha mai restituito: la colonna restava
-    // NULL e ogni foto inviata dai clienti spariva senza lasciare traccia.
-    $media = [];
-    for ($i = 0, $n = (int) ($post['NumMedia'] ?? 0); $i < $n; $i++) {
-        $url = trim((string) ($post['MediaUrl' . $i] ?? ''));
-        if ($url === '') {
-            continue;
+    $messages = [];
+    $statuses = [];
+
+    foreach (($payload['entry'] ?? []) as $entry) {
+        foreach (($entry['changes'] ?? []) as $change) {
+            $value = $change['value'] ?? [];
+            $to    = (string) ($value['metadata']['display_phone_number'] ?? '');
+
+            foreach (($value['messages'] ?? []) as $m) {
+                $type  = (string) ($m['type'] ?? 'text');
+                $part  = $m[$type] ?? [];
+                $media = [];
+
+                // image/document/audio/video/sticker portano un id e un mime;
+                // il nome originale c'e' solo sui documenti.
+                if (isset($part['id'])) {
+                    $media[] = [
+                        'id'       => (string) $part['id'],
+                        'mime'     => (string) ($part['mime_type'] ?? ''),
+                        'filename' => (string) ($part['filename'] ?? ''),
+                    ];
+                }
+
+                $messages[] = [
+                    // Meta consegna il numero senza "+": rimetterlo qui tiene una
+                    // sola forma in tutta l'applicazione (+39...), che e' quella
+                    // su cui le conversazioni vengono raggruppate.
+                    'from'        => '+' . ltrim((string) ($m['from'] ?? ''), '+'),
+                    'to'          => $to !== '' ? '+' . ltrim($to, '+') : '',
+                    'body'        => (string) ($part['body'] ?? $part['caption'] ?? ''),
+                    'external_id' => (string) ($m['id'] ?? '') ?: null,
+                    'type'        => $type,
+                    'media'       => $media,
+                ];
+            }
+
+            foreach (($value['statuses'] ?? []) as $st) {
+                $statuses[] = [
+                    'external_id' => (string) ($st['id'] ?? ''),
+                    'status'      => (string) ($st['status'] ?? ''),
+                    'recipient'   => '+' . ltrim((string) ($st['recipient_id'] ?? ''), '+'),
+                    'error'       => $st['errors'][0]['title'] ?? null,
+                ];
+            }
         }
-        $media[] = ['url' => $url, 'mime' => trim((string) ($post['MediaContentType' . $i] ?? ''))];
     }
 
-    return [
-        'from'        => $post['From'] ?? '',
-        'to'          => $post['To'] ?? '',
-        'body'        => $post['Body'] ?? '',
-        'external_id' => $post['MessageSid'] ?? null,
-        'media'       => $media,
-    ];
+    return ['messages' => $messages, 'statuses' => $statuses];
 }
 
 /**
- * Estensioni ammesse per un allegato in arrivo, per tipo dichiarato da Twilio.
+ * Estensioni ammesse per un allegato in arrivo, per tipo dichiarato da Meta.
  *
  * Whitelist e non mappa aperta: il nome del file finisce su disco, e prendere
  * l'estensione da quello che dice la controparte significa lasciarle scegliere
@@ -431,6 +567,7 @@ const WA_MEDIA_EXTENSIONS = [
     'audio/ogg'       => 'ogg',
     'audio/mpeg'      => 'mp3',
     'audio/amr'       => 'amr',
+    'audio/aac'       => 'aac',
     'video/mp4'       => 'mp4',
     'video/3gpp'      => '3gp',
     'text/vcard'      => 'vcf',
@@ -440,38 +577,58 @@ const WA_MEDIA_EXTENSIONS = [
 const WA_MEDIA_MAX_BYTES = 16 * 1024 * 1024;
 
 /**
- * Scarica un allegato da Twilio e lo salva nell'albero protetto.
+ * Scarica un allegato da Meta e lo salva nell'albero protetto.
  *
- * Le URL dei media Twilio richiedono le credenziali dell'account e non vivono
- * per sempre: salvare il link invece del file avrebbe dato una foto che si
- * apre oggi e non fra sei mesi, quando serve davvero (una perdita d'acqua
- * documentata, lo stato di un immobile alla riconsegna).
+ * Due passaggi, non uno: il webhook porta solo un id, da cui si ottiene una URL
+ * temporanea su lookaside.fbsbx.com, che a sua volta va scaricata CON il token —
+ * non e' un link pubblico e scade in fretta. Salvare il link invece del file
+ * avrebbe dato una foto che si apre oggi e non fra sei mesi, quando serve
+ * davvero (una perdita d'acqua documentata, lo stato di un immobile).
  *
  * Ritorna null se il download fallisce: il messaggio va salvato comunque, un
  * allegato mancante e' meno grave di un messaggio perso.
  *
- * @param array{url:string, mime:string} $media
+ * @param array{id:string, mime:string, filename?:string} $media
  * @return array{path:string, mime:string, name:string}|null
  */
 function waStoreInboundMedia(array $media, ?string $sid = null): ?array
 {
     $cfg = getWhatsAppConfig();
-    if ($cfg['account_sid'] === '' || $cfg['auth_token'] === '') {
-        error_log('[whatsapp] allegato non scaricato: credenziali Twilio assenti.');
+    if ($cfg['access_token'] === '') {
+        error_log('[whatsapp] allegato non scaricato: token di accesso Meta assente.');
+        return null;
+    }
+    if (($media['id'] ?? '') === '') {
         return null;
     }
 
-    $ch = curl_init($media['url']);
+    // Passo 1 — dall'id alla URL temporanea.
+    [$code, $info, $transport] = metaGraphRequest(
+        'https://graph.facebook.com/' . META_GRAPH_VERSION . '/' . rawurlencode($media['id']),
+        null,
+        10
+    );
+    if ($transport !== null || $code >= 400 || empty($info['url'])) {
+        error_log('[whatsapp] URL allegato non ottenuta (HTTP ' . $code . ') ' . ($transport ?? ''));
+        return null;
+    }
+
+    if ((int) ($info['file_size'] ?? 0) > WA_MEDIA_MAX_BYTES) {
+        error_log('[whatsapp] allegato oltre il limite consentito, scartato.');
+        return null;
+    }
+
+    // Passo 2 — il file. La URL e' su un host di Meta ma vuole comunque il token.
+    $ch = curl_init((string) $info['url']);
     curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS      => 3,
-        CURLOPT_USERPWD        => $cfg['account_sid'] . ':' . $cfg['auth_token'],
-        // Twilio chiude il webhook dopo 15 secondi: se il download non sta in
-        // piedi entro 10 si rinuncia all'allegato, non alla risposta.
-        CURLOPT_TIMEOUT        => 10,
-        CURLOPT_BUFFERSIZE     => 65536,
-        CURLOPT_NOPROGRESS     => false,
+        CURLOPT_RETURNTRANSFER   => true,
+        CURLOPT_FOLLOWLOCATION   => true,
+        CURLOPT_MAXREDIRS        => 3,
+        CURLOPT_HTTPHEADER       => ['Authorization: Bearer ' . $cfg['access_token']],
+        // Meta chiude il webhook in fretta: se il download non sta in piedi
+        // entro 10 secondi si rinuncia all'allegato, non alla risposta.
+        CURLOPT_TIMEOUT          => 10,
+        CURLOPT_NOPROGRESS       => false,
         CURLOPT_PROGRESSFUNCTION => static fn($res, $dlTotal, $dlNow) => $dlNow > WA_MEDIA_MAX_BYTES ? 1 : 0,
     ]);
 
@@ -490,7 +647,7 @@ function waStoreInboundMedia(array $media, ?string $sid = null): ?array
         return null;
     }
 
-    $mime = strtolower(trim(explode(';', $media['mime'])[0]));
+    $mime = strtolower(trim(explode(';', (string) ($media['mime'] ?: ($info['mime_type'] ?? '')))[0]));
     $ext  = WA_MEDIA_EXTENSIONS[$mime] ?? 'bin';
 
     $relDir = 'uploads/documents/whatsapp/' . date('Y/m');
@@ -500,17 +657,24 @@ function waStoreInboundMedia(array $media, ?string $sid = null): ?array
         return null;
     }
 
-    // Nome generato da noi: quello di Twilio non esiste, e il SID da solo
-    // renderebbe indovinabile il percorso di un allegato altrui.
+    // Nome generato da noi: quello del mittente non e' affidabile, e l'id da
+    // solo renderebbe indovinabile il percorso di un allegato altrui.
     $name = 'wa_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
     if (file_put_contents($absDir . '/' . $name, $bytes) === false) {
         error_log('[whatsapp] scrittura fallita: ' . $absDir . '/' . $name);
         return null;
     }
 
+    // Il nome mostrato nella chat: quello vero se il mittente lo ha (documenti),
+    // altrimenti l'id del messaggio, che almeno lo lega alla conversazione.
+    $shown = trim((string) ($media['filename'] ?? ''));
+    if ($shown === '') {
+        $shown = ($sid !== null && $sid !== '' ? $sid : 'allegato') . '.' . $ext;
+    }
+
     return [
         'path' => $relDir . '/' . $name,
         'mime' => $mime !== '' ? $mime : 'application/octet-stream',
-        'name' => ($sid !== null && $sid !== '' ? $sid : 'allegato') . '.' . $ext,
+        'name' => $shown,
     ];
 }

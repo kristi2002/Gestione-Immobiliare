@@ -88,8 +88,10 @@ function updateSettings(): void
     }
 
     if (in_array($section, ['whatsapp', 'all'], true)) {
-        collectPlain($data, ['whatsapp_enabled','twilio_account_sid','twilio_whatsapp_from'], $pairs);
-        collectSecret($data, 'twilio_auth_token', $pairs);
+        collectPlain($data, ['whatsapp_enabled','meta_wa_phone_number_id','whatsapp_from'], $pairs);
+        collectSecret($data, 'meta_wa_access_token', $pairs);
+        collectSecret($data, 'meta_wa_app_secret', $pairs);
+        collectSecret($data, 'meta_wa_verify_token', $pairs);
     }
 
     if (in_array($section, ['backup', 'all'], true)) {

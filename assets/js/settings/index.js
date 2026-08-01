@@ -30,9 +30,11 @@ const FIELD_IDS = {
     smtp_secure: 'set-smtp-secure',
     mailgun_webhook_key: 'set-mailgun-webhook-key',
     whatsapp_enabled: 'set-wa-enabled',
-    twilio_account_sid: 'set-twilio-sid',
-    twilio_auth_token: 'set-twilio-token',
-    twilio_whatsapp_from: 'set-twilio-from',
+    meta_wa_phone_number_id: 'set-wa-phone-id',
+    meta_wa_access_token: 'set-wa-token',
+    meta_wa_app_secret: 'set-wa-app-secret',
+    meta_wa_verify_token: 'set-wa-verify-token',
+    whatsapp_from: 'set-wa-from',
     backup_cloud_enabled: 'set-backup-enabled',
     backup_s3_endpoint: 'set-s3-endpoint',
     backup_s3_bucket: 'set-s3-bucket',
@@ -222,9 +224,11 @@ function updateMailHint(enabled) {
 
 function fillWhatsApp(w) {
     document.getElementById('set-wa-enabled').checked = !!w.whatsapp_enabled;
-    document.getElementById('set-twilio-sid').value = w.twilio_account_sid || '';
-    document.getElementById('set-twilio-from').value = w.twilio_whatsapp_from || '';
-    fillSecret('twilio_auth_token', 'whatsapp', w);
+    document.getElementById('set-wa-phone-id').value = w.meta_wa_phone_number_id || '';
+    document.getElementById('set-wa-from').value = w.whatsapp_from || '';
+    fillSecret('meta_wa_access_token', 'whatsapp', w);
+    fillSecret('meta_wa_app_secret', 'whatsapp', w);
+    fillSecret('meta_wa_verify_token', 'whatsapp', w);
 }
 
 function fillBackup(b) {
@@ -305,9 +309,11 @@ function collectMailgun() {
 function collectWhatsApp() {
     return {
         whatsapp_enabled: document.getElementById('set-wa-enabled').checked,
-        twilio_account_sid: document.getElementById('set-twilio-sid').value,
-        twilio_auth_token: document.getElementById('set-twilio-token').value,
-        twilio_whatsapp_from: document.getElementById('set-twilio-from').value,
+        meta_wa_phone_number_id: document.getElementById('set-wa-phone-id').value,
+        meta_wa_access_token: document.getElementById('set-wa-token').value,
+        meta_wa_app_secret: document.getElementById('set-wa-app-secret').value,
+        meta_wa_verify_token: document.getElementById('set-wa-verify-token').value,
+        whatsapp_from: document.getElementById('set-wa-from').value,
     };
 }
 

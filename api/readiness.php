@@ -156,10 +156,10 @@ if (!$waOn) {
 // quindi passava il controllo e il webhook risultava "configurato" mentre il
 // provider avrebbe rifiutato la chiave. Vale come mancante.
 $isPlaceholder = static fn(string $v): bool => $v === '' || str_ends_with($v, '...') || preg_match('/^(sk|pk|rk)_(live|test)_\.{3}$/', $v) === 1;
-$twilio = (string) (getSetting('twilio_auth_token') ?: getenv('TWILIO_AUTH_TOKEN'));
+$metaWa = (string) (getSetting('meta_wa_app_secret') ?: getenv('META_WA_APP_SECRET'));
 $stripe = (string) (getSetting('stripe_webhook_secret') ?: getenv('STRIPE_WEBHOOK_SECRET'));
 $whMsg = [];
-if ($isPlaceholder($twilio)) $whMsg[] = 'Twilio';
+if ($isPlaceholder($metaWa)) $whMsg[] = 'WhatsApp (Meta)';
 if ($isPlaceholder($stripe)) $whMsg[] = 'Stripe';
 $add('webhooks', empty($whMsg) ? 'ok' : 'warn',
     empty($whMsg)

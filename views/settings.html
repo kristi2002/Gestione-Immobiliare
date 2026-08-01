@@ -127,16 +127,35 @@
 
     <div class="settings-panel" id="panel-whatsapp" hidden>
         <form id="form-whatsapp" class="card">
-            <h3>WhatsApp (Twilio)</h3>
-            <p class="text-muted">Richiede account Twilio con WhatsApp Business API. Webhook: <code>api/whatsapp_webhook.php</code></p>
+            <h3>WhatsApp (Meta Cloud API)</h3>
+            <p class="text-muted">
+                Richiede un WhatsApp Business Account su Meta. Webhook da incollare nel pannello Meta:
+                <code>api/whatsapp_webhook.php</code> — Meta lo chiama prima in GET con il verify token qui sotto.
+            </p>
             <label class="form-check"><input type="checkbox" id="set-wa-enabled"> Abilita WhatsApp</label>
-            <div class="form-group" style="margin-top:16px"><label for="set-twilio-sid">Account SID</label><input type="text" id="set-twilio-sid" class="form-input"></div>
-            <div class="form-group">
-                <label for="set-twilio-token">Auth Token</label>
-                <input type="password" id="set-twilio-token" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarlo">
-                <small class="form-hint secret-state" id="state-twilio_auth_token"></small>
+            <div class="form-group" style="margin-top:16px">
+                <label for="set-wa-phone-id">Phone number ID</label>
+                <input type="text" id="set-wa-phone-id" class="form-input" inputmode="numeric" placeholder="Solo cifre, dal pannello Meta">
+                <small class="form-hint">È l'identificativo del mittente, non il numero di telefono.</small>
             </div>
-            <div class="form-group"><label for="set-twilio-from">Numero WhatsApp (formato internazionale, es. +14155238886)</label><input type="text" id="set-twilio-from" class="form-input"></div>
+            <div class="form-group">
+                <label for="set-wa-token">Token di accesso</label>
+                <input type="password" id="set-wa-token" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarlo">
+                <small class="form-hint secret-state" id="state-meta_wa_access_token"></small>
+            </div>
+            <div class="form-group">
+                <label for="set-wa-app-secret">App secret</label>
+                <input type="password" id="set-wa-app-secret" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarlo">
+                <small class="form-hint secret-state" id="state-meta_wa_app_secret"></small>
+                <small class="form-hint">Firma i webhook in arrivo: senza, in produzione ogni messaggio viene rifiutato.</small>
+            </div>
+            <div class="form-group">
+                <label for="set-wa-verify-token">Verify token</label>
+                <input type="password" id="set-wa-verify-token" class="form-input" autocomplete="new-password" placeholder="Lascia vuoto per non modificarlo">
+                <small class="form-hint secret-state" id="state-meta_wa_verify_token"></small>
+                <small class="form-hint">Una stringa scelta da te, da ripetere identica nel pannello Meta.</small>
+            </div>
+            <div class="form-group"><label for="set-wa-from">Numero WhatsApp (formato internazionale, es. +393331234567)</label><input type="text" id="set-wa-from" class="form-input"></div>
             <div class="settings-actions">
                 <button type="submit" class="btn btn--primary">Salva WhatsApp</button>
                 <div class="settings-feedback" id="feedback-whatsapp" hidden></div>
