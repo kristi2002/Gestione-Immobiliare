@@ -107,8 +107,9 @@
 .fb-pop__row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
 .fb-pop__row label { font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 .fb-pop__row .form-select, .fb-pop__row .form-input { height: 38px; border-radius: 8px; width: 100%; }
-.fb-pop__foot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--rd-line); padding-top: 10px; }
-.fb-pop__foot .btn-clear-filters { margin: 0; }
+/* "Applica" only: "Azzera filtri" is no longer per-popover, it sits at the far
+   right of the bar itself (.fb-group--right > .btn-clear-filters). */
+.fb-pop__foot { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--rd-line); padding-top: 10px; }
 .fb-menu button {
     display: flex; width: 100%; align-items: center; gap: 8px;
     padding: 8px 10px; background: none; border: none; border-radius: 7px;
@@ -118,10 +119,23 @@
 .fb-menu button.is-active { color: var(--color-primary); font-weight: 600; }
 .fb-menu button span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fb-menu__empty { padding: 10px; font-size: 12.5px; color: var(--color-text-muted); text-align: center; }
+
+/* One "Azzera filtri" for the whole bar, last control on the row. It only
+   exists while a search or a filter is set (filters.js updateVisibility), and
+   the same moment adds .fb-has-clear so the search box hands over the width it
+   needs — otherwise the right group wraps onto a second line. `margin-left`
+   is reset because the shared rule (01-base.css) pushes it away with `auto`,
+   which here would tear it off the sort button. */
+.fb-ref .fb-group--right .btn-clear-filters { margin-left: 0; flex: 0 0 auto; }
+.filter-bar__controls.fb-ref.fb-has-clear .fb-group--left .search-box { flex: 1 1 150px; min-width: 110px; }
+
 @media (max-width: 720px) {
     .filter-bar__controls.fb-ref { flex-direction: column; align-items: stretch; }
     .fb-group { justify-content: flex-start; }
     .fb-pop { right: auto; left: 0; }
+    /* Stacked column: the search box already owns the full row, nothing to
+       give up — keep it at its normal size. */
+    .filter-bar__controls.fb-ref.fb-has-clear .fb-group--left .search-box { flex: 1 1 220px; min-width: 150px; }
 }
 
 /* Segmented view toggle (columns / map) → pill control like the reference */

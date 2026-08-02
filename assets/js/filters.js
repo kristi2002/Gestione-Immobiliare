@@ -2,11 +2,19 @@
     'use strict';
 
     const BAR_SELECTORS = '.toolbar, .reports-toolbar, .chat-sidebar__search, .filter-bar';
+    const FIELD_SELECTOR = 'input:not([type="hidden"]):not([type="file"]), select, textarea';
 
     function hasFilters(bar) {
-        return bar.querySelector(
-            'input:not([type="hidden"]):not([type="file"]), select, textarea, .comm-tab, .forecast-period'
-        );
+        return bar.querySelector(FIELD_SELECTOR + ', .comm-tab, .forecast-period');
+    }
+
+    // Every control in the bar that is actually a filter. The Azioni dropdown
+    // lives inside the bar too (its markup is moved in by buildRefBar), but its
+    // "Seleziona tutti" checkbox is a selection, not a filter: counting it would
+    // pop "Azzera filtri" open on a bare list, and clearing would silently drop
+    // the user's selection.
+    function filterFields(bar) {
+        return [...bar.querySelectorAll(FIELD_SELECTOR)].filter(el => !el.closest('.fb-menu--bulk'));
     }
 
     function clearField(el) {
@@ -79,10 +87,7 @@
     }
 
     function isBarActive(bar) {
-        const fields = bar.querySelectorAll(
-            'input:not([type="hidden"]):not([type="file"]), select, textarea'
-        );
-        for (const el of fields) {
+        for (const el of filterFields(bar)) {
             if (isFieldActive(el)) return true;
         }
         return isTabGroupActive(bar);
@@ -341,7 +346,6 @@
                 pop.appendChild(row);
             });
             const foot = document.createElement('div'); foot.className = 'fb-pop__foot';
-            if (clearBtn) foot.appendChild(clearBtn);
             const done = document.createElement('button'); done.type = 'button';
             done.className = 'btn btn--primary btn--sm'; done.textContent = 'Applica';
             done.addEventListener('click', () => pop.classList.remove('open'));
@@ -367,8 +371,11 @@
         sortBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(sortBtn, sortMenu, 'right'); });
         right.appendChild(sortWrap);
 
-        // No Filtri popover to host it → "Azzera" closes the row, after Ordina.
-        if (!fields.length && clearBtn) right.appendChild(clearBtn);
+        // "Azzera filtri" is one button for the whole bar, not one per popover:
+        // it closes the row after Ordina and appears (setupBar's
+        // updateVisibility) as soon as ANY search or filter in the bar is set —
+        // including the search box, which no popover ever contained.
+        if (clearBtn) { clearBtn.classList.add('fb-clear'); right.appendChild(clearBtn); }
 
         controls.classList.add('fb-ref');
         controls.append(left, right);
@@ -504,14 +511,17 @@
             setupCollapsible(bar);
         }
 
+        // The row makes room for the button only while it is there: the search
+        // box gives up some width instead of the whole right group wrapping to
+        // a second line.
         const updateVisibility = () => {
-            btn.hidden = !isBarActive(bar);
+            const active = isBarActive(bar);
+            btn.hidden = !active;
+            controls.classList.toggle('fb-has-clear', active);
         };
 
         btn.addEventListener('click', () => {
-            const fields = bar.querySelectorAll(
-                'input:not([type="hidden"]):not([type="file"]), select, textarea'
-            );
+            const fields = filterFields(bar);
 
             fields.forEach(clearField);
             const tabsHandled = resetTabGroups(bar);
