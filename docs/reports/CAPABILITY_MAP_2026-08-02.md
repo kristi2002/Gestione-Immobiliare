@@ -191,10 +191,10 @@ That is the right layer.
 
 ## 4. Findings worth fixing
 
-### 4.1 A failed email silently destroys the agent's message — *fix this one*
+### 4.1 A failed send left no trace at all — **FIXED**
 
-`api/communications.php` sends first and stores second. If the mailer fails, the row
-is never inserted and the text the agent typed is gone.
+`api/communications.php` sent first and stored second. If the mailer failed, the row
+was never inserted:
 
 ```
 POST communications {"channel":"email",...} → {"success":false,"error":"Invio email fallito."}
@@ -202,24 +202,43 @@ GET  communications?client_id=31            → messages: []      ← nothing ke
 POST communications {"channel":"whatsapp"}  → success, status:"simulated"   ← kept
 ```
 
-Two channels on the same screen behave differently: WhatsApp degrades to `simulated`
-and is preserved; email fails hard and loses the content. An agent who writes a long
-message to a proprietario during an SMTP hiccup retypes it from scratch.
-**Suggested fix:** insert the row first with `status='failed'`, then attempt delivery
-and update — so the message is always recoverable and re-sendable.
+Two channels on the same screen behaved differently. The composed text itself was not
+lost from the form (both senders keep the textarea on error), but the *archive* had no
+record — so nobody could tell "non gli ho mai scritto" from "gli ho scritto e non è
+partita", and there was nothing to retry. That archive is exactly what an agent reads
+to tell a proprietario *"le ho scritto il 14"*.
 
-### 4.2 `payments.php?contract_id=` is silently ignored
+**Fix:** the row is now written as `queued` **before** dispatch and updated with the
+outcome — `sent` / `simulated` / `failed` + `status_detail`. A failed send returns
+HTTP 502 with `message_id`, and the page reloads the thread so the message appears
+marked *"Fallita"* instead of seeming to vanish. Anagrafica errors (no email, no
+phone) still abort *without* writing a row — an incomplete contact is not a failed
+delivery. Verified in the browser:
 
 ```
-GET payments.php?limit=1               → "total":318
-GET payments.php?contract_id=21&limit=1 → "total":318   ← filter no-op, returns everything
-GET payments.php?tenant_id=20&limit=1   → "total":48    ← works
-GET payments.php?property_id=62&limit=1 → "total":48    ← works
+before send: 4 bubbles
+after  send: 5 bubbles — last one status "Fallita", tooltip "Invio email fallito."
+             alert "Invio email fallito." (alert--error), compose box cleared
 ```
 
-No current screen passes `contract_id`, so nothing is visibly broken today — but the
-next screen that does will show every payment in the database and look correct.
-Either implement the filter or reject unknown filter params.
+### 4.2 `payments.php?contract_id=` was silently ignored — **FIXED**
+
+```
+GET payments.php?limit=1                → "total":318
+GET payments.php?contract_id=21&limit=1 → "total":318   ← filter no-op, returned everything
+```
+
+Rate are *created* from a contract (`contracts.php?action=generate_payments` writes
+`contract_id`), so asking for them by contract is the most natural question this list
+can be asked — and it returned the whole agency's scadenzario looking like one
+contract's. **Fix:** the filter is implemented. Verified:
+
+```
+no filter        → "total":307
+contract_id=1    → "total":37     (DB ground truth: 37)
+contract_id=99999 → "total":0
+tenant_id=1      → "total":15     (unchanged)
+```
 
 ### 4.3 Form field names diverge from what the API expects
 
@@ -374,7 +393,7 @@ simply be out of scope.
 
 ## 9. Suggested order of work before delivery
 
-1. Fix §4.1 — a lost message is the one bug an agent will hit on day one and lose trust over.
+1. ~~Fix §4.1 / §4.2~~ — **done**, both verified live.
 2. Decide Stripe in/out; if out, confirm no dead payment UI shows in the demo.
 3. Provision one tenant and one owner portal account, then re-run the isolation tests.
 4. Re-run the Apache boundary checks on the live host (§8).

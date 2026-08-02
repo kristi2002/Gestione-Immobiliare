@@ -84,15 +84,21 @@ function apiWordSearch(string $search, array $columns, array &$params, string $p
     return implode(' AND ', $clauses);
 }
 
-function apiError(string $message, int $code = 400): void
+/**
+ * @param array<string,mixed> $extra chiavi aggiuntive accanto a success/error —
+ *        per gli errori in cui qualcosa e' comunque stato salvato e la pagina
+ *        deve poterlo ritrovare (es. una comunicazione registrata come 'failed').
+ *        `success` ed `error` non sono sovrascrivibili.
+ */
+function apiError(string $message, int $code = 400, array $extra = []): void
 {
     apiDiscardBufferedOutput();
     apiHeaders();
     http_response_code($code);
-    echo json_encode([
+    echo json_encode(array_merge($extra, [
         'success' => false,
         'error'   => $message,
-    ], JSON_UNESCAPED_UNICODE);
+    ]), JSON_UNESCAPED_UNICODE);
     exit;
 }
 

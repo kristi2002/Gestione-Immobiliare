@@ -2,7 +2,7 @@
 /**
  * Payments (Scadenzario Affitti) CRUD API.
  *
- * GET    /api/payments.php                       — list (tenant_id, property_id, status, month, year)
+ * GET    /api/payments.php                       — list (tenant_id, property_id, contract_id, status, month, year)
  * GET    /api/payments.php?id={id}               — single payment
  * POST   /api/payments.php                       — create
  * PUT    /api/payments.php?id={id}               — update (mark paid, etc.)
@@ -111,6 +111,12 @@ function listPayments(PDO $db): void
     $pagination = apiGetPagination();
     $tenantId   = isset($_GET['tenant_id']) ? (int) $_GET['tenant_id'] : null;
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    // Le rate NASCONO da un contratto (contracts.php?action=generate_payments le
+    // scrive con contract_id), quindi chiederle per contratto e' la domanda piu'
+    // naturale che si possa fare a questo elenco. Non era implementata: il
+    // parametro veniva accettato e ignorato, e la risposta era l'intero
+    // scadenzario dell'agenzia — con l'aria di essere quello del contratto.
+    $contractId = isset($_GET['contract_id']) ? (int) $_GET['contract_id'] : null;
     $status     = trim($_GET['status'] ?? '');
     $month      = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : null;
     $year       = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : null;
@@ -125,6 +131,10 @@ function listPayments(PDO $db): void
     if ($propertyId) {
         $where .= ' AND pay.property_id = :property_id';
         $params['property_id'] = $propertyId;
+    }
+    if ($contractId) {
+        $where .= ' AND pay.contract_id = :contract_id';
+        $params['contract_id'] = $contractId;
     }
     if ($status !== '' && in_array($status, PAYMENT_STATUSES, true)) {
         // 'late' and 'pending' are derived (see SQL_IS_LATE / SQL_IS_PENDING) so the

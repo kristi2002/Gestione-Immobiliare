@@ -298,47 +298,33 @@ function createMessage(PDO $db): void
         $fromEmail = getMailConfig()['agency_email'];
         $toEmail   = $client['email'];
     }
-    $status     = $direction === 'received' ? 'received' : 'sent';
-    $externalId = null;
+    $dispatched = $direction === 'sent' && in_array($channel, COMM_DISPATCHED, true);
 
-    if ($direction === 'sent' && in_array($channel, COMM_DISPATCHED, true)) {
-        if ($channel === 'email') {
-            if (empty($client['email'])) {
-                apiError('Il proprietario non ha un indirizzo email configurato.');
-            }
-
-            $result = sendHtmlEmail($client['email'], $subject ?? '(nessun oggetto)', $body, $mailAttachments);
-
-            if (!$result['success']) {
-                apiError($result['error'] ?? 'Invio fallito.');
-            }
-
-            // Con MAIL_ENABLED=false config/mail.php risponde comunque
-            // success=true (per non bloccare i flussi) ma marca simulated=true.
-            // Leggere solo `status` scriveva "inviata" in archivio per un
-            // messaggio che nessuno ha ricevuto — ed e' l'archivio che l'agente
-            // guarda per dire al proprietario "le ho scritto il 14".
-            $simulated  = !empty($result['simulated']);
-            $status     = $simulated ? 'simulated' : $result['status'];
-            $externalId = $result['external_id'];
-        } elseif ($channel === 'whatsapp') {
-            if (empty($client['phone'])) {
-                apiError('Il proprietario non ha un numero di telefono configurato.');
-            }
-
-            require_once __DIR__ . '/../config/whatsapp.php';
-            $result = sendWhatsAppMessage($client['phone'], $body);
-
-            if (!$result['success']) {
-                apiError($result['error'] ?? 'Invio WhatsApp fallito.');
-            }
-
-            // Stessa simulazione lato WhatsApp quando l'integrazione e' spenta.
-            $simulated  = !empty($result['simulated']);
-            $status     = $simulated ? 'simulated' : $result['status'];
-            $externalId = $result['external_id'];
-        }
+    // Il destinatario mancante non e' un invio fallito: e' un'anagrafica
+    // incompleta. Si blocca prima di scrivere, perche' non c'e' niente da
+    // ritentare finche' l'indirizzo non esiste.
+    if ($dispatched && $channel === 'email' && empty($client['email'])) {
+        apiError('Il proprietario non ha un indirizzo email configurato.');
     }
+    if ($dispatched && $channel === 'whatsapp' && empty($client['phone'])) {
+        apiError('Il proprietario non ha un numero di telefono configurato.');
+    }
+
+    // ── Prima si scrive, poi si spedisce ────────────────────────────────────
+    // Prima era il contrario: si spediva e, solo se l'invio riusciva, si
+    // inseriva la riga. Un SMTP che non risponde cancellava quindi ogni traccia
+    // del tentativo — e l'archivio e' esattamente il posto in cui l'agente
+    // guarda per dire al proprietario "le ho scritto il 14". Senza riga non si
+    // distingue "non gli ho mai scritto" da "gli ho scritto e non e' partita",
+    // e non c'e' niente da ritentare: il messaggio, gli allegati gia'
+    // validati e l'immobile di contesto vanno riscritti da capo.
+    //
+    // Ora la riga nasce 'queued' e viene aggiornata con l'esito. Un invio
+    // fallito resta in archivio come 'failed' col motivo, visibile e
+    // rispedibile. Le note interne e i messaggi registrati a mano non passano
+    // di qui: per loro lo stato definitivo e' gia' quello giusto.
+    $status     = $dispatched ? 'queued' : ($direction === 'received' ? 'received' : 'sent');
+    $externalId = null;
 
     $stmt = $db->prepare(
         "INSERT INTO communications
@@ -365,7 +351,65 @@ function createMessage(PDO $db): void
     $newId    = (int) $db->lastInsertId();
     $attInfo  = $mailAttachments ? ' — ' . count($mailAttachments) . ' allegati' : '';
     logActivity('create', 'communication', $newId, "Comunicazione {$channel} ({$direction}) — proprietario #{$clientId}{$attInfo}");
+
+    if ($dispatched) {
+        $result = dispatchMessage($channel, $client, $subject, $body, $mailAttachments);
+
+        // Con MAIL_ENABLED=false (o WhatsApp spento) i config rispondono
+        // success=true ma marcano simulated=true. Leggere solo `status`
+        // scriveva "inviata" in archivio per un messaggio che nessuno ha
+        // ricevuto.
+        if ($result['success']) {
+            $status     = !empty($result['simulated']) ? 'simulated' : $result['status'];
+            $externalId = $result['external_id'] ?? null;
+            $detail     = null;
+        } else {
+            $status = 'failed';
+            $detail = mb_substr((string) ($result['error'] ?? 'Invio fallito.'), 0, 255);
+        }
+
+        $upd = $db->prepare(
+            "UPDATE communications
+                SET status = :status, status_detail = :detail,
+                    status_updated_at = NOW(), external_id = :external_id
+              WHERE id = :id"
+        );
+        $upd->execute([
+            'status'      => $status,
+            'detail'      => $detail,
+            'external_id' => $externalId,
+            'id'          => $newId,
+        ]);
+
+        // L'errore arriva comunque all'agente — ma ora con l'id della riga
+        // salvata, cosi' la schermata puo' ricaricare il thread e mostrargli
+        // il messaggio in archivio invece di lasciarlo credere che sia sparito.
+        if ($status === 'failed') {
+            apiError($detail, 502, ['message_id' => $newId, 'status' => 'failed']);
+        }
+    }
+
     getMessage($db, $newId);
+}
+
+/**
+ * Consegna vera e propria sul canale scelto. Isolata dal salvataggio perche'
+ * il salvataggio non deve piu' dipendere dall'esito.
+ *
+ * @return array{success:bool, status?:string, external_id?:?string, simulated?:bool, error?:string}
+ */
+function dispatchMessage(string $channel, array $client, ?string $subject, string $body, array $attachments): array
+{
+    if ($channel === 'email') {
+        return sendHtmlEmail($client['email'], $subject ?? '(nessun oggetto)', $body, $attachments);
+    }
+
+    if ($channel === 'whatsapp') {
+        require_once __DIR__ . '/../config/whatsapp.php';
+        return sendWhatsAppMessage($client['phone'], $body);
+    }
+
+    return ['success' => false, 'error' => 'Canale non spedibile.'];
 }
 
 function clientExists(PDO $db, int $id): bool

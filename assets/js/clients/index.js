@@ -927,6 +927,17 @@ async function sendMessage() {
             }),
         });
         const json = await res.json();
+
+        // Invio fallito ma messaggio comunque salvato (l'API risponde con
+        // message_id): si chiude la finestra e lo si dice. Lasciarla aperta col
+        // testo dentro invitava a ripremere Invia, creando una seconda riga per
+        // lo stesso messaggio — il ritentativo si fa da Comunicazioni, sulla
+        // riga marcata "Fallita".
+        if (!json.success && json.message_id) {
+            closeMessageModal();
+            showAlert(`${json.error} Il messaggio è salvato in Comunicazioni come non inviato.`, 'error');
+            return;
+        }
         if (!json.success) throw new Error(json.error || 'Invio fallito.');
         const name = `${messageClient.name} ${messageClient.surname}`;
         const attInfo = attachments.length

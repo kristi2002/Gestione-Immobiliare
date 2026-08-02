@@ -403,7 +403,20 @@
                 }),
             });
             const json = await res.json();
-            if (!json.success) throw new Error(json.error);
+
+            // Un invio fallito ora lascia comunque la riga in archivio
+            // (status 'failed'): l'API la segnala con message_id. Ricarichiamo
+            // il thread PRIMA di mostrare l'errore, cosi' l'agente vede il
+            // proprio messaggio marcato "non inviata" invece di credere che
+            // sia andato perso — e puo' ritentare da li'.
+            if (!json.success) {
+                if (json.message_id) {
+                    els.chatForm.reset();
+                    await loadClientSummary();
+                    await selectClient(selectedId);
+                }
+                throw new Error(json.error);
+            }
 
             els.chatForm.reset();
             await loadClientSummary();
