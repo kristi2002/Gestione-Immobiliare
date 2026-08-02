@@ -98,9 +98,13 @@
         els.loadEarlierBtn.addEventListener('click', loadEarlierMessages);
 
         // Thread search + filter tabs
+        buildClearButton();
+
         if (els.threadSearch) {
             let t = null;
             els.threadSearch.addEventListener('input', () => {
+                // Il bottone segue il testo digitato, il filtro la pausa.
+                syncClearButton();
                 clearTimeout(t);
                 t = setTimeout(() => { threadSearch = els.threadSearch.value.trim().toLowerCase(); renderThreads(); }, 180);
             });
@@ -111,9 +115,50 @@
                 if (!tab) return;
                 threadFilter = tab.dataset.filter || 'all';
                 els.threadTabs.querySelectorAll('.wa-tab').forEach(x => x.classList.toggle('active', x === tab));
+                syncClearButton();
                 renderThreads();
             });
         }
+    }
+
+    /**
+     * "Azzera filtri" — uno solo per la colonna, in fondo alla riga delle
+     * schede, come nelle barre filtri delle altre pagine.
+     *
+     * Anche qui i filtri sono due blocchi impilati (ricerca e schede) invece
+     * che una riga sola, quindi la colonna non passa da FilterBar
+     * (assets/js/filters.js): stessa classe, stesso comportamento, costruito
+     * a mano. Compare appena uno dei due e' attivo e li azzera insieme.
+     */
+    function buildClearButton() {
+        if (!els.threadTabs) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn--ghost btn--sm btn-clear-filters wa-tabs__clear';
+        btn.setAttribute('aria-label', 'Azzera filtri');
+        btn.innerHTML = '&#10005; Azzera';
+        btn.hidden = true;
+        btn.addEventListener('click', clearAllFilters);
+        els.threadTabs.appendChild(btn);
+        els.clearBtn = btn;
+    }
+
+    function syncClearButton() {
+        if (!els.clearBtn) return;
+        const typing = !!(els.threadSearch && els.threadSearch.value.trim());
+        els.clearBtn.hidden = !(typing || threadFilter !== 'all');
+    }
+
+    function clearAllFilters() {
+        if (els.threadSearch) els.threadSearch.value = '';
+        threadSearch = '';
+        threadFilter = 'all';
+        if (els.threadTabs) {
+            els.threadTabs.querySelectorAll('.wa-tab')
+                .forEach(x => x.classList.toggle('active', (x.dataset.filter || 'all') === 'all'));
+        }
+        syncClearButton();
+        renderThreads();
     }
 
     function startPolling() {
