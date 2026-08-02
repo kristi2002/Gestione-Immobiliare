@@ -68,7 +68,16 @@
             o.value = i; o.textContent = name; elMonth.appendChild(o);
         });
 
-        popup.addEventListener('mousedown', e => e.preventDefault()); // keep input focus
+        // Keep focus on the input so the field never blurs mid-interaction —
+        // EXCEPT on the month/year <select>s: preventing the default of a
+        // mousedown on a select is exactly what suppresses its native dropdown
+        // list (and its focus), so the blanket preventDefault made both menus
+        // unopenable. They need the default action; nothing closes the popup on
+        // blur, so letting focus land on them is safe.
+        popup.addEventListener('mousedown', e => {
+            if (e.target.closest('select')) return;
+            e.preventDefault();
+        });
         popup.querySelectorAll('.dp-nav').forEach(b =>
             b.addEventListener('click', () => stepMonth(+b.dataset.step)));
         elMonth.addEventListener('change', () => { viewM = +elMonth.value; renderDays(); });

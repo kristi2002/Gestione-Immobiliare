@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>datepicker month/year select test</title>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/theme-orlandi.css">
+</head>
+<body>
+<main class="app-content" style="padding:40px">
+  <div class="form-group" style="max-width:260px">
+    <label for="d1">Data (come in Automazioni)</label>
+    <input type="date" id="d1" class="form-control" value="2026-08-02">
+  </div>
+  <pre id="out" style="margin-top:320px;font:12px monospace"></pre>
+</main>
+<script>
+// Cache-bust: python's http.server answers 304 and the browser keeps the old
+// script across reloads, which silently tests yesterday's file.
+document.write('<script src="/assets/js/datepicker.js?t=' + Date.now() + '"><\/script>');
+</script>
+<script>
+DatePicker.setupIn(document);
+
+// Instrumentation: this bubble-phase listener runs AFTER the popup's own
+// mousedown handler, so defaultPrevented tells us whether the native <select>
+// dropdown was suppressed.
+const out = document.getElementById('out');
+const log = m => { out.textContent += m + '\n'; console.log('[DPTEST] ' + m); };
+document.addEventListener('mousedown', e => {
+  const t = e.target;
+  log('mousedown on <' + t.tagName.toLowerCase() + (t.className ? ' class="' + t.className + '"' : '') +
+      '> defaultPrevented=' + e.defaultPrevented);
+});
+document.addEventListener('change', e => {
+  if (e.target.matches && e.target.matches('.dp-month,.dp-year')) log('CHANGE ' + e.target.className + ' -> ' + e.target.value);
+});
+window.dpProbe = () => {
+  const p = document.querySelector('.dp-popup');
+  const sel = p && p.querySelector('.dp-month');
+  if (!sel) return { popup: !!p, note: 'popup not built yet' };
+  const ev = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  sel.dispatchEvent(ev);
+  return {
+    popupOpen: p.classList.contains('is-open'),
+    selectMousedownDefaultPrevented: ev.defaultPrevented,
+    pointerEvents: getComputedStyle(p).pointerEvents,
+    monthValue: sel.value,
+    activeElement: document.activeElement.tagName + '.' + document.activeElement.className,
+  };
+};
+</script>
+</body></html>
