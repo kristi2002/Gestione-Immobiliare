@@ -1,6 +1,7 @@
 /**
  * Appointment create / edit — dedicated page.
- * viewParams: { appointmentId } for edit; { propertyId } / { leadId } / { clientId } to preselect on create.
+ * viewParams: { appointmentId } for edit; { propertyId } / { leadId } / { clientId } to preselect
+ * on create, { date: 'YYYY-MM-DD' } to open the form already on that day (the calendar passes it).
  */
 (function () {
     'use strict';
@@ -283,7 +284,13 @@
             catch (err) { showAlert('Impossibile caricare l\'appuntamento: ' + err.message, 'error'); }
         } else {
             $('ape-title').textContent = 'Nuovo Appuntamento';
-            const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0);
+            // Opened from a day on the calendar: keep that day and only supply
+            // the hour. Otherwise fall back to "tomorrow at 10:00".
+            const day = /^\d{4}-\d{2}-\d{2}$/.test(String(vp.date || '')) ? String(vp.date) : null;
+            const d = day
+                ? new Date(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)), 10, 0, 0, 0)
+                : new Date();
+            if (!day) { d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); }
             $('ape-date').value = window.Fmt.toInputDateTime(d);
             if (vp.propertyId) $('ape-property').value = String(vp.propertyId);
             if (vp.leadId) $('ape-lead').value = String(vp.leadId);

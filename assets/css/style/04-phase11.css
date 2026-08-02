@@ -661,11 +661,12 @@ a.topbar-user:hover { background: var(--color-hover, rgba(0,0,0,.04)); }
 .notif-item__date  { display: block; font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 .notif-empty { padding: 20px 16px; text-align: center; }
 
-/* --- Calendar --- lives in assets/css/calendar.css, loaded with views/calendar.html.
-   The old block that sat here predated the reminder/appointment split: it had no
-   per-type event colours, no .cal-type-toggle and no .cal-legend, so it silently
-   half-styled the page whenever calendar.css failed to load.
-   Do not reintroduce a second copy here. */
+/* --- Calendar --- lives in style/16-calendar.css, bundled with everything else.
+   It used to sit here in a stale copy, and then in a per-view assets/css/calendar.css
+   loaded by views/calendar.html — the only view in the app carrying its own <link>.
+   Either way the page could arrive with its markup but without its CSS and still
+   look roughly like a calendar, so the breakage read as a styling bug rather than
+   a missing file. Keep it in the bundle, and do not reintroduce a copy here. */
 
 /* --- Reports page --- (shared .reports-toolbar chrome lives in 01-base.css) */
 .reports-toolbar__label {

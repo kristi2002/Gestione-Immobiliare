@@ -1,0 +1,590 @@
+/* =====================================================================
+   Calendario — month board + day agenda.
+
+   Lives in the bundled partial chain (NOT in a per-view <link>) for the
+   reason spelled out in 04-phase11.css: when this page carried its own
+   stylesheet it was the only view in the app that could arrive with its
+   markup but without its CSS, and the failure was silent — the grid still
+   looked roughly like a calendar while the toolbar fell back to raw
+   browser buttons. Bundled, the page cannot render half-styled.
+
+   Colour system — two independent axes, so a month can be read at a glance:
+     • the LEFT RAIL carries the TYPE   (azure = appuntamento, amber = promemoria)
+     • the FILL carries the STATUS      (tinted = da fare, neutral = chiuso,
+                                         strikethrough = annullato, red = assente)
+   ===================================================================== */
+
+.calendar-view {
+    --cal-appointment: #3186d5;
+    --cal-reminder:    #e08a1e;
+    --cal-line:        var(--color-border);
+    --cal-cell:        112px;
+}
+
+/* ---------------------------------------------------------------------
+   Layout — board + sticky day agenda
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 336px;
+    gap: var(--shell-gap, 14px);
+    align-items: start;
+}
+
+.calendar-view .cal-main {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px 16px;
+    min-width: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Toolbar — month nav on the left, scope + filter on the right.
+   It sits INSIDE the board card because it steers the board, not the page;
+   the page-level action ("Nuovo appuntamento") stays in .view-header.
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-view .cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.calendar-view .cal-nav__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.calendar-view .cal-nav__btn:hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* Lucide swaps <i data-lucide> for an <svg> and copies the class across, but
+   an unclassed icon inside a button keeps lucide's 24px default — size both. */
+.calendar-view .cal-nav__btn i,
+.calendar-view .cal-nav__btn svg { width: 17px; height: 17px; }
+
+.calendar-view .cal-title {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 4px 0 6px;
+    white-space: nowrap;
+    text-transform: capitalize;
+}
+
+.calendar-view .cal-today {
+    padding: 6px 13px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background: #eef2f7;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.calendar-view .cal-today:hover { background: var(--color-primary-light); color: var(--color-primary); }
+
+.calendar-view .cal-toolbar__right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* Month scope line — how much is actually in the month you are looking at. */
+.calendar-view .cal-count {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.calendar-view .cal-count b { color: var(--color-text); font-weight: 700; }
+
+.calendar-view .cal-count span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.calendar-view .cal-count span::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.calendar-view .cal-count .cal-count--appointment::before { background: var(--cal-appointment); }
+.calendar-view .cal-count .cal-count--reminder::before    { background: var(--cal-reminder); }
+
+/* Segmented filter — same shape language as .leads-viewtoggle. */
+.calendar-view .cal-seg {
+    display: inline-flex;
+    gap: 4px;
+    background: #eef2f7;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.calendar-view .cal-seg button {
+    border: none;
+    background: none;
+    padding: 6px 13px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-text-muted);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.calendar-view .cal-seg button:hover { color: var(--color-text); }
+
+.calendar-view .cal-seg button.is-active {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(49, 134, 213, .28);
+}
+
+/* ---------------------------------------------------------------------
+   The board — one continuous hairline grid.
+   The 1px gaps ARE the rules: the wrapper paints the line colour and every
+   cell paints over it, so the weekday strip and the day cells share exactly
+   one column track and can never drift out of alignment.
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-board {
+    border: 1px solid var(--cal-line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--cal-line);
+    display: grid;
+    gap: 1px;
+}
+
+.calendar-view .cal-weekdays,
+.calendar-view .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--cal-line);
+}
+
+.calendar-view .cal-weekdays span {
+    background: #f7f9fc;
+    padding: 9px 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.calendar-view .cal-weekdays span.is-weekend { color: var(--color-primary); }
+
+.calendar-view .cal-grid { grid-auto-rows: minmax(var(--cal-cell), auto); }
+
+/* ---------------------------------------------------------------------
+   Day cell
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 7px 7px 8px;
+    min-width: 0;
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.calendar-view .cal-day--weekend { background: #fbfcfe; }
+
+/* Days spilling in from the neighbouring months: real, clickable, and
+   carrying their real events — the first and last week of a month are
+   working days like any other — but visibly not part of it. */
+.calendar-view .cal-day--outside { background: #f7f9fc; }
+.calendar-view .cal-day--outside .cal-day__num { color: #a6b1c2; font-weight: 500; }
+.calendar-view .cal-day--outside .cal-event { opacity: 0.72; }
+
+.calendar-view .cal-day:hover { background: var(--color-primary-light); }
+
+.calendar-view .cal-day__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-text);
+    flex-shrink: 0;
+}
+
+.calendar-view .cal-day--today .cal-day__num { background: var(--color-primary); color: #fff; }
+.calendar-view .cal-day--today { background: #f4f9ff; }
+
+/* The selection ring is drawn on top of the cell rather than as a border, so
+   it never steals a pixel from the hairline grid and never nudges the layout. */
+.calendar-view .cal-day--selected::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--color-primary);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.calendar-view .cal-day__events {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: hidden;
+    min-width: 0;
+    flex: 1;
+}
+
+/* ---------------------------------------------------------------------
+   Event chip — [type rail] HH:MM label
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-event {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    padding: 2px 6px 2px 7px;
+    border-left: 3px solid transparent;
+    border-radius: 3px 5px 5px 3px;
+    font-size: 10.5px;
+    line-height: 1.45;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.calendar-view .cal-event__time {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    flex: 0 0 auto;
+}
+
+/* The label takes whatever width is left and ellipsises there, so a wide
+   screen shows the whole address instead of a fixed character stub. */
+.calendar-view .cal-event__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Axis 1 — the rail says WHAT it is, in every status. */
+.calendar-view .cal-event--appointment { border-left-color: var(--cal-appointment); }
+.calendar-view .cal-event--reminder    { border-left-color: var(--cal-reminder); }
+
+/* Axis 2 — the fill says WHERE IT STANDS. Open work is tinted in its own
+   hue and reads first; closed work goes quiet but keeps its rail. */
+.calendar-view .cal-event--appointment-scheduled { background: #e8f1fc; color: #1d5fa4; }
+.calendar-view .cal-event--reminder-pending      { background: #fdf3e3; color: #96590a; }
+
+.calendar-view .cal-event--appointment-cancelled,
+.calendar-view .cal-event--reminder-cancelled { text-decoration: line-through; opacity: 0.75; }
+
+.calendar-view .cal-event--appointment-no_show { background: #fee2e2; color: #b91c1c; }
+
+.calendar-view .cal-event--more {
+    background: transparent;
+    border-left-color: transparent;
+    color: var(--color-text-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding-left: 10px;
+}
+
+.calendar-view .cal-event--more:hover { color: var(--color-primary); }
+
+/* ---------------------------------------------------------------------
+   Legend
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.calendar-view .cal-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.calendar-view .cal-legend__key {
+    width: 14px;
+    height: 12px;
+    border-radius: 2px 4px 4px 2px;
+    border-left: 3px solid transparent;
+    flex-shrink: 0;
+}
+
+.calendar-view .cal-legend__key--appointment { border-left-color: var(--cal-appointment); background: #e8f1fc; }
+.calendar-view .cal-legend__key--reminder    { border-left-color: var(--cal-reminder);    background: #fdf3e3; }
+.calendar-view .cal-legend__key--done        { border-left-color: #94a3b8;                background: #f1f5f9; }
+.calendar-view .cal-legend__key--cancelled   { border-left-color: #cbd5e1;                background: #f1f5f9; }
+.calendar-view .cal-legend__key--no_show     { border-left-color: #b91c1c;                background: #fee2e2; }
+
+/* ---------------------------------------------------------------------
+   Day agenda (side panel)
+   --------------------------------------------------------------------- */
+
+.calendar-view .cal-side {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    overflow: hidden;
+}
+
+.calendar-view .cal-side__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-view .cal-side__title {
+    font-size: 14.5px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.3;
+    text-transform: capitalize;
+    min-width: 0;
+}
+
+.calendar-view .cal-side__count {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-transform: none;
+    margin-top: 2px;
+}
+
+.calendar-view .cal-side__add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    margin-left: auto;
+    border: none;
+    border-radius: 9px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.calendar-view .cal-side__add:hover { background: var(--color-primary); color: #fff; }
+.calendar-view .cal-side__add i,
+.calendar-view .cal-side__add svg { width: 17px; height: 17px; }
+
+.calendar-view .cal-side__events {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 210px);
+    overflow-y: auto;
+}
+
+.calendar-view .cal-side__empty {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.calendar-view .cal-side__empty i,
+.calendar-view .cal-side__empty svg {
+    width: 26px;
+    height: 26px;
+    color: #c2ccda;
+    margin-bottom: 8px;
+}
+
+/* Agenda row — time gutter, type rail, body. The rail lines the rows up into
+   a single vertical thread so the day reads as a sequence, not a stack. */
+.calendar-view .cal-side-item {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 0 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.calendar-view .cal-side-item:last-child { border-bottom: none; }
+.calendar-view .cal-side-item:hover { background: #f7f9fc; }
+
+.calendar-view .cal-side-item__time {
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    padding-left: 7px;
+    border-left: 3px solid #cbd5e1;
+    line-height: 1.4;
+}
+
+.calendar-view .cal-side-item--appointment .cal-side-item__time { border-left-color: var(--cal-appointment); }
+.calendar-view .cal-side-item--reminder    .cal-side-item__time { border-left-color: var(--cal-reminder); }
+
+.calendar-view .cal-side-item__body { min-width: 0; }
+
+.calendar-view .cal-side-item__title {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.calendar-view .cal-side-item__meta {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.calendar-view .cal-side-item__meta i,
+.calendar-view .cal-side-item__meta svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+.calendar-view .cal-side-item__desc {
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+    margin-top: 5px;
+    line-height: 1.45;
+}
+
+.calendar-view .cal-side-item__badge {
+    margin-top: 7px;
+    font-size: 10.5px;
+    padding: 2px 9px;
+}
+
+.calendar-view .cal-side-item--cancelled .cal-side-item__title { text-decoration: line-through; color: var(--color-text-muted); }
+
+.calendar-view .cal-side-item__done {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.calendar-view .cal-side-item__done:hover:not(:disabled) { background: #bbf7d0; border-color: #86efac; }
+.calendar-view .cal-side-item__done:disabled { opacity: 0.6; cursor: default; }
+
+/* Same lucide caveat as .cal-nav__btn: the class lives on the <i>, the icon
+   ends up an <svg>, so both have to be sized. */
+.calendar-view .cal-side-item__done i,
+.calendar-view .cal-side-item__done svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ---------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+    .calendar-view .cal-layout { grid-template-columns: 1fr; }
+    .calendar-view .cal-side { position: static; }
+    .calendar-view .cal-side__events { max-height: none; }
+    .calendar-view { --cal-cell: 96px; }
+}
+
+@media (max-width: 780px) {
+    .calendar-view .cal-toolbar { align-items: flex-start; }
+    .calendar-view .cal-toolbar__right { width: 100%; justify-content: space-between; }
+    .calendar-view .cal-count { order: 2; }
+    .calendar-view { --cal-cell: 74px; }
+    .calendar-view .cal-title { font-size: 17px; }
+}
+
+/* Below this the chips are narrower than the words in them, so the cell
+   switches to a per-type dot count: how much is on this day, and of what
+   kind, without pretending to show detail. The agenda underneath carries
+   the actual day. */
+@media (max-width: 620px) {
+    .calendar-view { --cal-cell: 58px; }
+    .calendar-view .cal-day { padding: 5px 4px; gap: 3px; align-items: center; }
+    .calendar-view .cal-day__num { align-self: center; }
+    .calendar-view .cal-day__events { flex-direction: row; flex: 0 0 auto; gap: 3px; justify-content: center; }
+    .calendar-view .cal-event {
+        width: 6px; height: 6px; padding: 0; border: none; border-radius: 50%;
+        overflow: hidden; text-indent: -999px;
+    }
+    .calendar-view .cal-event--appointment { background: var(--cal-appointment); }
+    .calendar-view .cal-event--reminder    { background: var(--cal-reminder); }
+    .calendar-view .cal-event--more        { display: none; }
+    .calendar-view .cal-weekdays span { font-size: 10px; padding: 7px 2px; }
+}

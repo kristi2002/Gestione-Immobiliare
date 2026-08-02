@@ -1,7 +1,12 @@
 /**
- * Calendario Visuale — monthly calendar merging promemoria + visite (Phase 10,
- * extended to include appointments so the calendar reflects what the agency
- * actually has scheduled, not just reminders).
+ * Calendario Visuale — monthly board merging promemoria + appuntamenti, plus a
+ * day agenda panel.
+ *
+ * The board always draws a full 6-week matrix and loads the events for that
+ * WHOLE matrix, not just for the 1st–31st: the leading and trailing cells are
+ * working days like any other, and an agent looking at early August needs to
+ * see what is on July 31 in the same row. Months therefore also keep a constant
+ * height instead of jumping between 5 and 6 rows.
  */
 (function () {
     'use strict';
@@ -12,10 +17,14 @@
     const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
-    const REM_STATUS_LABELS = { pending: 'In sospeso', completed: 'Completato', cancelled: 'Annullato' };
+    const REM_STATUS_LABELS  = { pending: 'In sospeso', completed: 'Completato', cancelled: 'Annullato' };
     const APPT_STATUS_LABELS = { scheduled: 'Programmato', completed: 'Completato', cancelled: 'Annullato', no_show: 'Mancata presentazione' };
     const APPT_TYPE_LABELS   = { visita: 'Visita', acquisizione: 'Acquisizione', atto: 'Atto', chiamata: 'Chiamata' };
+    const APPT_TYPE_ICONS    = { visita: 'home', acquisizione: 'key', atto: 'file-text', chiamata: 'phone' };
     const APPT_PLACE_LABELS  = { agenzia: 'In agenzia', virtuale: 'Videochiamata' };
+
+    /** The status each type sits in while it is still outstanding. */
+    const OPEN_STATUS = { reminder: 'pending', appointment: 'scheduled' };
 
     // apiGetPagination() hard-caps `limit` at 100 regardless of what we ask for,
     // so a month is assembled by paging rather than by one oversized request —
@@ -23,17 +32,23 @@
     const PAGE_LIMIT = 100;
     const MAX_PAGES  = 10;
 
-    let viewYear, viewMonth;     // month currently displayed (0-based month)
-    let events = [];             // merged reminders + appointments for the displayed range
-    let typeFilter = 'all';      // 'all' | 'reminder' | 'appointment'
+    const GRID_CELLS   = 42;   // 6 weeks — a fixed board height for every month
+    const MAX_CHIPS    = 3;    // events drawn in a cell before it collapses to "+N"
+
+    let viewYear, viewMonth;   // month currently displayed (0-based month)
+    let events = [];           // merged reminders + appointments for the visible matrix
+    let typeFilter = 'all';    // 'all' | 'reminder' | 'appointment'
 
     const els = {};
 
     function init() {
         els.grid      = document.getElementById('cal-grid');
         els.title     = document.getElementById('cal-title');
+        els.count     = document.getElementById('cal-count');
         els.alert     = document.getElementById('calendar-alert');
-        els.sideTitle = document.getElementById('cal-side-title');
+        els.sideDate  = document.getElementById('cal-side-date');
+        els.sideCount = document.getElementById('cal-side-count');
+        els.sideAdd   = document.getElementById('cal-side-add');
         els.sideBody  = document.getElementById('cal-side-events');
 
         const now = new Date();
@@ -46,17 +61,22 @@
             const d = new Date();
             viewYear = d.getFullYear();
             viewMonth = d.getMonth();
+            delete els.sideBody.dataset.key;   // jump back to today's agenda too
             loadMonth();
         });
 
-        document.querySelectorAll('.cal-type-toggle button').forEach(btn => {
+        document.querySelectorAll('#cal-seg button').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.cal-type-toggle button').forEach(b => b.classList.remove('is-active'));
+                document.querySelectorAll('#cal-seg button').forEach(b => b.classList.remove('is-active'));
                 btn.classList.add('is-active');
                 typeFilter = btn.dataset.type;
                 renderGrid();
             });
         });
+
+        const newBtn = document.getElementById('btn-new-appointment');
+        if (newBtn) newBtn.addEventListener('click', () => newAppointment());
+        els.sideAdd.addEventListener('click', () => newAppointment(els.sideBody.dataset.key));
 
         loadMonth();
     }
@@ -68,14 +88,26 @@
         loadMonth();
     }
 
+    /** Open the appointment form, pre-dated to the day the agent was looking at. */
+    function newAppointment(dateKey) {
+        if (!window.App) return;
+        window.App.navigateTo('appointment_edit', dateKey ? { date: dateKey } : {});
+    }
+
+    /** First cell of the board: the Monday on or before the 1st of the month. */
+    function gridStart() {
+        const first = new Date(viewYear, viewMonth, 1);
+        const offset = (first.getDay() + 6) % 7;   // JS getDay: 0=Sun..6=Sat
+        return new Date(viewYear, viewMonth, 1 - offset);
+    }
+
     async function loadMonth(keepSelection = false) {
         els.title.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
         if (!keepSelection) resetSide();
 
-        const from = `${viewYear}-${pad(viewMonth + 1)}-01`;
-        const lastDay = new Date(viewYear, viewMonth + 1, 0).getDate();
-        const to = `${viewYear}-${pad(viewMonth + 1)}-${pad(lastDay)}`;
-        const range = `from=${from}&to=${to}`;
+        const start = gridStart();
+        const end   = addDays(start, GRID_CELLS - 1);
+        const range = `from=${ymd(start)}&to=${ymd(end)}`;
 
         try {
             const [rem, appt] = await Promise.all([
@@ -86,7 +118,9 @@
             const reminders = rem.items.map(r => ({
                 type: 'reminder', id: r.id, date: r.reminder_date, status: r.status,
                 time: hhmm(r.reminder_date),
+                icon: 'bell',
                 title: r.title, label: r.title,
+                meta: '',
                 subtitle: r.description || '', raw: r,
             }));
             const appointments = appt.items.map(a => {
@@ -97,6 +131,7 @@
                 return {
                     type: 'appointment', id: a.id, date: a.appointment_date, status: a.status,
                     time: hhmm(a.appointment_date),
+                    icon: APPT_TYPE_ICONS[a.appointment_type] || 'calendar-check',
                     title: place || kind,
                     // One predictable shape per type, so a month can be scanned
                     // without opening every event: a call says who to ring, a
@@ -104,7 +139,8 @@
                     label: a.appointment_type === 'chiamata'
                         ? (who ? `Chiamare ${who}` : 'Chiamata')
                         : (place || (who ? `${kind} · ${who}` : kind)),
-                    subtitle: [kind, who].filter(Boolean).join(' · '), raw: a,
+                    meta: [kind, who].filter(Boolean).join(' · '),
+                    subtitle: a.notes || '', raw: a,
                 };
             });
             events = [...reminders, ...appointments];
@@ -166,10 +202,8 @@
     }
 
     function renderGrid() {
-        const firstDay = new Date(viewYear, viewMonth, 1);
-        // Monday-first offset (JS getDay: 0=Sun..6=Sat).
-        let offset = (firstDay.getDay() + 6) % 7;
-        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        const start = gridStart();
+        const todayKey = ymd(new Date());
 
         const byDay = {};
         visibleEvents().forEach(ev => {
@@ -178,39 +212,41 @@
         });
         Object.values(byDay).forEach(list => list.sort((a, b) => a.date.localeCompare(b.date)));
 
-        const today = new Date();
-        const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
         let html = '';
-
-        for (let i = 0; i < offset; i++) {
-            html += '<div class="cal-day cal-day--empty"></div>';
-        }
-
-        for (let d = 1; d <= daysInMonth; d++) {
-            const key = `${viewYear}-${pad(viewMonth + 1)}-${pad(d)}`;
-            const dow = new Date(viewYear, viewMonth, d).getDay(); // 0=Sun, 6=Sat
+        for (let i = 0; i < GRID_CELLS; i++) {
+            const d   = addDays(start, i);
+            const key = ymd(d);
+            const dow = d.getDay();
             const isWeekend = dow === 0 || dow === 6;
+            const isOutside = d.getMonth() !== viewMonth;
             const dayEvents = byDay[key] || [];
-            const isToday = key === todayKey;
 
             // [HH:mm] + one standardised label per type. The time leads because
             // that is what an agent scans a month for; the label is clipped by
             // CSS ellipsis rather than a fixed character count, so wide screens
             // show more instead of always cutting at 15 chars.
-            const chips = dayEvents.slice(0, 3).map(ev => `
+            const chips = dayEvents.slice(0, MAX_CHIPS).map(ev => `
                 <span class="cal-event cal-event--${ev.type} cal-event--${ev.type}-${ev.status}" title="${escapeHtml(`${ev.time} · ${ev.label}`)}">
                     <span class="cal-event__time">${escapeHtml(ev.time)}</span><span class="cal-event__label">${escapeHtml(ev.label)}</span>
                 </span>`).join('');
-            const more = dayEvents.length > 3 ? `<span class="cal-event cal-event--more">+${dayEvents.length - 3} altri</span>` : '';
+            const more = dayEvents.length > MAX_CHIPS
+                ? `<span class="cal-event cal-event--more">+${dayEvents.length - MAX_CHIPS} altri</span>` : '';
+
+            const cls = ['cal-day'];
+            if (isOutside) cls.push('cal-day--outside');
+            if (isWeekend) cls.push('cal-day--weekend');
+            if (key === todayKey) cls.push('cal-day--today');
+            if (dayEvents.length) cls.push('cal-day--has-events');
 
             html += `
-                <div class="cal-day${isToday ? ' cal-day--today' : ''}${isWeekend ? ' cal-day--weekend' : ''}${dayEvents.length ? ' cal-day--has-events' : ''}" data-key="${key}">
-                    <span class="cal-day__num">${d}</span>
+                <div class="${cls.join(' ')}" data-key="${key}">
+                    <span class="cal-day__num">${d.getDate()}</span>
                     <div class="cal-day__events">${chips}${more}</div>
                 </div>`;
         }
 
         els.grid.innerHTML = html;
+        renderCount();
 
         els.grid.querySelectorAll('.cal-day[data-key]').forEach(cell => {
             cell.addEventListener('click', () => selectDay(cell.dataset.key, byDay[cell.dataset.key] || []));
@@ -220,11 +256,30 @@
         // keep whatever day was selected (re-render on type-filter change or
         // after a quick status update — including when that emptied the day).
         const keepKey = els.sideBody.dataset.key;
+        const today = new Date();
         if (keepKey) {
             selectDay(keepKey, byDay[keepKey] || []);
         } else if (today.getFullYear() === viewYear && today.getMonth() === viewMonth) {
             selectDay(todayKey, byDay[todayKey] || []);
         }
+    }
+
+    /**
+     * Month scope line. Counts the month itself, not the drawn matrix — the
+     * spill-over cells belong to the neighbouring months and would inflate it.
+     * Both types are always shown: this describes the month, not the filter.
+     */
+    function renderCount() {
+        const inMonth = events.filter(ev => {
+            const [y, m] = ev.date.slice(0, 10).split('-').map(Number);
+            return y === viewYear && (m - 1) === viewMonth;
+        });
+        const appts = inMonth.filter(e => e.type === 'appointment').length;
+        const rems  = inMonth.length - appts;
+
+        els.count.innerHTML = `
+            <span class="cal-count--appointment"><b>${appts}</b> ${appts === 1 ? 'appuntamento' : 'appuntamenti'}</span>
+            <span class="cal-count--reminder"><b>${rems}</b> ${rems === 1 ? 'promemoria' : 'promemoria'}</span>`;
     }
 
     function selectDay(key, dayEvents) {
@@ -234,35 +289,48 @@
         if (cell) cell.classList.add('cal-day--selected');
 
         const d = new Date(key + 'T00:00:00');
-        els.sideTitle.textContent = d.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+        els.sideDate.textContent =
+            d.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: 'long' });
+        els.sideCount.textContent = dayEvents.length
+            ? `${dayEvents.length} ${dayEvents.length === 1 ? 'impegno' : 'impegni'}`
+            : 'Nessun impegno';
+        els.sideAdd.hidden = window.canWrite === false;
 
         if (!dayEvents.length) {
-            els.sideBody.innerHTML = '<p class="text-muted">Nessun evento in questa data.</p>';
+            els.sideBody.innerHTML = `
+                <div class="cal-side__empty">
+                    <i data-lucide="calendar"></i>
+                    <p>Nessun impegno in questa data.</p>
+                </div>`;
+            if (window.lucide) window.lucide.createIcons();
             return;
         }
 
         els.sideBody.innerHTML = dayEvents.map((ev, i) => {
-            const icon  = ev.type === 'appointment' ? 'calendar-check' : 'bell';
-            const label = ev.type === 'appointment' ? (APPT_STATUS_LABELS[ev.status] || ev.status) : (REM_STATUS_LABELS[ev.status] || ev.status);
-            const open  = ev.type === 'appointment' ? 'scheduled' : 'pending';
+            const labels = ev.type === 'appointment' ? APPT_STATUS_LABELS : REM_STATUS_LABELS;
+            const isOpen = ev.status === OPEN_STATUS[ev.type];
             // The panel is where the day gets worked, so the one action an agent
             // performs constantly lives here instead of two navigations away.
-            const canComplete = window.canWrite !== false && ev.status === open;
+            const canComplete = window.canWrite !== false && isOpen;
+            // "Programmato"/"In sospeso" on every open row is noise — the row is
+            // open precisely because it still has the button. Only the states
+            // that change how the row should be read get a badge.
+            const badge = isOpen ? '' :
+                `<span class="badge ${statusBadgeClass(ev.status)} cal-side-item__badge">${escapeHtml(labels[ev.status] || ev.status)}</span>`;
+
             return `
-            <div class="cal-side-item cal-side-item--${ev.type}-${ev.status}" data-type="${ev.type}" data-id="${ev.id}" data-idx="${i}">
-                <div class="cal-side-item__head">
-                    <i data-lucide="${icon}" class="cal-side-item__icon"></i>
-                    <div class="cal-side-item__time">${escapeHtml(ev.time)}</div>
-                    <span class="badge cal-side-item__badge">${escapeHtml(label)}</span>
-                </div>
-                <div class="cal-side-item__title">${escapeHtml(ev.title)}</div>
-                ${ev.subtitle ? `<div class="cal-side-item__desc text-muted">${escapeHtml(truncate(ev.subtitle, 90))}</div>` : ''}
-                ${canComplete ? `
-                <div class="cal-side-item__actions">
+            <div class="cal-side-item cal-side-item--${ev.type}${ev.status === 'cancelled' ? ' cal-side-item--cancelled' : ''}" data-type="${ev.type}" data-id="${ev.id}">
+                <div class="cal-side-item__time">${escapeHtml(ev.time)}</div>
+                <div class="cal-side-item__body">
+                    <div class="cal-side-item__title">${escapeHtml(ev.title)}</div>
+                    ${ev.meta ? `<div class="cal-side-item__meta"><i data-lucide="${ev.icon}"></i>${escapeHtml(ev.meta)}</div>` : ''}
+                    ${ev.subtitle ? `<div class="cal-side-item__desc">${escapeHtml(truncate(ev.subtitle, 90))}</div>` : ''}
+                    ${badge}
+                    ${canComplete ? `
                     <button type="button" class="cal-side-item__done" data-idx="${i}">
                         <i data-lucide="check"></i> Segna come completata
-                    </button>
-                </div>` : ''}
+                    </button>` : ''}
+                </div>
             </div>`;
         }).join('');
 
@@ -282,6 +350,12 @@
         });
 
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    function statusBadgeClass(status) {
+        if (status === 'completed') return 'badge--success';
+        if (status === 'no_show')   return 'badge--danger';
+        return 'badge--neutral';
     }
 
     /**
@@ -327,8 +401,15 @@
 
     function resetSide() {
         delete els.sideBody.dataset.key;
-        els.sideTitle.textContent = 'Seleziona un giorno';
-        els.sideBody.innerHTML = '<p class="text-muted">Clicca su un giorno del calendario per vedere gli eventi.</p>';
+        els.sideDate.textContent = 'Seleziona un giorno';
+        els.sideCount.textContent = '';
+        els.sideAdd.hidden = true;
+        els.sideBody.innerHTML = `
+            <div class="cal-side__empty">
+                <i data-lucide="mouse-pointer-click"></i>
+                <p>Clicca su un giorno del calendario per vedere gli impegni.</p>
+            </div>`;
+        if (window.lucide) window.lucide.createIcons();
     }
 
     // -------------------------------------------------------------------------
@@ -351,6 +432,16 @@
     function hhmm(dateStr) {
         const t = String(dateStr || '').slice(11, 16);
         return /^\d{2}:\d{2}$/.test(t) ? t : '--:--';
+    }
+
+    /** Local calendar date -> "YYYY-MM-DD" (never via toISOString, which is UTC). */
+    function ymd(d) {
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    /** Day arithmetic through the Date constructor, which normalises overflow. */
+    function addDays(d, n) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
     }
 
     function pad(n) { return String(n).padStart(2, '0'); }

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>calendario — anteprima</title>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/theme-orlandi.css">
+<style>[data-lucide]{display:inline-block;width:1em;height:1em}</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><a class="sb-brand" href="#"><span class="sb-brand__word"><span class="sb-brand__eyebrow">IMMOBILIARE</span><b class="sb-brand__name">ORLANDI</b></span></a></div>
+    <nav class="sidebar-nav"><ul><li><a href="#" class="nav-link active"><span class="nav-label">Calendario</span></a></li></ul></nav>
+  </aside>
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-title"><h1 id="page-title">Calendario</h1><p class="topbar-sub" id="topbar-sub">Visualizza gli impegni del mese.</p></div>
+      <div class="topbar-actions"></div>
+    </header>
+    <main id="app-content" class="app-content"></main>
+  </div>
+</div>
+
+<script>
+// The harness injects the real partial the same way app.js does (innerHTML +
+// moving <link> into <head>), so the cascade under test is the real one.
+(async () => {
+  const bust = '?t=' + Date.now();
+  const html = await fetch('/views/calendar.html' + bust, { cache: 'no-store' }).then(r => r.text());
+  const content = document.getElementById('app-content');
+  content.innerHTML = html;
+  content.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
+    const href = new URL(l.getAttribute('href'), location.origin + '/').pathname;
+    if ([...document.head.querySelectorAll('link')].some(h => new URL(h.getAttribute('href'), location.origin + '/').pathname === href)) l.remove();
+    else document.head.appendChild(l);
+  });
+
+  // Mock month so the grid has something to render without an API/session.
+  window.canWrite = true;
+  const now = new Date();
+  const Y = now.getFullYear(), M = now.getMonth();
+  const p = n => String(n).padStart(2, '0');
+  const day = d => `${Y}-${p(M + 1)}-${p(d)}`;
+  const REM = [
+    { id: 1, reminder_date: day(3) + ' 01:22:00', status: 'completed', title: 'Richiedere documenti', description: 'Copia carta d’identità e codice fiscale del conduttore.' },
+    { id: 2, reminder_date: day(3) + ' 09:30:00', status: 'pending', title: 'Rinnovo assicurazione fabbricato', description: 'Polizza in scadenza il 30/09.' },
+    { id: 3, reminder_date: day(1) + ' 14:51:00', status: 'pending', title: 'Promemoria amministratore', description: '' },
+    { id: 4, reminder_date: day(12) + ' 11:00:00', status: 'pending', title: 'Invio contratto firmato', description: '' },
+    { id: 5, reminder_date: day(18) + ' 16:00:00', status: 'cancelled', title: 'Sopralluogo annullato', description: '' },
+    { id: 6, reminder_date: day(25) + ' 08:00:00', status: 'pending', title: 'Lettura contatori', description: '' },
+  ];
+  const APPT = [
+    { id: 11, appointment_date: day(2) + ' 09:00:00', status: 'scheduled', appointment_type: 'visita', location_type: 'immobile', property_address: 'Corso Umberto I 42', property_city: 'Civitanova Marche', lead_name: 'Kristi', lead_surname: 'Komini' },
+    { id: 12, appointment_date: day(2) + ' 21:26:00', status: 'completed', appointment_type: 'chiamata', location_type: 'agenzia', lead_name: 'Kristi', lead_surname: 'Komini' },
+    { id: 13, appointment_date: day(2) + ' 21:27:00', status: 'scheduled', appointment_type: 'acquisizione', location_type: 'agenzia', client_name: 'Marco', client_surname: 'Rossi' },
+    { id: 14, appointment_date: day(2) + ' 22:10:00', status: 'no_show', appointment_type: 'visita', location_type: 'immobile', property_address: 'Via Buozzi 8', property_city: 'Porto Sant’Elpidio' },
+    { id: 15, appointment_date: day(1) + ' 15:04:00', status: 'scheduled', appointment_type: 'visita', location_type: 'immobile', property_address: 'Corso Bueno Aires 118', property_city: 'Civitanova Marche' },
+    { id: 16, appointment_date: day(3) + ' 17:15:00', status: 'scheduled', appointment_type: 'atto', location_type: 'virtuale', client_name: 'Anna', client_surname: 'Bianchi' },
+    { id: 17, appointment_date: day(15) + ' 10:00:00', status: 'scheduled', appointment_type: 'visita', location_type: 'immobile', property_address: 'Via Roma 3', property_city: 'Civitanova Marche' },
+    { id: 18, appointment_date: day(15) + ' 12:30:00', status: 'scheduled', appointment_type: 'chiamata', location_type: 'agenzia', client_name: 'Luca', client_surname: 'Verdi' },
+  ];
+  const page = (rows) => ({ success: true, data: { items: rows, total: rows.length, page: 1, limit: 100 } });
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (url, opts) => {
+    const u = String(url);
+    if (u.startsWith('api/reminders.php'))    return new Response(JSON.stringify(page(u.includes('page=1') ? REM : [])), { headers: { 'Content-Type': 'application/json' } });
+    if (u.startsWith('api/appointments.php')) return new Response(JSON.stringify(page(u.includes('page=1') ? APPT : [])), { headers: { 'Content-Type': 'application/json' } });
+    return realFetch(url, opts);
+  };
+
+  const s = document.createElement('script');
+  s.src = '/assets/js/calendar.js' + bust;
+  document.body.appendChild(s);
+})();
+</script>
+</body></html>
