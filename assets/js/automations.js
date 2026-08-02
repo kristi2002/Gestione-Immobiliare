@@ -41,6 +41,9 @@
         simulated: { text: 'Simulata',    cls: 'warning' },
         failed:    { text: 'Fallita',     cls: 'error' },
         skipped:   { text: 'Saltata',     cls: 'warning' },
+        // Non e' un guasto: il contatto non ha dato (o ha revocato) il consenso
+        // commerciale. Ritentare non serve — serve il consenso.
+        blocked:   { text: 'Bloccata',    cls: 'warning' },
     };
 
     const DOW_LABELS = ['', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
@@ -97,6 +100,9 @@
 
         document.querySelectorAll('input[name="automation-trigger"]').forEach(radio => {
             radio.addEventListener('change', syncTriggerMode);
+        });
+        document.querySelectorAll('input[name="automation-purpose"]').forEach(radio => {
+            radio.addEventListener('change', syncPurposeHint);
         });
         document.getElementById('automation-event').addEventListener('change', syncEventChoice);
         document.getElementById('automation-frequency').addEventListener('change', syncDayRuleVisibility);
@@ -564,6 +570,7 @@
             document.getElementById('automation-property').value = automation.property_id || '';
 
             setTrigger(automation.trigger_type || 'scheduled');
+            setPurpose(Number(automation.is_marketing) === 1);
 
             if (automation.trigger_type === 'event') {
                 document.getElementById('automation-event').value = automation.trigger_event || '';
@@ -587,6 +594,7 @@
         } else {
             document.getElementById('automation-modal-title').textContent = 'Nuova Automazione';
             pendingFilter = null;
+            setPurpose(true);
             document.getElementById('automation-start').value = window.Fmt.today();
             document.getElementById('automation-time').value  = '09:00';
             setTrigger('scheduled');
@@ -608,6 +616,32 @@
     function setTrigger(type) {
         const radio = document.querySelector(`input[name="automation-trigger"][value="${type}"]`);
         if (radio) radio.checked = true;
+    }
+
+    /**
+     * Commerciale o di servizio.
+     *
+     * Le nuove nascono "Commerciale" perche' i due errori non pesano uguale:
+     * marcare commerciale un messaggio di servizio blocca un invio e lo scrive
+     * nel registro, dove si vede e si corregge. Il contrario spedisce un'email
+     * che non si puo' richiamare.
+     */
+    function setPurpose(isMarketing) {
+        const value = isMarketing ? 'marketing' : 'service';
+        const radio = document.querySelector(`input[name="automation-purpose"][value="${value}"]`);
+        if (radio) radio.checked = true;
+        syncPurposeHint();
+    }
+
+    function currentPurposeIsMarketing() {
+        const checked = document.querySelector('input[name="automation-purpose"]:checked');
+        return !checked || checked.value === 'marketing';
+    }
+
+    function syncPurposeHint() {
+        document.getElementById('automation-purpose-hint').textContent = currentPurposeIsMarketing()
+            ? 'Promozioni, nuovi immobili, newsletter. Parte solo verso chi ha dato il consenso marketing e porta in fondo il link di disiscrizione: senza consenso l\'invio viene bloccato e registrato.'
+            : 'Report al proprietario, scadenze, avvisi legati a un contratto in essere. Non richiede consenso marketing — non usarlo per aggirarlo.';
     }
 
     function setDelay(minutes) {
@@ -717,6 +751,7 @@
             email_body:    body,
             notify_client: 1,
             notify_admin:  0,
+            is_marketing:  currentPurposeIsMarketing() ? 1 : 0,
             status:        'pending',
             trigger_type:  isEvent ? 'event' : 'scheduled',
         };

@@ -13,9 +13,28 @@
  */
 
 require_once __DIR__ . '/../config/consent.php';
+require_once __DIR__ . '/../config/env.php';
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../config/mail_html.php';
 require_once __DIR__ . '/../config/settings.php';
+
+/**
+ * L'indirizzo pubblico dell'applicazione, comunque si sia entrati.
+ *
+ * La costante APP_URL la definisce config/bootstrap.php, che e' il bootstrap
+ * HTTP: cron/process_reminders.php non lo include (carica solo env + db +
+ * reminders), quindi sotto cron la costante NON esiste. Leggendo solo quella,
+ * ogni invio commerciale partito dal cron — cioe' tutti — sarebbe stato
+ * rifiutato per "link di disiscrizione incompleto", e la funzione sarebbe
+ * sembrata rotta invece che non configurata.
+ */
+function marketingBaseUrl(): string
+{
+    if (defined('APP_URL') && APP_URL !== '') {
+        return rtrim((string) APP_URL, '/');
+    }
+    return rtrim((string) env('APP_URL', ''), '/');
+}
 
 /**
  * @return array{success: bool, status: string, external_id: ?string, error: ?string}
@@ -49,7 +68,7 @@ function sendMarketingEmail(
     //    disiscriversi è essa stessa una violazione, quindi la mancanza di
     //    APP_URL non degrada l'invio: lo impedisce. Meglio nessun messaggio che
     //    un messaggio da cui non si può uscire.
-    $baseUrl = defined('APP_URL') ? rtrim((string) APP_URL, '/') : '';
+    $baseUrl = marketingBaseUrl();
     if ($baseUrl === '') {
         return $refuse(
             'failed',

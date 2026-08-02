@@ -431,13 +431,13 @@ function createReminder(PDO $db): void
             (title, description, reminder_date, end_date, frequency, schedule_time, day_rule,
              trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, trigger_filter, status,
              client_id, lead_id, property_id, tenant_id, assigned_agent_id,
-             notify_admin, notify_client, email_subject, email_body, request_type,
+             notify_admin, notify_client, is_marketing, email_subject, email_body, request_type,
              maintenance_status, priority)
          VALUES
             (:title, :description, :reminder_date, :end_date, :frequency, :schedule_time, :day_rule,
              :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :trigger_filter, :status,
              :client_id, :lead_id, :property_id, :tenant_id, :assigned_agent_id,
-             :notify_admin, :notify_client, :email_subject, :email_body, :request_type,
+             :notify_admin, :notify_client, :is_marketing, :email_subject, :email_body, :request_type,
              :maintenance_status, :priority)"
     );
     $stmt->execute($validated);
@@ -494,6 +494,7 @@ function updateReminder(PDO $db, int $id): void
              client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
              tenant_id = :tenant_id, assigned_agent_id = :assigned_agent_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
+             is_marketing = :is_marketing,
              email_subject = :email_subject, email_body = :email_body,
              request_type = :request_type, maintenance_status = :maintenance_status,
              priority = :priority
@@ -647,6 +648,9 @@ function validateReminderInput(PDO $db, array $data): array
     $agentId      = !empty($data['assigned_agent_id']) ? (int) $data['assigned_agent_id'] : null;
     $notifyAdmin  = !empty($data['notify_admin']) ? 1 : 0;
     $notifyClient = !empty($data['notify_client']) ? 1 : 0;
+    // Commerciale o di servizio. Da questo dipende se l'invio passa dal
+    // registro consensi: vedi processSingleReminder() in config/reminders.php.
+    $isMarketing  = !empty($data['is_marketing']) ? 1 : 0;
     // Un intervento di manutenzione E' un promemoria con request_type='maintenance':
     // e' cosi' che la bacheca lo trova (riga 182). Finora quella colonna la
     // scriveva SOLO il portale inquilino (tenant/api_maintenance.php:67), quindi
@@ -811,6 +815,7 @@ function validateReminderInput(PDO $db, array $data): array
         'assigned_agent_id' => $agentId,
         'notify_admin'      => $notifyAdmin,
         'notify_client'     => $notifyClient,
+        'is_marketing'      => $isMarketing,
         'email_subject'     => $emailSubject,
         'email_body'        => $emailBody,
         // Manutenzione: e' `request_type` a far comparire la riga nella bacheca
