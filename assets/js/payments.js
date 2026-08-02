@@ -5,8 +5,6 @@
     'use strict';
 
     const API            = 'api/payments.php';
-    const TENANTS_API    = 'api/tenants.php';
-    const PROPERTIES_API = 'api/properties.php';
 
     const STATUS_LABELS = {
         pending:   'In attesa',
@@ -28,8 +26,6 @@
     }
 
     let payments   = [];
-    let tenants    = [];
-    let properties = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let schedaPaymentId = null;
@@ -46,15 +42,10 @@
         els.statusFilter = document.getElementById('payment-status-filter');
         els.monthFilter  = document.getElementById('payment-month-filter');
         els.yearFilter   = document.getElementById('payment-year-filter');
-        els.modal        = document.getElementById('payment-modal');
-        els.form         = document.getElementById('payment-form');
-        els.modalTitle   = document.getElementById('payment-modal-title');
-        els.tenantSelect = document.getElementById('payment-tenant');
-        els.propSelect   = document.getElementById('payment-property');
         els.pagination   = document.getElementById('payments-pagination');
 
         bindEvents();
-        Promise.all([loadTenants(), loadProperties(), loadStripeStatus()])
+        loadStripeStatus()
             .then(() => loadPayments())
             .catch(err => {
                 if (!els.alert?.isConnected) return;
@@ -173,26 +164,6 @@
         box.classList.add('stripe-link-box');
         body.appendChild(box);
         if (window.lucide) window.lucide.createIcons();
-    }
-
-    // -------------------------------------------------------------------------
-    // Reference data
-    // -------------------------------------------------------------------------
-
-    async function loadTenants() {
-        tenants = await Pagination.fetchList(TENANTS_API);
-        if (els.tenantSelect) els.tenantSelect.innerHTML = '<option value="">— Seleziona inquilino —</option>' +
-            tenants.map(t =>
-                `<option value="${t.id}" data-property="${t.property_id || ''}" data-contract="${t.contract_id || ''}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`
-            ).join('');
-    }
-
-    async function loadProperties() {
-        properties = await Pagination.fetchList(PROPERTIES_API);
-        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
-            properties.map(p =>
-                `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
-            ).join('');
     }
 
     // -------------------------------------------------------------------------

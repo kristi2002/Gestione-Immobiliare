@@ -38,12 +38,6 @@
         els.supplierFilter = document.getElementById('expense-supplier-filter');
         els.categoryFilter = document.getElementById('expense-category-filter');
         els.yearFilter     = document.getElementById('expense-year-filter');
-        els.modal          = document.getElementById('expense-modal');
-        els.form           = document.getElementById('expense-form');
-        els.modalTitle     = document.getElementById('expense-modal-title');
-        els.propSelect     = document.getElementById('expense-property');
-        els.clientSelect   = document.getElementById('expense-client');
-        els.supplierSelect = document.getElementById('expense-supplier');
         els.pagination     = document.getElementById('expenses-pagination');
 
         bindEvents();
@@ -87,7 +81,6 @@
         const opts = properties.map(p =>
             `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
         ).join('');
-        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.propFilter.innerHTML   = '<option value="">Tutti gli immobili</option>' + opts;
     }
 
@@ -96,7 +89,6 @@
         const opts = clients.map(c =>
             `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`
         ).join('');
-        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.clientFilter.innerHTML = '<option value="">Tutti i proprietari</option>' + opts;
     }
 
@@ -105,7 +97,6 @@
         const opts = suppliers.map(s =>
             `<option value="${s.id}">${escapeHtml(s.name)}</option>`
         ).join('');
-        if (els.supplierSelect) els.supplierSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.supplierFilter.innerHTML = '<option value="">Tutti i fornitori</option>' + opts;
     }
 
