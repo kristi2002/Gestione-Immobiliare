@@ -50,6 +50,12 @@
     const originalFetch = window.fetch.bind(window);
     const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
+    /**
+     * Endpoint le cui scritture cambiano il numero sulla campanella.
+     * 'reminders.php' prende per sottostringa anche process_reminders.php.
+     */
+    const BELL_ENDPOINTS = ['reminders.php', 'appointments.php'];
+
     window.fetch = async function (url, options = {}) {
         const opts = { ...options };
         const method = (opts.method || 'GET').toUpperCase();
@@ -90,6 +96,33 @@
             window.location.href = 'login.php';
             throw new Error('Sessione scaduta');
         }
+
+        // La campanella in topbar conta i promemoria scaduti, e le pagine che
+        // ne cambiano lo stato sono otto: Promemoria, Automazioni, Calendario,
+        // la bacheca manutenzione, le schede immobile / proprietario /
+        // inquilino, e il modulo generico entity_edit. Agganciarla a ognuna
+        // significava lasciarla indietro nella nona.
+        //
+        // Il punto in cui TUTTE le scritture passano davvero e' questo — lo
+        // stesso ragionamento gia' fatto qui sopra per il blocco in sola
+        // lettura. Il filtro sull'URL prende sia reminders.php sia
+        // process_reminders.php ("Elabora scaduti"), che e' l'azione che il
+        // conteggio lo azzera del tutto.
+        //
+        // appointments.php entra nell'elenco perche' salvare un appuntamento
+        // scrive una riga `reminders` (api/appointments.php): con un promemoria
+        // "30 minuti prima" su un appuntamento imminente la scadenza nasce gia'
+        // passata, quindi la campanella cambia subito.
+        //
+        // notifications.php e' una GET: non rientra in WRITE_METHODS e non
+        // puo' richiamare se stessa.
+        if (response.ok
+            && WRITE_METHODS.includes(method)
+            && BELL_ENDPOINTS.some(name => String(url).includes(name))
+            && window.Notifications) {
+            window.Notifications.refresh();
+        }
+
         return response;
     };
 
