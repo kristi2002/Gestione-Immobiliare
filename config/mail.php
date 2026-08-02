@@ -231,10 +231,34 @@ function smtpAuthProbe(?array $cfg = null, int $timeout = 8): array
         return ['ok' => false, 'error' => $opened['error']];
     }
 
+    // Autenticarsi non significa poter spedire. Gmail (e ogni SMTP serio)
+    // rifiuta un MAIL FROM che non sia l'account autenticato o un suo alias
+    // verificato: la connessione riesce, l'invio muore. Fermandosi ad AUTH la
+    // sonda dichiarava "ok" un server da cui non sarebbe partita una sola
+    // email — lo stesso verde falso per cui questa funzione era nata.
+    //
+    // MAIL FROM seguito da RSET chiede al server "accetteresti questo
+    // mittente?" e annulla la transazione: non parte nessun messaggio, non
+    // viene toccato nessun destinatario.
+    $sender   = (string) ($cfg['agency_email'] ?? '');
+    $senderOk = true;
+    $error    = null;
+
+    if ($sender === '') {
+        $senderOk = false;
+        $error    = 'Nessun indirizzo mittente configurato (agency_email).';
+    } elseif (!smtpCmd($opened['socket'], 'MAIL FROM:<' . $sender . '>', [250])) {
+        $senderOk = false;
+        $error    = "Il server rifiuta il mittente <{$sender}>: dev'essere l'account autenticato "
+                  . 'o un alias verificato. Autenticazione riuscita, ma nessuna email partirebbe.';
+    } else {
+        smtpCmd($opened['socket'], 'RSET', [250]);
+    }
+
     smtpCmd($opened['socket'], 'QUIT', [221]);
     fclose($opened['socket']);
 
-    return ['ok' => true, 'error' => null];
+    return ['ok' => $senderOk, 'error' => $error, 'sender_checked' => $sender];
 }
 
 function sendViaSmtp(string $to, string $subject, string $body, ?array $cfg = null, ?string $htmlBody = null, array $attachments = [], array $extraHeaders = []): array

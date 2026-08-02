@@ -115,7 +115,9 @@ if (!$mailOn || $smtpHost === '') {
     require_once __DIR__ . '/../config/mail.php';
     $probe = smtpAuthProbe();
     if ($probe['ok']) {
-        $add('email', 'ok', "SMTP $smtpHost: connessione e autenticazione riuscite.");
+        $add('email', 'ok', "SMTP $smtpHost: connessione, autenticazione e mittente <"
+            . ($probe['sender_checked'] ?? '?') . "> accettati dal server. "
+            . 'Resta da provare la consegna vera (che finisca in posta in arrivo, non nello spam).');
     } else {
         $add('email', 'fail', "SMTP $smtpHost non funzionante: {$probe['error']} Nessuna email (promemoria, scadenze, comunicazioni) sta partendo.");
     }
