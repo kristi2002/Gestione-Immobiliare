@@ -211,11 +211,33 @@
         popup.classList.add('is-open');
     }
 
+    /**
+     * Hand the keyboard focus back to the field, without its own focus listener
+     * reading that as a fresh request to reopen the calendar.
+     */
+    function refocus(input) {
+        if (!input || !input.isConnected) return;
+        input.dataset.dpRefocus = '1';
+        input.focus({ preventScroll: true });
+        delete input.dataset.dpRefocus;
+    }
+
     function close() {
         if (!popup) return;
+        // The month/year <select>s can legitimately hold the focus now. Hiding
+        // the popup with the focus still inside it strands the caret in a hidden
+        // dialog — and since the popup is portalled to the end of <body>, the
+        // next Tab jumps to the end of the page instead of the next field.
+        const inside = popup.contains(document.activeElement);
+        const owner = inside ? activeInput : null;
+        // Blur first: the field cannot always take the focus back (it may sit in
+        // a modal that is being closed at the same time), and dropping to <body>
+        // is still better than leaving it inside hidden content.
+        if (inside) document.activeElement.blur();
         popup.classList.remove('is-open');
         popup.hidden = true;
         activeInput = null;
+        refocus(owner);
     }
 
     function isOpen() { return popup && popup.classList.contains('is-open'); }
@@ -227,7 +249,7 @@
         close();
     });
     document.addEventListener('keydown', e => {
-        if (isOpen() && e.key === 'Escape') { const i = activeInput; close(); i && i.focus(); }
+        if (isOpen() && e.key === 'Escape') { const i = activeInput; close(); refocus(i); }
     });
     window.addEventListener('resize', () => { if (isOpen()) position(); });
     // Reposition while the modal/content scrolls under the fixed popup.
@@ -255,7 +277,11 @@
 
         const openThis = () => { (isOpen() && activeInput === input) ? close() : open(input); };
         input.addEventListener('mousedown', e => { e.preventDefault(); openThis(); });
-        input.addEventListener('focus', () => { if (!isOpen()) open(input); });
+        // Tabbing into the field opens the calendar — but the focus we hand back
+        // on close must not count, or closing would immediately reopen.
+        input.addEventListener('focus', () => {
+            if (!isOpen() && input.dataset.dpRefocus !== '1') open(input);
+        });
         toggle.addEventListener('mousedown', e => e.preventDefault());
         toggle.addEventListener('click', openThis);
         input.addEventListener('keydown', e => {
