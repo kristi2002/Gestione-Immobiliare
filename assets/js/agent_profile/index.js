@@ -82,7 +82,7 @@ function countLabel(shown, total, noun) {
 // Riga di avviso in coda alla tabella tagliata: il conteggio onesto da solo si
 // legge come un filtro, non come "qui sotto manca roba".
 function truncatedNote(total, colspan) {
-    return `<tr><td colspan="${colspan}" class="ap-truncated">
+    return `<tr><td colspan="${colspan}" class="list-truncated">
         Mostrate le prime ${PAGE_LIMIT} righe di ${total}. Usa la pagina dedicata per l'elenco completo.
     </td></tr>`;
 }
@@ -325,7 +325,7 @@ async function loadAppointments() {
             html += `<details class="ap-appt-past"><summary>Passati (${past.length})</summary>${apptTable(past, false)}</details>`;
         }
         if (truncated) {
-            html += `<div class="ap-truncated">Mostrati i primi ${PAGE_LIMIT} appuntamenti di ${total}. `
+            html += `<div class="list-truncated">Mostrati i primi ${PAGE_LIMIT} appuntamenti di ${total}. `
                   + `Usa la pagina Appuntamenti per l'elenco completo.</div>`;
         }
         body.innerHTML = html;
@@ -361,7 +361,7 @@ async function loadClients() {
                 </div>
             </div>`;
         }).join('') + (truncated
-            ? `<div class="ap-truncated">Mostrati i primi ${PAGE_LIMIT} clienti di ${total}. `
+            ? `<div class="list-truncated">Mostrati i primi ${PAGE_LIMIT} clienti di ${total}. `
               + `Usa la pagina Proprietari per l'elenco completo.</div>`
             : '');
         grid.querySelectorAll('.entity-card').forEach(card => card.addEventListener('click', () => {
