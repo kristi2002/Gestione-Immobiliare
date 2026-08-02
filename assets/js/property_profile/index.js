@@ -1137,14 +1137,17 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
     function loadReminders() {
         const list = document.getElementById('pp-reminders-list');
         list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
-        fetch('api/reminders.php?property_id=' + propertyId + '&limit=100')
+        // DELETE soft-cancels (status='cancelled'): gli annullati vanno nascosti.
+        // Il filtro sta nella QUERY e non qui: scartandoli nel browser la pagina
+        // mostrava 95 righe mentre `total` ne diceva 150 (annullati compresi), e
+        // conteggio e avviso finivano per parlare di due insiemi diversi.
+        fetch('api/reminders.php?property_id=' + propertyId + '&exclude_status=cancelled&limit=100')
             .then(r => r.json())
             .then(json => {
-                // DELETE soft-cancels (status='cancelled'); hide those so deleting
-                // actually removes the reminder from view.
                 const page  = window.Pagination.unwrap(json);
-                const items = page.items.filter(r => r.status !== 'cancelled');
-                document.getElementById('pp-reminders-count').textContent = items.length + ' promemoria';
+                const items = page.items;
+                document.getElementById('pp-reminders-count').textContent =
+                    window.Pagination.countLabel(items.length, page.total, 'promemoria');
                 const remTruncNote = ppTrunc(page.items.length, page.total);
                 if (!items.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun promemoria.</p>'; return; }
                 list.innerHTML = items.map(r => {
@@ -1173,12 +1176,17 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
     function loadSideReminders() {
         const list = document.getElementById('pp-side-reminders');
         if (!list) return;
-        fetch('api/reminders.php?property_id=' + propertyId + '&limit=100')
+        // Chiusi ed annullati esclusi nella QUERY: scartandoli qui, un immobile
+        // con piu' di 100 promemoria tutti gia' chiusi riempiva la pagina di
+        // righe da buttare e il riquadro annunciava "Nessun promemoria in
+        // programma" mentre in agenda ce n'erano. L'API ordina per data
+        // crescente, quindi i primi che tornano sono davvero i prossimi.
+        fetch('api/reminders.php?property_id=' + propertyId + '&exclude_status=completed,cancelled&limit=100')
             .then(r => r.json())
             .then(json => {
                 let items = json.data?.items || json.data || [];
                 // API contract: open reminders have status 'pending'; date field is reminder_date.
-                items = items.filter(r => r.status !== 'completed' && r.status !== 'cancelled')
+                items = items
                     .sort((a, b) => (a.reminder_date || '9999').localeCompare(b.reminder_date || '9999'))
                     .slice(0, 6);
                 if (!items.length) {

@@ -35,6 +35,8 @@
     let overview = null;
     let logPage = 1;
     const LOG_LIMIT = 25;
+    // Righe di anteprima dei candidati. Non e' un limite di invio: vedi renderCandidates.
+    const PREVIEW_LIMIT = 100;
     const els = {};
 
     function init() {
@@ -111,6 +113,14 @@
             return;
         }
 
+        // L'anteprima si ferma a PREVIEW_LIMIT righe: con centinaia di rate
+        // scadute la tabella diventa impaginabile a mano e basta. Il tetto e'
+        // SOLO di disegno — l'invio lavora sull'elenco intero, e l'avviso lo
+        // dice, perche' "mostrate le prime 100" letto accanto a un pulsante
+        // "Invia solleciti" si presta a credere che ne partano 100.
+        const total = rows.length;
+        rows = rows.slice(0, PREVIEW_LIMIT);
+
         els.candidates.innerHTML = rows.map(r => `
             <tr>
                 <td data-label="Inquilino">
@@ -128,6 +138,11 @@
                 }</td>
             </tr>
         `).join('');
+
+        els.candidates.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(
+            rows.length, total, 6,
+            'L\'invio le prende comunque tutte.'
+        ));
     }
 
     async function loadLog() {

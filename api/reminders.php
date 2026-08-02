@@ -2,7 +2,8 @@
 /**
  * Reminders (Promemoria) CRUD API.
  *
- * GET    /api/reminders.php              — list (search, status, frequency, due_soon)
+ * GET    /api/reminders.php              — list (search, status, frequency, due_soon,
+ *                                          exclude_status=a,b per togliere stati)
  * GET    /api/reminders.php?id={id}      — single reminder
  * GET    /api/reminders.php?action=contacts — rubrica unificata per il picker
  * GET    /api/reminders.php?action=agents   — agenti a cui assegnare
@@ -131,6 +132,20 @@ function listReminders(PDO $db): void
     if ($status !== '' && in_array($status, REMINDER_STATUSES, true)) {
         $where .= ' AND r.status = :status';
         $params['status'] = $status;
+    }
+
+    // Escludere uno stato non e' esprimibile con `status`, che e' un uguale.
+    // Serve alle schede che nascondono gli annullati: filtrandoli nel browser,
+    // la pagina mostrava 95 righe mentre `total` ne contava 150 (annullati
+    // inclusi), cioe' due numeri che descrivono insiemi diversi. Il taglio deve
+    // avvenire dove si conta, altrimenti il conteggio parla d'altro.
+    $excludeStatus = array_values(array_filter(
+        array_map('trim', explode(',', (string) ($_GET['exclude_status'] ?? ''))),
+        fn($s) => in_array($s, REMINDER_STATUSES, true)
+    ));
+    foreach ($excludeStatus as $i => $st) {
+        $where .= " AND r.status <> :excl_$i";
+        $params["excl_$i"] = $st;
     }
 
     if ($frequency !== '' && in_array($frequency, REMINDER_FREQUENCIES, true)) {
