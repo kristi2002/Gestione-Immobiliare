@@ -890,19 +890,23 @@
                     return;
                 }
                 list.innerHTML =
-                    `<li class="crumb"><button type="button" class="crumb__link" data-root="${esc(parent)}">`
+                    `<li class="crumb"><button type="button" class="crumb__link crumb__step" data-root="${esc(parent)}">`
                     + `${esc(this.viewTitles[parent] || parent)}</button></li>`
-                    + `<li class="crumb crumb--current" aria-current="page">${esc(this.crumbLabel(cur))}</li>`;
+                    + `<li class="crumb crumb--current" aria-current="page">`
+                    + `<span class="crumb__step">${esc(this.crumbLabel(cur))}</span></li>`;
                 bar.hidden = false;
                 list.scrollLeft = list.scrollWidth;
                 return;
             }
 
+            // Il passo sta sempre dentro il <li>, mai direttamente in esso: il
+            // separatore fra due passi nasce sul <li>, e finirebbe altrimenti
+            // dentro la pastiglia del passo corrente (vedi theme-orlandi.css).
             list.innerHTML = this.trail.map((e, i) => {
                 const label = esc(this.crumbLabel(e));
                 return i === this.trailIdx
-                    ? `<li class="crumb crumb--current" aria-current="page">${label}</li>`
-                    : `<li class="crumb"><button type="button" class="crumb__link" data-i="${i}">${label}</button></li>`;
+                    ? `<li class="crumb crumb--current" aria-current="page"><span class="crumb__step">${label}</span></li>`
+                    : `<li class="crumb"><button type="button" class="crumb__link crumb__step" data-i="${i}">${label}</button></li>`;
             }).join('');
             bar.hidden = false;
             // La lista scorre su una riga sola: la pagina corrente sta in fondo,
