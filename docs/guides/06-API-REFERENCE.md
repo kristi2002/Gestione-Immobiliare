@@ -178,10 +178,11 @@ owner portals use separate session namespaces.
 - `PUT ?id={id}` — mark read (body `is_read: true`); `POST` — internal outbound log (called by `whatsapp_send.php`)
 
 ### WhatsApp Send (`whatsapp_send.php`)
-- `POST` — send via Twilio (`phone`, `message`, `tenant_id?`, `reminder_id?`); rate-limit 20/min/user
+- `POST` — send via Meta Cloud API (`phone`, `message`, `tenant_id?`, `reminder_id?`); rate-limit 20/min/user
 
 ### WhatsApp Webhook (`whatsapp_webhook.php`) 🔓
-- `POST` — Twilio inbound receiver; validates `X-Twilio-Signature` HMAC-SHA1; saves to `whatsapp_messages`, optionally logs to `communications`, creates a notification
+- `GET` — verifica sottoscrizione Meta (restituisce `hub.challenge`)
+- `POST` — messaggi in arrivo **e** stati di consegna; verifica `X-Hub-Signature-256` (HMAC-SHA256 sul corpo grezzo); in produzione senza app secret risponde `503`; salva in `whatsapp_messages`, eventualmente in `communications`, crea una notifica
 
 ### WhatsApp Templates (`whatsapp_templates.php`) / Email Templates (`email_templates.php`)
 - `GET` list; `?id={id}` single; `POST` create; `PUT ?id={id}`; `DELETE ?id={id}` (email = soft-delete `is_active=0`, `?all=1` includes inactive)
@@ -285,7 +286,7 @@ communications. Separate auth namespace (`$_SESSION['owner_*']`). Credentials on
 
 | Endpoint | Limit | Window | Notes |
 |---|---|---|---|
-| `POST /whatsapp_send.php` | 20 | 60s | Per user — Twilio cost protection |
+| `POST /whatsapp_send.php` | 20 | 60s | Per user — protezione costi a conversazione |
 | `POST /stripe_checkout.php` | 5 | 60s | Per user — billing abuse |
 | `POST /esign.php?action=sign` | 10 | 60s | Per IP — token brute-force |
 | `POST /login.php` | 5 | 15 min | Per IP — brute-force lockout (`config/login_throttle.php`) |

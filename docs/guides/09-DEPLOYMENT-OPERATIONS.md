@@ -62,9 +62,12 @@ SMTP_SECURE=tls
 SMTP_USER=postmaster@mail.testdemo.it
 SMTP_PASS=<mailgun-smtp-pass>
 
-TWILIO_ACCOUNT_SID=<sid>
-TWILIO_AUTH_TOKEN=<token>
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886   # sandbox
+WHATSAPP_ENABLED=false                       # true per spedire davvero
+META_WA_PHONE_NUMBER_ID=<id del mittente>
+META_WA_ACCESS_TOKEN=<token permanente System User>
+META_WA_APP_SECRET=<app secret>              # firma i webhook
+META_WA_VERIFY_TOKEN=<stringa scelta da te>
+WHATSAPP_FROM=+393331234567
 
 META_APP_ID=<id>
 META_APP_SECRET=<secret>
@@ -250,7 +253,7 @@ disabled (`setup.php`→403 + `.setup_complete`); TLS + `Secure` cookies; non-On
 `schema_production.sql` updated through phases 8–9.)*
 
 **P1 (first week):** real SMTP + test send; server cron (not just UI trigger); cloud backup +
-verify a file lands in the bucket; test a restore; Twilio webhook signature validation; Meta
+verify a file lands in the bucket; test a restore; Meta
 App ID/Secret + OAuth redirect + `META_PUBLIC_BASE_URL`; authenticated proxy for sensitive
 `uploads/`; SVG logo sanitisation.
 
@@ -290,7 +293,7 @@ endpoint; PHPUnit + CI; GDPR legal docs; back up `uploads/` files (currently DB 
 | DB connection error | `DB_NAME` mismatch | Coolify DB is `default`, not `gestione_immobiliare` |
 | SMTP auth fails | Wrong TLS method | `config/mail.php` uses `TLSv1_2_CLIENT | TLSv1_3_CLIENT` |
 | Mailgun "domain unverified" | Missing MX records | Add MX for `mail.testdemo.it` |
-| WhatsApp not saved | Wrong Twilio webhook URL | Must be `https://testdemo.it/api/whatsapp_webhook.php` |
+| WhatsApp not saved | URL webhook errata nel pannello Meta | Must be `https://immobiliare.testdemo.it/api/whatsapp_webhook.php` |
 | Container not found after redeploy | Renamed each deploy | `docker ps` for the new name |
 
 ---

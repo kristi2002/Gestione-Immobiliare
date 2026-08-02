@@ -146,12 +146,12 @@ Convertible to Leads. *Connects to:* Properties → Leads.
 ### Group: Comunicazioni
 
 **Comunicazioni (Communications).** Chat-style inbox grouped by client; all email + WhatsApp
-history. Compose email (SMTP) or WhatsApp (Twilio), manually log inbound.
+history. Compose email (SMTP) or WhatsApp (Meta Cloud API), manually log inbound.
 *Connects to:* Clients, WhatsApp templates, Email templates.
 
 **WhatsApp Inbox.** Dedicated WhatsApp thread view for any phone number (not just registered
-clients). Full history with timestamps + delivery status. Powered by Twilio.
-*Connects to:* Clients/Tenants (by phone), Twilio.
+clients). Full history with timestamps + delivery status. Powered by Meta Cloud API.
+*Connects to:* Clients/Tenants (by phone), Meta Cloud API.
 
 **Social Media.** Facebook/Instagram posts for listings. Connect the agency Meta account,
 create a post (caption + gallery image), pick platform + schedule; publish via Graph API.
@@ -189,7 +189,7 @@ when, IP, which record. Cannot be edited/deleted. *Connects to:* all modules.
 **Impostazioni (Settings).** System configuration, tabbed:
 - **Branding** — agency name, tagline, logo, primary colour.
 - **Email (SMTP)** — outgoing mail credentials + test button.
-- **WhatsApp** — Twilio credentials.
+- **WhatsApp** — credenziali Meta Cloud API (`META_WA_*`) + `whatsapp_enabled`.
 - **Backup** — S3-compatible cloud backup config.
 - **Social / Meta** — Facebook/Instagram OAuth.
 - **WhatsApp Templates** / **Email Templates** — reusable templates with `{{variables}}`.
@@ -224,7 +224,7 @@ Contract ──► Property + Tenant + Client
 
 Reminder ──► Client? + Property? ──► Email notification
 Calendar ──reads──► Reminders
-Communications ──► Client (email/WhatsApp)      WhatsApp Inbox ──► Any phone (Twilio)
+Communications ──► Client (email/WhatsApp)      WhatsApp Inbox ──► Any phone (webhook Meta)
 Automations ──► Client (scheduled email)         Social Posts ──► Property ──► FB/IG
 Reports / Forecast ──read──► Payments + Expenses + Contracts
 Activity Log ──monitors──► All modules

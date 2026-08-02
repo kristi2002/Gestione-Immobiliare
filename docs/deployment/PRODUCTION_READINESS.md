@@ -17,7 +17,7 @@ Documento di riferimento per capire **cosa è già pronto**, **cosa manca** e **
 
 ## Sommario esecutivo — Stato attuale (giugno 2026)
 
-L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni principali sono configurate e funzionanti. Rimangono gap di sicurezza critici da risolvere subito (password admin, cron secret, validazione webhook Twilio).
+L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni principali sono configurate e funzionanti. Aggiornamento 02/08/2026, misurato con `GET /api/readiness.php` in produzione (`overall: warn`): la firma dei webhook e' verificata e **fail closed** (il punto "validazione webhook" qui sotto e' superato), la posta esce da Gmail e si autentica, i cron hanno tutti un heartbeat recente. Restano aperti: consenso marketing non configurato, WhatsApp spento, segreti webhook mancanti, identita' fiscale incompleta.
 
 | Area | Stato |
 |------|--------|
@@ -25,8 +25,8 @@ L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni p
 | Autenticazione base | ✅ Pronta |
 | Deploy su Hetzner/Coolify | ✅ Live |
 | DNS (Cloudflare) | ✅ Configurato |
-| Email (Mailgun EU) | ✅ Funzionante |
-| WhatsApp (Twilio sandbox) | ✅ Funzionante |
+| Email (SMTP) | OK — esce da `smtp.gmail.com` (Mailgun blocca a livello di account) |
+| WhatsApp (Meta Cloud API) | Spenta (`whatsapp_enabled=false`): gli invii sono simulati |
 | Social (Facebook + Instagram) | ✅ Funzionante |
 | HTTPS/SSL (Let's Encrypt via Traefik) | ✅ Attivo |
 | Hardening sicurezza | ⚠️ Parziale |
@@ -44,7 +44,7 @@ L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni p
 
 - Dashboard con statistiche
 - CRUD Proprietari, Immobili (con galleria), Documenti
-- Comunicazioni email + WhatsApp (Twilio)
+- Comunicazioni email + WhatsApp (Meta Cloud API)
 - Promemoria con notifiche email automatiche
 - Social Media (Meta API + OAuth Facebook/Instagram)
 - Inquilini + portale inquilino
@@ -131,8 +131,8 @@ L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni p
 
 - [ ] **Backup cloud** — abilitare in Impostazioni se usi S3/B2; verificare che un file compaia nel bucket
 - [ ] **Test restore backup** — ripristinare un `.sql` su DB di test almeno una volta
-- [ ] **Twilio webhook** — se usi WhatsApp, configurare URL webhook e **validare firma Twilio** (oggi `api/whatsapp_webhook.php` accetta qualsiasi POST)
-- [ ] **Meta** — App ID/Secret in Impostazioni, redirect OAuth `https://tuodominio.it/gestionale/meta_callback.php`, `META_PUBLIC_BASE_URL` per immagini Instagram
+- [x] **Webhook WhatsApp** — ~~accetta qualsiasi POST~~ **NON PIU' VERO**: `api/whatsapp_webhook.php` verifica `X-Hub-Signature-256` sul corpo grezzo e in produzione, senza app secret, risponde `503` invece di accettare. Resta da fare la parte di configurazione: URL webhook nel pannello Meta e campo `messages` sottoscritto.
+- [ ] **Meta** — App ID/Secret in Impostazioni, redirect OAuth `https://tuodominio.it/gestionale/meta_callback.php`. `META_PUBLIC_BASE_URL` **non serve piu'**: la base per le immagini Instagram deriva da `APP_URL`.
 - [x] **File upload** — ~~`uploads/` è pubblico~~ **RISOLTO/verificato live 2026-07-19**: `uploads/documents/` (documenti sensibili: ID, contratti, PDF generati) restituisce **403** a qualsiasi URL diretto (anche file inesistenti), servito solo da `download_document.php`/`download_pdf.php` (401 senza sessione). Le immagini degli immobili in `uploads/properties/` restano pubbliche per progetto; i PDF/doc in quella cartella sono comunque negati (403). Vedi `docs/security/UPLOADS_SECURITY.md`.
 - [ ] **Logo SVG** — disabilitare o sanitizzare (rischio XSS se caricato SVG malevolo)
 
@@ -159,7 +159,7 @@ L'app è **in produzione** su https://immobiliare.testdemo.it. Le integrazioni p
 | Nessun CSRF su form/API | Medio | Token di sessione su POST |
 | Nessun rate limit su login | Medio | Max tentativi per IP |
 | `APP_SECRET` non usato nel codice | Basso | Usarlo per firmare token/CSRF o rimuoverlo |
-| Webhook WhatsApp senza firma | Alto se esposto | Verifica `X-Twilio-Signature` |
+| ~~Webhook WhatsApp senza firma~~ **RISOLTO** | — | `X-Hub-Signature-256` verificata; non firmato = rifiutato in produzione |
 | ~~Upload pubblici in `uploads/`~~ **RISOLTO** (verificato live 2026-07-19: documenti → 403) | — | Già servito da `download_document.php`; `.htaccess Require all denied` attivo |
 | Account `readonly` può scrivere via API | Medio | `requireWriteAccess()` su tutte le API POST/PUT/DELETE |
 | Nessun MFA | Medio | Opzionale per admin |
@@ -191,7 +191,7 @@ Vedi `database/migrations/README.md`. Le migrazioni sono **idempotenti** (re-run
 | Servizio | Stato senza config | Cosa serve |
 |----------|-------------------|------------|
 | Email | Modalità simulata | SMTP (Gmail app password, SendGrid, Aruba, ecc.) |
-| WhatsApp | Modalità simulata | Account Twilio + numero WhatsApp Business |
+| WhatsApp | Modalità simulata | WABA su Meta + numero registrato su Cloud API + token permanente |
 | Facebook/Instagram | Modalità simulata | App Meta Developers + OAuth o token manuale |
 | Backup cloud | Solo locale | Bucket S3/B2 + credenziali in Impostazioni |
 
@@ -245,7 +245,7 @@ Per questo stack (PHP + MySQL), le opzioni più semplici:
 
 Estensioni necessarie:
 - `pdo_mysql`
-- `curl` (Meta API, Twilio, backup cloud)
+- `curl` (Meta API, backup cloud)
 - `fileinfo` (upload MIME)
 - `json`, `mbstring`, `openssl`
 - CLI + `mysqldump` in PATH per backup cron
@@ -330,7 +330,7 @@ Prima di usare l'app con dati reali di clienti e inquilini:
 - [ ] **Informativa privacy** (sito + portale inquilino)
 - [ ] **Base giuridica** per trattamento dati proprietari/inquilini
 - [ ] **Registro trattamenti** (se applicabile)
-- [ ] **DPAs** con fornitori: hosting, email, Twilio, Meta
+- [ ] **DPAs** con fornitori: hosting, email, Meta
 - [ ] **Retention policy** — quanto tempo tenere comunicazioni, documenti, backup
 - [ ] **Diritti interessati** — procedura per accesso/cancellazione dati
 - [ ] **Cookie banner** — se aggiungi analytics o cookie non tecnici
@@ -352,7 +352,7 @@ L'app **non include** pagine legali né gestione consensi: vanno aggiunte o link
 
 ### Fase B — Hardening (1 settimana)
 1. ~~`requireWriteAccess()` su tutte le API~~ ✅
-2. Validazione webhook Twilio
+2. ~~Validazione webhook~~ ✅ (firma Meta verificata, fail closed)
 3. Security headers
 4. Logging errori
 5. ~~Aggiornare `schema_production.sql`~~ ✅
@@ -392,7 +392,7 @@ L'app **non include** pagine legali né gestione consensi: vanno aggiunte o link
 | Hosting provider | | |
 | Dominio / DNS | | |
 | Email SMTP provider | | |
-| Account Twilio | | |
+| WABA Meta (WhatsApp Business Account) | | |
 | App Meta Developers | | |
 
 ---

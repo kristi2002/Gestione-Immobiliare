@@ -50,7 +50,7 @@ Sign a Data Processing Agreement with each provider actually used. Typical set:
 |----------|------|-----------|-------|
 | **Hetzner** (hosting) | Infrastructure processor | Yes | EU data centre; AV/DPA available. |
 | **Mailgun / SMTP provider** | Email processor | Yes | Inbound/outbound email content. |
-| **Twilio** (WhatsApp) | Messaging processor | Yes | Only if WhatsApp is activated. US company — verify SCCs. |
+| **Meta** (WhatsApp Cloud API) | Messaging processor | Yes | Solo se WhatsApp e' attivato. Societa' USA/IE — verificare SCC e il DPA WhatsApp Business. Twilio non e' piu' un fornitore (rimosso 01/08/2026). |
 | **Meta** (Facebook/Instagram) | Social publishing | Yes | Only if social publishing is activated. |
 | **Stripe** | Payment processor | Yes | Only if payments are activated. |
 | **Backup storage (S3-compatible)** | Storage processor | Yes | Only if cloud backup is enabled; prefer EU region. |

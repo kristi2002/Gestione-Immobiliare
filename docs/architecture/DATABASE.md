@@ -554,8 +554,8 @@ Dual-use table: handles both generic reminders and maintenance ticket tracking (
 Maintenance-specific columns: `maintenance_status`, `request_type`, `category`, `supplier_id`, `supplier_name`, `priority`, `tenant_name`, and `tenant_id` (FK to `tenants` — added phase24).  
 The `tenant_id` FK means maintenance tickets are now properly linked to the submitting tenant by foreign key, not just by free-text name.
 
-### `whatsapp_messages` — Twilio message log
-Stores inbound (from Twilio webhook) and outbound messages.  
+### `whatsapp_messages` — log messaggi WhatsApp (Meta Cloud API)
+Stores inbound (dal webhook Meta) and outbound messages.  
 Linked to `client_id` or `tenant_id` (both nullable — unrecognized numbers have neither).
 
 ### `social_posts` — Scheduled social media posts
