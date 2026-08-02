@@ -236,9 +236,8 @@ Same endpoint serves both (filtered by `type`).
 ### Admin Users (`admin_users.php`) — super_admin only
 - `GET` list; `POST` create (`username`, `password`, `role`, `email`, `name`); `PUT ?id={id}`; `DELETE ?id={id}` (deactivate)
 
-### Dashboard (`get_dashboard_stats.php`, `dashboard_prefs.php`)
+### Dashboard (`get_dashboard_stats.php`)
 - `GET /get_dashboard_stats.php` — KPI counts (properties_total/available/rented, payments_overdue, reminders_due, revenue_this_month, …)
-- `GET/PUT /dashboard_prefs.php` — quick-access shortcut links
 
 ### Notifications (`notifications.php`)
 - `GET` — `{ count, items[] }` overdue payments + upcoming reminders (top-bar bell)

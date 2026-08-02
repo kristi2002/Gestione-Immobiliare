@@ -100,10 +100,9 @@ public-token) · `upload_logo` (+role).
 **Reminders/Automations:** `reminders` · `process_reminders` (**Cron**) ·
 `process_contract_expirations` (**Cron**) · `automations` · `maintenance`.
 
-**Dashboard/Search/Reporting/Session:** `get_dashboard_stats` (APCu-cached) ·
-`dashboard_prefs` · `global_search` (rate-limited) · `reports` (+role) · `forecast`
-(+role) · `agent_portfolio` (+role) · `readiness` (Bootstrap or `X-Cron-Secret`) ·
-`me` (session identity + CSRF).
+**Dashboard/Search/Reporting:** `get_dashboard_stats` (APCu-cached) ·
+`global_search` (rate-limited) · `reports` (+role) · `forecast`
+(+role) · `agent_portfolio` (+role) · `readiness` (Bootstrap or `X-Cron-Secret`).
 
 **Auth/Admin/Ops:** `login` (**Public**) · `login_2fa` (**Public**) · `admin_users`
 (**super_admin only**) · `activity_log` (**super_admin only**) · `settings` ·

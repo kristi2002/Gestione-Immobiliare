@@ -12,6 +12,20 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/settings.php';
 
+// ── Metodo ───────────────────────────────────────────────────────────────────
+// Mailgun consegna in POST multipart. Prima qui non si guardava il metodo: una
+// GET vuota — un crawler, un controllo di raggiungibilita', uno sweep degli
+// endpoint — arrivava fino in fondo e scriveva una riga in `communications`
+// piu' una notifica nella campanella, mittente vuoto e oggetto "(senza
+// oggetto)". In produzione la firma ferma tutto prima, ma su ogni ambiente
+// non-produzione (dove il controllo firma e' volutamente saltato) l'archivio
+// si riempiva di email fantasma.
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    exit('Method not allowed');
+}
+
 // ── Signature verification ───────────────────────────────────────────────────
 
 $signingKey = getSetting('mailgun_webhook_key', '');
@@ -59,6 +73,17 @@ if ($body === '') {
 $senderEmail = '';
 if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/i', $fromRaw, $m)) {
     $senderEmail = strtolower(trim($m[0]));
+}
+
+// Un'email senza mittente riconoscibile non e' un'email: non si puo' collegare
+// a un proprietario, non si puo' rispondere e non si puo' valutare come lead
+// da portale. Prima veniva comunque archiviata (mittente vuoto) e faceva
+// squillare la campanella. Si risponde 200 perche' Mailgun non deve ritentare:
+// il messaggio e' stato ricevuto, semplicemente non c'e' niente da salvare.
+if ($senderEmail === '' && trim($fromRaw) === '') {
+    error_log('[email_inbound] scartata: richiesta senza mittente.');
+    http_response_code(200);
+    exit('OK');
 }
 
 // ── Database operations ──────────────────────────────────────────────────────

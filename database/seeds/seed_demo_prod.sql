@@ -91,7 +91,6 @@ INSERT INTO app_settings (setting_key, setting_value) VALUES
 ('smtp_user',            'noreply@gestionale-immobiliare.it'),
 ('smtp_from_name',       'Gestionale Immobiliare'),
 ('logo_path',            ''),
-('dashboard_quick_links','[]'),
 ('stripe_mode',          'test'),
 ('whatsapp_from',        '+39 02 1234 5678');
 

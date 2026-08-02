@@ -82,9 +82,18 @@ Query params: `search`, `status`, `property_id`
 
 **`GET /api/tenants.php?id={id}`** — single tenant
 
-**`POST /api/tenants.php`** — create tenant
+**`POST /api/tenants.php`** — create tenant  
+Body: `{ property_id, name, surname, email, lease_start?, lease_end?, monthly_rent?, … }`
 
-**`PUT /api/tenants.php?id={id}`** — update tenant
+⚠️ **`property_id` is mandatory** even though `tenants` has no such column. An
+inquilino exists in this domain because they rent something, so creating one also
+creates the `locazione` contract that ties them to the property — the lease lives in
+`contracts` (`tenant_id` + `property_id`), never on the tenant row. Omitting it fails
+with *"property_id, nome, cognome e email valida sono obbligatori."*
+
+**`PUT /api/tenants.php?id={id}`** — update tenant  
+Passing `property_id` means the lease was edited: it moves/creates the contract, it
+does not write a column on the tenant.
 
 **`DELETE /api/tenants.php?id={id}`** — soft-delete
 
@@ -476,7 +485,30 @@ Body: `{ invoice_id }`
 **`GET /api/communications.php?id={id}`** — single message
 
 **`POST /api/communications.php`** — send or log a message  
-Body: `{ client_id, channel: 'email'|'whatsapp', subject?, body, direction: 'sent'|'received' }`
+Body: `{ client_id, channel: 'email'|'whatsapp'|'sms'|'chiamata'|'nota', subject?, body, direction: 'sent'|'received', property_id?, attachments?: [documentId] }`
+
+⚠️ The message text field is **`body`**, not `message` — a payload using `message`
+is rejected with *"Il messaggio non può essere vuoto."*
+
+Only `email` and `whatsapp` are actually dispatched; `sms`/`chiamata`/`nota` are
+manual records of something that happened outside the gestionale.
+
+**The row is written before delivery is attempted**, so a send that fails is still
+in the archive:
+
+| Outcome | `status` | Response |
+|---|---|---|
+| delivered | `sent` / `delivered` | `200` |
+| integration switched off | `simulated` | `200` |
+| delivery failed | `failed` + `status_detail` | `502` + `{ message_id, status:'failed' }` |
+| no email/phone on the contact | *(no row written)* | `400` |
+
+A `502` still means the message was saved — read `message_id` and reload the thread
+rather than treating it as "nothing happened".
+
+Attachments are document ids, allowed only for outbound email, re-validated
+server-side for ownership (the document must belong to the recipient directly, via
+one of their properties, or via one of their contracts). Max 20 files / 20 MB.
 
 ---
 
@@ -563,6 +595,12 @@ Query params: `search`, `status`, `frequency`, `due_soon` (1 = due within 7 days
 
 **`POST /api/reminders.php`** — create  
 Contact: send either `contact_type` (`client` / `lead` / `tenant`) + `contact_id`, or the explicit `client_id` / `lead_id` / `tenant_id`. With a `property_id` and no contact, the property's owner is filled in automatically.
+
+⚠️ `request_type` accepts **only `'maintenance'`** (`REMINDER_REQUEST_TYPES`,
+`api/reminders.php:28`) — any other value is rejected with *"Tipo di richiesta non
+valido."* The column is a free varchar, so the constraint is not visible in the
+schema. Omit the field for an ordinary promemoria; it is the flag that makes the row
+show up on the Manutenzione board, not a general category.
 
 **`PUT /api/reminders.php?id={id}`** — full update  
 Sub-actions: `action=assign_supplier` (set `supplier_id`), `action=maintenance_status` (update kanban column)
@@ -730,12 +768,6 @@ Body: `{ username, password, role, email, name }`
 
 **`GET /api/get_dashboard_stats.php`** — all KPI counts for the dashboard home screen  
 Returns: `{ properties_total, properties_available, properties_rented, payments_overdue, reminders_due, revenue_this_month, ... }`
-
-**`GET /api/dashboard_prefs.php`** — read saved quick-access shortcut links  
-Returns: `{ quick_links: [{ label, href }] }`
-
-**`PUT /api/dashboard_prefs.php`** — save quick-access shortcuts  
-Body: `{ quick_links: [{ label, href }] }`
 
 ---
 

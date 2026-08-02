@@ -123,9 +123,10 @@ Legend: **✅ verified live** · **▶ present in code, not executed this run** 
 
 ### 3.1 Full endpoint sweep (authenticated)
 
-All 89 files in `api/` called with a live `gestionale_session` cookie.
+All files in `api/` called with a live `gestionale_session` cookie.
 **Zero 500s.** Everything returned either `200 + success:true`, or a precise
-`400`/`405` naming the missing parameter. Representative slice:
+`400`/`405` naming the missing parameter. (The sweep itself turned out to have a
+side effect — see §4.5.) Representative slice:
 
 ```
 clients.php            200 "success":true
@@ -179,9 +180,13 @@ That is the right layer.
 
 - **Migrations:** 90 applied, **0 pending**. (This supersedes the older note that
   phase79/80 had never run — they have, locally.)
-- **Orphan endpoints:** `api/me.php`, `api/dashboard_prefs.php`, `api/media.php` are
-  referenced by no frontend file and no other PHP — dead code (documented in
-  `docs/api/API.md`, which is now wrong about them).
+- **Orphan endpoints:** `api/me.php` and `api/dashboard_prefs.php` were referenced by
+  no frontend file and no other PHP — dead code, since **removed** (§4.4).
+  *(An earlier draft of this report also listed `api/media.php` as dead. That was
+  wrong: it is the auth-scoped streamer for private `attachment` media and is
+  referenced server-side at `api/property_media.php:250`, which builds
+  `api/media.php?id=N` into the JSON the frontend renders. A grep of the frontend
+  alone cannot see a URL that the backend generates.)*
 - **Frontend↔API parameter check:** every query parameter the frontend sends was
   checked against its endpoint. One real mismatch found (§4.2).
 - **Public link targets:** `apply.php`, `sign.php`, `unsubscribe.php`,
@@ -240,25 +245,63 @@ contract_id=99999 → "total":0
 tenant_id=1      → "total":15     (unchanged)
 ```
 
-### 4.3 Form field names diverge from what the API expects
+### 4.3 Undocumented API contracts — **FIXED (documented)**
 
-Three separate APIs take a different key than the obvious one, which cost real time
-even with the schema in front of me:
+Three APIs take a different key than the obvious one. All are internally consistent
+and none is a bug — they were simply invisible, and each cost real time to discover
+by trial and error. Now written down in `docs/api/API.md`:
 
 - `communications.php` wants **`body`**, not `message`
 - `reminders.php` accepts only `request_type='maintenance'` — any other value is
-  rejected outright (`REMINDER_REQUEST_TYPES` at `api/reminders.php:28`), yet the
-  column is a free varchar
-- `tenants.php` **requires `property_id`** to create a tenant at all, because it
-  auto-creates the contract
+  rejected (`REMINDER_REQUEST_TYPES`, `api/reminders.php:28`), yet the column is a
+  free varchar so the constraint is invisible in the schema
+- `tenants.php` **requires `property_id`** to create a tenant at all, because an
+  inquilino exists by virtue of renting something: the call also creates the
+  `locazione` contract, and the lease lives in `contracts`, never on the tenant row
 
-These are internally consistent, just undocumented. Worth a line in the API docs
-before another developer (or agent) touches them.
+Also documented: the new write-before-dispatch status contract for communications
+(§4.1), including the fact that a `502` still means the message was saved.
 
-### 4.4 Dead code
+### 4.4 Dead code — **FIXED (removed)**
 
-`api/me.php`, `api/dashboard_prefs.php`, `api/media.php` — unreferenced, but still
-listed as live endpoints in `docs/api/API.md` and `docs/guides/06-API-REFERENCE.md`.
+- `api/me.php` — session-bootstrap endpoint created for the React SPA
+  (`59d205e "React frontend Phase 1"`). React was abandoned and the `frontend/` tree
+  deleted; this was the last piece still shipping.
+- `api/dashboard_prefs.php` — a working quick-links preference endpoint with no UI
+  anywhere. Removed along with its orphaned `dashboard_quick_links` seed row; it is
+  in git history if the dashboard ever grows that feature.
+
+Stale references cleaned from `docs/api/API.md`, `docs/guides/06-API-REFERENCE.md`
+and `docs/architecture/CODEMAP.md`.
+
+`api/payments.php`'s `contract_id` (§4.2) is a related case worth naming: the API
+docs had *always* listed it as a supported filter. The documentation was right and
+the code was wrong — which is why nobody noticed.
+
+### 4.5 `email_inbound.php` created a fake email on any GET — **FIXED**
+
+Found by accident: the endpoint sweep in §3.1 is GET-only, yet it left a row behind
+each time it ran. Two of the "35 communications" in this database were created by my
+own audit.
+
+The webhook had no method check. A bare `GET /api/email_inbound.php` — a crawler, an
+uptime check, a scanner — ran the whole handler and inserted a `communications` row
+(mittente vuoto, subject *"(senza oggetto)"*) **plus** an `email_inbound` notification
+that rings the top-bar bell. Signature verification is deliberately skipped outside
+production, so every non-prod environment silently accumulated phantom emails.
+
+Production was never exposed: with `APP_ENV=production` the handler already fails
+closed — 503 without a signing key, 403 on a bad HMAC.
+
+**Fix:** require POST (405 otherwise), and drop a payload with no recognisable sender
+without writing anything — answering 200 so Mailgun does not retry, because the
+message *was* received, there is simply nothing to file. Verified:
+
+```
+GET                        → 405        (was 200 + 1 comm + 1 notifica)
+POST, empty body           → 200, rows unchanged (35/0 before and after)
+POST, real inbound email   → 200, stored as 'received', matched to client #21 by sender
+```
 
 ---
 
