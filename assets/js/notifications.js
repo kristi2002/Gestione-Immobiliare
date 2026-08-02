@@ -8,10 +8,14 @@
     const POLL_INTERVAL = 60000;
 
     let items = [];
+    /** Scadenze totali: puo' superare items.length (la tendina ne mostra 50). */
+    let count = 0;
     /** L'ultimo aggiornamento e' fallito: quello che si vede e' vecchio. */
     let stale = false;
     /** Una sola richiesta per volta (il tick e l'apertura possono coincidere). */
     let inFlight = null;
+    /** setInterval attivo, oppure null a scheda nascosta. */
+    let timer = null;
 
     let bell, badge, dropdown, list;
 
@@ -39,8 +43,35 @@
         // a un minuto dopo che l'utente ha gia' evaso la scadenza.
         window.Notifications = { refresh: poll };
 
+        // Una scheda in secondo piano non ha nessuno che la guardi: interrogare
+        // il server ogni minuto per ore e' traffico speso per un badge che
+        // nessuno sta leggendo. Al rientro si rilegge SUBITO, prima di
+        // riavviare il giro: altrimenti il primo minuto dopo il ritorno
+        // mostrerebbe la situazione di quando si e' usciti, che e' proprio il
+        // difetto appena corretto per la tendina.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                poll();
+                startPolling();
+            }
+        });
+
         poll();
-        setInterval(poll, POLL_INTERVAL);
+        // Se la pagina nasce in una scheda di sfondo (aperta con ctrl+click) il
+        // giro non parte: lo avvia il primo ritorno in primo piano.
+        if (!document.hidden) startPolling();
+    }
+
+    function startPolling() {
+        if (timer) return;
+        timer = setInterval(poll, POLL_INTERVAL);
+    }
+
+    function stopPolling() {
+        clearInterval(timer);
+        timer = null;
     }
 
     /**
@@ -63,8 +94,9 @@
                     throw new Error(json.error || ('HTTP ' + res.status));
                 }
                 items = json.data.items || [];
+                count = json.data.count || 0;
                 stale = false;
-                updateBadge(json.data.count || 0);
+                updateBadge(count);
             } catch (err) {
                 // Il conteggio precedente resta esposto: un blip di rete non
                 // deve far sparire scadenze vere dalla campanella. Ma non si
@@ -81,12 +113,15 @@
         return inFlight;
     }
 
-    function updateBadge(count) {
+    function updateBadge(total) {
         if (!badge) return;
-        if (count > 0) {
-            badge.textContent = count > 99 ? '99+' : count;
+        if (total > 0) {
+            badge.textContent = total > 99 ? '99+' : total;
+            // "99+" da solo non si legge: il titolo porta il numero esatto.
+            badge.title = total + (total === 1 ? ' scadenza' : ' scadenze');
             badge.hidden = false;
         } else {
+            badge.removeAttribute('title');
             badge.hidden = true;
         }
     }
@@ -102,12 +137,18 @@
             list.innerHTML = notice || '<p class="notif-empty text-muted">Nessuna notifica.</p>';
             return;
         }
+        // Il badge puo' dire 80 mentre la tendina ne elenca 50: senza questa
+        // riga sembrerebbe che il conteggio sia sbagliato.
+        const more = count > items.length
+            ? `<p class="notif-empty text-muted">Altre ${count - items.length} in Promemoria.</p>`
+            : '';
+
         list.innerHTML = notice + items.map(it => `
             <button type="button" class="notif-item" data-id="${it.id}">
                 <span class="notif-item__title">${escapeHtml(it.title)}</span>
                 <span class="notif-item__date">${formatDateTime(it.reminder_date)}</span>
             </button>
-        `).join('');
+        `).join('') + more;
 
         list.querySelectorAll('.notif-item').forEach(btn => {
             btn.addEventListener('click', () => {
