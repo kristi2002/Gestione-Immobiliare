@@ -17,17 +17,13 @@
         <div class="meta-card__header">
             <div>
                 <h3>Connessione Meta</h3>
-                <p class="text-muted">Configura le credenziali Facebook Page e Instagram Business.</p>
+                <p class="text-muted">Quale pagina Facebook e quale account Instagram Business usiamo per pubblicare.</p>
             </div>
             <span class="meta-status" id="meta-status-badge">—</span>
         </div>
 
         <form id="meta-settings-form" class="meta-card__body">
-            <div class="form-row form-row--3">
-                <div class="form-group">
-                    <label for="meta-app-id">Meta App ID</label>
-                    <input type="text" id="meta-app-id" class="form-input" placeholder="ID app da developers.facebook.com">
-                </div>
+            <div class="form-row">
                 <div class="form-group">
                     <label for="meta-page-id">Facebook Page ID</label>
                     <input type="text" id="meta-page-id" class="form-input" placeholder="ID pagina Facebook">
@@ -48,7 +44,12 @@
                 </div>
             </div>
             <p class="form-hint text-muted">
-                Senza credenziali Meta, i post vengono salvati in modalità simulata (utile per sviluppo).
+                App ID e App Secret non si impostano qui: sono le credenziali dell'app Meta,
+                si mettono una volta sola in <strong>Impostazioni → Meta / Social</strong> (super admin)
+                e servono al pulsante OAuth qui sotto.
+            </p>
+            <p class="form-hint text-muted">
+                Senza una pagina collegata, i post vengono salvati in modalità simulata (utile per sviluppo).
                 Per Instagram live, imposta anche <code>META_PUBLIC_BASE_URL</code> sul server (URL pubblico delle immagini).
             </p>
             <button type="submit" class="btn btn--primary" id="btn-save-meta">Salva connessione manuale</button>

@@ -708,8 +708,13 @@ Returns: `{ facebook_post_id?, instagram_media_id? }`
 
 **`GET /api/social_settings.php`** — get settings; all tokens are masked (••••••••)
 
-**`PUT /api/social_settings.php`** — update Meta credentials  
-Body: `{ meta_app_id, meta_user_token, facebook_page_id, ... }`
+**`PUT /api/social_settings.php`** — update the connected account  
+Body: `{ facebook_page_id, facebook_page_token, instagram_account_id, token_expires_at }`
+
+`meta_app_id` / `meta_app_secret` are app-level credentials and do **not** belong to
+this endpoint: they live in `app_settings` (`PUT /api/settings.php`, Impostazioni →
+Meta / Social, super admin only) and are what `meta_oauth.php` reads. The
+`social_settings.meta_app_id` column is written only by the OAuth callback.
 
 ---
 
