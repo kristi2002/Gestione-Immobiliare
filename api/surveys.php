@@ -228,9 +228,10 @@ function createSurvey(PDO $db): void
     $newId = (int) $db->lastInsertId();
     logActivity('create', 'survey', $newId, 'Sondaggio creato con token');
 
-    // Build the public survey link
+    // Build the public survey link. La pagina sta sotto tenant/, non in radice
+    // (a differenza di sign.php): il percorso sbagliato dava un 404.
     $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
-    $link    = $baseUrl . '/survey.php?token=' . $token;
+    $link    = $baseUrl . '/tenant/survey.php?token=' . $token;
 
     apiSuccess([
         'id'    => $newId,
