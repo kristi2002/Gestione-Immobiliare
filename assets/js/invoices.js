@@ -19,6 +19,7 @@
 
     function init() {
         els.grid         = document.getElementById('invoices-grid');
+        els.search       = document.getElementById('invoice-search');
         els.statusFilter = document.getElementById('invoice-status-filter');
         els.yearFilter   = document.getElementById('invoice-year-filter');
         els.alert        = document.getElementById('invoices-alert');
@@ -42,7 +43,7 @@
             if (window.App) window.App.navigateTo('invoice_edit');
         });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadInvoices(); });
-        els.yearFilter.addEventListener('input', () => { clearTimeout(els._t); els._t = setTimeout(() => { currentPage = 1; loadInvoices(); }, 300); });
+        [els.search, els.yearFilter].forEach(el => el.addEventListener('input', () => { clearTimeout(els._t); els._t = setTimeout(() => { currentPage = 1; loadInvoices(); }, 300); }));
 
         // Scheda quick-view
         const schedaModal = document.getElementById('invoice-scheda-modal');
@@ -86,6 +87,7 @@
 
     async function loadInvoices() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.yearFilter.value) params.set('year', els.yearFilter.value);
         params.set('page', currentPage);

@@ -29,9 +29,14 @@
         els.tbody    = document.getElementById('scad-tbody');
         els.horizon  = document.getElementById('scad-horizon');
         els.typeF    = document.getElementById('scad-type');
+        els.search   = document.getElementById('scad-search');
 
         els.horizon.addEventListener('change', load);
         els.typeF.addEventListener('change', load);
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(load, 400);
+        });
         load();
     }
 
@@ -39,6 +44,7 @@
         const params = new URLSearchParams();
         params.set('horizon', els.horizon.value);
         if (els.typeF.value) params.set('type', els.typeF.value);
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
 
         softLoad(els.tbody, '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
         try {

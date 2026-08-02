@@ -76,8 +76,17 @@ function listExpenses(PDO $db): void
     $category   = trim($_GET['category'] ?? '');
     $year       = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : null;
 
+    $search = trim($_GET['search'] ?? '');
+
     $where = 'WHERE 1=1';
     $params = [];
+
+    // Stesse join per conteggio e dati: la ricerca guarda immobile, proprietario,
+    // fornitore ed edificio, non solo le colonne della spesa.
+    $joins = ' LEFT JOIN properties p ON p.id = e.property_id
+               LEFT JOIN clients c ON c.id = e.client_id
+               LEFT JOIN suppliers s ON s.id = e.supplier_id
+               LEFT JOIN buildings b ON b.id = e.building_id';
 
     if ($propertyId) {
         $where .= ' AND e.property_id = :property_id';
@@ -115,17 +124,22 @@ function listExpenses(PDO $db): void
         $where .= CHILD_EXPENSE_EXCLUSION;
     }
 
-    $countSql = "SELECT COUNT(*) FROM expenses e $where";
+    if ($search !== '') {
+        $frag = apiWordSearch($search, [
+            'e.description', 'e.notes', 'e.category',
+            'p.address', 'p.city', 'c.name', 'c.surname', 's.name', 'b.name',
+        ], $params, 'exps');
+        if ($frag !== '') $where .= " AND ($frag)";
+    }
+
+    $countSql = "SELECT COUNT(*) FROM expenses e $joins $where";
 
     $dataSql = "SELECT e.*, p.address AS property_address, p.city AS property_city,
                    c.name AS client_name, c.surname AS client_surname,
                    s.name AS supplier_name, b.name AS building_name,
                    (SELECT COUNT(*) FROM expenses ch WHERE ch.parent_expense_id = e.id) AS allocation_count
             FROM expenses e
-            LEFT JOIN properties p ON p.id = e.property_id
-            LEFT JOIN clients c ON c.id = e.client_id
-            LEFT JOIN suppliers s ON s.id = e.supplier_id
-            LEFT JOIN buildings b ON b.id = e.building_id
+            $joins
             $where
             ORDER BY e.expense_date DESC";
 

@@ -14,6 +14,7 @@
 
     function init() {
         els.alert      = document.getElementById('surveys-alert');
+        els.search     = document.getElementById('survey-search');
         els.tbody      = document.getElementById('surveys-tbody');
         els.pagination = document.getElementById('surveys-pagination');
         els.linkModal  = document.getElementById('surveys-link-modal');
@@ -25,6 +26,11 @@
     }
 
     function bindEvents() {
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(() => { currentPage = 1; loadSurveys(); }, 400);
+        });
+
         document.getElementById('btn-new-survey-link').addEventListener('click', openLinkModal);
         document.getElementById('surveys-link-close').addEventListener('click', closeLinkModal);
         document.getElementById('surveys-link-cancel').addEventListener('click', closeLinkModal);
@@ -81,6 +87,7 @@
 
     async function loadSurveys() {
         const params = new URLSearchParams({ page: currentPage, limit: PAGE_LIMIT });
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         softLoad(els.tbody, '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {

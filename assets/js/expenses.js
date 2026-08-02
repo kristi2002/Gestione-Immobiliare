@@ -32,6 +32,7 @@
     function init() {
         els.grid           = document.getElementById('expenses-grid');
         els.alert          = document.getElementById('expenses-alert');
+        els.search         = document.getElementById('expense-search');
         els.propFilter     = document.getElementById('expense-property-filter');
         els.clientFilter   = document.getElementById('expense-client-filter');
         els.supplierFilter = document.getElementById('expense-supplier-filter');
@@ -60,10 +61,10 @@
         });
 
         [els.propFilter, els.clientFilter, els.supplierFilter, els.categoryFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadExpenses(); }));
-        els.yearFilter.addEventListener('input', () => {
+        [els.search, els.yearFilter].forEach(el => el.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadExpenses(); }, 400);
-        });
+        }));
 
         // Scheda quick-view
         const schedaModal = document.getElementById('expense-scheda-modal');
@@ -114,6 +115,7 @@
 
     async function loadExpenses() {
         const params = new URLSearchParams();
+        if (els.search.value.trim())  params.set('search', els.search.value.trim());
         if (els.propFilter.value)     params.set('property_id', els.propFilter.value);
         if (els.clientFilter.value)   params.set('client_id', els.clientFilter.value);
         if (els.supplierFilter.value) params.set('supplier_id', els.supplierFilter.value);

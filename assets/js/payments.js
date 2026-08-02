@@ -39,6 +39,7 @@
     function init() {
         els.grid         = document.getElementById('payments-grid');
         els.alert        = document.getElementById('payments-alert');
+        els.search       = document.getElementById('payment-search');
         els.statusFilter = document.getElementById('payment-status-filter');
         els.monthFilter  = document.getElementById('payment-month-filter');
         els.yearFilter   = document.getElementById('payment-year-filter');
@@ -66,10 +67,10 @@
         bindSddExport();
 
         [els.statusFilter, els.monthFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadPayments(); }));
-        els.yearFilter.addEventListener('input', () => {
+        [els.search, els.yearFilter].forEach(el => el.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadPayments(); }, 400);
-        });
+        }));
 
         // Scheda quick-view
         const schedaModal = document.getElementById('payment-scheda-modal');
@@ -114,6 +115,7 @@
 
     async function loadPayments() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.monthFilter.value)  params.set('month', els.monthFilter.value);
         if (els.yearFilter.value.trim()) params.set('year', els.yearFilter.value.trim());

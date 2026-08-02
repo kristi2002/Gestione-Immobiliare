@@ -71,16 +71,27 @@ function listSurveys(PDO $db): void
 {
     $pagination = apiGetPagination();
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
+    $search     = trim($_GET['search'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
+
+    // Stesse join per conteggio e dati: si cerca per inquilino e per immobile.
+    $joins = ' LEFT JOIN tenants t ON t.id = ts.tenant_id
+               LEFT JOIN properties p ON p.id = ts.property_id';
 
     if ($propertyId) {
         $where .= ' AND ts.property_id = :property_id';
         $params['property_id'] = $propertyId;
     }
+    if ($search !== '') {
+        $frag = apiWordSearch($search, [
+            't.name', 't.surname', 'p.address', 'p.city', 'ts.comment',
+        ], $params, 'svs');
+        if ($frag !== '') $where .= " AND ($frag)";
+    }
 
-    $countSql = "SELECT COUNT(*) FROM tenant_surveys ts $where";
+    $countSql = "SELECT COUNT(*) FROM tenant_surveys ts $joins $where";
 
     $dataSql = "SELECT ts.*,
                    ts.overall_rating       AS rating_global,
@@ -89,8 +100,7 @@ function listSurveys(PDO $db): void
                    t.name AS tenant_name, t.surname AS tenant_surname,
                    p.address AS property_address, p.city AS property_city
             FROM tenant_surveys ts
-            LEFT JOIN tenants t ON t.id = ts.tenant_id
-            LEFT JOIN properties p ON p.id = ts.property_id
+            $joins
             $where
             ORDER BY ts.submitted_at DESC, ts.id DESC";
 

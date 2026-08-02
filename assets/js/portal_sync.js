@@ -27,6 +27,7 @@
         els.alert      = document.getElementById('portal-alert');
         els.tbody      = document.getElementById('portal-tbody');
         els.pagination = document.getElementById('portal-pagination');
+        els.search     = document.getElementById('portal-search');
         els.portalF    = document.getElementById('portal-portal-filter');
         els.statusF    = document.getElementById('portal-status-filter');
         els.modal      = document.getElementById('portal-modal');
@@ -56,6 +57,10 @@
         document.getElementById('portal-delete-confirm').addEventListener('click', confirmDelete);
         els.delModal.addEventListener('click', e => { if (e.target === els.delModal) closeDeleteModal(); });
 
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(() => { currentPage = 1; loadList(); }, 400);
+        });
         els.portalF.addEventListener('change', () => { currentPage = 1; loadList(); });
         els.statusF.addEventListener('change', () => { currentPage = 1; loadList(); });
 
@@ -166,6 +171,7 @@
 
     async function loadList() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.portalF.value) params.set('portal', els.portalF.value);
         if (els.statusF.value) params.set('status', els.statusF.value);
         params.set('page', currentPage);

@@ -28,6 +28,7 @@
 
     function init() {
         els.grid         = document.getElementById('appointments-grid');
+        els.search       = document.getElementById('appt-search');
         els.typeFilter   = document.getElementById('appt-type-filter');
         els.statusFilter = document.getElementById('appt-status-filter');
         els.from         = document.getElementById('appt-from');
@@ -45,6 +46,10 @@
         });
         [els.typeFilter, els.statusFilter, els.from, els.to].forEach(el =>
             el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(() => { currentPage = 1; loadAppointments(); }, 400);
+        });
 
         const routeBtn = document.getElementById('btn-appt-route');
         if (routeBtn) routeBtn.addEventListener('click', planDay);
@@ -121,6 +126,7 @@
 
     async function loadAppointments() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.typeFilter.value) params.set('type', els.typeFilter.value);
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.from.value) params.set('from', els.from.value);

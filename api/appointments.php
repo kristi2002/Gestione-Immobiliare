@@ -70,9 +70,17 @@ function listAppointments(PDO $db): void
     $type       = trim($_GET['type'] ?? '');
     $from       = trim($_GET['from'] ?? '');
     $to         = trim($_GET['to'] ?? '');
+    $search     = trim($_GET['search'] ?? '');
 
     $where = 'WHERE 1=1';
     $params = [];
+
+    // Stesse join per conteggio e dati: la ricerca guarda immobile e persone.
+    $joins = ' LEFT JOIN properties p ON p.id = a.property_id
+               LEFT JOIN leads l ON l.id = a.lead_id
+               LEFT JOIN clients c ON c.id = a.client_id
+               LEFT JOIN clients po ON po.id = p.client_id
+               LEFT JOIN admin_users u ON u.id = a.agent_id';
 
     if ($propertyId) { $where .= ' AND a.property_id = :pid'; $params['pid'] = $propertyId; }
     if ($agentId)    { $where .= ' AND a.agent_id = :aid'; $params['aid'] = $agentId; }
@@ -84,8 +92,16 @@ function listAppointments(PDO $db): void
     }
     if ($from !== '') { $where .= ' AND a.appointment_date >= :from'; $params['from'] = $from . ' 00:00:00'; }
     if ($to !== '')   { $where .= ' AND a.appointment_date <= :to'; $params['to'] = $to . ' 23:59:59'; }
+    if ($search !== '') {
+        $frag = apiWordSearch($search, [
+            'a.notes', 'a.location_detail', 'p.address', 'p.city',
+            'l.name', 'l.surname', 'c.name', 'c.surname',
+            'po.name', 'po.surname', 'u.username',
+        ], $params, 'appts');
+        if ($frag !== '') $where .= " AND ($frag)";
+    }
 
-    $countSql = "SELECT COUNT(*) FROM appointments a $where";
+    $countSql = "SELECT COUNT(*) FROM appointments a $joins $where";
 
     $dataSql = "SELECT a.*, p.address AS property_address, p.city AS property_city,
                    p.latitude AS property_latitude, p.longitude AS property_longitude,
@@ -94,11 +110,7 @@ function listAppointments(PDO $db): void
                    po.id AS owner_id, po.name AS owner_name, po.surname AS owner_surname,
                    u.username AS agent_name
             FROM appointments a
-            LEFT JOIN properties p ON p.id = a.property_id
-            LEFT JOIN leads l ON l.id = a.lead_id
-            LEFT JOIN clients c ON c.id = a.client_id
-            LEFT JOIN clients po ON po.id = p.client_id
-            LEFT JOIN admin_users u ON u.id = a.agent_id
+            $joins
             $where
             ORDER BY a.appointment_date ASC";
 

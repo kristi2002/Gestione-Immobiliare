@@ -208,17 +208,27 @@ function listListings(PDO $db): void
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $portal     = trim($_GET['portal'] ?? '');
     $status     = trim($_GET['status'] ?? '');
+    $search     = trim($_GET['search'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
+    // Stessa join per conteggio e dati: si cerca soprattutto per indirizzo.
+    $joins  = ' LEFT JOIN properties p ON p.id = pl.property_id';
     if ($propertyId) { $where .= ' AND pl.property_id = :pid'; $params['pid'] = $propertyId; }
     if ($portal !== '' && in_array($portal, PORTALS, true)) { $where .= ' AND pl.portal = :portal'; $params['portal'] = $portal; }
     if ($status !== '' && in_array($status, PORTAL_STATUSES, true)) { $where .= ' AND pl.status = :status'; $params['status'] = $status; }
+    if ($search !== '') {
+        $frag = apiWordSearch($search, [
+            'p.address', 'p.city', 'pl.external_id', 'pl.external_url',
+            'pl.error_message', 'pl.notes',
+        ], $params, 'pls');
+        if ($frag !== '') $where .= " AND ($frag)";
+    }
 
-    $countSql = "SELECT COUNT(*) FROM portal_listings pl $where";
+    $countSql = "SELECT COUNT(*) FROM portal_listings pl $joins $where";
     $dataSql  = "SELECT pl.*, p.address AS property_address, p.city AS property_city
                  FROM portal_listings pl
-                 LEFT JOIN properties p ON p.id = pl.property_id
+                 $joins
                  $where
                  ORDER BY pl.updated_at DESC";
 
