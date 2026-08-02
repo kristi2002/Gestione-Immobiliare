@@ -33,6 +33,9 @@
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let schedaPaymentId = null;
+    // Sapere se Stripe e' configurato PRIMA di disegnare il pulsante: altrimenti
+    // l'unico modo di scoprirlo sarebbe premerlo e ricevere un 503.
+    let stripeConfigured = false;
 
     const els = {};
 
@@ -51,7 +54,7 @@
         els.pagination   = document.getElementById('payments-pagination');
 
         bindEvents();
-        Promise.all([loadTenants(), loadProperties()])
+        Promise.all([loadTenants(), loadProperties(), loadStripeStatus()])
             .then(() => loadPayments())
             .catch(err => {
                 if (!els.alert?.isConnected) return;
@@ -87,6 +90,89 @@
             closeSchedaModal();
             markPaid(id);
         });
+        document.getElementById('scheda-pay-link').addEventListener('click', () => {
+            createPaymentLink(schedaPaymentId);
+        });
+    }
+
+    /**
+     * L'incasso online e' lato agenzia: si genera il link e lo si manda
+     * all'inquilino. Il portale inquilino NON ha un pulsante "Paga": l'endpoint
+     * di checkout richiede una sessione admin, quindi un click dell'inquilino
+     * finirebbe in 401.
+     */
+    async function loadStripeStatus() {
+        try {
+            const res  = await fetch('api/stripe_checkout.php');
+            const json = await res.json();
+            stripeConfigured = !!(json.success && json.data && json.data.configured);
+        } catch {
+            stripeConfigured = false;   // nel dubbio non si mostra il pulsante
+        }
+    }
+
+    async function createPaymentLink(id) {
+        const btn = document.getElementById('scheda-pay-link');
+        if (!id || !btn) return;
+
+        btn.disabled = true;
+        const original = btn.innerHTML;
+        btn.textContent = 'Generazione…';
+
+        try {
+            const base = window.location.origin + window.location.pathname;
+            const res  = await fetch('api/stripe_checkout.php', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    payment_id:  id,
+                    success_url: base + '?pagamento=ok',
+                    cancel_url:  base + '?pagamento=annullato',
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore Stripe.');
+            showPaymentLink(json.data.checkout_url);
+        } catch (err) {
+            showAlert('Link di pagamento non creato: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+
+    /** Il link va copiato e inviato a mano: mostrarlo per intero, non troncato. */
+    function showPaymentLink(url) {
+        const body = document.getElementById('scheda-pay-body');
+        if (!body) return;
+
+        const box = document.createElement('div');
+        box.className = 'scheda-rows';
+        box.style.marginTop = '12px';
+        box.innerHTML = `
+            <div class="scheda-row">
+                <span class="scheda-row__label"><i data-lucide="link"></i> Link di pagamento</span>
+                <span class="scheda-row__value" style="word-break:break-all">${escapeHtml(url)}</span>
+            </div>`;
+
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'btn btn--ghost btn--sm';
+        copy.textContent = 'Copia link';
+        copy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(url);
+                copy.textContent = 'Copiato';
+            } catch {
+                copy.textContent = 'Copia non riuscita';
+            }
+        });
+        box.appendChild(copy);
+
+        body.querySelector('.stripe-link-box')?.remove();
+        box.classList.add('stripe-link-box');
+        body.appendChild(box);
+        if (window.lucide) window.lucide.createIcons();
     }
 
     // -------------------------------------------------------------------------
@@ -228,6 +314,15 @@
 
         const editBtn = document.getElementById('scheda-pay-edit');
         if (editBtn) editBtn.hidden = window.canWrite === false;
+
+        // Il link si genera solo per un pagamento ancora da incassare, e solo se
+        // Stripe e' davvero configurato: su un pagamento gia' saldato sarebbe un
+        // invito a farsi pagare due volte.
+        const linkBtn = document.getElementById('scheda-pay-link');
+        if (linkBtn) {
+            linkBtn.hidden = !(stripeConfigured && window.canWrite !== false
+                               && (st === 'pending' || st === 'late'));
+        }
 
         document.getElementById('payment-scheda-modal').hidden = false;
     }
