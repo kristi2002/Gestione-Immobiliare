@@ -26,14 +26,6 @@
             <option value="cancelled">In pausa</option>
             <option value="completed">Completate</option>
         </select>
-        <select id="automation-freq-filter" class="form-select">
-            <option value="">Tutte le frequenze</option>
-            <option value="weekly">Settimanale</option>
-            <option value="biweekly">Quindicinale</option>
-            <option value="monthly">Mensile</option>
-            <option value="quarterly">Trimestrale</option>
-            <option value="yearly">Annuale</option>
-        </select>
     </div>
 
     <div id="automations-grid" class="entity-grid">
@@ -49,11 +41,34 @@
             <h3 id="automation-modal-title">Nuova Automazione</h3>
             <button class="modal-close" id="automation-modal-close" aria-label="Chiudi">&times;</button>
         </div>
-        <form id="automation-form" class="modal-body">
+
+        <!-- Passo 1: da cosa si parte.
+             Il modulo vuoto chiedeva di scrivere un'email da zero prima ancora
+             di sapere che aspetto avrà: qui si sceglie un'automazione già
+             scritta e si cambia solo ciò che serve. -->
+        <div class="modal-body" id="automation-gallery">
+            <p class="preset-grid__intro">Scegli un punto di partenza: potrai cambiare ogni parola prima di salvare.</p>
+            <div class="preset-grid" id="automation-preset-grid"></div>
+        </div>
+
+        <form id="automation-form" class="modal-body" hidden>
             <input type="hidden" id="automation-id">
 
+            <div id="automation-modal-alert" class="alert" style="display:none;"></div>
+
+            <div class="form-backlink" id="automation-backlink" hidden>
+                <button type="button" class="btn-link" id="automation-back-to-gallery">‹ Cambia punto di partenza</button>
+            </div>
+
+            <!-- La regola detta in una riga, ricostruita a ogni modifica: è il
+                 solo posto dove l'agente legge cosa ha configurato senza dover
+                 rimettere insieme cinque campi separati. -->
+            <div class="rule-summary" id="automation-summary">
+                <span class="rule-summary__text">—</span>
+            </div>
+
             <fieldset class="form-section">
-                <legend>Attivazione</legend>
+                <legend>Quando parte</legend>
                 <div class="form-group">
                     <div class="segmented" role="radiogroup" aria-label="Tipo di attivazione">
                         <label class="segmented__option">
@@ -78,7 +93,7 @@
                             <small class="form-hint" id="automation-event-hint"></small>
                         </div>
                         <div class="form-group">
-                            <label for="automation-recipient-rule">Destinatari <span class="required">*</span></label>
+                            <label for="automation-recipient-rule">A chi va <span class="required">*</span></label>
                             <select id="automation-recipient-rule" class="form-select">
                                 <option value="">— Seleziona evento prima —</option>
                             </select>
@@ -177,7 +192,7 @@
             </fieldset>
 
             <fieldset class="form-section" id="automation-target-section">
-                <legend>Destinatario</legend>
+                <legend>A chi</legend>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="automation-contact">Contatto <span class="required">*</span></label>
@@ -194,13 +209,13 @@
                         <select id="automation-property" class="form-select">
                             <option value="">— Nessuno —</option>
                         </select>
-                        <small class="form-hint">Se scelto, i token <code>{{immobile.*}}</code> si riempiono da qui.</small>
+                        <small class="form-hint">Se scelto, i dati dell'immobile compaiono nel testo al posto dei segnaposto.</small>
                     </div>
                 </div>
             </fieldset>
 
             <fieldset class="form-section">
-                <legend>Contenuto email</legend>
+                <legend>Cosa dice</legend>
                 <div class="form-group">
                     <label for="automation-name">Nome automazione <span class="required">*</span></label>
                     <input type="text" id="automation-name" class="form-input" required maxlength="255"
@@ -228,7 +243,7 @@
                 </div>
                 <div class="form-group">
                     <label for="automation-body">Corpo del messaggio <span class="required">*</span></label>
-                    <textarea id="automation-body" class="form-textarea" rows="7" required
+                    <textarea id="automation-body" class="form-textarea" rows="9" required
                               placeholder="Gentile {{contatto.nome}},&#10;&#10;...&#10;&#10;Cordiali saluti,&#10;{{agenzia.nome}}"></textarea>
                 </div>
                 <div class="token-picker" id="automation-tokens">
@@ -237,12 +252,21 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Anteprima oggetto</label>
-                    <div class="token-preview" id="automation-preview">—</div>
+                    <label>Anteprima <small class="form-hint form-hint--inline">con dati di esempio dove il contatto non è ancora scelto</small></label>
+                    <div class="token-preview">
+                        <div class="token-preview__subject" id="automation-preview">—</div>
+                        <div class="token-preview__body" id="automation-preview-body">—</div>
+                    </div>
                 </div>
             </fieldset>
 
             <div class="modal-footer">
+                <!-- Prima di questo pulsante l'unico modo di sapere se il testo
+                     era giusto era aspettare il cron e leggere il registro:
+                     cioè accorgersi dell'errore dopo il cliente. -->
+                <button type="button" class="btn btn--ghost modal-footer__aside" id="automation-test-send">
+                    <i data-lucide="send"></i> Invia una prova a me
+                </button>
                 <button type="button" class="btn btn--ghost" id="automation-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary" id="automation-modal-save">Salva automazione</button>
             </div>
@@ -263,4 +287,4 @@
     </div>
 </div>
 
-<script src="assets/js/automations.js?v=2"></script>
+<script src="assets/js/automations.js?v=3"></script>

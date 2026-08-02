@@ -1,8 +1,122 @@
 /* ==========================================================================
-   Automazioni (phase66)
+   Automazioni (phase66, phase94)
    Segmented control per il tipo di trigger, pillole dei token dinamici,
    anteprima dell'oggetto, righe di esito sulle schede.
+   phase94: modelli di partenza, riepilogo in una frase, invio di prova.
    ========================================================================== */
+
+/* ---- Modelli di partenza ---- */
+
+.preset-grid__intro {
+    margin: 0 0 16px;
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.9rem;
+}
+
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.preset-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 16px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 12px;
+    background: var(--color-surface, #fff);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+
+.preset-card:hover,
+.preset-card:focus-visible {
+    border-color: var(--color-primary, #2563eb);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .08);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.preset-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(37, 99, 235, .10);
+    color: var(--color-primary, #2563eb);
+}
+.preset-card__icon svg { width: 18px; height: 18px; }
+
+.preset-card__label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text, #1e293b);
+}
+
+.preset-card__desc {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--color-text-muted, #64748b);
+}
+
+/* "Parti da zero" non è un modello: è l'uscita di sicurezza, e non deve
+   competere visivamente con le cinque scelte vere. */
+.preset-card--blank {
+    border-style: dashed;
+    background: transparent;
+}
+.preset-card--blank .preset-card__icon {
+    background: var(--color-bg, #f1f5f9);
+    color: var(--color-text-muted, #64748b);
+}
+
+/* ---- Ritorno ai modelli ---- */
+
+.form-backlink { margin-bottom: 10px; }
+
+.btn-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-primary, #2563eb);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-link:hover { text-decoration: underline; }
+
+/* ---- La regola detta in una frase ---- */
+
+.rule-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--color-primary, #2563eb);
+    border-radius: 0 8px 8px 0;
+    background: var(--color-bg, #f1f5f9);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--color-text, #334155);
+}
+
+.rule-summary__arrow {
+    margin: 0 4px;
+    color: var(--color-text-muted, #94a3b8);
+}
+
+.rule-summary__todo {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: var(--color-warning, #b45309);
+}
 
 /* ---- Scelta del trigger: calendario vs evento ---- */
 
@@ -118,6 +232,35 @@
     min-height: 38px;
     word-break: break-word;
 }
+
+/* L'oggetto da solo non bastava: i segnaposto sbagliati stanno quasi sempre
+   nel corpo, dove sono cinque e non uno. */
+.token-preview__subject {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    font-weight: 600;
+}
+
+.token-preview__body {
+    white-space: pre-wrap;
+    max-height: 220px;
+    overflow-y: auto;
+    line-height: 1.55;
+}
+
+.form-hint--inline {
+    display: inline;
+    margin-left: 6px;
+    font-weight: 400;
+}
+
+/* ---- Invio di prova ---- */
+
+/* Spinge il pulsante di prova all'estremo opposto di Annulla/Salva: è una
+   verifica, non un modo di uscire dal modulo. */
+.modal-footer__aside { margin-right: auto; }
+.modal-footer__aside svg { width: 15px; height: 15px; }
 
 /* ---- Schede ---- */
 

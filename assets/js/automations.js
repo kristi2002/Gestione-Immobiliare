@@ -8,6 +8,11 @@
  *
  * phase66 aggiunge: token dinamici, immobile, contatto su tutta la rubrica,
  * ora di invio, regola del giorno, trigger a evento, esiti di consegna.
+ *
+ * phase94 lavora sulla fatica dell'agente, non sulle funzioni: si parte da un
+ * modello già scritto invece che da un modulo vuoto, la regola si legge in una
+ * frase invece che ricostruendola da cinque campi, e si può spedire una prova
+ * a sé stessi invece di scoprire un errore dopo il cliente.
  */
 (function () {
     'use strict';
@@ -22,6 +27,16 @@
         monthly:   'Mensile',
         quarterly: 'Trimestrale',
         yearly:    'Annuale',
+    };
+
+    /** La stessa frequenza detta come la direbbe una persona. */
+    const FREQ_SENTENCE = {
+        once:      'Una volta sola',
+        weekly:    'Ogni settimana',
+        biweekly:  'Ogni 15 giorni',
+        monthly:   'Ogni mese',
+        quarterly: 'Ogni 3 mesi',
+        yearly:    'Ogni anno',
     };
 
     const STATUS_LABELS = {
@@ -49,8 +64,13 @@
     const DOW_LABELS = ['', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
     const NTH_LABELS = { 1: 'Il primo', 2: 'Il secondo', 3: 'Il terzo', 4: 'Il quarto', last: "L'ultimo" };
 
+    /** Cosa manca ancora, detto come un'istruzione e non come un errore. */
+    const NEEDS_LABELS = {
+        contact: 'scegli il contatto in rubrica',
+    };
+
     let automations = [];
-    let vocabulary  = { token_groups: {}, events: {}, recipient_rules: {}, event_token_group: 'Evento' };
+    let vocabulary  = { token_groups: {}, events: {}, recipient_rules: {}, presets: {}, event_token_group: 'Evento' };
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let searchTimer  = null;
@@ -64,14 +84,21 @@
     // era attivo, cliccare la pillola sposta il focus e l'informazione è persa.
     let lastFocusedField = null;
 
+    // Cosa resta da scegliere dopo aver applicato un modello. Vive finché il
+    // modulo è aperto: è un promemoria, non una validazione (il salvataggio ha
+    // già i suoi controlli).
+    let pendingNeeds = [];
+
     const els = {};
 
     function init() {
         els.grid       = document.getElementById('automations-grid');
         els.alert      = document.getElementById('automations-alert');
+        els.modalAlert = document.getElementById('automation-modal-alert');
         els.pagination = document.getElementById('automations-pagination');
         els.modal      = document.getElementById('automation-modal');
         els.form       = document.getElementById('automation-form');
+        els.gallery    = document.getElementById('automation-gallery');
         els.logModal   = document.getElementById('automation-log-modal');
         els.logBody    = document.getElementById('automation-log-body');
 
@@ -87,6 +114,9 @@
         els.modal.addEventListener('click', e => { if (e.target === els.modal) closeModal(); });
         els.form.addEventListener('submit', handleSubmit);
 
+        document.getElementById('automation-back-to-gallery').addEventListener('click', showGallery);
+        document.getElementById('automation-test-send').addEventListener('click', sendTest);
+
         document.getElementById('automation-log-close').addEventListener('click', () => { els.logModal.hidden = true; });
         els.logModal.addEventListener('click', e => { if (e.target === els.logModal) els.logModal.hidden = true; });
 
@@ -94,7 +124,7 @@
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => { currentPage = 1; loadAutomations(); }, 300);
         });
-        ['automation-status-filter', 'automation-freq-filter', 'automation-trigger-filter'].forEach(id => {
+        ['automation-status-filter', 'automation-trigger-filter'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => { currentPage = 1; loadAutomations(); });
         });
 
@@ -112,6 +142,16 @@
         document.getElementById('automation-contact').addEventListener('change', resolveContact);
         document.getElementById('automation-property').addEventListener('change', updatePreview);
 
+        // Ogni campo che entra nella frase di riepilogo deve poterla riscrivere:
+        // un riepilogo che resta indietro è peggio di nessun riepilogo.
+        ['automation-recipient-rule', 'automation-delay', 'automation-delay-unit',
+         'automation-time', 'automation-day-of-month', 'automation-nth-week',
+         'automation-nth-dow', 'automation-start', 'automation-end'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('change', updateSummary);
+            el.addEventListener('input', updateSummary);
+        });
+
         ['automation-subject', 'automation-body'].forEach(id => {
             const field = document.getElementById(id);
             field.addEventListener('focus', () => { lastFocusedField = field; });
@@ -121,8 +161,8 @@
 
     // ── Caricamenti ─────────────────────────────────────────────────────────
 
-    /** Token, eventi e strategie di destinatario arrivano dal backend: una
-     *  copia in JS divergerebbe al primo token aggiunto, offrendo segnaposto
+    /** Token, eventi, strategie di destinatario e modelli arrivano dal backend:
+     *  una copia in JS divergerebbe al primo token aggiunto, offrendo segnaposto
      *  che il motore non sa sostituire. */
     async function loadVocabulary() {
         try {
@@ -131,6 +171,7 @@
             vocabulary = json.data;
             renderTokenPicker();
             renderEventOptions();
+            renderPresetGallery();
         } catch { /* non-fatal: il form resta usabile senza pillole */ }
     }
 
@@ -180,7 +221,6 @@
 
         const search  = document.getElementById('automation-search').value.trim();
         const status  = document.getElementById('automation-status-filter').value;
-        const freq    = document.getElementById('automation-freq-filter').value;
         const trigger = document.getElementById('automation-trigger-filter').value;
 
         // Le regole a evento sono escluse di default da reminders.php (in agenda
@@ -189,7 +229,6 @@
 
         if (search) params.set('search', search);
         if (status) params.set('status', status);
-        if (freq)   params.set('frequency', freq);
 
         softLoad(els.grid, '<div class="entity-loading">Caricamento…</div>');
 
@@ -205,6 +244,83 @@
             els.grid.classList.remove('is-loading');
             els.grid.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
         }
+    }
+
+    // ── Modelli di partenza ─────────────────────────────────────────────────
+
+    function renderPresetGallery() {
+        const grid    = document.getElementById('automation-preset-grid');
+        const presets = vocabulary.presets || {};
+
+        const cards = Object.entries(presets).map(([key, p]) => `
+            <button type="button" class="preset-card" data-preset="${escAttr(key)}">
+                <span class="preset-card__icon"><i data-lucide="${escAttr(p.icon || 'zap')}"></i></span>
+                <span class="preset-card__label">${esc(p.label)}</span>
+                <span class="preset-card__desc">${esc(p.description)}</span>
+            </button>`).join('');
+
+        grid.innerHTML = cards + `
+            <button type="button" class="preset-card preset-card--blank" data-preset="">
+                <span class="preset-card__icon"><i data-lucide="file-plus"></i></span>
+                <span class="preset-card__label">Parti da zero</span>
+                <span class="preset-card__desc">Modulo vuoto: scegli tu attivazione, destinatario e testo.</span>
+            </button>`;
+
+        grid.querySelectorAll('.preset-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                applyPreset(btn.dataset.preset);
+                showForm();
+            });
+        });
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    /**
+     * Riempie il modulo con i valori del modello.
+     *
+     * Da qui in poi non esiste più alcun legame con il modello: ciò che si
+     * salva è una riga come tutte le altre, e riaprirla mostrerà il modulo
+     * normale. Il modello è un punto di partenza, non un tipo.
+     */
+    function applyPreset(key) {
+        resetForm();
+        pendingNeeds = [];
+
+        const preset = (vocabulary.presets || {})[key];
+        if (!preset) {          // "Parti da zero"
+            setPurpose(true);
+            setTrigger('scheduled');
+            syncTriggerMode();
+            updatePreview();
+            return;
+        }
+
+        const v = preset.values || {};
+        pendingNeeds = preset.needs || [];
+
+        document.getElementById('automation-name').value    = v.title || '';
+        document.getElementById('automation-subject').value = v.email_subject || '';
+        document.getElementById('automation-body').value    = v.email_body || '';
+        setPurpose(Number(v.is_marketing) === 1);
+        setTrigger(v.trigger_type || 'scheduled');
+
+        if (v.trigger_type === 'event') {
+            document.getElementById('automation-event').value = v.trigger_event || '';
+            // syncEventChoice() ridisegna le scelte di destinatario ammesse per
+            // quell'evento: assegnare la regola prima significherebbe scriverla
+            // in una tendina che sta per essere sostituita.
+            syncEventChoice();
+            document.getElementById('automation-recipient-rule').value = v.recipient_rule || '';
+            setDelay(Number(v.trigger_delay_minutes || 0));
+        } else {
+            document.getElementById('automation-frequency').value = v.frequency || 'monthly';
+            document.getElementById('automation-time').value      = v.schedule_time || '09:00';
+            setDayRule(v.day_rule || '');
+        }
+
+        syncTriggerMode();
+        updatePreview();
     }
 
     // ── Schede ──────────────────────────────────────────────────────────────
@@ -237,8 +353,7 @@
                     ${subject ? `<div class="entity-card__subtitle">${esc(subject)}</div>` : ''}
                 </div>
                 <div class="entity-card__body">
-                    ${cardRow(isEvent ? 'zap' : 'repeat', triggerSummary(a))}
-                    ${cardRow('user', contactSummary(a))}
+                    ${cardRow(isEvent ? 'zap' : 'repeat', describeAutomation(a))}
                     ${a.property_address ? cardRow('home', `${esc(a.property_address)}${a.property_city ? ', ' + esc(a.property_city) : ''}`) : ''}
                     ${cardRow('calendar-clock', nextRunSummary(a))}
                     ${cardRow('send', lastRunSummary(a))}
@@ -264,19 +379,95 @@
         return `<div class="entity-card__info"><span class="entity-card__info-icon"><i data-lucide="${icon}"></i></span>${html}</div>`;
     }
 
-    function triggerSummary(a) {
-        if (a.trigger_type === 'event') {
-            const ev    = vocabulary.events?.[a.trigger_event];
-            const label = ev ? ev.label : a.trigger_event;
-            const delay = Number(a.trigger_delay_minutes || 0);
-            return esc(label) + (delay > 0 ? ` · dopo ${formatDelay(delay)}` : ' · subito');
+    // ── La regola detta in una frase ────────────────────────────────────────
+
+    /**
+     * "Ogni mese, il 1° del mese, alle 09:00 → Rossi Mario"
+     *
+     * Una sola funzione per le schede e per il modulo: erano due riassunti
+     * scritti separatamente, e bastava cambiarne uno perché l'elenco e il
+     * modulo raccontassero la stessa regola in due modi diversi.
+     *
+     * @param {object} s stato normalizzato (vedi automationState/formState)
+     * @returns {string} HTML
+     */
+    function describeRule(s) {
+        const arrow = ' <span class="rule-summary__arrow">→</span> ';
+
+        if (s.trigger_type === 'event') {
+            const ev    = vocabulary.events?.[s.trigger_event];
+            const label = ev ? ev.label : s.trigger_event;
+            if (!label) return '<span class="text-muted">Scegli l\'evento che la fa partire</span>';
+
+            const delay = Number(s.trigger_delay_minutes || 0);
+            const when  = delay > 0
+                ? `${esc(formatDelay(delay))} dopo: <strong>${esc(label)}</strong>`
+                : `Appena accade: <strong>${esc(label)}</strong>`;
+
+            const who = s.recipient_rule
+                ? esc(vocabulary.recipient_rules?.[s.recipient_rule] || s.recipient_rule)
+                : '<span class="text-muted">destinatari da scegliere</span>';
+
+            return when + arrow + who;
         }
 
-        const freq = FREQ_LABELS[a.frequency] || a.frequency;
-        const bits = [freq];
-        if (a.day_rule)      bits.push(describeDayRule(a.day_rule));
-        if (a.schedule_time) bits.push('alle ' + String(a.schedule_time).slice(0, 5));
-        return esc(bits.join(' · '));
+        const bits = [FREQ_SENTENCE[s.frequency] || FREQ_LABELS[s.frequency] || s.frequency];
+        if (s.day_rule)      bits.push(describeDayRule(s.day_rule));
+        if (s.schedule_time) bits.push('alle ' + String(s.schedule_time).slice(0, 5));
+
+        const when = esc(bits.join(', '));
+        const who  = s.recipient_html || '<span class="text-muted">nessun contatto scelto</span>';
+
+        return when + arrow + who;
+    }
+
+    /** Stato normalizzato a partire da una riga dell'elenco. */
+    function describeAutomation(a) {
+        return describeRule({
+            trigger_type:          a.trigger_type,
+            trigger_event:         a.trigger_event,
+            trigger_delay_minutes: a.trigger_delay_minutes,
+            recipient_rule:        a.recipient_rule,
+            frequency:             a.frequency,
+            day_rule:              a.day_rule,
+            schedule_time:         a.schedule_time,
+            recipient_html:        contactSummary(a),
+        });
+    }
+
+    /** Stato normalizzato a partire dai campi del modulo. */
+    function formState() {
+        const contactLabel = document.getElementById('automation-contact').value.trim();
+        const contact      = contactsByLabel.get(contactLabel);
+
+        return {
+            trigger_type:  currentTriggerType(),
+            trigger_event: document.getElementById('automation-event').value,
+            trigger_delay_minutes:
+                Number(document.getElementById('automation-delay').value || 0) *
+                Number(document.getElementById('automation-delay-unit').value || 1),
+            recipient_rule: document.getElementById('automation-recipient-rule').value,
+            frequency:      document.getElementById('automation-frequency').value,
+            day_rule:       buildDayRule(),
+            schedule_time:  document.getElementById('automation-time').value,
+            recipient_html: contact ? esc(contact.label.split(' · ')[0]) : null,
+        };
+    }
+
+    function updateSummary() {
+        const box = document.getElementById('automation-summary');
+        const missing = pendingNeeds
+            .filter(n => n !== 'contact' || !document.getElementById('automation-contact-id').value)
+            .map(n => NEEDS_LABELS[n] || n);
+
+        // Niente icone lucide qui dentro: updateSummary() gira a ogni tasto
+        // premuto nel corpo dell'email, e createIcons() ridisegna tutta la
+        // pagina ogni volta.
+        box.innerHTML =
+            `<span class="rule-summary__text">${describeRule(formState())}</span>` +
+            (missing.length
+                ? `<span class="rule-summary__todo">↳ Manca solo: ${esc(missing.join(', '))}</span>`
+                : '');
     }
 
     function contactSummary(a) {
@@ -447,11 +638,13 @@
         // backend rifiuta le combinazioni sbagliate, qui non le si offre.
         if (!ev) {
             sel.innerHTML = '<option value="">— Seleziona evento prima —</option>';
+            updateSummary();
             return;
         }
         sel.innerHTML = ev.recipients
             .map(r => `<option value="${escAttr(r)}">${esc(vocabulary.recipient_rules?.[r] || r)}</option>`)
             .join('');
+        updateSummary();
     }
 
     function syncTriggerMode() {
@@ -466,6 +659,7 @@
         // su un'automazione a calendario significherebbe promettere un valore
         // che al momento dell'invio non esiste.
         syncEventTokenVisibility();
+        updateSummary();
     }
 
     function currentTriggerType() {
@@ -483,6 +677,7 @@
         document.getElementById('automation-day-row').hidden   = !monthlyish;
         document.getElementById('automation-dom-group').hidden = !monthlyish || mode !== 'dom';
         document.getElementById('automation-nth-group').hidden = !monthlyish || mode !== 'nth';
+        updateSummary();
     }
 
     function renderTokenPicker() {
@@ -494,7 +689,10 @@
                 <div class="token-picker__group" data-group="${escAttr(group)}">
                     <span class="token-picker__label">${esc(group)}</span>
                     ${Object.entries(tokens).map(([token, desc]) =>
-                        `<button type="button" class="token-pill" data-token="${escAttr(token)}" title="${escAttr(desc)}">{{${esc(token)}}}</button>`
+                        // Prima la pillola mostrava {{contatto.nome}}: il codice
+                        // che finisce nel testo, non la cosa che rappresenta.
+                        // Il segnaposto resta a portata di sguardo nel title.
+                        `<button type="button" class="token-pill" data-token="${escAttr(token)}" title="{{${escAttr(token)}}}">${esc(desc)}</button>`
                     ).join('')}
                 </div>`).join('');
 
@@ -530,36 +728,81 @@
     }
 
     /**
-     * Anteprima dell'oggetto con dati veri quando ci sono.
+     * Anteprima di oggetto E corpo con dati veri quando ci sono.
      *
      * Serve a rendere visibile l'errore più probabile: un token scritto male
      * resta letterale nell'email, e senza anteprima lo scopre il cliente.
+     * L'oggetto da solo non bastava — il testo sbagliato sta quasi sempre nel
+     * corpo, che è dove i segnaposto sono cinque e non uno.
      */
     function updatePreview() {
-        const subject = document.getElementById('automation-subject').value;
         const contact = contactsByLabel.get(document.getElementById('automation-contact').value.trim());
         const propSel = document.getElementById('automation-property');
         const propTxt = propSel.value ? propSel.options[propSel.selectedIndex].text : '';
         const [address, city] = propTxt.split(', ');
 
-        const sample = {
-            'contatto.nome':          contact ? contact.label.split(' ')[1] || contact.label.split(' ')[0] : 'Mario',
-            'contatto.cognome':       contact ? contact.label.split(' ')[0] : 'Rossi',
-            'contatto.nome_completo': contact ? contact.label.split(' · ')[0] : 'Mario Rossi',
-            'immobile.indirizzo':     address || 'Via Roma 1',
-            'immobile.citta':         city || 'Civitanova Marche',
-        };
+        const person = contact ? contact.label.split(' · ')[0] : '';
+        const parts  = person.split(' ');
 
-        const rendered = subject.replace(/\{\{\s*([a-z_]+\.[a-z_]+)\s*\}\}/gi,
-            (m, key) => sample[key.toLowerCase()] ?? m);
+        // Base dal backend: agenzia e date sono valori VERI, e mostrarli come
+        // segnaposto faceva sembrare rotto ciò che funziona. Sopra ci vanno le
+        // scelte già fatte nel modulo, che il backend non può conoscere.
+        const sample = Object.assign({}, vocabulary.sample_context || {});
 
-        document.getElementById('automation-preview').textContent = rendered || '—';
+        if (contact) {
+            sample['contatto.nome']          = parts[1] || parts[0] || sample['contatto.nome'];
+            sample['contatto.cognome']       = parts[0] || sample['contatto.cognome'];
+            sample['contatto.nome_completo'] = person;
+        }
+        if (address) sample['immobile.indirizzo'] = address;
+        if (city)    sample['immobile.citta']     = city;
+
+        const render = text => String(text || '').replace(
+            /\{\{\s*([a-z_]+\.[a-z_]+)\s*\}\}/gi,
+            (m, key) => sample[key.toLowerCase()] ?? m
+        );
+
+        document.getElementById('automation-preview').textContent =
+            render(document.getElementById('automation-subject').value) || '—';
+        document.getElementById('automation-preview-body').textContent =
+            render(document.getElementById('automation-body').value) || '—';
+
+        updateSummary();
     }
 
-    function openModal(automation = null) {
+    // ── Apertura / chiusura ─────────────────────────────────────────────────
+
+    function showGallery() {
+        els.gallery.hidden = false;
+        els.form.hidden    = true;
+        document.getElementById('automation-modal-title').textContent = 'Nuova Automazione';
+    }
+
+    function showForm() {
+        els.gallery.hidden = true;
+        els.form.hidden    = false;
+        document.getElementById('automation-name').focus();
+        if (window.lucide) lucide.createIcons();
+    }
+
+    /** Campi ai valori neutri, senza toccare il passo in cui ci si trova. */
+    function resetForm() {
         els.form.reset();
         document.getElementById('automation-id').value = '';
         clearContact();
+        hideModalAlert();
+        pendingFilter = null;
+        document.getElementById('automation-start').value = window.Fmt.today();
+        document.getElementById('automation-time').value  = '09:00';
+    }
+
+    function openModal(automation = null) {
+        resetForm();
+        pendingNeeds = [];
+
+        // In modifica non si sceglie più il punto di partenza: l'automazione
+        // esiste già e il modello non ha più niente da dire su di lei.
+        document.getElementById('automation-backlink').hidden = !!automation;
 
         if (automation) {
             document.getElementById('automation-modal-title').textContent = 'Modifica Automazione';
@@ -591,26 +834,29 @@
                 setDayRule(automation.day_rule || '');
                 setContact(automation);
             }
-        } else {
-            document.getElementById('automation-modal-title').textContent = 'Nuova Automazione';
-            pendingFilter = null;
-            setPurpose(true);
-            document.getElementById('automation-start').value = window.Fmt.today();
-            document.getElementById('automation-time').value  = '09:00';
-            setTrigger('scheduled');
+
+            syncTriggerMode();
+            syncEventTokenVisibility();
+            updatePreview();
+            els.modal.hidden = false;
+            showForm();
+            return;
         }
 
+        setPurpose(true);
+        setTrigger('scheduled');
         syncTriggerMode();
         syncEventTokenVisibility();
         updatePreview();
 
         els.modal.hidden = false;
-        document.getElementById('automation-name').focus();
+        showGallery();
         if (window.lucide) lucide.createIcons();
     }
 
     function closeModal() {
         els.modal.hidden = true;
+        hideModalAlert();
     }
 
     function setTrigger(type) {
@@ -685,7 +931,7 @@
 
     function describeDayRule(rule) {
         const parts = String(rule).split(':');
-        if (parts[0] === 'dom') return parts[1] === 'last' ? "l'ultimo giorno del mese" : `il ${parts[1]} del mese`;
+        if (parts[0] === 'dom') return parts[1] === 'last' ? "l'ultimo giorno del mese" : `il ${parts[1]}° del mese`;
         if (parts[0] === 'nth') return `${NTH_LABELS[parts[1]] || parts[1]} ${DOW_LABELS[parts[2]] || ''}`.trim().toLowerCase();
         if (parts[0] === 'dow') return `ogni ${DOW_LABELS[parts[1]] || ''}`.trim();
         return rule;
@@ -730,6 +976,57 @@
         updatePreview();
     }
 
+    // ── Invio di prova ──────────────────────────────────────────────────────
+
+    /**
+     * Spedisce a chi è collegato la stessa email che riceverebbe il cliente.
+     *
+     * Non salva niente e non tocca il registro invii: è una verifica del testo,
+     * non un pezzo di storia dell'automazione. L'indirizzo lo decide il
+     * backend (l'admin in sessione) — qui non se ne manda nessuno.
+     */
+    async function sendTest() {
+        const subject = document.getElementById('automation-subject').value.trim();
+        const body    = document.getElementById('automation-body').value.trim();
+
+        if (!subject || !body) {
+            showModalAlert('Scrivi oggetto e corpo del messaggio prima di provarlo.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('automation-test-send');
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API}?action=test_send`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    email_subject: subject,
+                    email_body:    body,
+                    contact_type:  document.getElementById('automation-contact-type').value,
+                    contact_id:    document.getElementById('automation-contact-id').value,
+                    property_id:   document.getElementById('automation-property').value,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            showModalAlert(
+                json.data.simulated
+                    ? `Prova generata ma NON spedita: l'invio email è disattivato (MAIL_ENABLED=false). Il testo è qui sotto nell'anteprima.`
+                    : `Prova inviata a ${json.data.to}. Controlla la posta — se non arriva, non arriverà nemmeno ai clienti.`,
+                json.data.simulated ? 'warning' : 'success'
+            );
+        } catch (err) {
+            showModalAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ── Salvataggio ─────────────────────────────────────────────────────────
+
     async function handleSubmit(e) {
         e.preventDefault();
 
@@ -740,7 +1037,7 @@
         const body    = document.getElementById('automation-body').value.trim();
 
         if (!name || !subject || !body) {
-            showAlert('Nome, oggetto e corpo del messaggio sono obbligatori.', 'error');
+            showModalAlert('Nome, oggetto e corpo del messaggio sono obbligatori.', 'error');
             return;
         }
 
@@ -760,13 +1057,13 @@
             const event = document.getElementById('automation-event').value;
             const rule  = document.getElementById('automation-recipient-rule').value;
             if (!event || !rule) {
-                showAlert('Scegli l\'evento e i destinatari.', 'error');
+                showModalAlert('Scegli l\'evento e i destinatari.', 'error');
                 return;
             }
             const filter = collectFilter();
             const empty  = Object.entries(filter).find(([, vals]) => vals.length === 0);
             if (empty) {
-                showAlert('Scegli almeno una voce in "' +
+                showModalAlert('Scegli almeno una voce in "' +
                     (vocabulary.events?.[event]?.filters?.[empty[0]]?.label || empty[0]) +
                     '": senza nessuna spunta l\'automazione non scatterebbe mai.', 'error');
                 return;
@@ -784,11 +1081,11 @@
             const start     = document.getElementById('automation-start').value;
             const contactId = document.getElementById('automation-contact-id').value;
             if (!start) {
-                showAlert('La data di inizio è obbligatoria.', 'error');
+                showModalAlert('La data di inizio è obbligatoria.', 'error');
                 return;
             }
             if (!contactId) {
-                showAlert('Scegli un contatto dalla rubrica: senza destinatario l\'automazione non spedirebbe nulla.', 'error');
+                showModalAlert('Scegli un contatto dalla rubrica: senza destinatario l\'automazione non spedirebbe nulla.', 'error');
                 return;
             }
             payload.reminder_date = start;
@@ -814,7 +1111,7 @@
             loadAutomations();
             showAlert('Automazione salvata.', 'success');
         } catch (err) {
-            showAlert(err.message, 'error');
+            showModalAlert(err.message, 'error');
         } finally {
             btn.disabled = false; btn.textContent = 'Salva automazione';
         }
@@ -846,6 +1143,24 @@
         els.alert.style.display  = 'block';
         clearTimeout(els.alert._t);
         els.alert._t = setTimeout(() => { els.alert.style.display = 'none'; }, 4000);
+    }
+
+    /** L'avviso della pagina resterebbe dietro al modale, cioè invisibile. */
+    function showModalAlert(msg, type) {
+        els.modalAlert.textContent   = msg;
+        els.modalAlert.className     = `alert alert--${type}`;
+        els.modalAlert.style.display = 'block';
+        clearTimeout(els.modalAlert._t);
+        // L'esito di una prova va letto con calma: sparisce solo quando è chiaro
+        // che è stato visto (nuova azione o chiusura del modale).
+        if (type !== 'error') {
+            els.modalAlert._t = setTimeout(hideModalAlert, 12000);
+        }
+    }
+
+    function hideModalAlert() {
+        els.modalAlert.style.display = 'none';
+        clearTimeout(els.modalAlert._t);
     }
 
     function esc(s) {
