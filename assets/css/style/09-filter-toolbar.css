@@ -127,7 +127,11 @@
    is reset because the shared rule (01-base.css) pushes it away with `auto`,
    which here would tear it off the sort button. */
 .fb-ref .fb-group--right .btn-clear-filters { margin-left: 0; flex: 0 0 auto; }
-.filter-bar__controls.fb-ref.fb-has-clear .fb-group--left .search-box { flex: 1 1 150px; min-width: 110px; }
+/* Not scoped to .fb-ref: the bars that never get the reference layout (the
+   Comunicazioni sidebar search, the tab-only rows) need the same room, and in a
+   ~300px sidebar the default `min-width: 200px` alone is what pushed the button
+   onto its own line. */
+.filter-bar__controls.fb-has-clear .search-box { flex: 1 1 150px; min-width: 110px; }
 
 @media (max-width: 720px) {
     .filter-bar__controls.fb-ref { flex-direction: column; align-items: stretch; }
@@ -135,7 +139,7 @@
     .fb-pop { right: auto; left: 0; }
     /* Stacked column: the search box already owns the full row, nothing to
        give up — keep it at its normal size. */
-    .filter-bar__controls.fb-ref.fb-has-clear .fb-group--left .search-box { flex: 1 1 220px; min-width: 150px; }
+    .filter-bar__controls.fb-has-clear .search-box { flex: 1 1 220px; min-width: 150px; }
 }
 
 /* Segmented view toggle (columns / map) → pill control like the reference */

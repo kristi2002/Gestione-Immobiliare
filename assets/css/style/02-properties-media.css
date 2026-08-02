@@ -1070,6 +1070,16 @@
     width: 100%;
 }
 
+/* With "Azzera filtri" on the row, a 100% basis is what forces it onto a second
+   line and grows the sidebar header by a whole row mid-search. Give the field a
+   basis it can shrink from so the button sits beside it, as it does in the
+   page toolbars. */
+.chat-sidebar__search .filter-bar__controls.fb-has-clear .form-input,
+.chat-sidebar__search .filter-bar__controls.fb-has-clear input[type="search"] {
+    flex: 1 1 120px;
+    width: auto;
+}
+
 .chat-client-list {
     list-style: none;
     overflow-y: auto;
