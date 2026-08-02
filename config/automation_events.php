@@ -60,6 +60,23 @@ const AUTOMATION_EVENT_CATALOGUE = [
         'entity'      => 'appointment',
         'recipients'  => ['event_contact', 'property_owner'],
     ],
+    'maintenance.completed' => [
+        'label'       => 'Intervento di manutenzione concluso',
+        'description' => 'Scatta quando un ticket di manutenzione passa a "completata" o "chiusa". '
+                       . 'E\' il momento in cui ha senso chiedere un riscontro: nel testo si usa {{sondaggio.link}} '
+                       . 'e l\'inquilino riceve il proprio link al sondaggio.',
+        'entity'      => 'reminder',
+        'recipients'  => ['event_contact', 'property_owner'],
+        'filters'     => [
+            'new_status' => [
+                'label'   => 'Solo per questi stati',
+                'hint'    => 'Un ticket "completata" e uno "chiusa" sono due momenti diversi: chi archivia a mesi '
+                           . 'di distanza non vuole far partire allora la richiesta di riscontro.',
+                'options' => ['completata' => 'Completata', 'chiusa' => 'Chiusa'],
+                'default' => ['completata'],
+            ],
+        ],
+    ],
     'property.status_changed' => [
         'label'       => 'Stato immobile cambiato',
         'description' => 'Scatta quando un immobile passa a venduto/affittato/archiviato o torna disponibile. '

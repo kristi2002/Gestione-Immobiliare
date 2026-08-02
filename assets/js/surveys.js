@@ -36,6 +36,7 @@
         document.getElementById('surveys-link-cancel').addEventListener('click', closeLinkModal);
         els.linkModal.addEventListener('click', e => { if (e.target === els.linkModal) closeLinkModal(); });
         document.getElementById('surveys-link-generate').addEventListener('click', generateLink);
+        document.getElementById('surveys-link-send').addEventListener('click', sendLink);
         document.getElementById('surveys-tenant-select').addEventListener('change', onTenantChange);
         document.getElementById('btn-copy-survey-link').addEventListener('click', () => {
             const url = document.getElementById('surveys-link-url');
@@ -155,16 +156,24 @@
 
     function closeLinkModal() { els.linkModal.hidden = true; }
 
-    async function generateLink() {
+    function generateLink() { return requestLink(false); }
+    function sendLink()     { return requestLink(true); }
+
+    /**
+     * `send=1` fa spedire l'invito al server. Il link torna comunque, perché
+     * l'agente vuole vedere cos'è partito (e in sviluppo l'email è simulata).
+     */
+    async function requestLink(send) {
         const tenantId   = document.getElementById('surveys-tenant-select').value;
         const propertyId = document.getElementById('surveys-property-select').value;
         if (!tenantId) { showAlert('Seleziona un inquilino.', 'error'); return; }
 
-        const btn = document.getElementById('surveys-link-generate');
-        btn.disabled = true; btn.textContent = 'Generazione…';
+        const btn   = document.getElementById(send ? 'surveys-link-send' : 'surveys-link-generate');
+        const label = btn.textContent;
+        btn.disabled = true; btn.textContent = send ? 'Invio…' : 'Generazione…';
 
         try {
-            const res  = await fetch(API, {
+            const res  = await fetch(send ? `${API}?send=1` : API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tenant_id: tenantId, property_id: propertyId || null }),
@@ -172,16 +181,28 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            const token = json.data?.token || json.token;
+            // Il link lo costruisce il server, da APP_URL: è lo stesso che finisce
+            // nelle email. Si ripiega sull'URL del browser solo se APP_URL non è
+            // configurato — lì l'invio non parte comunque, ma copiarlo funziona.
+            const token = json.data?.token;
             const base  = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
-            const link  = `${base}tenant/survey.php?token=${encodeURIComponent(token)}`;
+            const link  = json.data?.link
+                || (token ? `${base}tenant/survey.php?token=${encodeURIComponent(token)}` : '');
 
             document.getElementById('surveys-link-url').value = link;
             document.getElementById('surveys-generated-link').style.display = 'block';
+
+            if (send) {
+                showAlert(json.data.simulated
+                    ? `Invio simulato (MAIL_ENABLED=false): il link per ${json.data.sent_to} non è partito davvero.`
+                    : `Invito inviato a ${json.data.sent_to}.`,
+                    json.data.simulated ? 'info' : 'success');
+                loadSurveys();
+            }
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
-            btn.disabled = false; btn.textContent = 'Genera link';
+            btn.disabled = false; btn.textContent = label;
         }
     }
 

@@ -8,6 +8,9 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/mail_html.php';
 require_once __DIR__ . '/automation_templates.php';
+// Il token {{sondaggio.link}} non e' un campo da leggere: crea la riga del
+// sondaggio al momento dell'invio. Vedi processSingleReminder().
+require_once __DIR__ . '/surveys.php';
 // La porta per gli invii commerciali: consenso verificato e link di
 // disiscrizione. Vedi processSingleReminder(), che sceglie quale usare.
 require_once __DIR__ . '/../lib/marketing_mail.php';
@@ -107,12 +110,30 @@ function processSingleReminder(PDO $db, array $reminder): array
 
     $recipient = reminderRecipient($reminder);
 
+    $subjectTpl = $reminder['email_subject'] ?: $reminder['title'];
+    $bodyTpl    = $reminder['email_body'] ?: buildDefaultClientEmailBody($reminder);
+
+    // Il link del sondaggio nasce QUI, come effetto della spedizione: e' diverso
+    // per ogni destinatario e non puo' stare nel modello salvato. Si risolve solo
+    // se un invio al cliente c'e' davvero, altrimenti si creerebbe una riga
+    // `tenant_surveys` per un messaggio che nessuno spedisce.
+    $survey = ['required' => false, 'link' => '', 'error' => null];
     if ($reminder['notify_client'] && $recipient['email'] !== '') {
+        $survey = surveyResolveAutomationLink($db, $reminder, $subjectTpl, $bodyTpl);
+    }
+
+    if ($survey['required'] && $survey['link'] === '') {
+        // Il messaggio esisteva solo per portare quel link: spedirlo con un buco
+        // al suo posto e' peggio che non spedirlo, e va detto in chiaro nel
+        // registro invii, l'unico posto dove l'agente puo' accorgersene.
+        logReminderDispatch($db, $reminder, 'skipped', $recipient, null, null, $survey['error']);
+        $actions['client'] = 'skipped_no_survey';
+    } elseif ($reminder['notify_client'] && $recipient['email'] !== '') {
         // I token si risolvono ORA, non al salvataggio: un'occorrenza generata
         // dieci mesi fa deve comunque riportare l'indirizzo e il prezzo di oggi.
-        $ctx     = buildAutomationContext($reminder);
-        $subject = renderAutomationTemplate($reminder['email_subject'] ?: $reminder['title'], $ctx);
-        $body    = renderAutomationTemplate($reminder['email_body'] ?: buildDefaultClientEmailBody($reminder), $ctx);
+        $ctx     = buildAutomationContext($reminder, ['sondaggio.link' => $survey['link']]);
+        $subject = renderAutomationTemplate($subjectTpl, $ctx);
+        $body    = renderAutomationTemplate($bodyTpl, $ctx);
 
         // Un messaggio commerciale passa dalla porta che interroga il registro
         // consensi e appende il link di disiscrizione. Uno di servizio no: la
