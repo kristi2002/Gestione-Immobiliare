@@ -52,7 +52,11 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             renderStats(json.data.stats || {});
-            renderRows(json.data.items || []);
+            // Oltre il tetto l'API manda `truncated`/`shown` apposta. Finche'
+            // nessuno li leggeva, l'elenco si fermava in silenzio mentre i
+            // contatori — calcolati sull'insieme completo — dicevano un altro
+            // numero: sembrava un errore di conteggio, era una lista tagliata.
+            renderRows(json.data.items || [], json.data);
         } catch (err) {
             els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
@@ -66,7 +70,7 @@
         document.getElementById('stat-scad-total').textContent    = s.total ?? '—';
     }
 
-    function renderRows(items) {
+    function renderRows(items, meta = {}) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
             els.tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Nessuna scadenza nel periodo selezionato.</td></tr>';
@@ -88,6 +92,18 @@
                 <td data-label="" class="col-actions"><button class="btn btn--sm btn--ghost btn-scad-go" data-view="${esc(it.view)}" data-id="${it.entity_id}" title="Apri">Apri</button></td>
             </tr>`;
         }).join('');
+
+        // `stats.total` conta tutta la finestra, `shown` solo cio' che e' in
+        // tabella: quando divergono lo si dice, invece di lasciare due numeri
+        // diversi a schermo senza spiegazione.
+        if (meta.truncated) {
+            els.tbody.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(
+                meta.shown ?? items.length,
+                meta.stats?.total ?? items.length,
+                6,
+                'Restringi l\'orizzonte o filtra per tipo per vedere le altre.'
+            ));
+        }
 
         els.tbody.querySelectorAll('.btn-scad-go').forEach(b => {
             b.addEventListener('click', () => {

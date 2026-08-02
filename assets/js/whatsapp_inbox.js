@@ -19,6 +19,9 @@
     const els            = {};
     let threadFilter     = 'all';  // 'all' | 'unread'
     let threadSearch     = '';
+    // Quante conversazioni esistono a DB: la colonna ne carica al massimo 200 e
+    // la ricerca filtra solo quelle caricate, quindi il taglio va detto.
+    let threadsTotal     = 0;
 
     function init() {
         els.alert            = document.getElementById('whatsapp-inbox-alert');
@@ -181,7 +184,12 @@
             const res  = await fetch(`${INBOX_API}?threads=1`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            threads = json.data || [];
+            // La risposta e' passata da array a {items,total}: `unwrap` regge
+            // entrambe le forme, cosi' una versione vecchia in cache non
+            // svuota la colonna.
+            const page   = window.Pagination.unwrap(json);
+            threads      = page.items;
+            threadsTotal = page.total;
             renderThreads();
             // Il contesto può cambiare sotto i piedi (un collega associa il
             // numero da un'altra postazione): l'intestazione va riallineata.
@@ -205,7 +213,12 @@
         if (!list.length) {
             const msg = !threads.length ? 'Nessuna conversazione.'
                 : (threadFilter === 'unread' ? 'Nessuna conversazione non letta.' : 'Nessun risultato.');
-            els.threadItems.innerHTML = `<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">${msg}</div>`;
+            // Anche (soprattutto) qui: "Nessun risultato" su una colonna
+            // troncata e' la bugia peggiore, perche' la conversazione cercata
+            // puo' benissimo esistere fra quelle non caricate.
+            els.threadItems.innerHTML = `<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">${msg}</div>`
+                + window.Pagination.truncationNote(threads.length, threadsTotal, 0,
+                    'La ricerca qui a lato guarda solo queste.');
             return;
         }
 
@@ -234,7 +247,9 @@
             </div>`;
         }).join('');
 
-        els.threadItems.innerHTML = items;
+        els.threadItems.innerHTML = items + window.Pagination.truncationNote(
+            threads.length, threadsTotal, 0,
+            'La ricerca qui a lato guarda solo queste.');
         els.threadItems.querySelectorAll('.wa-thread-item').forEach(item => {
             item.addEventListener('click', () => openThread(item.dataset.phone));
         });

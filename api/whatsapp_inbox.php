@@ -23,6 +23,15 @@ apiHandleOptions();
 const WA_COUNTERPARTY = "IF(wm.direction = 'inbound', wm.from_number, wm.to_number)";
 
 /**
+ * Quante conversazioni mostra la colonna di sinistra. La ricerca in colonna
+ * filtra cio' che e' stato caricato, quindi oltre questo numero non sparivano
+ * solo le righe in fondo: sparivano anche dai risultati della ricerca. Il tetto
+ * resta (e' una barra laterale, non un elenco), ma ora la risposta dice quante
+ * conversazioni esistono davvero e la colonna lo scrive.
+ */
+const WA_THREADS_LIMIT = 200;
+
+/**
  * Colonna di whatsapp_messages corrispondente al tipo di contatto.
  * Whitelist esplicita: il valore finisce in un nome di colonna, mai concatenare
  * quello che arriva dal client.
@@ -118,6 +127,11 @@ function listThreads(PDO $db): void
     // Una riga per conversazione, raggruppata sul numero della CONTROPARTE.
     $cp = WA_COUNTERPARTY;
 
+    $total = (int) $db->query(
+        // L'alias `wm` serve: WA_COUNTERPARTY lo nomina.
+        "SELECT COUNT(*) FROM (SELECT {$cp} AS phone FROM whatsapp_messages wm GROUP BY phone) t"
+    )->fetchColumn();
+
     // contact_key = "tipo:id" del messaggio associato PIÙ RECENTE.
     //
     // Non si può usare MAX(contact_type) + MAX(contact_id) separati: MAX() su
@@ -140,11 +154,15 @@ function listThreads(PDO $db): void
          FROM whatsapp_messages wm
          GROUP BY phone
          ORDER BY last_at DESC
-         LIMIT 200"
+         LIMIT " . WA_THREADS_LIMIT
     );
 
     $rows = $stmt->fetchAll();
-    apiSuccess(waAttachContacts($db, $rows));
+    apiSuccess([
+        'items' => waAttachContacts($db, $rows),
+        'total' => $total,
+        'limit' => WA_THREADS_LIMIT,
+    ]);
 }
 
 /**

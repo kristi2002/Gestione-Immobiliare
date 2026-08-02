@@ -7,6 +7,14 @@ import {
 } from './constants.js';
 import { esc, fmtDate } from './helpers.js';
 
+// Le schede non hanno impaginatore: mostrano UNA pagina. Chiedevano 200 righe
+// a endpoint che ne concedono 100 (apiGetPagination) e poi contavano quelle
+// arrivate, cosi' un inquilino con 270 pagamenti leggeva "100 pagamenti" e non
+// c'era modo di accorgersene. Ora si chiede il tetto vero e, se il totale a DB
+// e' piu' alto, la lista lo dichiara.
+const TAB_LIMIT = window.Pagination.TAB_LIMIT;
+const TAB_HINT  = 'Apri la pagina dedicata per l\'elenco completo.';
+
 let tenant   = null;
 let tenantId = null;
 let tabsLoaded = new Set();
@@ -186,12 +194,12 @@ async function loadContratti() {
     const list = document.getElementById('profile-contratti-list');
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
-        const res  = await fetch(`${CONT_API}?tenant_id=${tenantId}&limit=200&page=1`);
+        const res  = await fetch(`${CONT_API}?tenant_id=${tenantId}&limit=${TAB_LIMIT}&page=1`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        const { items, total } = window.Pagination.unwrap(json);
         document.getElementById('profile-contratti-count').textContent =
-            items.length ? `${items.length} contratt${items.length === 1 ? 'o' : 'i'}` : '';
+            total ? window.Pagination.countLabel(items.length, total, total === 1 ? 'contratto' : 'contratti') : '';
 
         if (!items.length) {
             list.innerHTML = '<div class="entity-empty">Nessun contratto per questo inquilino. Usa "Nuovo Contratto".</div>';
@@ -216,6 +224,7 @@ async function loadContratti() {
                 </div>
             </div>`;
         }).join('');
+        list.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(items.length, total, 0, TAB_HINT));
     } catch (err) {
         list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
     }
@@ -227,12 +236,12 @@ async function loadPagamenti() {
     const list = document.getElementById('profile-pagamenti-list');
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
-        const res  = await fetch(`${PAY_API}?tenant_id=${tenantId}&limit=200&page=1`);
+        const res  = await fetch(`${PAY_API}?tenant_id=${tenantId}&limit=${TAB_LIMIT}&page=1`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        const { items, total } = window.Pagination.unwrap(json);
         document.getElementById('profile-pagamenti-count').textContent =
-            items.length ? `${items.length} pagament${items.length === 1 ? 'o' : 'i'}` : '';
+            total ? window.Pagination.countLabel(items.length, total, total === 1 ? 'pagamento' : 'pagamenti') : '';
 
         if (!items.length) {
             list.innerHTML = '<div class="entity-empty">Nessun pagamento registrato. Usa "Nuovo Pagamento" o genera lo scadenzario dal contratto.</div>';
@@ -260,6 +269,7 @@ async function loadPagamenti() {
                 </div>
             </div>`;
         }).join('');
+        list.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(items.length, total, 0, TAB_HINT));
 
         list.querySelectorAll('.btn-pay-mark').forEach(btn => {
             btn.addEventListener('click', () => markPaymentPaid(btn.dataset.id, items));
@@ -310,12 +320,12 @@ async function loadDocuments() {
     hint.textContent = 'Documenti associati all\'immobile locato — condivisi con il proprietario e visibili anche a eventuali altri inquilini dello stesso immobile.';
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
-        const res  = await fetch(`${DOCS_API}?property_id=${tenant.property_id}&limit=200&page=1`);
+        const res  = await fetch(`${DOCS_API}?property_id=${tenant.property_id}&limit=${TAB_LIMIT}&page=1`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        const { items, total } = window.Pagination.unwrap(json);
         document.getElementById('profile-docs-count').textContent =
-            items.length ? `${items.length} document${items.length === 1 ? 'o' : 'i'}` : '';
+            total ? window.Pagination.countLabel(items.length, total, total === 1 ? 'documento' : 'documenti') : '';
 
         if (!items.length) {
             list.innerHTML = '<div class="entity-empty">Nessun documento associato. Carica il primo con il pulsante sopra.</div>';
@@ -339,6 +349,7 @@ async function loadDocuments() {
                 </div>
             </div>`;
         }).join('');
+        list.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(items.length, total, 0, TAB_HINT));
     } catch (err) {
         list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
     }
