@@ -147,3 +147,26 @@
     font-style: normal;
     font-size: 0.85em;
 }
+
+/* ---- Restrizioni dell'evento ---- */
+
+/* Undici fonti in colonna spingerebbero il resto del modulo fuori dal modale:
+   a griglia stanno in tre righe e si leggono a colpo d'occhio. */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 6px 14px;
+    margin-top: 6px;
+}
+
+.checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--color-text, #334155);
+    cursor: pointer;
+}
+
+.checkbox-inline input { margin: 0; flex: 0 0 auto; }

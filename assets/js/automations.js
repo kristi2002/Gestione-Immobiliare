@@ -370,12 +370,71 @@
                 .join('');
     }
 
+    // Filtro salvato della regola in modifica, in attesa che syncEventChoice()
+    // disegni le caselle su cui applicarlo. Su una regola nuova resta null e
+    // vince la preselezione dichiarata dal catalogo.
+    let pendingFilter = null;
+
+    /**
+     * Restrizioni dell'evento ("solo per queste fonti").
+     *
+     * Nessuna casella spuntata sarebbe una regola che non scatta mai, quindi
+     * l'assenza di filtro si rappresenta con TUTTE spuntate: e' anche cio' che
+     * il backend riscrive a NULL quando le riceve tutte.
+     */
+    function renderFilterFields(ev) {
+        const host    = document.getElementById('automation-filter-fields');
+        const filters = ev?.filters || null;
+        if (!filters) {
+            host.hidden = true;
+            host.innerHTML = '';
+            return;
+        }
+
+        host.hidden = false;
+        host.innerHTML = Object.entries(filters).map(([field, spec]) => {
+            const saved    = pendingFilter?.[field] || null;
+            const selected = saved || spec.default || Object.keys(spec.options);
+            const boxes = Object.entries(spec.options).map(([value, label]) => `
+                <label class="checkbox-inline">
+                    <input type="checkbox" data-filter-field="${escAttr(field)}" value="${escAttr(value)}"
+                           ${selected.includes(value) ? 'checked' : ''}>
+                    <span>${esc(label)}</span>
+                </label>`).join('');
+            return `
+                <div class="form-group">
+                    <label>${esc(spec.label)}</label>
+                    <div class="checkbox-grid">${boxes}</div>
+                    <small class="form-hint">${esc(spec.hint || '')}</small>
+                </div>`;
+        }).join('');
+    }
+
+    /** Il filtro salvato: stringa JSON dal DB, oggetto se gia' decodificato. */
+    function parseFilter(raw) {
+        if (!raw) return null;
+        if (typeof raw === 'object') return raw;
+        try { return JSON.parse(raw); } catch (_) { return null; }
+    }
+
+    /** { campo: [valori spuntati] } — vuoto se l'evento non ha restrizioni. */
+    function collectFilter() {
+        const out = {};
+        document.querySelectorAll('#automation-filter-fields input[data-filter-field]').forEach(cb => {
+            const f = cb.dataset.filterField;
+            out[f] = out[f] || [];
+            if (cb.checked) out[f].push(cb.value);
+        });
+        return out;
+    }
+
     function syncEventChoice() {
         const key = document.getElementById('automation-event').value;
         const ev  = vocabulary.events?.[key];
         const sel = document.getElementById('automation-recipient-rule');
 
         document.getElementById('automation-event-hint').textContent = ev ? ev.description : '';
+        renderFilterFields(ev);
 
         // Non tutte le strategie hanno senso per tutti gli eventi: "i lead con
         // ricerca compatibile" su un nuovo lead non vuole dire nulla. Il
@@ -508,6 +567,10 @@
 
             if (automation.trigger_type === 'event') {
                 document.getElementById('automation-event').value = automation.trigger_event || '';
+                // MySQL restituisce le colonne JSON come stringa: senza decodifica
+                // le caselle tornerebbero tutte spuntate e risalvare la regola ne
+                // allargherebbe in silenzio la portata.
+                pendingFilter = parseFilter(automation.trigger_filter);
                 syncEventChoice();
                 document.getElementById('automation-recipient-rule').value = automation.recipient_rule || '';
                 setDelay(Number(automation.trigger_delay_minutes || 0));
@@ -523,6 +586,7 @@
             }
         } else {
             document.getElementById('automation-modal-title').textContent = 'Nuova Automazione';
+            pendingFilter = null;
             document.getElementById('automation-start').value = window.Fmt.today();
             document.getElementById('automation-time').value  = '09:00';
             setTrigger('scheduled');
@@ -664,8 +728,17 @@
                 showAlert('Scegli l\'evento e i destinatari.', 'error');
                 return;
             }
+            const filter = collectFilter();
+            const empty  = Object.entries(filter).find(([, vals]) => vals.length === 0);
+            if (empty) {
+                showAlert('Scegli almeno una voce in "' +
+                    (vocabulary.events?.[event]?.filters?.[empty[0]]?.label || empty[0]) +
+                    '": senza nessuna spunta l\'automazione non scatterebbe mai.', 'error');
+                return;
+            }
             payload.trigger_event  = event;
             payload.recipient_rule = rule;
+            payload.trigger_filter = filter;
             payload.trigger_delay_minutes =
                 Number(document.getElementById('automation-delay').value || 0) *
                 Number(document.getElementById('automation-delay-unit').value || 1);

@@ -324,6 +324,53 @@ function listContacts(PDO $db): void
 }
 
 /**
+ * Restringe una regola a evento a un sottoinsieme di valori del payload.
+ *
+ * Accetta solo i campi che il catalogo dichiara per QUEL evento e solo i valori
+ * che quel campo ammette: un filtro su una chiave sconosciuta non scatterebbe
+ * mai e la regola sembrerebbe attiva restando morta.
+ *
+ * Selezionare tutte le opzioni equivale a non filtrare (NULL): due modi di
+ * scrivere la stessa cosa, e il dispatcher ne deve leggere uno solo.
+ *
+ * @return string|null JSON da scrivere in `reminders.trigger_filter`
+ */
+function validateTriggerFilter(string $event, $raw): ?string
+{
+    // Una stringa arriva da updateReminder(), che ricopia dalla riga esistente
+    // le chiavi assenti dal corpo: senza decodificarla, un salvataggio che non
+    // parla del filtro lo cancellerebbe invece di lasciarlo com'e'.
+    if (is_string($raw) && $raw !== '') {
+        $raw = json_decode($raw, true);
+    }
+
+    $declared = AUTOMATION_EVENT_CATALOGUE[$event]['filters'] ?? [];
+    if (!$declared || !is_array($raw) || !$raw) {
+        return null;
+    }
+
+    $out = [];
+    foreach ($declared as $field => $spec) {
+        $picked = $raw[$field] ?? null;
+        if (!is_array($picked)) {
+            continue;
+        }
+        $options = array_keys($spec['options']);
+        $clean   = array_values(array_unique(array_intersect(array_map('strval', $picked), $options)));
+
+        if (!$clean) {
+            apiError('Seleziona almeno una voce per "' . $spec['label'] . '", oppure tutte per non filtrare.');
+        }
+        if (count($clean) === count($options)) {
+            continue; // tutte = nessun vincolo
+        }
+        $out[$field] = $clean;
+    }
+
+    return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : null;
+}
+
+/**
  * Vocabolario delle automazioni: token, eventi, strategie di destinatario.
  *
  * Serve al form, che altrimenti manterrebbe una copia di queste liste in JS —
@@ -382,13 +429,13 @@ function createReminder(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO reminders
             (title, description, reminder_date, end_date, frequency, schedule_time, day_rule,
-             trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, status,
+             trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, trigger_filter, status,
              client_id, lead_id, property_id, tenant_id, assigned_agent_id,
              notify_admin, notify_client, email_subject, email_body, request_type,
              maintenance_status, priority)
          VALUES
             (:title, :description, :reminder_date, :end_date, :frequency, :schedule_time, :day_rule,
-             :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :status,
+             :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :trigger_filter, :status,
              :client_id, :lead_id, :property_id, :tenant_id, :assigned_agent_id,
              :notify_admin, :notify_client, :email_subject, :email_body, :request_type,
              :maintenance_status, :priority)"
@@ -443,6 +490,7 @@ function updateReminder(PDO $db, int $id): void
              schedule_time = :schedule_time, day_rule = :day_rule,
              trigger_type = :trigger_type, trigger_event = :trigger_event,
              trigger_delay_minutes = :trigger_delay_minutes, recipient_rule = :recipient_rule,
+             trigger_filter = :trigger_filter,
              client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
              tenant_id = :tenant_id, assigned_agent_id = :assigned_agent_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
@@ -650,6 +698,8 @@ function validateReminderInput(PDO $db, array $data): array
     $recipientRule = trim($data['recipient_rule'] ?? '') ?: null;
     $triggerDelay  = max(0, (int) ($data['trigger_delay_minutes'] ?? 0));
 
+    $triggerFilter = null;
+
     if ($triggerType === 'event') {
         if (!isset(AUTOMATION_EVENT_CATALOGUE[$triggerEvent])) {
             apiError('Evento non valido.');
@@ -658,6 +708,7 @@ function validateReminderInput(PDO $db, array $data): array
         if (!in_array($recipientRule, $allowed, true)) {
             apiError('Destinatario non compatibile con l\'evento scelto.');
         }
+        $triggerFilter = validateTriggerFilter($triggerEvent, $data['trigger_filter'] ?? null);
         // Una regola a evento non ha una cadenza: la data serve solo perché la
         // colonna è NOT NULL, e la frequenza resta 'once' per non farla entrare
         // nel materializzatore di serie.
@@ -751,6 +802,7 @@ function validateReminderInput(PDO $db, array $data): array
         'trigger_event'     => $triggerEvent,
         'trigger_delay_minutes' => $triggerDelay,
         'recipient_rule'    => $recipientRule,
+        'trigger_filter'    => $triggerFilter,
         'status'            => $status,
         'client_id'         => $clientId,
         'lead_id'           => $leadId,

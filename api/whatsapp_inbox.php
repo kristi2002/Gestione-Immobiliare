@@ -457,9 +457,13 @@ function createLeadFromThread(PDO $db): void
         throw $e;
     }
 
+    // Stessa fonte scritta nell'INSERT qui sopra: il filtro per fonte delle
+    // automazioni confronta questo campo, e un payload muto non fa scattare
+    // nessuna regola ristretta.
     emitAutomationEvent($db, 'lead.created', 'lead', $leadId, [
         'lead_id'     => $leadId,
         'property_id' => null,
+        'source'      => 'whatsapp',
     ]);
 
     logActivity('create', 'lead', $leadId,
