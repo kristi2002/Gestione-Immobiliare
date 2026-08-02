@@ -133,6 +133,37 @@ if ($consentText === '') {
     $add('marketing_consent', 'ok', 'Testo del consenso marketing configurato.');
 }
 
+// ── Identità fiscale: fatture elettroniche e SDD ───────────────────────────
+// Fattura e addebito NON producono un file sbagliato quando questi campi
+// mancano: si rifiutano di generarlo. Il problema è quando lo si scopre —
+// davanti alla prima fattura da emettere, non prima di andare in produzione.
+// I fallback (`?:`) sono gli stessi dei chiamanti reali, altrimenti la sonda
+// segnalerebbe come mancanti campi che in pratica vengono ereditati.
+require_once __DIR__ . '/../lib/FatturaPA.php';
+$agencyFiscal = [
+    'piva'          => getSetting('agency_piva', ''),
+    'cf'            => getSetting('agency_cf', ''),
+    'denominazione' => getSetting('agency_denominazione', '') ?: getSetting('agency_name', ''),
+    'indirizzo'     => getSetting('agency_indirizzo', '') ?: getSetting('agency_address', ''),
+    'cap'           => getSetting('agency_cap', ''),
+    'comune'        => getSetting('agency_comune', ''),
+];
+$missingFiscal = fatturaPaMissingAgencyFields($agencyFiscal);
+$missingSdd    = [];
+if (trim((string) getSetting('agency_iban', '')) === '')              $missingSdd[] = 'IBAN agenzia';
+if (trim((string) getSetting('agency_sepa_creditor_id', '')) === '')  $missingSdd[] = 'Identificativo Creditore SEPA';
+
+if (!$missingFiscal && !$missingSdd) {
+    $add('fiscal_identity', 'ok', 'Identità fiscale completa: fattura elettronica e addebiti SEPA possono essere generati.');
+} else {
+    $bits = [];
+    if ($missingFiscal) $bits[] = 'fattura elettronica — manca: ' . implode(', ', $missingFiscal);
+    if ($missingSdd)    $bits[] = 'addebiti SEPA (SDD) — manca: ' . implode(', ', $missingSdd);
+    $add('fiscal_identity', 'warn',
+        'Impostazioni → Fatturazione incompleta. ' . implode('; ', $bits)
+        . '. Finché mancano, la generazione si rifiuta di partire.');
+}
+
 // ── WhatsApp: il mittente configurato è davvero un canale WhatsApp? ─────────
 // Non esisteva alcun controllo, ed è per questo che l'integrazione è rimasta
 // "attiva" per settimane mentre ogni singolo invio moriva con l'errore 63007.
