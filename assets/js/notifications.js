@@ -8,6 +8,10 @@
     const POLL_INTERVAL = 60000;
 
     let items = [];
+    /** L'ultimo aggiornamento e' fallito: quello che si vede e' vecchio. */
+    let stale = false;
+    /** Una sola richiesta per volta (il tick e l'apertura possono coincidere). */
+    let inFlight = null;
 
     let bell, badge, dropdown, list;
 
@@ -29,21 +33,52 @@
             }
         });
 
+        // Le altre schermate cambiano lo stato dei promemoria (completa,
+        // annulla, riapri, elabora scaduti): senza un aggancio la campanella
+        // resterebbe col conteggio vecchio fino al tick successivo, cioe' fino
+        // a un minuto dopo che l'utente ha gia' evaso la scadenza.
+        window.Notifications = { refresh: poll };
+
         poll();
         setInterval(poll, POLL_INTERVAL);
     }
 
-    async function poll() {
-        try {
-            const res  = await fetch(API);
-            const json = await res.json();
-            if (!json.success) return;
-            items = json.data.items || [];
-            updateBadge(json.data.count || 0);
+    /**
+     * Rilegge badge e lista dal server.
+     *
+     * Restituisce la Promise della richiesta in corso, cosi' chi la invoca puo'
+     * attenderla; le chiamate sovrapposte condividono la stessa richiesta
+     * invece di accavallarsi.
+     */
+    function poll() {
+        if (inFlight) return inFlight;
+
+        inFlight = (async () => {
+            try {
+                const res  = await fetch(API);
+                const json = await res.json();
+                // Il 401 non arriva fin qui: il fetch di app.js porta al login.
+                // Restano il 500, la rete caduta e il success:false.
+                if (!res.ok || !json.success) {
+                    throw new Error(json.error || ('HTTP ' + res.status));
+                }
+                items = json.data.items || [];
+                stale = false;
+                updateBadge(json.data.count || 0);
+            } catch (err) {
+                // Il conteggio precedente resta esposto: un blip di rete non
+                // deve far sparire scadenze vere dalla campanella. Ma non si
+                // spaccia piu' per aggiornato — la tendina lo dichiara, e
+                // l'errore finisce in console invece di essere ingoiato.
+                stale = true;
+                console.warn('[notifiche] aggiornamento non riuscito:', err.message);
+            } finally {
+                inFlight = null;
+            }
             renderList();
-        } catch (err) {
-            // Silently ignore polling errors.
-        }
+        })();
+
+        return inFlight;
     }
 
     function updateBadge(count) {
@@ -58,11 +93,16 @@
 
     function renderList() {
         if (!list) return;
+
+        const notice = stale
+            ? '<p class="notif-empty text-muted">Aggiornamento non riuscito: elenco non aggiornato.</p>'
+            : '';
+
         if (items.length === 0) {
-            list.innerHTML = '<p class="notif-empty text-muted">Nessuna notifica.</p>';
+            list.innerHTML = notice || '<p class="notif-empty text-muted">Nessuna notifica.</p>';
             return;
         }
-        list.innerHTML = items.map(it => `
+        list.innerHTML = notice + items.map(it => `
             <button type="button" class="notif-item" data-id="${it.id}">
                 <span class="notif-item__title">${escapeHtml(it.title)}</span>
                 <span class="notif-item__date">${formatDateTime(it.reminder_date)}</span>
@@ -80,7 +120,14 @@
     function toggleDropdown() {
         if (!dropdown) return;
         dropdown.hidden = !dropdown.hidden;
-        if (!dropdown.hidden) renderList();
+        if (dropdown.hidden) return;
+
+        // Si disegna subito quello che c'e' — la tendina non deve aspettare la
+        // rete per aprirsi — e insieme si rinfresca. Il tick e' di un minuto:
+        // senza questo si legge un elenco vecchio fino a 60 secondi, e un
+        // promemoria appena evaso altrove resta li' come se fosse ancora aperto.
+        renderList();
+        poll();
     }
 
     function formatDateTime(dateStr) { return window.Fmt.dateTime(dateStr); }

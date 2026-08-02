@@ -531,6 +531,7 @@
                 'success'
             );
             loadReminders();
+            refreshBell();
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
@@ -561,6 +562,7 @@
 
             showAlert('Promemoria aggiornato.', 'success');
             loadReminders();
+            refreshBell();
         } catch (err) {
             showAlert(err.message, 'error');
         }
@@ -584,6 +586,7 @@
                 'success'
             );
             loadReminders();
+            refreshBell();
         } catch (err) {
             showAlert(err.message, 'error');
         } finally {
@@ -596,6 +599,15 @@
     // -------------------------------------------------------------------------
     // Utilities
     // -------------------------------------------------------------------------
+
+    /**
+     * La campanella in topbar conta i promemoria scaduti e si aggiorna da sola
+     * ogni minuto: dopo una modifica fatta QUI resterebbe indietro fino al tick
+     * successivo, mostrando come in ritardo qualcosa che si e' appena chiuso.
+     */
+    function refreshBell() {
+        if (window.Notifications) window.Notifications.refresh();
+    }
 
     function showAlert(message, type) {
         els.alert.textContent = message;

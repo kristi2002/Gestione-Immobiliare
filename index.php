@@ -333,7 +333,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
     })();
     </script>
     <script src="assets/js/app.js?v=<?= @filemtime(__DIR__ . '/assets/js/app.js') ?: time() ?>"></script>
-    <script src="assets/js/notifications.js"></script>
+    <script src="assets/js/notifications.js?v=<?= @filemtime(__DIR__ . '/assets/js/notifications.js') ?: time() ?>"></script>
     <script>
     if ('serviceWorker' in navigator) {
         // Auto-reload once when an UPDATED service worker takes control, so stale
