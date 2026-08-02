@@ -10,7 +10,10 @@
  * POST   /api/reminders.php              — create
  * PUT    /api/reminders.php?id={id}      — update
  * PATCH  /api/reminders.php?id={id}      — quick status update (?action=complete|cancel)
- * DELETE /api/reminders.php?id={id}      — cancel reminder
+ * DELETE /api/reminders.php?id={id}      — elimina (le occorrenze della serie e
+ *                                          il registro invii vanno in cascata).
+ *                                          Per sospendere senza perdere:
+ *                                          PATCH ?action=cancel
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
@@ -81,7 +84,7 @@ try {
             break;
         case 'DELETE':
             if (!$id) apiError('ID promemoria mancante.');
-            cancelReminder($db, $id);
+            deleteReminder($db, $id);
             break;
         default:
             apiError('Metodo non consentito.', 405);
@@ -744,8 +747,30 @@ function patchReminder(PDO $db, int $id): void
         if (!in_array($newStatus, $allowed, true)) {
             apiError('Stato manutenzione non valido.');
         }
+        // Lo stato di prima serve per non riemettere l'evento a ogni salvataggio:
+        // riaprire e richiudere un ticket manderebbe due volte lo stesso invito.
+        $before = $db->prepare("SELECT maintenance_status, tenant_id, property_id FROM reminders WHERE id = :id");
+        $before->execute(['id' => $id]);
+        $ticket = $before->fetch();
+        if (!$ticket) {
+            apiError('Promemoria non trovato.', 404);
+        }
+
         $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms WHERE id = :id");
         $stmt->execute(['ms' => $newStatus, 'id' => $id]);
+
+        if ($newStatus !== ($ticket['maintenance_status'] ?? '') && in_array($newStatus, ['completata', 'chiusa'], true)) {
+            // Nel payload NON va il proprietario: 'event_contact' sceglie il primo
+            // fra lead/cliente/inquilino, e il riscontro su un intervento lo deve
+            // dare chi ci abita. Il proprietario resta raggiungibile con la
+            // strategia 'property_owner', che lo risale dall'immobile.
+            emitAutomationEvent($db, 'maintenance.completed', 'reminder', $id, [
+                'tenant_id'   => $ticket['tenant_id'] !== null ? (int) $ticket['tenant_id'] : null,
+                'property_id' => $ticket['property_id'] !== null ? (int) $ticket['property_id'] : null,
+                'new_status'  => $newStatus,
+            ]);
+        }
+
         getReminder($db, $id);
         return;
     }
@@ -792,18 +817,44 @@ function applySeriesStatusSideEffects(PDO $db, int $id, string $action): void
     syncReminderSeries($db, $id);
 }
 
-function cancelReminder(PDO $db, int $id): void
+/**
+ * Elimina davvero.
+ *
+ * Prima questa funzione scriveva `status='cancelled'`, cioè esattamente ciò che
+ * fa il pulsante pausa: entrambe le pagine che la chiamano chiedono "Eliminare
+ * questo promemoria?", la UI rispondeva "eliminato", e la riga restava lì —
+ * ricompariva al primo filtro "Tutte" e nessuno capiva perché. Chi vuole
+ * sospendere senza perdere ha già `PATCH ?action=cancel`, che resta.
+ *
+ * Occorrenze della serie e righe del registro invii se ne vanno da sole:
+ * `fk_reminders_series` e `fk_disp_reminder` sono ON DELETE CASCADE.
+ * Cancellarle a mano qui sarebbe una seconda verità, destinata a divergere
+ * dalla prima migrazione che tocca quelle chiavi.
+ */
+function deleteReminder(PDO $db, int $id): void
 {
-    if (!reminderExists($db, $id)) {
+    $stmt = $db->prepare('SELECT title, series_id FROM reminders WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
         apiError('Promemoria non trovato.', 404);
     }
 
-    $stmt = $db->prepare("UPDATE reminders SET status = 'cancelled' WHERE id = :id");
-    $stmt->execute(['id' => $id]);
+    // Contate PRIMA: dopo il DELETE non esistono più, e l'agente ha diritto di
+    // sapere quante occorrenze programmate sono sparite con la regola.
+    $count = $db->prepare('SELECT COUNT(*) FROM reminders WHERE series_id = :id');
+    $count->execute(['id' => $id]);
+    $occurrences = (int) $count->fetchColumn();
 
-    applySeriesStatusSideEffects($db, $id, 'cancel');
-    logActivity('delete', 'reminder', $id, 'Promemoria annullato #' . $id);
-    apiSuccess(['id' => $id, 'message' => 'Promemoria annullato.']);
+    $db->prepare('DELETE FROM reminders WHERE id = :id')->execute(['id' => $id]);
+
+    logActivity('delete', 'reminder', $id, 'Promemoria eliminato: ' . ($row['title'] ?: ('#' . $id)));
+    apiSuccess([
+        'id'          => $id,
+        'occurrences' => $occurrences,
+        'message'     => 'Promemoria eliminato.',
+    ]);
 }
 
 // ---------------------------------------------------------------------------

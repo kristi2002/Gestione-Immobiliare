@@ -515,9 +515,14 @@
         });
         els.grid.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (await confirmDialog('Eliminare questa automazione?', { title: 'Elimina automazione', confirmText: 'Elimina' })) {
-                    deleteAutomation(btn.dataset.id);
-                }
+                // Adesso elimina davvero: il messaggio deve dire cosa se ne va
+                // con la regola, e che esiste una strada che non perde niente.
+                const ok = await confirmDialog(
+                    'Spariscono anche gli invii già programmati e lo storico degli invii fatti. '
+                    + 'Per sospenderla senza perdere nulla usa invece la pausa.',
+                    { title: 'Eliminare questa automazione?', confirmText: 'Elimina' }
+                );
+                if (ok) deleteAutomation(btn.dataset.id);
             });
         });
     }
@@ -1129,7 +1134,12 @@
         const json = await res.json();
         if (json.success) {
             loadAutomations();
-            showAlert('Automazione eliminata.', 'success');
+            const n = Number(json.data?.occurrences || 0);
+            showAlert(
+                n > 0 ? `Automazione eliminata, insieme a ${n} invii che erano in programma.`
+                      : 'Automazione eliminata.',
+                'success'
+            );
         } else {
             showAlert(json.error, 'error');
         }
