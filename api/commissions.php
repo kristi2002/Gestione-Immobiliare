@@ -193,7 +193,8 @@ function createCommission(PDO $db): void
     $stmt->execute($validated);
 
     $newId = (int) $db->lastInsertId();
-    logActivity('create', 'commission', $newId, 'Commissione creata: € ' . $validated['amount']);
+    // Come in payments.php: nel registro l'importo va formattato come ovunque.
+    logActivity('create', 'commission', $newId, 'Commissione creata: € ' . number_format((float) $validated['amount'], 2, ',', '.'));
     getCommission($db, $newId);
 }
 

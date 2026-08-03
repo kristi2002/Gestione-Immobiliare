@@ -220,7 +220,10 @@ function createPayment(PDO $db): void
     $stmt->execute($validated);
 
     $newId = (int) $db->lastInsertId();
-    logActivity('create', 'payment', $newId, 'Pagamento creato di € ' . $validated['amount']);
+    // Il valore grezzo finiva nel registro come "€ 1235": e' l'unico importo
+    // del lato server che non passava da number_format, e si leggeva accanto
+    // alle righe formattate del resto dell'app.
+    logActivity('create', 'payment', $newId, 'Pagamento creato di € ' . number_format((float) $validated['amount'], 2, ',', '.'));
     getPayment($db, $newId);
 }
 
