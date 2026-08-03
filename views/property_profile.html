@@ -54,7 +54,17 @@
                 <div class="profile-panel__header">
                     <span class="text-muted" id="pp-media-count"></span>
                     <div style="display:flex;gap:8px;align-items:center;">
-                        <input type="hidden" id="pp-media-type" value="photo">
+                        <!-- Era un hidden fisso a "photo": video, planimetrie e
+                             allegati erano irraggiungibili benche' l'API li
+                             accetti da sempre (property_media.php ALLOWED_MIMES). -->
+                        <select id="pp-media-type" class="form-select" style="width:auto;"
+                                aria-label="Tipo di file da caricare" title="Tipo di file da caricare">
+                            <option value="photo">Foto</option>
+                            <option value="floor_plan">Planimetria</option>
+                            <option value="house_map">Mappa / elaborato</option>
+                            <option value="video">Video</option>
+                            <option value="attachment">Allegato (non pubblicato)</option>
+                        </select>
                         <label class="btn btn--sm btn--primary" style="cursor:pointer;margin:0;">
                             <i data-lucide="upload"></i> Carica
                             <input type="file" id="pp-media-upload" hidden multiple>

@@ -152,7 +152,18 @@ function uploadMedia(PDO $db): void
     $allowed = ALLOWED_MIMES[$mediaType] ?? [];
 
     if (!in_array($mime, $allowed, true)) {
-        apiError('Tipo di file non consentito per questa categoria (' . $mime . '). Usa MP4, WebM o MOV per i video.');
+        // Il messaggio nomina i formati della categoria SCELTA. Prima
+        // consigliava sempre i video, anche caricando un PDF fra le foto —
+        // e ora che l'errore arriva davvero all'agente (la scheda immobile lo
+        // mostra, invece di far sparire il file in silenzio) deve dire il vero.
+        $labels = array_values(array_unique(array_map(
+            static fn(string $m): string => strtoupper(MIME_EXTENSIONS[$m] ?? $m),
+            $allowed
+        )));
+        apiError(
+            'Tipo di file non consentito per la categoria scelta (' . $mime . '). '
+            . 'Formati ammessi: ' . implode(', ', $labels) . '.'
+        );
     }
 
     // Attachments may hold sensitive files, so they live in the deny-all

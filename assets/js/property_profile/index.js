@@ -934,6 +934,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                 <div class="gallery-item-info">
                     <span class="gallery-item-name">${esc(m.original_name || m.file_name || '')}</span>
                     <div class="gallery-item-actions">
+                        ${!isPhoto && m.url ? `<a class="btn btn--xs btn--ghost" href="${esc(m.url)}" target="_blank" rel="noopener">Apri</a>` : ''}
                         ${isPhoto && !m.is_cover ? `<button class="btn btn--xs btn--ghost" data-action="cover" data-id="${m.id}">Copertina</button>` : ''}
                         <button class="btn btn--xs btn--danger" data-action="delete" data-id="${m.id}"><i data-lucide="trash-2"></i></button>
                     </div>
@@ -1029,16 +1030,53 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
 
     // ── Media management ──────────────────────────────────────────────────────
 
+    // Estensioni suggerite al selettore file, per tipo. Rispecchiano
+    // ALLOWED_MIMES di api/property_media.php: la validazione vera resta
+    // server-side (sul mime RILEVATO, non sul nome del file).
+    const MEDIA_ACCEPT = {
+        photo:      'image/jpeg,image/png,image/webp,image/gif',
+        video:      'video/mp4,video/webm,video/quicktime,video/x-msvideo',
+        floor_plan: 'image/jpeg,image/png,image/webp,application/pdf',
+        house_map:  'image/jpeg,image/png,image/webp,application/pdf',
+        attachment: 'image/*,video/*,application/pdf,.doc,.docx',
+    };
+
+    function syncMediaAccept() {
+        const type = document.getElementById('pp-media-type')?.value || 'photo';
+        const input = document.getElementById('pp-media-upload');
+        if (input) input.accept = MEDIA_ACCEPT[type] || '';
+    }
+
     function uploadMedia(files) {
         const type = document.getElementById('pp-media-type').value;
-        const uploads = Array.from(files).map(file => {
-            const fd = new FormData();
-            fd.append('property_id', propertyId);
-            fd.append('media_type', type);
-            fd.append('file', file);
-            return fetch('api/property_media.php', { method: 'POST', body: fd }).then(r => r.json());
+        const uploads = Array.from(files).map(file =>
+            (() => {
+                const fd = new FormData();
+                fd.append('property_id', propertyId);
+                fd.append('media_type', type);
+                fd.append('file', file);
+                return fetch('api/property_media.php', { method: 'POST', body: fd })
+                    .then(r => r.json())
+                    .then(j => ({ name: file.name, ok: !!j.success, error: j.error }))
+                    .catch(() => ({ name: file.name, ok: false, error: 'errore di rete' }));
+            })()
+        );
+
+        Promise.all(uploads).then(results => {
+            loadMedia();
+            // Un file rifiutato spariva in silenzio: fetch() risolve anche su
+            // 400, quindi Promise.all riusciva e la galleria si limitava a non
+            // mostrarlo. L'agente concludeva che il caricamento "non va".
+            const failed = results.filter(r => !r.ok);
+            if (failed.length) {
+                showAlert(
+                    failed.map(f => `${f.name}: ${f.error || 'caricamento non riuscito'}`).join(' — '),
+                    'error'
+                );
+            } else if (results.length) {
+                showAlert(results.length === 1 ? 'File caricato.' : `${results.length} file caricati.`, 'success');
+            }
         });
-        Promise.all(uploads).then(() => loadMedia()).catch(() => showAlert('Errore durante il caricamento.', 'error'));
     }
 
     let _pendingDeleteId = null;
@@ -1355,6 +1393,10 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             if (e.target.files.length) uploadMedia(e.target.files);
             e.target.value = '';
         });
+
+        // Il selettore file propone le estensioni del tipo scelto.
+        document.getElementById('pp-media-type')?.addEventListener('change', syncMediaAccept);
+        syncMediaAccept();
 
         document.getElementById('pp-doc-upload').addEventListener('change', e => {
             if (e.target.files.length) uploadDocuments(e.target.files);
