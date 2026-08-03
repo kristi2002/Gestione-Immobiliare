@@ -275,7 +275,7 @@ erDiagram
 - **`tenants` + `tenant_users`** — `tenants` holds personal data; `tenant_users` holds the portal password hash (one-to-one).
 - **`leads`** — Prospect pipeline `new → converted / lost`. `lead_property_matches` is a many-to-many pivot to candidate properties.
 - **`reminders`** — Dual-use: generic reminders **and** maintenance tickets (`type='maintenance'`). Maintenance columns: `maintenance_status`, `request_type`, `category`, `supplier_id`, `supplier_name`, `priority`, `tenant_name`, and `tenant_id` FK (added phase24, links a ticket to the submitting tenant).
-- **`whatsapp_messages`** — log inbound/outbound WhatsApp (Meta Cloud API); linked to `client_id` or `tenant_id` (both nullable).
+- **`whatsapp_messages`** — Twilio inbound/outbound log; linked to `client_id` or `tenant_id` (both nullable).
 - **`social_posts`** — Scheduled FB/IG posts. Image posts need `image_path` + `META_PUBLIC_BASE_URL`. Cron reads `status=scheduled`.
 - **`social_settings`** — Single-row (`id=1`) Meta OAuth store: user token, page token, page ID, IG account ID. Tokens expire (~60 days) → manual reconnect.
 - **`app_settings`** — Key-value runtime config editable in Settings UI (`smtp_host`, `agency_name`, `primary_color`, `whatsapp_enabled`, …).

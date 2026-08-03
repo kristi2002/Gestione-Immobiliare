@@ -8,18 +8,8 @@ import {
 import { esc, fmtDate, fmtDateTime } from './helpers.js';
 import { clientDocFilesHtml } from './templates.js';
 
-// Le schede non hanno impaginatore: mostrano UNA pagina. Chiedevano 200 righe
-// a endpoint che ne concedono 100 (apiGetPagination) e poi contavano quelle
-// arrivate, cosi' un proprietario con 300 documenti ne leggeva "100" senza un
-// segno che la lista fosse tagliata. Ora si chiede il tetto vero e, quando il
-// totale a DB e' piu' alto, l'elenco lo dichiara.
-const TAB_LIMIT = window.Pagination.TAB_LIMIT;
-const TAB_HINT  = 'Apri la pagina dedicata per l\'elenco completo.';
-const trunc     = (shown, total) => window.Pagination.truncationNote(shown, total, 0, TAB_HINT);
-
 let client   = null;
 let clientId = null;
-let remindersTotal = 0;
 let tabsLoaded = new Set();
 
 function init() {
@@ -167,13 +157,12 @@ async function loadProperties() {
     const grid = document.getElementById('profile-props-grid');
     grid.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
-        const res  = await fetch(`${PROPS_API}?client_id=${clientId}&limit=${TAB_LIMIT}&page=1`);
+        const res  = await fetch(`${PROPS_API}?client_id=${clientId}&limit=100&page=1`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const { items, total } = window.Pagination.unwrap(json);
-        document.getElementById('profile-props-count').textContent = total
-            ? window.Pagination.countLabel(items.length, total, total === 1 ? 'immobile associato' : 'immobili associati')
-            : '';
+        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        document.getElementById('profile-props-count').textContent =
+            items.length ? `${items.length} immobil${items.length === 1 ? 'e' : 'i'} associat${items.length === 1 ? 'o' : 'i'}` : '';
 
         if (!items.length) {
             grid.innerHTML = '<div class="entity-empty">Nessun immobile associato a questo proprietario.</div>';
@@ -199,7 +188,6 @@ async function loadProperties() {
                 </div>
             </div>`;
         }).join('');
-        grid.insertAdjacentHTML('beforeend', trunc(items.length, total));
 
         grid.querySelectorAll('[data-prop-id]').forEach(card => {
             card.addEventListener('click', () => {
@@ -251,17 +239,15 @@ async function loadFatture() {
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
         const [invJson, docJson] = await Promise.all([
-            fetch(`${INV_API}?client_id=${clientId}&limit=${TAB_LIMIT}&page=1`).then(r => r.json()),
-            fetch(`${DOCS_API}?client_id=${clientId}&doc_type=invoice&limit=${TAB_LIMIT}&page=1`).then(r => r.json()).catch(() => ({})),
+            fetch(`${INV_API}?client_id=${clientId}&limit=200&page=1`).then(r => r.json()),
+            fetch(`${DOCS_API}?client_id=${clientId}&doc_type=invoice&limit=200&page=1`).then(r => r.json()).catch(() => ({})),
         ]);
         if (!invJson.success) throw new Error(invJson.error);
-        const inv   = window.Pagination.unwrap(invJson);
-        const docsW = window.Pagination.unwrap(docJson);
-        const items = inv.items, docs = docsW.items;
+        const items = invJson.data?.items ?? (Array.isArray(invJson.data) ? invJson.data : []);
+        const docs  = docJson.data?.items ?? (Array.isArray(docJson.data) ? docJson.data : []);
         const cnt   = items.length + docs.length;
-        const cntTotal = inv.total + docsW.total;
         document.getElementById('profile-fatture-count').textContent =
-            cntTotal ? window.Pagination.countLabel(cnt, cntTotal, cntTotal === 1 ? 'elemento' : 'elementi') : '';
+            cnt ? `${cnt} element${cnt === 1 ? 'o' : 'i'}` : '';
 
         if (!cnt) {
             list.innerHTML = '<div class="entity-empty">Nessuna fattura. Usa "Carica fattura" per allegare un file o "Nuova Fattura".</div>';
@@ -299,7 +285,6 @@ async function loadFatture() {
             </div>`;
         }).join('');
         html += clientDocFilesHtml(docs);
-        html += trunc(cnt, cntTotal);
         list.innerHTML = html;
 
         list.querySelectorAll('.btn-fattura-pdf').forEach(btn => {
@@ -333,17 +318,15 @@ async function loadContratti() {
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
         const [ctJson, docJson] = await Promise.all([
-            fetch(`${CONT_API}?client_id=${clientId}&limit=${TAB_LIMIT}&page=1`).then(r => r.json()),
-            fetch(`${DOCS_API}?client_id=${clientId}&doc_type=contract&limit=${TAB_LIMIT}&page=1`).then(r => r.json()).catch(() => ({})),
+            fetch(`${CONT_API}?client_id=${clientId}&limit=200&page=1`).then(r => r.json()),
+            fetch(`${DOCS_API}?client_id=${clientId}&doc_type=contract&limit=200&page=1`).then(r => r.json()).catch(() => ({})),
         ]);
         if (!ctJson.success) throw new Error(ctJson.error);
-        const ct    = window.Pagination.unwrap(ctJson);
-        const docsW = window.Pagination.unwrap(docJson);
-        const items = ct.items, docs = docsW.items;
+        const items = ctJson.data?.items ?? (Array.isArray(ctJson.data) ? ctJson.data : []);
+        const docs  = docJson.data?.items ?? (Array.isArray(docJson.data) ? docJson.data : []);
         const cnt   = items.length + docs.length;
-        const cntTotal = ct.total + docsW.total;
         document.getElementById('profile-contratti-count').textContent =
-            cntTotal ? window.Pagination.countLabel(cnt, cntTotal, cntTotal === 1 ? 'elemento' : 'elementi') : '';
+            cnt ? `${cnt} element${cnt === 1 ? 'o' : 'i'}` : '';
 
         if (!cnt) {
             list.innerHTML = '<div class="entity-empty">Nessun contratto. Usa "Carica contratto" per allegare un file o "Nuovo Contratto".</div>';
@@ -386,7 +369,6 @@ async function loadContratti() {
             </div>`;
         }).join('');
         html += clientDocFilesHtml(docs);
-        html += trunc(cnt, cntTotal);
         list.innerHTML = html;
         bindClientDocDeletes(list, loadContratti, 'contratti');
     } catch (err) {
@@ -400,12 +382,12 @@ async function loadDocuments() {
     const list = document.getElementById('profile-docs-list');
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     try {
-        const res  = await fetch(`${DOCS_API}?client_id=${clientId}&limit=${TAB_LIMIT}&page=1`);
+        const res  = await fetch(`${DOCS_API}?client_id=${clientId}&limit=200&page=1`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const { items, total } = window.Pagination.unwrap(json);
+        const items = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
         document.getElementById('profile-docs-count').textContent =
-            total ? window.Pagination.countLabel(items.length, total, total === 1 ? 'documento' : 'documenti') : '';
+            items.length ? `${items.length} document${items.length === 1 ? 'o' : 'i'}` : '';
 
         if (!items.length) {
             list.innerHTML = '<div class="entity-empty">Nessun documento associato. Carica il primo con il pulsante sopra.</div>';
@@ -430,7 +412,6 @@ async function loadDocuments() {
                 </div>
             </div>`;
         }).join('');
-        list.insertAdjacentHTML('beforeend', trunc(items.length, total));
 
         list.querySelectorAll('.btn-del-doc').forEach(btn => {
             btn.addEventListener('click', () => deleteDocument(btn.dataset.id));
@@ -548,15 +529,13 @@ async function loadReminders() {
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
     let reminders = [];
     try {
-        const res  = await fetch(`${REM_API}?client_id=${clientId}&limit=${TAB_LIMIT}&page=1`);
+        const res  = await fetch(`${REM_API}?client_id=${clientId}&limit=100&page=1`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const remW = window.Pagination.unwrap(json);
-        reminders  = remW.items;
-        const cnt  = reminders.length;
-        remindersTotal = remW.total;
+        reminders = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        const cnt = reminders.length;
         document.getElementById('profile-reminders-count').textContent =
-            remW.total ? window.Pagination.countLabel(cnt, remW.total, remW.total === 1 ? 'promemoria' : 'promemoria') : '';
+            cnt ? `${cnt} promemori${cnt === 1 ? 'o' : 'a'}` : '';
 
         if (!cnt) {
             list.innerHTML = '<div class="entity-empty">Nessun promemoria configurato. Creane uno con il pulsante sopra.</div>';
@@ -579,7 +558,6 @@ async function loadReminders() {
                     <button class="btn btn--sm btn--ghost btn-del-rem" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>`).join('');
-        list.insertAdjacentHTML('beforeend', trunc(reminders.length, remindersTotal));
 
         list.querySelectorAll('.btn-done-rem').forEach(btn => {
             btn.addEventListener('click', () => completeReminder(btn.dataset.id));

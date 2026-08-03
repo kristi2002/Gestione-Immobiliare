@@ -14,21 +14,6 @@ require_once __DIR__ . '/../config/rate_limit.php';
 requireRole('admin', 'agent', 'super_admin');
 
 apiHandleOptions();
-
-// ── Stripe è configurato? ───────────────────────────────────────────────────
-// Serve alla pagina Pagamenti per decidere se mostrare il pulsante "Link di
-// pagamento". Senza questa risposta l'unico modo di scoprirlo sarebbe premerlo
-// e incassare un 503: un pulsante morto, che e' esattamente cio' che non deve
-// comparire in un portale mostrato a un cliente. Torna un booleano e nient'altro:
-// la chiave non esce da qui, nemmeno mascherata.
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
-    $configuredKey = (string) (getSetting('stripe_secret_key') ?: (getenv('STRIPE_SECRET_KEY') ?: ''));
-    // Un segnaposto copiato da .env.example (`sk_live_...`) non e' vuoto: senza
-    // questo controllo la UI si fiderebbe e mostrerebbe comunque il pulsante.
-    $isPlaceholder = $configuredKey === '' || str_ends_with($configuredKey, '...');
-    apiSuccess(['configured' => !$isPlaceholder]);
-}
-
 apiRequireMethod('POST');
 
 // Rate limit: 5 Stripe checkout sessions per user per minute (prevents runaway billing)

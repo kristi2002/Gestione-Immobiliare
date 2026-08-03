@@ -59,9 +59,9 @@ A numbered 10-part set meant to be read in order; the best entry point for someo
 
 | Doc | Description |
 |-----|-------------|
-| [INTEGRATIONS.md](./integrations/INTEGRATIONS.md) | SMTP, WhatsApp (Meta Cloud API), Meta Graph API, Stripe, Cloudflare R2 — setup status and known issues |
+| [INTEGRATIONS.md](./integrations/INTEGRATIONS.md) | Mailgun, Twilio WhatsApp, Meta Graph API, Stripe, Cloudflare R2 — setup status and known issues |
 | [PORTAL_INTEGRATION.md](./integrations/PORTAL_INTEGRATION.md) | Tenant/owner portal integration notes |
-| [WHATSAPP_MIGRATION_PLAN.md](./integrations/WHATSAPP_MIGRATION_PLAN.md) | **Storico, eseguito 01/08/2026**: il piano con cui WhatsApp e' passata dal sandbox Twilio alla Meta Cloud API. Per il funzionamento attuale vedi INTEGRATIONS.md |
+| [WHATSAPP_MIGRATION_PLAN.md](./integrations/WHATSAPP_MIGRATION_PLAN.md) | Plan to move WhatsApp off the Twilio sandbox to a Business number |
 
 ## Security & Compliance (`docs/security/`)
 
@@ -99,6 +99,6 @@ A numbered 10-part set meant to be read in order; the best entry point for someo
 | Proxy | Traefik (coolify-proxy) |
 | DNS | Cloudflare |
 | Email | Mailgun EU |
-| WhatsApp | Meta Cloud API — implementata, spenta (`whatsapp_enabled=false`) |
+| WhatsApp | Twilio (sandbox — demo only) |
 | Social | Meta Graph API (development mode) |
 | Payments | Stripe (code ready, not configured) |

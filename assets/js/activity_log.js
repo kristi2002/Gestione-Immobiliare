@@ -22,7 +22,6 @@
     function init() {
         els.tbody        = document.getElementById('log-tbody');
         els.alert        = document.getElementById('log-alert');
-        els.search       = document.getElementById('log-search');
         els.actionFilter = document.getElementById('log-action-filter');
         els.entityFilter = document.getElementById('log-entity-filter');
         els.fromFilter   = document.getElementById('log-from-filter');
@@ -31,17 +30,16 @@
 
         els.actionFilter.addEventListener('change', () => { currentPage = 1; loadLog(); });
         [els.fromFilter, els.toFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadLog(); }));
-        [els.search, els.entityFilter].forEach(el => el.addEventListener('input', () => {
+        els.entityFilter.addEventListener('input', () => {
             clearTimeout(filterTimer);
             filterTimer = setTimeout(() => { currentPage = 1; loadLog(); }, 400);
-        }));
+        });
 
         loadLog();
     }
 
     async function loadLog() {
         const params = new URLSearchParams();
-        if (els.search.value.trim())      params.set('search', els.search.value.trim());
         if (els.actionFilter.value)       params.set('action', els.actionFilter.value);
         if (els.entityFilter.value.trim())params.set('entity_type', els.entityFilter.value.trim());
         if (els.fromFilter.value)         params.set('from', els.fromFilter.value);

@@ -53,14 +53,9 @@ function listInvoices(PDO $db): void
     $clientId   = isset($_GET['client_id']) ? (int) $_GET['client_id'] : null;
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $year       = isset($_GET['year']) ? (int) $_GET['year'] : null;
-    $search     = trim($_GET['search'] ?? '');
 
     $where = 'WHERE 1=1';
     $params = [];
-
-    // Stesse join per conteggio e dati: la ricerca guarda anche il cliente.
-    $joins = ' LEFT JOIN clients c ON c.id = i.client_id
-               LEFT JOIN leads l ON l.id = i.lead_id';
 
     if ($status !== '' && in_array($status, INVOICE_STATUSES, true)) {
         $where .= ' AND i.status = :status'; $params['status'] = $status;
@@ -68,20 +63,14 @@ function listInvoices(PDO $db): void
     if ($clientId)   { $where .= ' AND i.client_id = :cid'; $params['cid'] = $clientId; }
     if ($propertyId) { $where .= ' AND i.property_id = :pid'; $params['pid'] = $propertyId; }
     if ($year)       { $where .= ' AND YEAR(i.issue_date) = :year'; $params['year'] = $year; }
-    if ($search !== '') {
-        $frag = apiWordSearch($search, [
-            'i.invoice_number', 'i.description', 'i.notes',
-            'c.name', 'c.surname', 'l.name', 'l.surname',
-        ], $params, 'invs');
-        if ($frag !== '') $where .= " AND ($frag)";
-    }
 
-    $countSql = "SELECT COUNT(*) FROM invoices i $joins $where";
+    $countSql = "SELECT COUNT(*) FROM invoices i $where";
 
     $dataSql = "SELECT i.*, c.name AS client_name, c.surname AS client_surname,
                    l.name AS lead_name, l.surname AS lead_surname
             FROM invoices i
-            $joins
+            LEFT JOIN clients c ON c.id = i.client_id
+            LEFT JOIN leads l ON l.id = i.lead_id
             $where
             ORDER BY i.issue_date DESC, i.id DESC";
 

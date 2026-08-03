@@ -30,9 +30,12 @@ const SURVEY_PUBLIC_PATH = '/tenant/survey.php';
  * Stringa vuota e non percorso relativo: dentro un'email un link relativo non
  * e' cliccabile, e chi chiama deve poter decidere di non spedire affatto.
  *
- * L'indirizzo base si chiede a appBaseUrl() (env.php), che sa che sotto cron la
- * costante APP_URL non esiste: guardare solo la costante voleva dire spedire
- * dal web e non dal cron, cioe' rompersi esattamente nell'uso automatico.
+ * La costante APP_URL la definisce config/bootstrap.php, che e' un file del
+ * percorso HTTP: cron/process_reminders.php carica solo l'ambiente, quindi
+ * sotto cron la costante NON esiste e la variabile si'. Guardare solo la
+ * costante voleva dire spedire dal web e non dal cron — cioe' rompersi
+ * esattamente nell'uso automatico. Vedi anche mail_html.php, che per lo stesso
+ * motivo perde il logo nelle email del cron.
  */
 function surveyPublicLink(string $token): string
 {
@@ -48,12 +51,15 @@ function surveyPublicLink(string $token): string
  *
  * Interrogabile PRIMA di creare il sondaggio: senza questo, un invio impossibile
  * lasciava comunque in tabella una riga con un token che nessuno avrebbe mai
- * ricevuto. Il come-si-ricava sta in env.php, non qui: era una regola che ogni
- * chiamante reimparava a sue spese.
+ * ricevuto.
  */
 function surveyLinkBaseUrl(): string
 {
-    return appBaseUrl();
+    $baseUrl = defined('APP_URL') && APP_URL !== ''
+        ? (string) APP_URL
+        : (string) env('APP_URL', '');
+
+    return rtrim($baseUrl, '/');
 }
 
 /**

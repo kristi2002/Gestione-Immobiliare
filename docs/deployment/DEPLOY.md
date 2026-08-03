@@ -57,37 +57,23 @@ SESSION_NAME=gestionale_session    # canonical name (matches code default + all 
 CRON_SECRET=<change-me>             # ⚠️ Must change from placeholder
 
 AGENCY_NAME=Anije Immobiliare
-AGENCY_EMAIL=<indirizzo del mittente>   # deve essere un mittente autorizzato dal provider SMTP
+AGENCY_EMAIL=noreply@mail.testdemo.it   # Must be on verified Mailgun domain
 
-# ⚠️ In produzione (verificato 02/08/2026) la posta esce da smtp.gmail.com, non
-# da Mailgun: Mailgun blocca a livello di account. Le righe SMTP qui sotto sono
-# quindi un ESEMPIO. Contano solo se in `app_settings` non c'e' gia' la chiave
-# corrispondente — e c'e': la pagina Impostazioni vince sull'ambiente.
-SMTP_HOST=smtp.gmail.com
+SMTP_HOST=smtp.eu.mailgun.org       # EU region
 SMTP_PORT=587
 SMTP_SECURE=tls
-SMTP_USER=<account@gmail.com>
-SMTP_PASS=<app password, non la password dell'account>
+SMTP_USER=postmaster@mail.testdemo.it
+SMTP_PASS=<mailgun-smtp-pass>
 
-# Posta in ENTRATA (route Mailgun -> api/email_inbound.php). Senza questa chiave
-# la produzione rifiuta ogni richiesta non firmata: l'acquisizione dei lead dai
-# portali tace senza errori visibili.
-MAILGUN_WEBHOOK_KEY=<signing key>
-
-WHATSAPP_ENABLED=false                       # true per spedire davvero, non simulare
 META_WA_PHONE_NUMBER_ID=<id del mittente, solo cifre>
-META_WA_ACCESS_TOKEN=<token permanente da System User, non quello di sviluppo>
+META_WA_ACCESS_TOKEN=<token>
 META_WA_APP_SECRET=<app secret>              # firma i webhook in arrivo
 META_WA_VERIFY_TOKEN=<stringa scelta da te>  # da ripetere nel pannello Meta
 WHATSAPP_FROM=+393331234567                  # numero mostrato come mittente
 
 META_APP_ID=<id>
 META_APP_SECRET=<secret>
-# META_PUBLIC_BASE_URL non serve: la base pubblica per le immagini Instagram
-# deriva da APP_URL. Va impostata SOLO in sviluppo locale, dove APP_URL e'
-# localhost e serve un tunnel (ngrok). Puntata a un host che non serve i file —
-# per esempio il dominio nudo invece del sottodominio — Meta riceve un 404 e
-# ogni post con immagine fallisce.
+META_PUBLIC_BASE_URL=https://testdemo.it    # Required for Instagram image URLs
 
 SETUP_ENABLED=false
 ADMIN_PASSWORD=<change-from-admin>  # ⚠️ Must change
@@ -319,10 +305,7 @@ The app checks `$_SERVER['HTTP_X_FORWARDED_PROTO']` to detect HTTPS when behind 
 | DB connection error | `DB_NAME` mismatch | Coolify creates DB named `default`, not `gestione_immobiliare` |
 | SMTP auth fails | Wrong TLS method | `config/mail.php` uses `STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT \| STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT` |
 | Mailgun "domain unverified" | Missing MX records | Add MX records for `mail.testdemo.it` |
-| WhatsApp messages not saved | URL del webhook errata nel pannello Meta | Deve essere `https://immobiliare.testdemo.it/api/whatsapp_webhook.php`, con il campo `messages` sottoscritto |
-| WhatsApp: il webhook risponde `503` | Manca `META_WA_APP_SECRET`: in produzione la firma non e' verificabile e si rifiuta tutto | Impostare l'app secret (ambiente o Impostazioni) |
-| Una env var "non fa effetto" | Esiste gia' la riga in `app_settings`, che vince sull'ambiente | Cambiare il valore da Impostazioni, non da Coolify |
-| Post Instagram falliscono con 404 sull'immagine | `META_PUBLIC_BASE_URL` punta a un host che non serve i file | Rimuoverla: la base deriva da `APP_URL` |
+| WhatsApp messages not saved | Wrong webhook URL in Twilio | URL must be `https://testdemo.it/api/whatsapp_webhook.php` |
 | Container not found after redeploy | Container renamed on each deploy | Run `docker ps` to get new name |
 
 ---

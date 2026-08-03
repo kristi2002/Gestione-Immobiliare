@@ -69,7 +69,7 @@ Owner portal helpers (`owner/auth.php`): `initOwnerSession()`, `requireOwnerAuth
 | SQL | PDO prepared statements, `ATTR_EMULATE_PREPARES => false` |
 | CORS | Limited to `APP_URL` (`config/api_helpers.php`) |
 | Meta OAuth | CSRF `state` parameter in `meta_oauth.php` / `meta_callback.php` |
-| Webhook signatures | Meta `X-Hub-Signature-256` (HMAC-SHA256), Stripe `Stripe-Signature`, Mailgun HMAC-SHA256 — **fail closed in produzione**: senza segreto si risponde 503/rifiuto, non si accetta |
+| Webhook signatures | Twilio `X-Twilio-Signature` (HMAC-SHA1), Stripe `Stripe-Signature`, Mailgun HMAC-SHA256 — all claimed validated (verify) |
 
 ---
 
@@ -108,7 +108,7 @@ request and the data returned.
 
 | Gap | Severity | Claimed status |
 |-----|----------|----------------|
-| Webhook WhatsApp senza firma | 🔴 | ✅ Risolto — `whatsapp_webhook.php` verifica `X-Hub-Signature-256` sul corpo grezzo con `META_WA_APP_SECRET`; in produzione, se il segreto manca, risponde `503` invece di accettare |
+| Twilio webhook signature validation | 🔴 | ✅ Fixed June 2026 — validates `X-Twilio-Signature` HMAC-SHA1; skipped only if `TWILIO_AUTH_TOKEN` unset |
 | ADMIN_PASSWORD default "admin" | 🔴 | ✅ Fixed — changed in Coolify + Settings |
 | CRON_SECRET placeholder | 🔴 | ✅ Fixed — 64-char random hex |
 | CSRF on all endpoints | 🟠 | ✅ Already implemented — `api_bootstrap.php` validates all mutating methods; 47 API files use it; only webhooks/cron exempt |
@@ -125,7 +125,7 @@ request and the data returned.
 
 ## Sale/legal liabilities to surface every time (CLAUDE.md §9)
 
-1. **GDPR layer.** ~~`uploads/` pubblico~~ **RISOLTO e verificato live** (2026-07-18/19): `uploads/documents/` risponde `403` a qualsiasi URL diretto, anche per file inesistenti; i documenti passano solo da `download_document.php`/`download_pdf.php`. Restano da chiudere: nessuna informativa privacy, nessuna base giuridica documentata, nessun DPA con Meta/provider email, nessuna procedura di retention/cancellazione — while handling owners' and tenants' personal data. **Close this before real documents go in front of a real client.** (Test: upload a doc as admin → open the file URL in a fresh incognito session with no cookies → it must be blocked/403.)
+1. **Public `uploads/` + no GDPR layer.** `PRODUCTION_READINESS.md` states `uploads/` is served by Apache without auth. Every uploaded ID card / contract is readable by anyone with the link. No privacy informativa, no legal basis, no DPA with Twilio/Meta/Mailgun, no retention/deletion procedure — while handling owners' and tenants' personal data. **Close this before real documents go in front of a real client.** (Test: upload a doc as admin → open the file URL in a fresh incognito session with no cookies → it must be blocked/403.)
 2. **`DB_USER=root` in production** (`DEPLOY.md`) — the readiness doc itself says not to do this.
 3. **Payments scope undecided** — Stripe is "code ready, not configured." Decide in/out; if out, ensure no dead "Pay now" button shows in any portal.
 
@@ -137,7 +137,7 @@ Before real client/tenant data:
 - Privacy informativa (site + tenant portal)
 - Legal basis for processing owner/tenant data
 - Record of processing activities (registro trattamenti) if applicable
-- DPAs with hosting, email provider, Meta (WhatsApp + social)
+- DPAs with hosting, email (Mailgun), Twilio, Meta
 - Retention policy (communications, documents, backups)
 - Data-subject rights procedure (access/erasure)
 - Cookie banner if analytics/non-technical cookies added

@@ -7,7 +7,7 @@
 | Integration | Status | Config location |
 |-------------|--------|-----------------|
 | Mailgun (email) | ✅ Working | Coolify env + `app_settings` |
-| WhatsApp (Meta Cloud API) | Spenta: `whatsapp_enabled=false`, invii simulati | Coolify env **o** `app_settings` |
+| Twilio WhatsApp | ⚠️ Working **sandbox** (demo-only) | Coolify env + `app_settings` |
 | Meta Graph API (Facebook) | ⚠️ Working, **Development mode** | `social_settings` table |
 | Meta Graph API (Instagram) | ⚠️ Working (requires image), Dev mode | `social_settings` table |
 | Stripe (payments) | ⚠️ Code exists, not configured | Coolify env |
@@ -38,36 +38,25 @@ be on a verified domain (a Gmail FROM is rejected). Inbound email is handled by
 
 ---
 
-## 2. WhatsApp — Meta Cloud API · `config/whatsapp.php`, `api/whatsapp_webhook.php`, `api/whatsapp_inbox.php`
-
-Twilio e' stato rimosso il 01/08/2026: la migrazione descritta in fondo a questo
-documento **e' stata eseguita**. `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` e
-`TWILIO_WHATSAPP_FROM` non li legge piu' nessuno.
+## 2. Twilio WhatsApp — ⚠️ Sandbox · `config/whatsapp.php`, `api/whatsapp_webhook.php`, `api/whatsapp_inbox.php`
 
 ```
-Outbound: PHP -> graph.facebook.com (Bearer) -> WhatsApp
-Inbound:  WhatsApp -> Meta -> POST /api/whatsapp_webhook.php (JSON firmato) -> MySQL
+Outbound: PHP → Twilio REST API → WhatsApp
+Inbound:  WhatsApp → Twilio → POST /api/whatsapp_webhook.php → MySQL
 ```
 
-**Outbound** `sendWhatsAppMessage($to, $body)`: legge `whatsapp_enabled` (se false simula e
-non chiama nessuno) -> `POST /{phone_number_id}/messages` su Graph -> salva in
-`communications` (`channel=whatsapp`). Fuori dalle 24 ore dall'ultimo messaggio del cliente
-servono i **template approvati** (`sendWhatsAppTemplate()`).
+**Outbound** `sendWhatsAppMessage($to, $body)`: checks `whatsapp_enabled` (simulates success if
+false) → `POST https://api.twilio.com/2010-04-01/Accounts/{SID}/Messages.json` from
+`whatsapp:+14155238886` (sandbox) → saves to `communications` (`channel=whatsapp`).
 
-**Inbound** un solo endpoint, due metodi: **GET** restituisce `hub.challenge` per attivare la
-sottoscrizione (senza, il webhook non si attiva e non arriva nulla, in silenzio); **POST**
-porta messaggi **e** stati di consegna, che con Twilio erano un endpoint separato. Firma
-`X-Hub-Signature-256` verificata sul corpo grezzo: in produzione, senza app secret,
-risponde `503` e rifiuta — **fail closed**.
+**Inbound** webhook: `parseTwilioWebhook($_POST)` (`From`, `To`, `Body`, `MessageSid`) →
+insert `whatsapp_messages` (`direction=inbound`) → insert notification → return empty TwiML
+`<Response/>`. Validates `X-Twilio-Signature` (HMAC-SHA1) per GAPS "Fixed June 2026".
 
-**Config:** `WHATSAPP_ENABLED`, `META_WA_PHONE_NUMBER_ID`, `META_WA_ACCESS_TOKEN`,
-`META_WA_APP_SECRET`, `META_WA_VERIFY_TOKEN`, `WHATSAPP_FROM` — da ambiente **o** da
-Impostazioni, con la riga in `app_settings` che vince. Webhook URL =
-`https://immobiliare.testdemo.it/api/whatsapp_webhook.php`, campo `messages` sottoscritto.
+**Config:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886`.
+Sandbox setup: users must text `join <word>` to `+14155238886` first; webhook URL =
+`https://testdemo.it/api/whatsapp_webhook.php`.
 
-**Known gaps / reality:** il token di sviluppo dura 24 ore (poi **errore 190**): serve un
-token permanente da System User. Finche' l'app Meta e' in **sviluppo** si scrive solo ai
-numeri di prova (**131030**). Sostituisce il paragrafo seguente, che descriveva il sandbox
 **Known gaps / reality:** still **sandbox** — **not client-usable**; needs a paid WhatsApp
 Business number (flag as needing activation). No media rendering in the inbox UI. The inbox UI
 data comes from `whatsapp_inbox.php` (a different file from the webhook). Inbox pagination
@@ -137,10 +126,11 @@ checking `/var/log/gestione-cron.log` — script existence ≠ scheduled executi
 
 ```mermaid
 flowchart LR
-    App["PHP App (immobiliare.testdemo.it)"]
+    App["PHP App (testdemo.it)"]
     App -->|STARTTLS :587| Mailgun["Mailgun EU"]
-    App -->|Graph API| Meta["graph.facebook.com (social + WhatsApp)"]
-    Meta -->|POST webhook firmato| App
+    App -->|REST API| Twilio
+    Twilio -->|POST webhook| App
+    App -->|Graph API| Meta["graph.facebook.com"]
     App -->|Checkout API| Stripe
     Stripe -->|POST webhook| App
     App -->|S3 PUT| R2["Cloudflare R2 (planned)"]
@@ -150,13 +140,12 @@ flowchart LR
 
 ---
 
-# WhatsApp Migration Plan — Twilio → Meta Cloud API  ✔ ESEGUITA (01/08/2026)
+# WhatsApp Migration Plan — Twilio → Meta Cloud API
 
-> From docs/WHATSAPP_MIGRATION_PLAN.md. **Piano storico, ormai attuato**: conservato per
-> capire perche' si e' passati a Meta. Per come funziona *oggi* vedi la sezione 2 sopra.
-> L'obiettivo era togliere la dipendenza dal sandbox Twilio e costruire
-> un'integrazione WhatsApp utilizzabile da un cliente direttamente su **Meta WhatsApp
-> Cloud API**, con lo strato di conformita' e affidabilita' che serve a un'agenzia vera.
+> From docs/WHATSAPP_MIGRATION_PLAN.md. **Plan only** — nothing is "done" until built and
+> verified with pasted evidence (CLAUDE.md). Goal: remove the Twilio sandbox dependency and
+> build a professional, client-usable WhatsApp integration directly on **Meta WhatsApp Cloud
+> API**, with the compliance/reliability layer a real agency needs.
 
 ## The decision
 Switch transport from **Twilio WhatsApp** to **Meta WhatsApp Cloud API (direct)**. Why: Twilio

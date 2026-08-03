@@ -27,7 +27,6 @@ try {
     // versata, un APE da rifare); piu' indietro e' archivio, non scadenzario.
     $lookback = isset($_GET['lookback']) ? max(30, min(1825, (int) $_GET['lookback'])) : 365;
     $typeF   = trim($_GET['type'] ?? '');
-    $search  = trim($_GET['search'] ?? '');
 
     $items = [];
 
@@ -99,22 +98,6 @@ try {
 
     if ($typeF !== '') {
         $items = array_values(array_filter($items, fn($it) => $it['type'] === $typeF));
-    }
-
-    // La ricerca filtra le stesse voci che il tipo filtra, e PRIMA delle
-    // statistiche: i contatori devono descrivere l'elenco che si sta guardando,
-    // altrimenti "3 scadute" resta acceso su una lista dove non ce n'e' nessuna.
-    // Ogni parola deve comparire da qualche parte nella voce (come apiWordSearch
-    // lato SQL), cosi' "rossi taglio" trova la voce che ha entrambi.
-    if ($search !== '') {
-        $words = array_values(array_filter(preg_split('/\s+/u', mb_strtolower($search))));
-        $items = array_values(array_filter($items, function ($it) use ($words) {
-            $hay = mb_strtolower(implode(' ', [$it['subject'] ?? '', $it['context'] ?? '', $it['label']]));
-            foreach ($words as $w) {
-                if (!str_contains($hay, $w)) return false;
-            }
-            return true;
-        }));
     }
 
     // Sort by date ascending (overdue first).

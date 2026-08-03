@@ -34,11 +34,7 @@ function updateSettings(PDO $db): void
     $data     = apiGetJsonBody();
     $existing = getSocialSettings($db);
 
-    // meta_app_id NON si tocca da qui. È una credenziale dell'app Meta, vive in
-    // app_settings (Impostazioni → Meta / Social) ed è da lì che la leggono
-    // meta_oauth.php e meta_callback.php; la copia in questa tabella la scrive
-    // solo il callback OAuth. Accettarla anche qui creava un secondo valore che
-    // nessuno rileggeva e che il primo OAuth sovrascriveva senza dirlo.
+    $appId     = trim($data['meta_app_id'] ?? '') ?: null;
     $pageId    = trim($data['facebook_page_id'] ?? '') ?: null;
     $token     = trim($data['facebook_page_token'] ?? '');
     $igId      = trim($data['instagram_account_id'] ?? '') ?: null;
@@ -51,6 +47,7 @@ function updateSettings(PDO $db): void
 
     $stmt = $db->prepare(
         "UPDATE social_settings SET
+            meta_app_id = :meta_app_id,
             facebook_page_id = :facebook_page_id,
             facebook_page_token = :facebook_page_token,
             instagram_account_id = :instagram_account_id,
@@ -58,6 +55,7 @@ function updateSettings(PDO $db): void
          WHERE id = 1"
     );
     $stmt->execute([
+        'meta_app_id'          => $appId,
         'facebook_page_id'     => $pageId,
         'facebook_page_token'  => $token,
         'instagram_account_id' => $igId,

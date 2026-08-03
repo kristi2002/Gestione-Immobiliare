@@ -4,8 +4,6 @@
  * Included by config/meta.php.
  */
 
-require_once __DIR__ . '/../env.php';
-
 /**
  * Process all scheduled posts that are due.
  */
@@ -147,10 +145,7 @@ function sendMetaTokenExpiryAlert(PDO $db, string $errorDetail): void
 
     $agencyName   = getSetting('agency_name', 'Gestionale Immobiliare');
     $adminEmail   = getSetting('admin_email') ?: getSetting('agency_email', '');
-    // Questo avviso lo manda cron/publish_social_posts.php, dove la costante non
-    // esiste: l'unica istruzione utile del messaggio ("accedi al gestionale")
-    // arrivava senza indirizzo.
-    $appUrl       = appBaseUrl();
+    $appUrl       = defined('APP_URL') ? APP_URL : '';
 
     if (!$adminEmail) {
         error_log('[meta] Token expiry detected but no admin_email configured.');

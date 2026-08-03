@@ -16,7 +16,7 @@ $appId  = getSetting('meta_app_id');
 $secret = getSetting('meta_app_secret');
 
 if (!$appId || !$secret) {
-    header('Location: index.php?view=social&meta_error=missing_app_credentials');
+    header('Location: index.php?meta_error=missing_app_credentials');
     exit;
 }
 

@@ -1,12 +1,7 @@
 <?php
 /**
  * Send a WhatsApp message via Meta Cloud API.
- *
- * Due modi, decisi dalla finestra di 24 ore di Meta:
- *   POST { phone, message }                    — testo libero, solo a finestra aperta
- *   POST { phone, template_id, params:{...} }  — template approvato, sempre ammesso
- *
- * Opzionali su entrambi: tenant_id, client_id.
+ * POST { phone, message, [tenant_id], [reminder_id] }
  */
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/whatsapp.php';
@@ -19,86 +14,15 @@ requireRole('admin', 'agent', 'super_admin');
 // Rate limit: 20 outbound WhatsApp messages per user per minute (no admin bypass — ogni conversazione si paga)
 checkRateLimit('whatsapp_send', 20, 60, false);
 
-$data       = apiGetJsonBody();
-$phone      = trim($data['phone'] ?? '');
-$message    = trim($data['message'] ?? '');
-$templateId = isset($data['template_id']) ? (int) $data['template_id'] : 0;
-$params     = is_array($data['params'] ?? null) ? $data['params'] : [];
+$data    = apiGetJsonBody();
+$phone   = trim($data['phone'] ?? '');
+$message = trim($data['message'] ?? '');
 
-if ($phone === '') {
-    apiError('Il numero di telefono è obbligatorio.');
-}
-if ($templateId <= 0 && $message === '') {
-    apiError('Serve un messaggio o un template.');
+if ($phone === '' || $message === '') {
+    apiError('Numero di telefono e messaggio sono obbligatori.');
 }
 
-$db     = getDB();
-$window = waWindowState($db, $phone);
-
-if ($templateId > 0) {
-    // ── Template approvato ──────────────────────────────────────────────────
-    $stmt = $db->prepare('SELECT * FROM whatsapp_templates WHERE id = :id');
-    $stmt->execute(['id' => $templateId]);
-    $tpl = $stmt->fetch();
-
-    if (!$tpl) {
-        apiError('Template non trovato.', 404);
-    }
-
-    $metaName = trim((string) ($tpl['meta_template_name'] ?? ''));
-    if ($metaName === '') {
-        apiError('Il template "' . $tpl['name'] . '" non è collegato a un template Meta: '
-            . 'aggiungi il nome registrato nel Business Manager in Impostazioni → Template WhatsApp.', 422);
-    }
-    if (($tpl['meta_status'] ?? 'bozza') !== 'approvato') {
-        apiError('Il template "' . $tpl['name'] . '" non risulta approvato da Meta: '
-            . 'un invio con un template non approvato viene rifiutato.', 422);
-    }
-
-    // I valori arrivano per nome ({{nome}}), Meta li vuole per posizione: e'
-    // l'ordine di `variables` a fare da traduttore, ed e' anche l'ordine con cui
-    // il template e' stato registrato su Meta. Un buco qui non va riempito con
-    // stringa vuota: Meta conta i parametri e rifiuta l'invio, quindi tanto vale
-    // dirlo prima e per nome.
-    $names   = waTemplateVariables($tpl);
-    $values  = [];
-    $missing = [];
-    foreach ($names as $n) {
-        $v = trim((string) ($params[$n] ?? ''));
-        if ($v === '') {
-            $missing[] = $n;
-        }
-        $values[$n] = $v;
-    }
-    if ($missing) {
-        apiError('Valori mancanti per il template: ' . implode(', ', $missing) . '.', 422);
-    }
-
-    $message = waRenderTemplate((string) $tpl['body'], $values);
-    $result  = sendWhatsAppTemplate(
-        $phone,
-        $metaName,
-        array_values($values),
-        (string) ($tpl['meta_language'] ?: 'it')
-    );
-} else {
-    // ── Testo libero ────────────────────────────────────────────────────────
-    // La guardia vale quando WhatsApp e' davvero acceso. A integrazione spenta
-    // l'invio e' simulato e non tocca Meta: bloccarlo renderebbe impossibile
-    // provare l'inbox prima di avere i template approvati. La risposta porta
-    // comunque `window_closed`, cosi' la schermata dice la verita' invece di
-    // mostrare un invio che in produzione non partirebbe.
-    if (!$window['open'] && getWhatsAppConfig()['enabled']) {
-        apiError(
-            $window['last_inbound_at'] === null
-                ? 'Questo numero non ci ha mai scritto: fuori dalla finestra di 24 ore WhatsApp accetta solo un template approvato.'
-                : 'Sono passate più di 24 ore dall\'ultimo messaggio del cliente: ora WhatsApp accetta solo un template approvato.',
-            422
-        );
-    }
-
-    $result = sendWhatsAppMessage($phone, $message);
-}
+$result = sendWhatsAppMessage($phone, $message);
 
 if (!$result['success']) {
     apiError($result['error'] ?? 'Errore invio WhatsApp.', 422);
@@ -186,19 +110,11 @@ if ($clientId) {
     }
 }
 
-// window_closed: vero solo per un testo libero passato perche' l'integrazione e'
-// spenta. Con WhatsApp acceso quel caso non arriva fin qui (viene rifiutato
-// sopra), quindi e' esattamente l'avviso "in produzione questo non partirebbe".
-$windowBypassed = $templateId <= 0 && !$window['open'];
-
 apiSuccess([
-    'status'        => $savedStatus,
-    'simulated'     => $simulated,
-    'external_id'   => $result['external_id'],
-    'window_closed' => $windowBypassed,
-    'message'       => match (true) {
-        $simulated && $windowBypassed => "Invio simulato. Attenzione: fuori dalla finestra di 24 ore — a WhatsApp attivo servirebbe un template approvato.",
-        $simulated                    => "Invio simulato: l'integrazione WhatsApp non è attiva, il messaggio non è partito.",
-        default                       => 'Messaggio WhatsApp inviato.',
-    },
+    'status'      => $savedStatus,
+    'simulated'   => $simulated,
+    'external_id' => $result['external_id'],
+    'message'     => $simulated
+        ? "Invio simulato: l'integrazione WhatsApp non è attiva, il messaggio non è partito."
+        : 'Messaggio WhatsApp inviato.',
 ]);

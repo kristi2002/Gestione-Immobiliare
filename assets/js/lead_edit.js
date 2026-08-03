@@ -165,9 +165,6 @@
         const id = $('lde-id').value;
         const btn = $('lde-save');
         btn.disabled = true; btn.textContent = 'Salvataggio...';
-        // Un salvataggio in corso non e' una modifica da perdere: senza questo
-        // un refresh a meta' invio faceva comparire l'avviso del browser.
-        saving = true;
         try {
             const res = await fetch(id ? `${API}?id=${id}` : API, {
                 method: id ? 'PUT' : 'POST',
@@ -176,15 +173,8 @@
             });
             const j = await res.json();
             if (!j.success) throw new Error(j.error);
-            // Salvato: il modulo non ha piu' niente di sospeso. Senza spegnere
-            // la guardia, l'uscita verso l'elenco chiedeva "vuoi perdere le
-            // modifiche?" su un lead gia' scritto — e chi rispondeva Annulla
-            // restava sul modulo convinto di non aver salvato.
-            if (guard) { guard.markClean(); guard.detach(); }
-            window.App?.setLeaveGuard(null);
             goBack();
         } catch (err) {
-            saving = false;
             showError(err.message);
             btn.disabled = false; btn.textContent = 'Salva';
         }

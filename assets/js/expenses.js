@@ -32,12 +32,17 @@
     function init() {
         els.grid           = document.getElementById('expenses-grid');
         els.alert          = document.getElementById('expenses-alert');
-        els.search         = document.getElementById('expense-search');
         els.propFilter     = document.getElementById('expense-property-filter');
         els.clientFilter   = document.getElementById('expense-client-filter');
         els.supplierFilter = document.getElementById('expense-supplier-filter');
         els.categoryFilter = document.getElementById('expense-category-filter');
         els.yearFilter     = document.getElementById('expense-year-filter');
+        els.modal          = document.getElementById('expense-modal');
+        els.form           = document.getElementById('expense-form');
+        els.modalTitle     = document.getElementById('expense-modal-title');
+        els.propSelect     = document.getElementById('expense-property');
+        els.clientSelect   = document.getElementById('expense-client');
+        els.supplierSelect = document.getElementById('expense-supplier');
         els.pagination     = document.getElementById('expenses-pagination');
 
         bindEvents();
@@ -55,10 +60,10 @@
         });
 
         [els.propFilter, els.clientFilter, els.supplierFilter, els.categoryFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadExpenses(); }));
-        [els.search, els.yearFilter].forEach(el => el.addEventListener('input', () => {
+        els.yearFilter.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadExpenses(); }, 400);
-        }));
+        });
 
         // Scheda quick-view
         const schedaModal = document.getElementById('expense-scheda-modal');
@@ -81,6 +86,7 @@
         const opts = properties.map(p =>
             `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
         ).join('');
+        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.propFilter.innerHTML   = '<option value="">Tutti gli immobili</option>' + opts;
     }
 
@@ -89,6 +95,7 @@
         const opts = clients.map(c =>
             `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`
         ).join('');
+        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.clientFilter.innerHTML = '<option value="">Tutti i proprietari</option>' + opts;
     }
 
@@ -97,6 +104,7 @@
         const opts = suppliers.map(s =>
             `<option value="${s.id}">${escapeHtml(s.name)}</option>`
         ).join('');
+        if (els.supplierSelect) els.supplierSelect.innerHTML = '<option value="">— Nessuno —</option>' + opts;
         els.supplierFilter.innerHTML = '<option value="">Tutti i fornitori</option>' + opts;
     }
 
@@ -106,7 +114,6 @@
 
     async function loadExpenses() {
         const params = new URLSearchParams();
-        if (els.search.value.trim())  params.set('search', els.search.value.trim());
         if (els.propFilter.value)     params.set('property_id', els.propFilter.value);
         if (els.clientFilter.value)   params.set('client_id', els.clientFilter.value);
         if (els.supplierFilter.value) params.set('supplier_id', els.supplierFilter.value);

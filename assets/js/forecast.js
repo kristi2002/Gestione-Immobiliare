@@ -46,7 +46,7 @@
             renderStats(data.stats || {});
             renderCharts(data.monthly || []);
             renderTopProperties(data.top_properties || []);
-            renderOverdue(data.overdue || [], data.stats?.overdue_count);
+            renderOverdue(data.overdue || []);
         } catch (err) {
             showAlert(err.message, 'error');
         }
@@ -170,7 +170,7 @@
         </tr>`).join('');
     }
 
-    function renderOverdue(items, total) {
+    function renderOverdue(items) {
         if (!items.length) {
             els.overdueTbody.innerHTML = '<tr><td colspan="4" class="text-muted" style="text-align:center;padding:1.5rem;">Nessun insoluto.</td></tr>';
             return;
@@ -190,14 +190,6 @@
                 <td><span style="color:${daysColor};font-weight:600;">${esc(String(days))}</span></td>
             </tr>`;
         }).join('');
-
-        // "Insoluti totali" in cima somma TUTTI gli insoluti, la tabella si
-        // ferma alle prime righe: senza questa nota i due numeri si
-        // contraddicono a vista e sembra un errore di calcolo.
-        els.overdueTbody.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(
-            items.length, Number(total ?? items.length), 4,
-            'Il totale qui sopra li conta tutti.'
-        ));
     }
 
     function showAlert(msg, type) {

@@ -2,8 +2,7 @@
 /**
  * Appointments (Appuntamenti) CRUD API.
  *
- * GET    /api/appointments.php          — list (property_id, agent_id, status, type, from, to,
- *                                         scope=upcoming|past, search)
+ * GET    /api/appointments.php          — list (property_id, agent_id, status, type, from, to)
  * GET    /api/appointments.php?id={id}  — single
  * POST   /api/appointments.php          — create
  * PUT    /api/appointments.php?id={id}  — update
@@ -71,18 +70,9 @@ function listAppointments(PDO $db): void
     $type       = trim($_GET['type'] ?? '');
     $from       = trim($_GET['from'] ?? '');
     $to         = trim($_GET['to'] ?? '');
-    $search     = trim($_GET['search'] ?? '');
-    $scope      = trim($_GET['scope'] ?? '');
 
     $where = 'WHERE 1=1';
     $params = [];
-
-    // Stesse join per conteggio e dati: la ricerca guarda immobile e persone.
-    $joins = ' LEFT JOIN properties p ON p.id = a.property_id
-               LEFT JOIN leads l ON l.id = a.lead_id
-               LEFT JOIN clients c ON c.id = a.client_id
-               LEFT JOIN clients po ON po.id = p.client_id
-               LEFT JOIN admin_users u ON u.id = a.agent_id';
 
     if ($propertyId) { $where .= ' AND a.property_id = :pid'; $params['pid'] = $propertyId; }
     if ($agentId)    { $where .= ' AND a.agent_id = :aid'; $params['aid'] = $agentId; }
@@ -95,40 +85,7 @@ function listAppointments(PDO $db): void
     if ($from !== '') { $where .= ' AND a.appointment_date >= :from'; $params['from'] = $from . ' 00:00:00'; }
     if ($to !== '')   { $where .= ' AND a.appointment_date <= :to'; $params['to'] = $to . ' 23:59:59'; }
 
-    // Scope: la pagina guarda avanti o indietro.
-    //
-    // Senza di esso l'elenco ordinava per data crescente SENZA pavimento, quindi
-    // la prima pagina mostrava l'appuntamento più vecchio in archivio: aprendo
-    // "Appuntamenti" ad agosto si vedeva maggio, e la visita di domani stava
-    // pagine più in là.
-    //
-    // Il confine è CURDATE(), non NOW(): l'appuntamento delle 09:00 deve restare
-    // fra i "Prossimi" anche alle 09:30, perché è lì che lo si segna come
-    // completato. Un'agenzia ragiona per giornate, non per minuti.
-    //
-    // Convive con from/to invece di sostituirli: "Storico" con un "Da" esplicito
-    // resta lo storico a partire da quella data. E resta OPZIONALE — senza
-    // parametro il comportamento è quello di prima, perché la scheda agente e il
-    // calendario chiamano questo stesso endpoint aspettandosi tutto.
-    $order = 'ASC';
-    if ($scope === 'upcoming') {
-        $where .= ' AND a.appointment_date >= CURDATE()';
-    } elseif ($scope === 'past') {
-        $where .= ' AND a.appointment_date < CURDATE()';
-        // Nello storico il più recente viene prima: nessuno apre l'archivio per
-        // leggere il primo appuntamento del 2024.
-        $order = 'DESC';
-    }
-    if ($search !== '') {
-        $frag = apiWordSearch($search, [
-            'a.notes', 'a.location_detail', 'p.address', 'p.city',
-            'l.name', 'l.surname', 'c.name', 'c.surname',
-            'po.name', 'po.surname', 'u.username',
-        ], $params, 'appts');
-        if ($frag !== '') $where .= " AND ($frag)";
-    }
-
-    $countSql = "SELECT COUNT(*) FROM appointments a $joins $where";
+    $countSql = "SELECT COUNT(*) FROM appointments a $where";
 
     $dataSql = "SELECT a.*, p.address AS property_address, p.city AS property_city,
                    p.latitude AS property_latitude, p.longitude AS property_longitude,
@@ -137,9 +94,13 @@ function listAppointments(PDO $db): void
                    po.id AS owner_id, po.name AS owner_name, po.surname AS owner_surname,
                    u.username AS agent_name
             FROM appointments a
-            $joins
+            LEFT JOIN properties p ON p.id = a.property_id
+            LEFT JOIN leads l ON l.id = a.lead_id
+            LEFT JOIN clients c ON c.id = a.client_id
+            LEFT JOIN clients po ON po.id = p.client_id
+            LEFT JOIN admin_users u ON u.id = a.agent_id
             $where
-            ORDER BY a.appointment_date {$order}";
+            ORDER BY a.appointment_date ASC";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
     apiPaginatedSuccess($items, $total, $pagination);

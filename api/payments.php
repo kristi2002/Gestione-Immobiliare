@@ -118,19 +118,11 @@ function listPayments(PDO $db): void
     // scadenzario dell'agenzia — con l'aria di essere quello del contratto.
     $contractId = isset($_GET['contract_id']) ? (int) $_GET['contract_id'] : null;
     $status     = trim($_GET['status'] ?? '');
-    $search     = trim($_GET['search'] ?? '');
     $month      = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : null;
     $year       = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : null;
 
     $where = 'WHERE 1=1';
     $params = [];
-
-    // Le stesse join per il conteggio e per i dati. Erano due query diverse (il
-    // conteggio sulla sola tabella payments), quindi la ricerca su inquilino o
-    // indirizzo avrebbe fatto esplodere il COUNT su colonne inesistenti.
-    $joins = ' INNER JOIN tenants t ON t.id = pay.tenant_id
-               INNER JOIN properties p ON p.id = pay.property_id
-               LEFT JOIN contracts ct ON ct.id = pay.contract_id';
 
     if ($tenantId) {
         $where .= ' AND pay.tenant_id = :tenant_id';
@@ -164,20 +156,16 @@ function listPayments(PDO $db): void
         $where .= ' AND YEAR(pay.due_date) = :year';
         $params['year'] = $year;
     }
-    if ($search !== '') {
-        $frag = apiWordSearch($search, [
-            't.name', 't.surname', 'p.address', 'p.city', 'ct.title', 'pay.notes',
-        ], $params, 'pays');
-        if ($frag !== '') $where .= " AND ($frag)";
-    }
 
-    $countSql = "SELECT COUNT(*) FROM payments pay $joins $where";
+    $countSql = "SELECT COUNT(*) FROM payments pay $where";
 
     $dataSql = "SELECT pay.*, " . SQL_IS_LATE . " AS is_late,
                    t.name AS tenant_name, t.surname AS tenant_surname,
                    p.address AS property_address, p.city AS property_city
             FROM payments pay
-            $joins
+            INNER JOIN tenants t ON t.id = pay.tenant_id
+            INNER JOIN properties p ON p.id = pay.property_id
+            LEFT JOIN contracts ct ON ct.id = pay.contract_id
             $where
             ORDER BY pay.due_date DESC";
 

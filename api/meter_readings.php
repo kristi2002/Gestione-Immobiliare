@@ -72,16 +72,9 @@ function listMeterReadings(PDO $db): void
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
     $meterType  = trim($_GET['meter_type'] ?? '');
     $meterId    = isset($_GET['meter_id']) ? (int) $_GET['meter_id'] : null;
-    $search     = trim($_GET['search'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
-
-    // Stesse join per conteggio e dati: si cerca per immobile e per contatore
-    // (POD/PDR, matricola, ubicazione), che stanno tutti fuori da meter_readings.
-    $joins = ' LEFT JOIN properties p ON p.id = mr.property_id
-               LEFT JOIN meters m ON m.id = mr.meter_id
-               LEFT JOIN suppliers s ON s.id = m.supplier_id';
 
     if ($meterId) {
         $where .= ' AND mr.meter_id = :meter_id';
@@ -95,15 +88,8 @@ function listMeterReadings(PDO $db): void
         $where .= ' AND mr.meter_type = :meter_type';
         $params['meter_type'] = $meterType;
     }
-    if ($search !== '') {
-        $frag = apiWordSearch($search, [
-            'p.address', 'p.city', 'm.code', 'm.serial_number', 'm.location',
-            'm.supplier_name', 's.name', 'mr.notes',
-        ], $params, 'mrs');
-        if ($frag !== '') $where .= " AND ($frag)";
-    }
 
-    $countSql = "SELECT COUNT(*) FROM meter_readings mr $joins $where";
+    $countSql = "SELECT COUNT(*) FROM meter_readings mr $where";
 
     // Il "precedente" va scelto per DATA, non per ordine di inserimento: l'agente
     // inserisce spesso una lettura arretrata dopo una piu' recente. Con `prev.id <
@@ -131,7 +117,9 @@ function listMeterReadings(PDO $db): void
                        LIMIT 1
                    ), 2) AS consumption
             FROM meter_readings mr
-            $joins
+            LEFT JOIN properties p ON p.id = mr.property_id
+            LEFT JOIN meters m ON m.id = mr.meter_id
+            LEFT JOIN suppliers s ON s.id = m.supplier_id
             $where
             ORDER BY mr.reading_date DESC, mr.id DESC";
 

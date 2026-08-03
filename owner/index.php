@@ -7,25 +7,6 @@ requireOwnerAuth();
 $ownerId = getCurrentOwnerId();
 $db = getDB();
 
-/**
- * Quante righe mostra ogni riquadro. Sono tetti veri: il portale non ha
- * impaginatore, quindi oltre questi numeri le righe non sono raggiungibili in
- * alcun modo. Il conteggio in intestazione veniva dall'array GIA' TAGLIATO, e
- * cosi' un proprietario con 25 contratti leggeva "I miei contratti (20)":
- * non un elenco incompleto, proprio un numero sbagliato detto al cliente.
- */
-const OWNER_CONTRACTS_LIMIT = 20;
-const OWNER_PAYMENTS_LIMIT  = 48;
-const OWNER_DOCS_LIMIT      = 20;
-
-/** "Mostrati i primi N di M" — solo quando i due numeri divergono davvero. */
-function ownerTruncNote(int $shown, int $total): string
-{
-    if ($shown >= $total) return '';
-    return '<div class="list-truncated">Mostrati i piu\' recenti ' . $shown
-         . ' di ' . $total . '. Per lo storico completo contatta l\'agenzia.</div>';
-}
-
 // Owner's properties
 $propsStmt = $db->prepare(
     "SELECT p.*, COUNT(m.id) AS media_count
@@ -46,20 +27,10 @@ $contractsStmt = $db->prepare(
      WHERE ct.client_id = :id OR p.client_id = :id2
      GROUP BY ct.id
      ORDER BY ct.created_at DESC
-     LIMIT " . OWNER_CONTRACTS_LIMIT
+     LIMIT 20"
 );
 $contractsStmt->execute(['id' => $ownerId, 'id2' => $ownerId]);
 $contracts = $contractsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Il totale VERO, non count($contracts): l'intestazione mostra questo.
-$contractsTotalStmt = $db->prepare(
-    "SELECT COUNT(DISTINCT ct.id)
-     FROM contracts ct
-     INNER JOIN properties p ON p.id = ct.property_id
-     WHERE ct.client_id = :id OR p.client_id = :id2"
-);
-$contractsTotalStmt->execute(['id' => $ownerId, 'id2' => $ownerId]);
-$contractsTotal = (int) $contractsTotalStmt->fetchColumn();
 
 // Payments for owner's properties (last 24 months)
 $paymentsStmt = $db->prepare(
@@ -69,18 +40,10 @@ $paymentsStmt = $db->prepare(
      LEFT JOIN tenants t ON t.id = pay.tenant_id
      WHERE p.client_id = :id
      ORDER BY pay.due_date DESC
-     LIMIT " . OWNER_PAYMENTS_LIMIT
+     LIMIT 48"
 );
 $paymentsStmt->execute(['id' => $ownerId]);
 $payments = $paymentsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-$paymentsTotalStmt = $db->prepare(
-    "SELECT COUNT(*) FROM payments pay
-     INNER JOIN properties p ON p.id = pay.property_id
-     WHERE p.client_id = :id"
-);
-$paymentsTotalStmt->execute(['id' => $ownerId]);
-$paymentsTotal = (int) $paymentsTotalStmt->fetchColumn();
 
 // Payment totals — calcolati dal DATABASE, non dalle 48 righe qui sopra.
 //
@@ -110,18 +73,10 @@ $docsStmt = $db->prepare(
      LEFT JOIN properties p ON p.id = d.property_id
      WHERE d.client_id = :id OR p.client_id = :id2
      ORDER BY d.created_at DESC
-     LIMIT " . OWNER_DOCS_LIMIT
+     LIMIT 20"
 );
 $docsStmt->execute(['id' => $ownerId, 'id2' => $ownerId]);
 $documents = $docsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-$docsTotalStmt = $db->prepare(
-    "SELECT COUNT(*) FROM documents d
-     LEFT JOIN properties p ON p.id = d.property_id
-     WHERE d.client_id = :id OR p.client_id = :id2"
-);
-$docsTotalStmt->execute(['id' => $ownerId, 'id2' => $ownerId]);
-$documentsTotal = (int) $docsTotalStmt->fetchColumn();
 
 // Recent communications — SOLO i messaggi mandati davvero al proprietario.
 //
@@ -274,7 +229,7 @@ function oEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                 <!-- ── TAB: Contratti ──────────────────────────────────── -->
                 <div class="portal-section" id="section-contratti">
                     <div class="card">
-                        <h3 style="font-size:15px;margin-bottom:12px">I miei contratti (<?= $contractsTotal ?>)</h3>
+                        <h3 style="font-size:15px;margin-bottom:12px">I miei contratti (<?= count($contracts) ?>)</h3>
                         <?php if (!$contracts): ?>
                             <p class="text-muted">Nessun contratto registrato.</p>
                         <?php else: ?>
@@ -293,7 +248,6 @@ function oEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                                 </tbody>
                             </table>
                         </div>
-                        <?= ownerTruncNote(count($contracts), $contractsTotal) ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -342,7 +296,6 @@ function oEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                                 </tbody>
                             </table>
                         </div>
-                        <?= ownerTruncNote(count($payments), $paymentsTotal) ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -364,7 +317,6 @@ function oEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                             </li>
                             <?php endforeach; ?>
                         </ul>
-                        <?= ownerTruncNote(count($documents), $documentsTotal) ?>
                         <?php endif; ?>
                     </div>
                 </div>

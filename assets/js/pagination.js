@@ -47,46 +47,6 @@
             return `page=${page}&limit=${limit}`;
         },
 
-        /**
-         * Tetto reale di apiGetPagination() per gli endpoint che non lo alzano.
-         * Le schede chiedevano `limit=200` e il server ne concedeva 100 senza
-         * dirlo: chiedere quello che si ottiene davvero e' l'unico modo perche'
-         * `limit` nella risposta e le righe a schermo raccontino la stessa cosa.
-         */
-        TAB_LIMIT: 100,
-
-        /**
-         * Un elenco senza impaginatore (le schede: contratti di un inquilino,
-         * documenti di un immobile...) mostra UNA pagina. `items.length` e' la
-         * pagina, `total` e' il COUNT(*) a DB: contare il primo al posto del
-         * secondo scrive "100 pagamenti" a chi ne ha 270, e niente lo segnala.
-         */
-        unwrap(payload) {
-            const d     = payload && payload.data !== undefined ? payload.data : payload;
-            const items = (d && d.items) || (Array.isArray(d) ? d : []);
-            const total = Number(d?.total ?? items.length);
-            return { items, total, truncated: total > items.length };
-        },
-
-        /** "12 documenti" quando ci sono tutti, "100 di 270 pagamenti" quando no. */
-        countLabel(shown, total, noun) {
-            return shown < total ? `${shown} di ${total} ${noun}` : `${total} ${noun}`;
-        },
-
-        /**
-         * Avviso in coda all'elenco tagliato. Il conteggio onesto da solo si
-         * legge come un filtro, non come "qui sotto manca roba".
-         * @param {number} colspan  se >0 restituisce una <tr>, altrimenti un <div>
-         * @param {string} hint     frase gia' formata su come vedere il resto
-         */
-        truncationNote(shown, total, colspan = 0, hint = '') {
-            if (shown >= total) return '';
-            const text = `Mostrate le prime ${shown} righe di ${total}.${hint ? ' ' + hint : ''}`;
-            return colspan > 0
-                ? `<tr><td colspan="${colspan}" class="list-truncated">${text}</td></tr>`
-                : `<div class="list-truncated">${text}</div>`;
-        },
-
         parseResponse(json) {
             const d = json?.data;
 

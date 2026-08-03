@@ -19,7 +19,7 @@ Real estate agency admin dashboard for managing owners (*proprietari*), properti
 | Hosting | Hetzner VPS → Coolify → Docker → Traefik | ✅ |
 | DNS | Cloudflare (testdemo.it → 91.99.137.240) | ✅ |
 | Email | Mailgun SMTP EU (smtp.eu.mailgun.org:587 STARTTLS) | ✅ |
-| WhatsApp | Meta Cloud API (diretta, senza rivenditore) | spenta: `whatsapp_enabled=false` |
+| WhatsApp | Twilio sandbox | ✅ |
 | Social | Meta Graph API (Facebook ✅ / Instagram ✅ with image) | ✅ |
 | S3 backup | Cloudflare R2 (planned) | 🔄 in progress |
 | Cron | Not yet configured on server | ⚠️ pending |
@@ -53,6 +53,7 @@ flowchart TB
 
     subgraph external [External services]
         SMTP[SMTP server]
+        Twilio[Twilio WhatsApp]
         Meta[Meta Graph API]
         S3[S3-compatible bucket]
     end
@@ -69,7 +70,7 @@ flowchart TB
     Cron --> MySQL
     Cron --> SMTP
     Cron --> S3
-    Webhooks --> Meta
+    Webhooks --> Twilio
     TenantUI --> Auth
     TenantUI --> MySQL
     APIs --> SMTP
@@ -229,7 +230,7 @@ Each file under `api/` is a self-contained endpoint. There is no central router;
 | `generate_pdf.php` / `download_pdf.php` | PDF generation |
 | `get_dashboard_stats.php` | Dashboard aggregates |
 | `process_reminders.php` / `publish_social_posts.php` | HTTP cron triggers |
-| `whatsapp_webhook.php` | Webhook Meta: GET verifica la sottoscrizione, POST porta messaggi e stati (no session auth, firma HMAC) |
+| `whatsapp_webhook.php` | Twilio inbound webhook (no session auth) |
 
 File downloads (`download_document.php`, `download_pdf.php`) stream from `uploads/` after auth checks.
 
@@ -317,7 +318,7 @@ SMTP settings come from `app_settings` (editable in Settings UI) with `.env` fal
 
 ### WhatsApp (`config/whatsapp.php`)
 
-Credenziali Meta Cloud API in Impostazioni o da ambiente. Gli invii finiscono in `communications`; il webhook `api/whatsapp_webhook.php` riceve messaggi **e** stati di consegna, e verifica la firma HMAC-SHA256 (in produzione rifiuta il non firmato).
+Twilio credentials stored in settings. Outbound messages logged in `communications`. Inbound messages arrive at `api/whatsapp_webhook.php`.
 
 ### Meta / Social (`config/meta.php`)
 
@@ -354,7 +355,7 @@ Loaded by `config/env.php`. Typical keys:
 - `APP_ENV`, `APP_DEBUG`, `APP_URL`, `FORCE_HTTPS`
 - `SESSION_NAME`, `CRON_SECRET`, `SETUP_ENABLED`
 - `ADMIN_USERNAME`, `ADMIN_PASSWORD` (setup only)
-- Integration fallbacks: `SMTP_*`, `META_*` (incluse `META_WA_*`), `BACKUP_S3_*`. Attenzione: una riga in `app_settings` vince sempre sull'ambiente.
+- Integration fallbacks: `SMTP_*`, `TWILIO_*`, `META_*`, `BACKUP_S3_*`
 
 ### `app_settings` (runtime, UI-editable)
 
@@ -448,8 +449,7 @@ classDiagram
     }
     class whatsapp {
         +sendWhatsAppMessage(to, body) array
-        +sendWhatsAppTemplate(to, template) array
-        +verifyMetaWebhook(rawBody) string
+        +parseTwilioWebhook(post) array
     }
     class meta {
         +publishSocialPost(post) array
@@ -473,7 +473,7 @@ classDiagram
     auth --> db : queries admin_users
     auth --> roles : checks permissions
     mail --> settings : reads SMTP config
-    whatsapp --> settings : reads Meta Cloud API config
+    whatsapp --> settings : reads Twilio config
     meta --> settings : reads Meta tokens
     meta --> db : reads/writes social_settings
 ```
@@ -514,23 +514,23 @@ sequenceDiagram
 
 ---
 
-## Sequence diagram — WhatsApp inbound (webhook Meta)
+## Sequence diagram — WhatsApp inbound (Twilio webhook)
 
 ```mermaid
 sequenceDiagram
     participant W as WhatsApp User
-    participant T as Meta Cloud API
+    participant T as Twilio
     participant WH as api/whatsapp_webhook.php
     participant DB as MySQL
 
-    W->>T: Manda un messaggio al numero WhatsApp Business
-    T->>WH: POST https://immobiliare.testdemo.it/api/whatsapp_webhook.php<br/>JSON firmato (X-Hub-Signature-256)
+    W->>T: Sends message to sandbox number
+    T->>WH: POST https://testdemo.it/api/whatsapp_webhook.php<br/>From, To, Body, MessageSid
     WH->>DB: INSERT INTO whatsapp_messages (direction=inbound)
     WH->>DB: INSERT INTO notifications
-    WH-->>T: 200 OK
-    T-->>W: (nessuna risposta automatica)
+    WH-->>T: TwiML <Response/> (empty)
+    T-->>W: (no reply — blank TwiML)
 
-    Note over WH: Firma HMAC verificata; in produzione il non firmato e' rifiutato (fail closed)
+    Note over WH: No Twilio signature validation yet (⚠️ gap)
 ```
 
 ---

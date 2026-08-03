@@ -88,7 +88,7 @@ public-token) · `upload_logo` (+role).
 
 **Communications:** `communications` · `email_templates` · `email_inbound`
 (**Webhook**, Mailgun) · `whatsapp_send` (+role) · `whatsapp_inbox` ·
-`whatsapp_templates` · `whatsapp_webhook` (**Webhook**, Meta Cloud API) · `notifications`.
+`whatsapp_templates` · `whatsapp_webhook` (**Webhook**, Twilio) · `notifications`.
 
 **Social:** `social_posts` (+role) · `social_settings` (+role) ·
 `publish_social_posts` (**Cron**).

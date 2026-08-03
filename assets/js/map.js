@@ -48,14 +48,9 @@
         els.fitBtn = document.getElementById('map-fit');
         els.selectionBar = document.getElementById('map-selection');
 
-        buildClearButton();
-
         if (els.search) {
             let t = null;
             els.search.addEventListener('input', () => {
-                // Non aspettare il debounce per mostrare "Azzera filtri": il
-                // bottone reagisce al testo digitato, il filtro alla pausa.
-                syncClearButton();
                 clearTimeout(t);
                 t = setTimeout(() => { searchTerm = els.search.value.trim().toLowerCase(); applyFilter(); }, 200);
             });
@@ -66,7 +61,6 @@
                 if (!chip) return;
                 statusFilter = chip.dataset.status || '';
                 els.filters.querySelectorAll('.map-chip').forEach(c => c.classList.toggle('active', c === chip));
-                syncClearButton();
                 applyFilter();
             });
         }
@@ -108,7 +102,6 @@
         if (els.viewportToggle) {
             els.viewportToggle.addEventListener('change', () => {
                 viewportOnly = els.viewportToggle.checked;
-                syncClearButton();
                 renderList();
             });
         }
@@ -125,54 +118,6 @@
         if (els.routeBtn) els.routeBtn.addEventListener('click', toggleSelectionMode);
 
         loadProperties();
-    }
-
-    /**
-     * "Azzera filtri" — uno solo per tutta la colonna, in fondo alla riga delle
-     * etichette di stato, come nelle barre filtri delle altre pagine.
-     *
-     * La colonna non passa da FilterBar (assets/js/filters.js): i suoi filtri
-     * non stanno su una riga sola ma in tre blocchi impilati — ricerca,
-     * etichette, "Solo area visibile" — e riunirli in una barra sola
-     * significherebbe rifare il layout della colonna. Il bottone è quindi
-     * costruito qui, con la stessa classe e lo stesso comportamento: compare
-     * appena UNO qualsiasi dei tre è attivo, sparisce quando non c'è più
-     * niente da azzerare.
-     */
-    function buildClearButton() {
-        if (!els.filters) return;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn--ghost btn--sm btn-clear-filters map-filters__clear';
-        btn.setAttribute('aria-label', 'Azzera filtri');
-        btn.innerHTML = '&#10005; Azzera filtri';
-        btn.hidden = true;
-        btn.addEventListener('click', clearAllFilters);
-        els.filters.appendChild(btn);
-        els.clearBtn = btn;
-    }
-
-    function syncClearButton() {
-        if (!els.clearBtn) return;
-        const typing = !!(els.search && els.search.value.trim());
-        els.clearBtn.hidden = !(typing || statusFilter || viewportOnly);
-    }
-
-    function clearAllFilters() {
-        if (els.search) els.search.value = '';
-        searchTerm = '';
-        statusFilter = '';
-        if (els.filters) {
-            els.filters.querySelectorAll('.map-chip')
-                .forEach(c => c.classList.toggle('active', (c.dataset.status || '') === ''));
-        }
-        if (els.viewportToggle) els.viewportToggle.checked = false;
-        viewportOnly = false;
-        syncClearButton();
-        // Senza Leaflet init() esce prima di creare il cluster, ma ricerca ed
-        // etichette restano cliccabili: l'elenco si aggiorna lo stesso.
-        if (cluster) applyFilter();
-        else renderList();
     }
 
     /**

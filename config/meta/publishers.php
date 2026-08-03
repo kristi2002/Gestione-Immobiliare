@@ -4,32 +4,6 @@
  * and the low-level Graph transport. Included by config/meta.php.
  */
 
-require_once __DIR__ . '/../env.php';
-
-/**
- * Base pubblica da cui Meta scarica le immagini per Instagram.
- *
- * Instagram non accetta un upload: vuole un URL che vada a prendere da sola. Se
- * quella base non è l'host da cui l'app serve davvero i file, Meta riceve un 404
- * e il post fallisce — ed è successo, con META_PUBLIC_BASE_URL puntata al
- * dominio nudo mentre l'app sta su un sottodominio. La base giusta è quindi
- * APP_URL, che è già l'indirizzo pubblico dell'app; l'override esiste solo per
- * lo sviluppo locale, dove APP_URL è localhost e serve un tunnel (ngrok).
- */
-function metaPublicBaseUrl(): string
-{
-    $override = (string) (getenv('META_PUBLIC_BASE_URL') ?: '');
-    if ($override !== '') {
-        return rtrim($override, '/');
-    }
-
-    // appBaseUrl() e non la costante: chi pubblica davvero e'
-    // cron/publish_social_posts.php, che non carica bootstrap.php. Con la sola
-    // costante l'unica strada automatica si fermava da sola chiedendo di
-    // impostare una APP_URL gia' impostata.
-    return appBaseUrl();
-}
-
 /**
  * Publish text/photo post to a Facebook Page.
  */
@@ -70,16 +44,17 @@ function publishToInstagram(string $igAccountId, string $token, string $caption,
     }
 
     // Instagram Graph API requires a public image URL.
-    $publicBase = metaPublicBaseUrl();
+    // For local dev, use META_PUBLIC_BASE_URL if images are served publicly.
+    $publicBase = getenv('META_PUBLIC_BASE_URL') ?: '';
     if ($publicBase === '') {
         return [
             'success'  => false,
             'media_id' => null,
-            'error'    => 'Imposta APP_URL (o META_PUBLIC_BASE_URL) per pubblicare su Instagram: serve l\'URL pubblico dell\'immagine.',
+            'error'    => 'Configura META_PUBLIC_BASE_URL per pubblicare su Instagram (URL pubblico dell\'immagine).',
         ];
     }
 
-    $imageUrl = $publicBase . '/' . ltrim($imagePath, '/');
+    $imageUrl = rtrim($publicBase, '/') . '/' . ltrim($imagePath, '/');
 
     $container = metaApiRequest('POST', "/{$igAccountId}/media", [
         'image_url'    => $imageUrl,
@@ -147,9 +122,9 @@ function publishToFacebookPageMulti(string $pageId, string $token, string $messa
  */
 function publishToInstagramCarousel(string $igAccountId, string $token, string $caption, array $imagePaths): array
 {
-    $publicBase = metaPublicBaseUrl();
+    $publicBase = getenv('META_PUBLIC_BASE_URL') ?: '';
     if ($publicBase === '') {
-        return ['success' => false, 'media_id' => null, 'error' => 'Imposta APP_URL (o META_PUBLIC_BASE_URL) per pubblicare su Instagram.'];
+        return ['success' => false, 'media_id' => null, 'error' => 'Configura META_PUBLIC_BASE_URL per pubblicare su Instagram.'];
     }
 
     $childIds = [];
@@ -158,7 +133,7 @@ function publishToInstagramCarousel(string $igAccountId, string $token, string $
         if (!$full || !file_exists($full)) {
             continue;
         }
-        $imageUrl = $publicBase . '/' . ltrim($rel, '/');
+        $imageUrl = rtrim($publicBase, '/') . '/' . ltrim($rel, '/');
         $c = metaApiRequest('POST', "/{$igAccountId}/media", [
             'image_url'        => $imageUrl,
             'is_carousel_item' => 'true',

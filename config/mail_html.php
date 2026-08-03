@@ -3,7 +3,6 @@
  * Branded HTML email wrapper for cron and notifications.
  */
 
-require_once __DIR__ . '/env.php';
 require_once __DIR__ . '/settings.php';
 
 /**
@@ -25,16 +24,12 @@ function wrapHtmlEmail(string $subject, string $bodyText, string $footerHtml = '
     // email come immagine rotta — promemoria, solleciti, reset password,
     // campagne. Se APP_URL non è configurato non si ripiega sul relativo (che è
     // rotto per definizione): si omette il logo e resta il nome dell'agenzia.
-    //
-    // L'indirizzo si chiede ad appBaseUrl(), non alla costante: questo file lo
-    // usano soprattutto i cron, dove la costante non esiste (vedi env.php). Con
-    // `defined('APP_URL')` il logo c'era dal browser e spariva da ogni email
-    // spedita davvero — cioè da tutte.
     if ($logo !== '') {
-        $appBase = appBaseUrl();
         $logoSrc = preg_match('#^https?://#i', $logo) === 1
             ? $logo
-            : ($appBase !== '' ? $appBase . '/' . ltrim($logo, '/') : '');
+            : (defined('APP_URL') && APP_URL !== ''
+                ? rtrim((string) APP_URL, '/') . '/' . ltrim($logo, '/')
+                : '');
 
         if ($logoSrc !== '') {
             $logoUrl  = htmlspecialchars($logoSrc, ENT_QUOTES, 'UTF-8');

@@ -37,7 +37,6 @@ function init() {
     els.pagination     = document.getElementById('social-pagination');
 
     bindEvents();
-    reportOAuthOutcome();
     loadSettings();
     loadProperties()
         .then(() => loadPosts())
@@ -76,27 +75,6 @@ function bindEvents() {
 // Meta settings
 // -------------------------------------------------------------------------
 
-// meta_oauth.php / meta_callback.php rimandano qui con l'esito in query string.
-// Fino a ieri nessuno lo leggeva: il ritorno da Facebook era indistinguibile da
-// un caricamento normale, riuscito o fallito che fosse.
-const OAUTH_ERRORS = {
-    missing_app_credentials: 'App ID o App Secret non impostati: vanno messi in Impostazioni → Meta / Social da un super admin.',
-    invalid_state:           'Sessione OAuth non valida o scaduta. Riprova a collegare la pagina.',
-    token_exchange_failed:   'Meta non ha rilasciato il token. Controlla App Secret e redirect URI dell\'app.',
-    access_denied:           'Autorizzazione negata su Facebook: senza i permessi richiesti non si può pubblicare.',
-};
-
-function reportOAuthOutcome() {
-    const params = new URLSearchParams(window.location.search);
-    const err    = params.get('meta_error');
-
-    if (err) {
-        showAlert(OAUTH_ERRORS[err] || `Collegamento Meta non riuscito (${err}).`, 'error');
-    } else if (params.get('meta_connected')) {
-        showAlert('Pagina Facebook collegata.', 'success');
-    }
-}
-
 async function loadSettings() {
     try {
         const res  = await fetch(SETTINGS_API);
@@ -104,6 +82,7 @@ async function loadSettings() {
         if (!json.success) throw new Error(json.error);
 
         const s = json.data;
+        document.getElementById('meta-app-id').value   = s.meta_app_id || '';
         document.getElementById('meta-page-id').value  = s.facebook_page_id || '';
         document.getElementById('meta-page-token').value = s.facebook_page_token || '';
         document.getElementById('meta-ig-id').value      = s.instagram_account_id || '';
@@ -133,6 +112,7 @@ async function handleMetaSubmit(e) {
     btn.disabled = true;
 
     const data = {
+        meta_app_id:          document.getElementById('meta-app-id').value.trim(),
         facebook_page_id:     document.getElementById('meta-page-id').value.trim(),
         facebook_page_token:  document.getElementById('meta-page-token').value.trim(),
         instagram_account_id: document.getElementById('meta-ig-id').value.trim(),

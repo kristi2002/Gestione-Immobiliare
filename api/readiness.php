@@ -115,9 +115,7 @@ if (!$mailOn || $smtpHost === '') {
     require_once __DIR__ . '/../config/mail.php';
     $probe = smtpAuthProbe();
     if ($probe['ok']) {
-        $add('email', 'ok', "SMTP $smtpHost: connessione, autenticazione e mittente <"
-            . ($probe['sender_checked'] ?? '?') . "> accettati dal server. "
-            . 'Resta da provare la consegna vera (che finisca in posta in arrivo, non nello spam).');
+        $add('email', 'ok', "SMTP $smtpHost: connessione e autenticazione riuscite.");
     } else {
         $add('email', 'fail', "SMTP $smtpHost non funzionante: {$probe['error']} Nessuna email (promemoria, scadenze, comunicazioni) sta partendo.");
     }
@@ -133,37 +131,6 @@ if ($consentText === '') {
     $add('marketing_consent', 'warn', 'Testo del consenso marketing non configurato in Impostazioni: i consensi raccolti non registrano a cosa il contatto ha acconsentito. Le campagne restano bloccate finché non c\'è un consenso valido.');
 } else {
     $add('marketing_consent', 'ok', 'Testo del consenso marketing configurato.');
-}
-
-// ── Identità fiscale: fatture elettroniche e SDD ───────────────────────────
-// Fattura e addebito NON producono un file sbagliato quando questi campi
-// mancano: si rifiutano di generarlo. Il problema è quando lo si scopre —
-// davanti alla prima fattura da emettere, non prima di andare in produzione.
-// I fallback (`?:`) sono gli stessi dei chiamanti reali, altrimenti la sonda
-// segnalerebbe come mancanti campi che in pratica vengono ereditati.
-require_once __DIR__ . '/../lib/FatturaPA.php';
-$agencyFiscal = [
-    'piva'          => getSetting('agency_piva', ''),
-    'cf'            => getSetting('agency_cf', ''),
-    'denominazione' => getSetting('agency_denominazione', '') ?: getSetting('agency_name', ''),
-    'indirizzo'     => getSetting('agency_indirizzo', '') ?: getSetting('agency_address', ''),
-    'cap'           => getSetting('agency_cap', ''),
-    'comune'        => getSetting('agency_comune', ''),
-];
-$missingFiscal = fatturaPaMissingAgencyFields($agencyFiscal);
-$missingSdd    = [];
-if (trim((string) getSetting('agency_iban', '')) === '')              $missingSdd[] = 'IBAN agenzia';
-if (trim((string) getSetting('agency_sepa_creditor_id', '')) === '')  $missingSdd[] = 'Identificativo Creditore SEPA';
-
-if (!$missingFiscal && !$missingSdd) {
-    $add('fiscal_identity', 'ok', 'Identità fiscale completa: fattura elettronica e addebiti SEPA possono essere generati.');
-} else {
-    $bits = [];
-    if ($missingFiscal) $bits[] = 'fattura elettronica — manca: ' . implode(', ', $missingFiscal);
-    if ($missingSdd)    $bits[] = 'addebiti SEPA (SDD) — manca: ' . implode(', ', $missingSdd);
-    $add('fiscal_identity', 'warn',
-        'Impostazioni → Fatturazione incompleta. ' . implode('; ', $bits)
-        . '. Finché mancano, la generazione si rifiuta di partire.');
 }
 
 // ── WhatsApp: il mittente configurato è davvero un canale WhatsApp? ─────────

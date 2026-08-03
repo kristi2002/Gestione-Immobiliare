@@ -19,9 +19,10 @@ apiHandleOptions();
 
 const LEAD_STATUSES   = ['new', 'contacted', 'interested', 'negotiating', 'converted', 'lost'];
 const LEAD_INTERESTS  = ['affitto', 'acquisto', 'entrambi'];
-// Le fonti vivono in config/lead_sources.php: da quando le automazioni possono
-// restringersi per fonte, la lista ha due lettori e una copia locale sarebbe
-// divergiuta al primo portale aggiunto (vedi LEAD_SOURCE_LABELS).
+// Allineato all'enum leads.source (migrazione phase68): una sorgente presente
+// qui ma non nell'enum viene rifiutata dal DB, una nell'enum ma non qui viene
+// rifiutata dall'API — e il form mostrerebbe un'opzione che non si può salvare.
+const LEAD_SOURCES    = ['telefono', 'email', 'web', 'passaparola', 'social', 'immobiliare', 'idealista', 'casa', 'subito', 'whatsapp', 'altro'];
 const LEAD_PROP_TYPES = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
 
 try {
@@ -174,13 +175,9 @@ function createLead(PDO $db): void
     $stmt->execute($validated);
     $newId = (int) $db->lastInsertId();
 
-    // `source` viaggia nel payload perche' le regole possono restringersi alle
-    // sole fonti in entrata: senza, il dispatcher non saprebbe distinguere un
-    // contatto dal sito da uno digitato a mano dopo una telefonata.
     emitAutomationEvent($db, 'lead.created', 'lead', $newId, [
         'lead_id'     => $newId,
         'property_id' => $validated['preferred_property_id'] ?: null,
-        'source'      => $validated['source'],
     ]);
 
     getLead($db, $newId);
@@ -539,7 +536,7 @@ function validateLeadInput(array $data): array
         if (!$d || $d->format('Y-m-d') !== $nextAt) apiError('Data prossima azione non valida (usa AAAA-MM-GG).');
     }
     if ($nextNote !== null && mb_strlen($nextNote) > 255) apiError('Nota azione troppo lunga (max 255 caratteri).');
-    if (!leadSourceIsValid($source)) apiError('Fonte non valida.');
+    if (!in_array($source, LEAD_SOURCES, true)) apiError('Fonte non valida.');
     if ($ptype !== null && !in_array($ptype, LEAD_PROP_TYPES, true)) apiError('Tipo immobile non valido.');
 
     return [

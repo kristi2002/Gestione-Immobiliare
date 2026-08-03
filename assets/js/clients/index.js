@@ -1,14 +1,15 @@
 /**
  * Clients (Proprietari) — CRUD logic for Phase 2 (ES-module entry controller)
  */
-import { API, COMM_API, STATUS_LABELS, PAGE_LIMIT } from './constants.js';
-import { escapeHtml, agentInitials, parseCsv } from './helpers.js';
+import { API, COMM_API, REPORT_API, STATUS_LABELS, PAGE_LIMIT } from './constants.js';
+import { escapeHtml, agentInitials, formatDateTime, truncate, parseCsv } from './helpers.js';
 
 let importRows = [];
 
 let clients       = [];
 let deleteTargetId = null;
 let searchTimer   = null;
+let editingClientId = null;
 let currentPage = 1;
 
 // DOM refs — populated on init
@@ -21,7 +22,10 @@ function init() {
     els.search       = document.getElementById('client-search');
     els.statusFilter = document.getElementById('client-status-filter');
     els.alert        = document.getElementById('clients-alert');
+    els.modal        = document.getElementById('client-modal');
     els.deleteModal  = document.getElementById('delete-modal');
+    els.form         = document.getElementById('client-form');
+    els.modalTitle   = document.getElementById('modal-title');
     els.pagination   = document.getElementById('clients-pagination');
 
     bindEvents();
@@ -228,6 +232,21 @@ async function loadStats() {
     } catch (_) { /* the strip stays at — */ }
 }
 
+async function saveClient(data, id) {
+    const url    = id ? `${API}?id=${id}` : API;
+    const method = id ? 'PUT' : 'POST';
+
+    const res  = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const json = await res.json();
+
+    if (!json.success) throw new Error(json.error);
+    return json.data;
+}
+
 async function archiveClient(id) {
     const res  = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
     const json = await res.json();
@@ -345,6 +364,98 @@ function bulkExport() {
     window.open(`${API}?format=csv&ids=${ids}`, '_blank');
 }
 
+// -------------------------------------------------------------------------
+// Modal
+// -------------------------------------------------------------------------
+
+function showModalError(message) {
+    const el = document.getElementById('client-modal-error');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+}
+
+function clearModalError() {
+    const el = document.getElementById('client-modal-error');
+    if (el) el.style.display = 'none';
+}
+
+function openModal(client = null) {
+    els.form.reset();
+    document.getElementById('client-id').value = '';
+    editingClientId = null;
+    clearModalError();
+    document.getElementById('client-comm-section').hidden = true;
+    document.getElementById('btn-owner-report').hidden = true;
+
+    if (client) {
+        editingClientId = client.id;
+        document.getElementById('btn-owner-report').hidden = false;
+        els.modalTitle.textContent = 'Modifica Proprietario';
+        document.getElementById('client-id').value       = client.id;
+        document.getElementById('client-name').value     = client.name;
+        document.getElementById('client-surname').value  = client.surname;
+        document.getElementById('client-cf').value       = client.codice_fiscale || '';
+        document.getElementById('client-phone').value    = client.phone || '';
+        document.getElementById('client-email').value    = client.email || '';
+        document.getElementById('client-status').value   = client.status;
+        document.querySelector('#client-status option[value="archived"]').hidden = false;
+        document.getElementById('client-notes').value    = client.internal_notes || '';
+
+        document.getElementById('client-comm-section').hidden = false;
+        loadClientCommunications(client.id);
+        document.getElementById('client-id-card-section').hidden = false;
+        loadClientIdDocForModal(client.id);
+    } else {
+        els.modalTitle.textContent = 'Nuovo Proprietario';
+        document.getElementById('client-status').value = 'active';
+        document.querySelector('#client-status option[value="archived"]').hidden = true;
+    }
+
+    els.modal.hidden = false;
+    document.getElementById('client-name').focus();
+}
+
+function closeModal() {
+    els.modal.hidden = true;
+    editingClientId = null;
+    document.getElementById('client-id-card-section').hidden = true;
+}
+
+async function loadClientCommunications(clientId) {
+    const container = document.getElementById('client-comm-history');
+    container.innerHTML = '<p class="text-muted">Caricamento...</p>';
+
+    try {
+        const res  = await fetch(`${COMM_API}?client_id=${clientId}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const msgs = json.data.messages.slice(-5);
+
+        if (msgs.length === 0) {
+            container.innerHTML = '<p class="text-muted">Nessuna comunicazione registrata.</p>';
+            return;
+        }
+
+        container.innerHTML = msgs.map(m => {
+            const dir = m.direction === 'sent' ? '↗ Inviata' : '↙ Ricevuta';
+            const preview = truncate(m.body, 80);
+            return `
+                <div class="client-comm-item client-comm-item--${m.direction}">
+                    <div class="client-comm-item__head">
+                        <span>${dir}</span>
+                        <span>${formatDateTime(m.created_at)}</span>
+                    </div>
+                    ${m.subject ? `<div class="client-comm-item__subject">${escapeHtml(m.subject)}</div>` : ''}
+                    <div class="client-comm-item__body">${escapeHtml(preview)}</div>
+                </div>`;
+        }).join('');
+    } catch (err) {
+        container.innerHTML = `<p class="text-muted">${escapeHtml(err.message)}</p>`;
+    }
+}
+
 function openDeleteModal(id, name) {
     deleteTargetId = id;
     document.getElementById('delete-client-name').textContent = name;
@@ -354,6 +465,37 @@ function openDeleteModal(id, name) {
 function closeDeleteModal() {
     deleteTargetId = null;
     els.deleteModal.hidden = true;
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+
+    const id   = document.getElementById('client-id').value;
+    const data = {
+        name:           document.getElementById('client-name').value.trim(),
+        surname:        document.getElementById('client-surname').value.trim(),
+        codice_fiscale: document.getElementById('client-cf').value.trim().toUpperCase() || null,
+        phone:          document.getElementById('client-phone').value.trim(),
+        email:          document.getElementById('client-email').value.trim(),
+        status:         document.getElementById('client-status').value,
+        internal_notes: document.getElementById('client-notes').value.trim(),
+    };
+
+    const saveBtn = document.getElementById('modal-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvataggio...';
+
+    try {
+        await saveClient(data, id || null);
+        closeModal();
+        showAlert('Proprietario salvato con successo.', 'success');
+        loadClients();
+    } catch (err) {
+        showModalError(err.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salva';
+    }
 }
 
 async function confirmDelete() {
@@ -936,6 +1078,42 @@ async function confirmMerge() {
 }
 
 // -------------------------------------------------------------------------
+// Owner report
+// -------------------------------------------------------------------------
+
+function openReportModal() {
+    if (!editingClientId) return;
+    document.getElementById('report-month').value = '';
+    document.getElementById('report-year').value = new Date().getFullYear();
+    document.getElementById('report-modal').hidden = false;
+}
+function closeReportModal() {
+    document.getElementById('report-modal').hidden = true;
+}
+async function generateReport() {
+    const btn = document.getElementById('report-generate');
+    btn.disabled = true; btn.textContent = 'Generazione...';
+    try {
+        const res = await fetch(REPORT_API, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: editingClientId,
+                month: document.getElementById('report-month').value || null,
+                year: document.getElementById('report-year').value,
+            }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        closeReportModal();
+        window.open(json.data.download, '_blank');
+    } catch (err) {
+        showAlert(err.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Genera PDF';
+    }
+}
+
+// -------------------------------------------------------------------------
 // CSV import
 // -------------------------------------------------------------------------
 
@@ -995,6 +1173,123 @@ async function confirmImport() {
         showAlert(err.message, 'error');
     } finally {
         btn.disabled = false;
+    }
+}
+
+// -------------------------------------------------------------------------
+// ID card (carta di identità) for edit modal
+// -------------------------------------------------------------------------
+
+async function loadClientIdDocForModal(clientId) {
+    const frontContainer = document.getElementById('client-id-front-status');
+    const backContainer  = document.getElementById('client-id-back-status');
+    if (!frontContainer && !backContainer) return;
+
+    async function loadSide(container, docType, label, btnId) {
+        if (!container) return;
+        container.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Caricamento...</p>';
+        try {
+            const res  = await fetch(`api/documents.php?doc_type=${docType}&client_id=${clientId}&limit=1`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const docs = json.data?.items || [];
+            if (!docs.length) {
+                container.innerHTML = '<p class="text-muted" style="font-size:13px;margin:0;">Non caricato</p>';
+                return;
+            }
+            const doc = docs[0];
+            container.innerHTML = `
+                <div class="id-card-row">
+                    <span style="font-size:13px;"><i data-lucide="file-text"></i> ${escapeHtml(doc.original_name)}</span>
+                    <a href="${escapeHtml(doc.download_url)}" target="_blank" class="btn btn--xs btn--ghost"><i data-lucide="printer"></i> Stampa</a>
+                    <button type="button" class="btn btn--xs btn--ghost" data-del-id="${doc.id}" style="color:#b91c1c"><i data-lucide="trash-2"></i></button>
+                </div>`;
+            container.querySelector('[data-del-id]')?.addEventListener('click', async () => {
+                if (!confirm('Rimuovere questo documento?')) return;
+                try {
+                    const r = await fetch(`api/documents.php?id=${doc.id}`, { method: 'DELETE' });
+                    const j = await r.json();
+                    if (!j.success) throw new Error(j.error);
+                    loadClientIdDocForModal(clientId);
+                } catch (err) { showAlert(err.message, 'error'); }
+            });
+        } catch (err) {
+            if (container) container.innerHTML = `<p class="text-muted" style="font-size:13px;margin:0;">Errore</p>`;
+        }
+    }
+
+    await Promise.all([
+        loadSide(frontContainer, 'id_front', 'Fronte', 'btn-upload-id-front'),
+        loadSide(backContainer,  'id_back',  'Retro',  'btn-upload-id-back'),
+    ]);
+}
+
+async function uploadIdDocument(clientId, file, docType) {
+    const btnId   = docType === 'id_front' ? 'btn-upload-id-front' : 'btn-upload-id-back';
+    const btnLabel = docType === 'id_front' ? '<i data-lucide="upload"></i> Carica Fronte' : '<i data-lucide="upload"></i> Carica Retro';
+    const title   = docType === 'id_front' ? 'CI - Fronte' : 'CI - Retro';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doc_type', docType);
+    formData.append('client_id', clientId);
+    formData.append('title', title);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = true; btn.textContent = 'Caricamento...'; }
+    try {
+        const res  = await fetch('api/documents.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        showAlert('Documento caricato.', 'success');
+        loadClientIdDocForModal(clientId);
+    } catch (err) {
+        showAlert(err.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = btnLabel; window.lucide?.createIcons(); }
+    }
+}
+
+async function loadAndPrintIdDoc(clientId) {
+    try {
+        const [frontRes, backRes] = await Promise.all([
+            fetch(`api/documents.php?doc_type=id_front&client_id=${clientId}&limit=1`).then(r => r.json()),
+            fetch(`api/documents.php?doc_type=id_back&client_id=${clientId}&limit=1`).then(r => r.json()),
+        ]);
+        const front = frontRes.data?.items?.[0] || null;
+        const back  = backRes.data?.items?.[0] || null;
+        if (!front && !back) {
+            showAlert('Nessuna carta di identità caricata per questo proprietario.', 'error');
+            return;
+        }
+        if (front) window.open(front.download_url, '_blank');
+        if (back)  setTimeout(() => window.open(back.download_url, '_blank'), 300);
+    } catch (_) {
+        showAlert('Impossibile recuperare il documento.', 'error');
+    }
+}
+
+// -------------------------------------------------------------------------
+// Copy to clipboard
+// -------------------------------------------------------------------------
+
+function copyToClipboard(text, btn) {
+    const finish = () => {
+        if (!btn) return;
+        const orig = btn.textContent;
+        btn.innerHTML = '<i data-lucide="check-circle"></i>';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+    };
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(finish).catch(finish);
+    } else {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(el);
+        el.select();
+        try { document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(el);
+        finish();
     }
 }
 

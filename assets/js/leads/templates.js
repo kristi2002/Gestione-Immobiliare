@@ -25,7 +25,6 @@ export function kanbanCardHtml(l, status) {
                     <div class="kcard__foot">
                         <select class="kcard__status kcard__status--${status}" data-id="${l.id}" title="Sposta in un'altra fase">${statusOptions}</select>
                         ${l.agent_name ? `<span class="kcard__agent">${escapeHtml(l.agent_name)}</span>` : ''}
-                        <button type="button" class="kcard__archive" data-id="${l.id}" title="Archivia" aria-label="Archivia lead"><i data-lucide="archive"></i></button>
                     </div>
                 </div>`;
 }

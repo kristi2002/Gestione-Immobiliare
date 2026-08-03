@@ -28,12 +28,6 @@
         window.App.navigateTo('entity_edit', id ? { entity: 'aml', id: Number(id) } : { entity: 'aml' });
     }
 
-    /** Il fascicolo: campi, avvisi di conformità e copie allegate. */
-    function openProfile(id) {
-        if (!window.App) return;
-        window.App.navigateTo('aml_profile', { amlId: Number(id) });
-    }
-
     function init() {
         els.alert       = document.getElementById('aml-alert');
         els.tbody       = document.getElementById('aml-tbody');
@@ -104,24 +98,8 @@
                 ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(a.operation_value)
                 : '';
             const pep = Number(a.is_pep) ? ' <span class="badge badge--danger" title="Persona Politicamente Esposta">PEP</span>' : '';
-
-            // La copia del documento (art. 31) non è un dettaglio della scheda:
-            // una pratica chiusa senza allegato è la contestazione più probabile
-            // in ispezione, e va vista dall'elenco.
-            const docs = Number(a.document_count) || 0;
-            const clip = docs
-                ? ` <span class="badge" title="${docs} ${docs === 1 ? 'copia allegata' : 'copie allegate'}">📎 ${docs}</span>`
-                : (a.status === 'completata'
-                    ? ' <span class="badge badge--danger" title="Pratica completata senza copia del documento (art. 31)">senza copia</span>'
-                    : '');
-
-            // Il nominativo è un link vero: ha un URL condivisibile e si
-            // raggiunge col tab. Il click sulla riga è solo una comodità in più
-            // — da solo lascerebbe il fascicolo irraggiungibile da tastiera.
-            const href = `index.php?view=aml_profile&amlId=${a.id}`;
-
-            return `<tr class="row-clickable" data-aml-id="${a.id}">
-                <td data-label="Soggetto"><a href="${href}" class="aml-open" data-id="${a.id}"><strong>${esc(a.subject_name)}</strong></a>${pep}${clip}<br><small class="text-muted">${esc(a.codice_fiscale || a.partita_iva || '')}</small></td>
+            return `<tr>
+                <td data-label="Soggetto"><strong>${esc(a.subject_name)}</strong>${pep}<br><small class="text-muted">${esc(a.codice_fiscale || a.partita_iva || '')}</small></td>
                 <td data-label="Operazione">${esc(a.operation_type)}${opVal ? `<br><small class="text-muted">${opVal}</small>` : ''}</td>
                 <td data-label="Verifica">${esc(a.verification_type)}</td>
                 <td data-label="Rischio"><span class="badge ${RISK_BADGE[a.risk_level] || 'badge'}">${esc(a.risk_level)}</span></td>
@@ -137,25 +115,6 @@
 
         // Niente più GET della singola pratica per riempire il modale: la
         // pagina di modifica carica da sé il record dall'id.
-        // La riga apre il fascicolo. I bottoni in coda restano scorciatoie, ma
-        // devono fermare la risalita dell'evento o si finisce sempre in scheda.
-        els.tbody.querySelectorAll('a.aml-open').forEach(a => {
-            a.addEventListener('click', e => {
-                // L'href resta valido per "apri in una nuova scheda"; qui però
-                // la navigazione la fa la SPA, senza ricaricare tutto.
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-                e.preventDefault();
-                e.stopPropagation();
-                openProfile(a.dataset.id);
-            });
-        });
-        els.tbody.querySelectorAll('tr[data-aml-id]').forEach(tr => {
-            tr.addEventListener('click', () => openProfile(tr.dataset.amlId));
-        });
-        els.tbody.querySelectorAll('.col-actions').forEach(td => {
-            td.addEventListener('click', e => e.stopPropagation());
-        });
-
         els.tbody.querySelectorAll('.btn-aml-edit').forEach(btn => {
             btn.addEventListener('click', () => openForm(btn.dataset.id));
         });

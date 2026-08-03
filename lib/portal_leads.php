@@ -295,28 +295,11 @@ function portalLeadImport(PDO $db, string $fromRaw, string $subject, string $bod
         'source'   => $source,
         'notes'    => $notes,
     ]);
-    $leadId = (int) $db->lastInsertId();
-
-    // Questa strada scriveva il lead senza annunciarlo: le automazioni "nuovo
-    // lead" restavano mute proprio sulla provenienza piu' legittima — il
-    // portale, dove qualcuno ha davvero scritto e aspetta risposta — mentre
-    // scattavano sull'inserimento a mano. Solo sui lead NUOVI: una seconda
-    // richiesta dello stesso contatto (ramo duplicato, qui sopra) aggiorna le
-    // note e non deve far ripartire il messaggio di benvenuto.
-    require_once __DIR__ . '/../config/automation_events.php';
-    emitAutomationEvent($db, 'lead.created', 'lead', $leadId, [
-        'lead_id'     => $leadId,
-        'property_id' => $property['id'] ?? null,
-        'source'      => $source,
-    ]);
 
     return [
         'created'      => true,
         'duplicate'    => false,
-        // $leadId, non un secondo lastInsertId(): l'accodamento dell'evento qui
-        // sopra e' esso stesso un INSERT, e rileggerlo ora restituirebbe l'id
-        // della riga in `automation_events`.
-        'lead_id'      => $leadId,
+        'lead_id'      => (int) $db->lastInsertId(),
         'lead_name'    => trim($surname . ' ' . $name) ?: $name,
         'portal'       => $source,
         'portal_label' => $lbl,

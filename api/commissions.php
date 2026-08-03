@@ -69,16 +69,9 @@ function listCommissions(PDO $db): void
     $pagination  = apiGetPagination(25, 500);
     $adminUserId = isset($_GET['admin_user_id']) ? (int) $_GET['admin_user_id'] : null;
     $status      = trim($_GET['status'] ?? '');
-    $search      = trim($_GET['search'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
-
-    // Stesse join per conteggio e dati: si cerca per agente, immobile, cliente.
-    $joins = ' LEFT JOIN admin_users au ON au.id = ac.admin_user_id
-               LEFT JOIN properties p ON p.id = ac.property_id
-               LEFT JOIN clients c ON c.id = ac.client_id
-               LEFT JOIN contracts ct ON ct.id = ac.contract_id';
 
     if ($adminUserId) {
         $where .= ' AND ac.admin_user_id = :admin_user_id';
@@ -88,15 +81,8 @@ function listCommissions(PDO $db): void
         $where .= ' AND ac.status = :status';
         $params['status'] = $status;
     }
-    if ($search !== '') {
-        $frag = apiWordSearch($search, [
-            'au.username', 'p.address', 'p.city',
-            'c.name', 'c.surname', 'ct.title',
-        ], $params, 'coms');
-        if ($frag !== '') $where .= " AND ($frag)";
-    }
 
-    $countSql = "SELECT COUNT(*) FROM agent_commissions ac $joins $where";
+    $countSql = "SELECT COUNT(*) FROM agent_commissions ac $where";
 
     $dataSql = "SELECT ac.*,
                    au.username AS agent_username,
@@ -104,7 +90,10 @@ function listCommissions(PDO $db): void
                    c.name AS client_name, c.surname AS client_surname,
                    ct.title AS contract_title, ct.contract_type
             FROM agent_commissions ac
-            $joins
+            LEFT JOIN admin_users au ON au.id = ac.admin_user_id
+            LEFT JOIN properties p ON p.id = ac.property_id
+            LEFT JOIN clients c ON c.id = ac.client_id
+            LEFT JOIN contracts ct ON ct.id = ac.contract_id
             $where
             ORDER BY ac.created_at DESC";
 

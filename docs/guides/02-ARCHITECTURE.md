@@ -31,6 +31,7 @@ flowchart TB
     end
     subgraph external [External services]
         SMTP[Mailgun SMTP]
+        Twilio[Twilio WhatsApp]
         Meta[Meta Graph API]
         Stripe[Stripe]
         S3[S3 / Cloudflare R2]
@@ -47,7 +48,7 @@ flowchart TB
     Cron --> MySQL
     Cron --> SMTP
     Cron --> S3
-    Webhooks --> Meta
+    Webhooks --> Twilio
     TenantUI --> Auth
     OwnerUI --> Auth
     APIs --> SMTP
@@ -190,7 +191,7 @@ classDiagram
     class roles { +ROLE_PERMISSIONS array +userHasPermission(role, perm) bool }
     class settings { +getSetting(key) +setSetting(key,value) +getMailConfig() +getPublicBranding() }
     class mail { +sendClientEmail() +sendAdminEmail() +sendViaSmtp() +sendTestEmail() }
-    class whatsapp { +sendWhatsAppMessage() +sendWhatsAppTemplate() +verifyMetaWebhook() }
+    class whatsapp { +sendWhatsAppMessage() +parseTwilioWebhook() }
     class meta { +publishSocialPost() +publishToFacebookPage() +publishToInstagram() +isMetaConfigured() }
     class pdf { +generatePdf(template,data) string }
     class backup_cloud { +uploadToS3(filePath) bool }
@@ -254,19 +255,19 @@ sequenceDiagram
     App->>MG: QUIT
 ```
 
-### WhatsApp inbound — webhook Meta
+### WhatsApp inbound — Twilio webhook
 ```mermaid
 sequenceDiagram
     participant W as WhatsApp User
-    participant T as Meta Cloud API
+    participant T as Twilio
     participant WH as api/whatsapp_webhook.php
     participant DB as MySQL
-    W->>T: Manda un messaggio al numero WhatsApp Business
-    T->>WH: POST /api/whatsapp_webhook.php (JSON: messaggi + stati di consegna)
-    Note over WH: Verifica X-Hub-Signature-256 sul corpo grezzo; senza app secret in produzione risponde 503 (fail closed)
+    W->>T: Sends message to sandbox number
+    T->>WH: POST /api/whatsapp_webhook.php (From, To, Body, MessageSid)
+    Note over WH: Validates X-Twilio-Signature (HMAC-SHA1) — per GAPS.md "Fixed June 2026"
     WH->>DB: INSERT whatsapp_messages (direction=inbound)
     WH->>DB: INSERT notification
-    WH-->>T: 200 OK
+    WH-->>T: TwiML <Response/> (empty — suppress auto-reply)
 ```
 
 ### Meta social publishing

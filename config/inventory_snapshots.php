@@ -19,7 +19,6 @@
  */
 
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/env.php';
 require_once __DIR__ . '/pdf.php';
 require_once __DIR__ . '/settings.php';
 
@@ -552,9 +551,8 @@ function lockInventorySnapshot(PDO $db, int $snapshotId, ?int $adminId, ?string 
             'exp'    => $expiresAt,
         ]);
         $esignId  = (int) $db->lastInsertId();
-        // appBaseUrl(): ci si arriva anche da cron/process_contract_expirations.php,
-        // dove la costante non esiste e il link di firma restava monco.
-        $signLink = appBaseUrl() . '/sign.php?token=' . $token;
+        $baseUrl  = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+        $signLink = $baseUrl . '/sign.php?token=' . $token;
     }
 
     $db->prepare(

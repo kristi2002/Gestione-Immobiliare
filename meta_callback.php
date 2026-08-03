@@ -12,16 +12,13 @@ $code  = $_GET['code'] ?? '';
 $state = $_GET['state'] ?? '';
 $error = $_GET['error'] ?? '';
 
-// Sempre back alla vista social: è l'unica pagina che sa leggere meta_error.
-// Senza `view=social` l'esito finiva sulla dashboard, che non lo mostra: ogni
-// fallimento OAuth — segreto mancante compreso — era del tutto muto.
 if ($error) {
-    header('Location: index.php?view=social&meta_error=' . urlencode($error));
+    header('Location: index.php?meta_error=' . urlencode($error));
     exit;
 }
 
 if ($code === '' || $state === '' || empty($_SESSION['meta_oauth_state']) || !hash_equals($_SESSION['meta_oauth_state'], $state)) {
-    header('Location: index.php?view=social&meta_error=invalid_state');
+    header('Location: index.php?meta_error=invalid_state');
     exit;
 }
 
@@ -39,7 +36,7 @@ $tokenResp = metaApiRequest('GET', '/oauth/access_token', [
 ]);
 
 if (empty($tokenResp['access_token'])) {
-    header('Location: index.php?view=social&meta_error=token_exchange_failed');
+    header('Location: index.php?meta_error=token_exchange_failed');
     exit;
 }
 

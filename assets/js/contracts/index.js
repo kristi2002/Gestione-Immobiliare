@@ -4,6 +4,8 @@
 import {
     API,
     PROPERTIES_API,
+    TENANTS_API,
+    CLIENTS_API,
     ESIGN_API,
     TYPE_LABELS,
     STATUS_LABELS,
@@ -51,6 +53,8 @@ function contractAmount(c) {
 let contracts  = [];
 let contractDocs = [];
 let properties = [];
+let tenants    = [];
+let clients    = [];
 let currentPage = 1;
 let schedaContractId = null;
 
@@ -62,10 +66,17 @@ function init() {
     els.search         = document.getElementById('contract-search');
     els.propFilter     = document.getElementById('contract-property-filter');
     els.typeFilter     = document.getElementById('contract-type-filter');
+    els.statusFilter   = document.getElementById('contract-status-filter');
+    els.modal          = document.getElementById('contract-modal');
+    els.form           = document.getElementById('contract-form');
+    els.modalTitle     = document.getElementById('contract-modal-title');
+    els.propSelect     = document.getElementById('contract-property');
+    els.tenantSelect   = document.getElementById('contract-tenant');
+    els.clientSelect   = document.getElementById('contract-client');
     els.pagination     = document.getElementById('contracts-pagination');
 
     bindEvents();
-    Promise.all([loadProperties()])
+    Promise.all([loadProperties(), loadTenants(), loadClients()])
         .then(() => loadContracts())
         .then(() => {
             // Legacy entry points now redirect to the dedicated contract page.
@@ -148,7 +159,20 @@ async function loadProperties() {
     const opts = properties.map(p =>
         `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
     ).join('');
+    if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' + opts;
     if (els.propFilter) els.propFilter.innerHTML = '<option value="">Tutti gli immobili</option>' + opts;
+}
+
+async function loadTenants() {
+    tenants = await Pagination.fetchList(TENANTS_API);
+    if (els.tenantSelect) els.tenantSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+        tenants.map(t => `<option value="${t.id}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`).join('');
+}
+
+async function loadClients() {
+    clients = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
+    if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
+        clients.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
 }
 
 // -------------------------------------------------------------------------

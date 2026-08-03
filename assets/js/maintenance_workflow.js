@@ -41,7 +41,6 @@
         els.alert          = document.getElementById('maintenance-workflow-alert');
         els.tbody          = document.getElementById('mw-tbody');
         els.pagination     = document.getElementById('mw-pagination');
-        els.search         = document.getElementById('mw-search');
         els.propFilter     = document.getElementById('mw-property-filter');
         els.statusFilter   = document.getElementById('mw-status-filter');
         els.priorityFilter = document.getElementById('mw-priority-filter');
@@ -81,7 +80,6 @@
             });
         });
 
-        els.search.addEventListener('input', debounce(() => { currentPage = 1; loadRequests(); }, 400));
         els.propFilter.addEventListener('change', () => { currentPage = 1; loadRequests(); });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadRequests(); });
         els.priorityFilter.addEventListener('change', () => { currentPage = 1; loadRequests(); });
@@ -135,12 +133,10 @@
         const params = new URLSearchParams();
         params.set('type', 'maintenance');
 
-        const search   = els.search.value.trim();
         const prop     = els.propFilter.value;
         const status   = els.statusFilter.value;
         const priority = els.priorityFilter.value;
 
-        if (search)   params.set('search', search);
         if (prop)     params.set('property_id', prop);
         if (status)   params.set('maintenance_status', status);
         if (priority) params.set('priority', priority);

@@ -11,13 +11,6 @@ import { esc, ppFmtDate, ppMoney, pciItNumber, pciItDate } from './helpers.js';
 import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.js';
 
     const propertyId = window.App?.viewParams?.propertyId;
-
-    // I pannelli laterali mostrano UNA pagina e non hanno impaginatore: quando
-    // il COUNT(*) a DB supera le righe arrivate lo si dichiara, invece di far
-    // sembrare la pagina l'intero elenco.
-    const ppTrunc = (shown, total) => window.Pagination.truncationNote(
-        shown, total, 0, 'Apri la pagina dedicata per l\'elenco completo.');
-
     let currentProperty = null;
     let allMedia = [];
     let mediaPage = 1;
@@ -593,10 +586,8 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             fetch('api/contracts.php?property_id=' + propertyId + '&limit=100').then(r => r.json()).catch(() => ({})),
             fetch('api/documents.php?property_id=' + propertyId + '&doc_type=contract&limit=100').then(r => r.json()).catch(() => ({})),
         ]).then(([cRes, dRes]) => {
-            const cW = window.Pagination.unwrap(cRes);
-            const dW = window.Pagination.unwrap(dRes);
-            const contracts = cW.items;
-            const docs = dW.items;
+            const contracts = cRes.data?.items || cRes.data || [];
+            const docs = dRes.data?.items || dRes.data || [];
             const today = window.Fmt.today();
             // Files attached to a contract record (contract_id set) are shown on that
             // record, not as standalone file cards — avoids duplicate entries.
@@ -626,7 +617,6 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             }).join('');
             const looseDocs = docs.filter(d => !d.contract_id);
             html += docFilesHtml(looseDocs, loadContracts);
-            html += ppTrunc(contracts.length + docs.length, cW.total + dW.total);
             if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessun contratto. Usa il pulsante di caricamento per aggiungerne uno.</p>';
             list.innerHTML = html;
             bindDocDeletes(list, loadContracts);
@@ -663,10 +653,8 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             fetch('api/invoices.php?property_id=' + propertyId + '&limit=100').then(r => r.json()).catch(() => ({})),
             fetch('api/documents.php?property_id=' + propertyId + '&doc_type=invoice&limit=100').then(r => r.json()).catch(() => ({})),
         ]).then(([iRes, dRes]) => {
-            const iW = window.Pagination.unwrap(iRes);
-            const dW = window.Pagination.unwrap(dRes);
-            const invoices = iW.items;
-            const docs = dW.items;
+            const invoices = iRes.data?.items || iRes.data || [];
+            const docs = dRes.data?.items || dRes.data || [];
             let html = invoices.map(i => `
                 <div class="pp-side-item">
                     <div class="pp-side-item__main">
@@ -677,7 +665,6 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                     <span class="badge badge--${esc(i.status || 'draft')}">${esc(i.status || '')}</span>
                 </div>`).join('');
             html += docFilesHtml(docs, loadInvoices);
-            html += ppTrunc(invoices.length + docs.length, iW.total + dW.total);
             if (!html) html = '<p class="text-muted" style="font-size:13px;margin:0;">Nessuna fattura. Usa il pulsante di caricamento per aggiungerne una.</p>';
             list.innerHTML = html;
             bindDocDeletes(list, loadInvoices);
@@ -1091,11 +1078,9 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                 // The documents API also returns contract records as virtual entries
                 // (doc_type 'contratto', no downloadable file). Those belong in the
                 // Contratti panel, not here — keep only real uploaded files.
-                const page = window.Pagination.unwrap(json);
-                const docs = page.items.filter(d => d.doc_type !== 'contratto' && (d.download_url || d.id));
+                const docs = (json.data?.items || json.data || []).filter(d => d.doc_type !== 'contratto' && (d.download_url || d.id));
                 document.getElementById('pp-docs-count').textContent = docs.length + ' documenti';
                 if (!docs.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun documento caricato.</p>'; return; }
-                const docsTruncNote = ppTrunc(page.items.length, page.total);
                 // I documenti ereditati arrivano dall'edificio: il file e' uno
                 // solo, condiviso da tutte le unita'. Niente cestino qui — si
                 // cancella dalla scheda dell'edificio, dove e' stato caricato,
@@ -1107,7 +1092,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                         ${d.inherited ? `<span class="badge" title="Documento condominiale di ${esc(d.building_name || 'questo edificio')} — si gestisce dalla scheda edificio">condominio</span>` : ''}
                         <span class="doc-row__date text-muted">${d.created_at ? window.Fmt.date(d.created_at) : ''}</span>
                         ${d.inherited ? '' : `<button class="btn btn--xs btn--danger" data-doc-id="${d.id}"><i data-lucide="trash-2"></i></button>`}
-                    </div>`).join('') + docsTruncNote;
+                    </div>`).join('');
                 list.querySelectorAll('[data-doc-id]').forEach(btn => btn.addEventListener('click', () => deleteDocument(btn.dataset.docId)));
             })
             .catch(() => { list.innerHTML = '<p class="text-muted" style="padding:16px;">Errore caricamento documenti.</p>'; });
@@ -1137,18 +1122,13 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
     function loadReminders() {
         const list = document.getElementById('pp-reminders-list');
         list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
-        // DELETE soft-cancels (status='cancelled'): gli annullati vanno nascosti.
-        // Il filtro sta nella QUERY e non qui: scartandoli nel browser la pagina
-        // mostrava 95 righe mentre `total` ne diceva 150 (annullati compresi), e
-        // conteggio e avviso finivano per parlare di due insiemi diversi.
-        fetch('api/reminders.php?property_id=' + propertyId + '&exclude_status=cancelled&limit=100')
+        fetch('api/reminders.php?property_id=' + propertyId + '&limit=100')
             .then(r => r.json())
             .then(json => {
-                const page  = window.Pagination.unwrap(json);
-                const items = page.items;
-                document.getElementById('pp-reminders-count').textContent =
-                    window.Pagination.countLabel(items.length, page.total, 'promemoria');
-                const remTruncNote = ppTrunc(page.items.length, page.total);
+                // DELETE soft-cancels (status='cancelled'); hide those so deleting
+                // actually removes the reminder from view.
+                const items = (json.data?.items || json.data || []).filter(r => r.status !== 'cancelled');
+                document.getElementById('pp-reminders-count').textContent = items.length + ' promemoria';
                 if (!items.length) { list.innerHTML = '<p class="text-muted" style="padding:16px;">Nessun promemoria.</p>'; return; }
                 list.innerHTML = items.map(r => {
                     const done = r.status === 'completed';
@@ -1164,7 +1144,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                             <button class="btn btn--xs btn--danger" data-rem-delete="${r.id}"><i data-lucide="trash-2"></i></button>
                         </div>
                     </div>`;
-                }).join('') + remTruncNote;
+                }).join('');
                 list.querySelectorAll('[data-rem-complete]').forEach(btn => btn.addEventListener('click', () => completeReminder(btn.dataset.remComplete)));
                 list.querySelectorAll('[data-rem-delete]').forEach(btn => btn.addEventListener('click', () => deleteReminder(btn.dataset.remDelete)));
             })
@@ -1176,17 +1156,12 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
     function loadSideReminders() {
         const list = document.getElementById('pp-side-reminders');
         if (!list) return;
-        // Chiusi ed annullati esclusi nella QUERY: scartandoli qui, un immobile
-        // con piu' di 100 promemoria tutti gia' chiusi riempiva la pagina di
-        // righe da buttare e il riquadro annunciava "Nessun promemoria in
-        // programma" mentre in agenda ce n'erano. L'API ordina per data
-        // crescente, quindi i primi che tornano sono davvero i prossimi.
-        fetch('api/reminders.php?property_id=' + propertyId + '&exclude_status=completed,cancelled&limit=100')
+        fetch('api/reminders.php?property_id=' + propertyId + '&limit=100')
             .then(r => r.json())
             .then(json => {
                 let items = json.data?.items || json.data || [];
                 // API contract: open reminders have status 'pending'; date field is reminder_date.
-                items = items
+                items = items.filter(r => r.status !== 'completed' && r.status !== 'cancelled')
                     .sort((a, b) => (a.reminder_date || '9999').localeCompare(b.reminder_date || '9999'))
                     .slice(0, 6);
                 if (!items.length) {

@@ -597,17 +597,10 @@
 }
 .topbar-icon-btn:hover { background: var(--color-primary-light); color: var(--color-primary); }
 .topbar-icon-btn [data-lucide] { width: 19px; height: 19px; }
-/* Icone di marca dallo sprite in index.php. Un <svg> senza width/height
-   occuperebbe 300x150: la misura predefinita e' quella che lucide si porta
-   negli attributi, cosi' il glifo sta in riga con le sue vicine ovunque
-   venga richiamato, e le regole di contesto (.lt-menu__item svg, la topbar,
-   la barra laterale) continuano a vincere dove gia' esistono. */
 /* Il glifo WhatsApp e' pieno, mentre le lucide accanto sono tratteggiate a 2px:
-   alla stessa misura peserebbe di piu', quindi nella topbar sta un filo
-   piu' piccolo. */
-.icon-brand-whatsapp { width: 24px; height: 24px; flex: 0 0 auto; }
+   alla stessa misura peserebbe di piu', quindi sta un filo piu' piccolo. */
+.icon-brand-whatsapp { flex: 0 0 auto; }
 .topbar-icon-btn .icon-brand-whatsapp { width: 18px; height: 18px; }
-.app-icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .topbar-user {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 5px 10px 5px 6px; border-radius: 999px; text-decoration: none;

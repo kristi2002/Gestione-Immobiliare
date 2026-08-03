@@ -48,13 +48,6 @@
     // Qui l'inserimento non viene bloccato — viene mostrato cosa esiste già.
     let duplicateAcknowledged = false;
 
-    // Guardia "modifiche non salvate", assegnata in init() e consultata da
-    // leave(). Dichiarate qui: il file gira in strict mode, e senza
-    // dichiarazione l'assegnamento in init() sollevava un ReferenceError che
-    // interrompeva l'inizializzazione a meta' — modulo muto da li' in poi.
-    let guard  = null;
-    let saving = false;
-
     async function findDuplicates(data) {
         const params = new URLSearchParams({ action: 'check_duplicate' });
         if (clientId) params.set('exclude_id', clientId);
@@ -289,8 +282,6 @@
         const saveBtn = $('ce-save');
         saveBtn.disabled = true;
         saveBtn.textContent = 'Salvataggio...';
-        // Un salvataggio in corso non e' una modifica da perdere.
-        saving = true;
         try {
             const url    = id ? `${API}?id=${id}` : API;
             const method = id ? 'PUT' : 'POST';
@@ -302,18 +293,10 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
 
-            // Salvato: spegnere la guardia PRIMA di navigare, altrimenti il
-            // router chiede "vuoi perdere le modifiche?" su una scheda gia'
-            // scritta, e un Annulla lascia l'utente sul modulo convinto che il
-            // salvataggio non sia andato a buon fine.
-            if (guard) { guard.markClean(); guard.detach(); }
-            window.App?.setLeaveGuard(null);
-
             const newId = id || json.data?.id;
             if (window.App && newId) window.App.navigateTo('client_profile', { clientId: Number(newId) });
             else if (window.App) window.App.navigateTo('clients');
         } catch (err) {
-            saving = false;
             showError(err.message);
         } finally {
             saveBtn.disabled = false;

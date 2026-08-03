@@ -1,10 +1,5 @@
 # WhatsApp Migration Plan — Twilio → Meta Cloud API
 
-> ✔ **ESEGUITO il 01/08/2026.** Questo documento e' un record storico: descrive il piano,
-> non lo stato attuale. Twilio e' stato rimosso e il codice parla direttamente con la Meta
-> Cloud API. Per come funziona oggi vedi `docs/integrations/INTEGRATIONS.md` §2.
-
-
 > Project: **Gestionale Immobiliare** (Orlandi Immobiliare, Civitanova Marche)
 > Goal: remove the Twilio sandbox dependency and build a **professional, client-usable** WhatsApp integration on **Meta's WhatsApp Cloud API**, with the compliance and reliability layer a real agency needs.
 > Status of this doc: **plan only.** Nothing here is "done" until it is built and verified per `CLAUDE.md` (paste the actual output, test the unhappy path).

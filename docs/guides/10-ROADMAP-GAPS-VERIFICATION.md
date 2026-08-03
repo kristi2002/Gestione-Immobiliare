@@ -13,7 +13,7 @@ Legend: 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low · ✅ claimed Fix
 
 | Gap | Sev | Claimed status & detail |
 |-----|-----|-------------------------|
-| Webhook WhatsApp non validato | 🔴 | ✅ Risolto — `whatsapp_webhook.php` verifica `X-Hub-Signature-256`: HMAC-SHA256 del corpo **grezzo** con `META_WA_APP_SECRET`. In produzione, se il segreto manca, risponde `503` invece di accettare (fail closed). |
+| Twilio webhook not validated | 🔴 | ✅ Fixed — `whatsapp_webhook.php` validates `X-Twilio-Signature` HMAC-SHA1 (sort POST params, concat `APP_URL + path + k + v…`, HMAC-SHA1 with auth token, base64 compare); skipped only when `TWILIO_AUTH_TOKEN` unset |
 | ADMIN_PASSWORD "admin" | 🔴 | ✅ Fixed — changed in Coolify + Settings |
 | CRON_SECRET placeholder | 🔴 | ✅ Fixed — 64-char random hex |
 | No CSRF on most endpoints | 🟠 | ✅ Already implemented — `api_bootstrap.php` L22–25 `validateCsrfToken()` on all mutating methods; all 47 admin API files use it; webhooks/cron correctly excluded |
@@ -140,7 +140,7 @@ Stand up a **fresh DB, no seed** + a brand-new admin; walk `create proprietario 
 rendering counts. Then run the exact demo sequence on the real domain/data.
 
 ### Integrations reality (Tier 3)
-Email (must reach inbox not spam); WhatsApp (Meta Cloud API, oggi spenta — serve WABA + numero Business
+Email (must reach inbox not spam); WhatsApp (still Twilio sandbox — flag as needing a Business
 number); Meta (Development mode — needs App Review for the agency's pages); Cron (check
 `/var/log/gestione-cron.log` for recent entries); webhook signature validation (prove with an
 unsigned POST).

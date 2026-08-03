@@ -1,26 +1,23 @@
 # Integrations — Gestione Immobiliare
 
-Stato delle integrazioni verificato in produzione il **02/08/2026** via
-`GET /api/readiness.php` (`overall: warn`). Le righe qui sotto sono misurate,
-non dichiarate.
+Status of all third-party service integrations as of June 2026.
 
 | Integration | Status | Config location |
 |-------------|--------|-----------------|
-| Email (SMTP) | OK — `smtp.gmail.com`, connessione e autenticazione riuscite | `app_settings` (**vince** sulle env var) |
-| WhatsApp (Meta Cloud API) | Spento: `whatsapp_enabled = false`, invii simulati | env var **o** Impostazioni |
-| Meta Graph (Facebook) | Codice funzionante, app in dev mode | `social_settings` |
-| Meta Graph (Instagram) | Come sopra; richiede immagine + base pubblica (ora da `APP_URL`) | `social_settings` |
-| Stripe (payments) | Chiavi non configurate **e** nessun endpoint di checkout lato inquilino | env var (nessuna UI) |
-| Backup su cloud (S3/R2) | Non configurato. Il backup **locale** gira (ultimo ~18h) | env var `BACKUP_*` |
-| Cron jobs | OK — tutti i job hanno un heartbeat recente | crontab sul server |
-| Posta in **entrata** (Mailgun route) | Bloccata: manca `mailgun_webhook_key`, in produzione rifiuta il non firmato | env var **o** Impostazioni |
+| Mailgun (email) | ✅ Working | Coolify env vars + app_settings |
+| Twilio WhatsApp | ✅ Working (sandbox) | Coolify env vars + app_settings |
+| Meta Graph API (Facebook) | ✅ Working | social_settings table |
+| Meta Graph API (Instagram) | ✅ Working (requires image) | social_settings table |
+| Stripe (payments) | ⚠️ Code exists, not configured | Coolify env vars |
+| Cloudflare R2 / S3 backup | 🔄 In progress | Planned env vars |
+| Cron jobs | ⚠️ Not yet set up on server | See DEPLOY.md |
 
 ---
 
 ## 1. Mailgun (Email)
 
 **Status:** ✅ Working  
-**Provider:** Mailgun EU
+**Provider:** Mailgun EU  
 **Code:** `config/mail.php`
 
 ### How it works
@@ -67,82 +64,59 @@ stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT |
 
 ---
 
-## 2. WhatsApp — Meta Cloud API
+## 2. Twilio WhatsApp
 
-**Status:** configurato nel codice, **spento in produzione** (`whatsapp_enabled = false`):
-gli invii vengono registrati come "simulati", non spediti.
+**Status:** ✅ Working (Twilio Sandbox)  
 **Code:** `config/whatsapp.php`, `api/whatsapp_webhook.php`, `api/whatsapp_inbox.php`
-
-Twilio e' stato rimosso (01/08/2026): rivendeva questa stessa piattaforma Meta
-aggiungendo una tariffa per messaggio. Ora si chiama Meta direttamente, quindi
-non esistono piu' `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
-`TWILIO_WHATSAPP_FROM` — se sono ancora nell'ambiente, non li legge nessuno.
 
 ### Architecture
 
 ```
-Outbound: PHP -> graph.facebook.com (Bearer token) -> WhatsApp
-Inbound:  WhatsApp -> Meta -> POST /api/whatsapp_webhook.php (JSON firmato HMAC) -> MySQL
+Outbound: PHP → Twilio REST API → WhatsApp
+Inbound:  WhatsApp → Twilio → POST /api/whatsapp_webhook.php → MySQL
 ```
 
 ### Outbound flow
 
 `sendWhatsAppMessage($to, $body)` in `config/whatsapp.php`:
-1. Legge `whatsapp_enabled` (se false, simula il successo e non chiama nessuno)
-2. `POST /{phone_number_id}/messages` su Graph, autenticato `Authorization: Bearer`
-3. Salva in `communications` con `channel = whatsapp`
-
-`phone_number_id` **non e' il numero**: e' l'identificativo che Meta assegna al
-mittente ed e' l'unica cosa che finisce nell'URL. `WHATSAPP_FROM` serve solo a
-mostrare il mittente in archivio e in chat.
-
-Fuori dalle 24 ore dall'ultimo messaggio del cliente, Meta accetta **solo
-template approvati**: vedi `sendWhatsAppTemplate()`. Gli errori 131047/131051/
-131026 significano "finestra chiusa", non "guasto".
+1. Checks `whatsapp_enabled` setting (if false, simulates success)
+2. Calls Twilio REST API: `POST https://api.twilio.com/2010-04-01/Accounts/{SID}/Messages.json`
+3. From number: `whatsapp:+14155238886` (sandbox)
+4. Saves to `communications` table with `channel = whatsapp`
 
 ### Inbound flow
 
-Un solo endpoint, due metodi:
-- **GET** — la verifica con cui Meta attiva la sottoscrizione. Va restituita la
-  `hub.challenge` in chiaro, altrimenti il webhook non si attiva mai e non
-  arriva un solo messaggio, senza errori visibili da questa parte.
-- **POST** — messaggi in arrivo **e** stati di consegna dei nostri, che con
-  Twilio erano un endpoint separato.
+Twilio POSTs to `https://testdemo.it/api/whatsapp_webhook.php` with fields:
+- `From` — sender's WhatsApp number (`whatsapp:+39...`)
+- `To` — sandbox number
+- `Body` — message text
+- `MessageSid` — Twilio message ID
 
-Firma HMAC-SHA256 del corpo grezzo con `META_WA_APP_SECRET`. **Fail closed in
-produzione:** senza app secret il webhook risponde `503` e rifiuta tutto —
-WhatsApp sembrerebbe attivo e non arriverebbe niente.
-
-URL da incollare nel pannello Meta:
-`https://immobiliare.testdemo.it/api/whatsapp_webhook.php` (sottoscrivere il
-campo `messages`).
+The webhook:
+1. Calls `parseTwilioWebhook($_POST)` to extract fields
+2. Inserts into `whatsapp_messages` (`direction = inbound`)
+3. Inserts notification record
+4. Returns empty TwiML `<Response/>` to suppress Twilio auto-reply
 
 ### Configuration
 
-Tutte le chiavi si possono impostare **o** da ambiente **o** da Impostazioni.
-Attenzione alla precedenza: **una riga in `app_settings` vince sull'ambiente**
-(la pagina Impostazioni batte Coolify). Se una variabile sembra non avere
-effetto, e' perche' esiste gia' la riga corrispondente.
+| Env var | Value |
+|---------|-------|
+| `TWILIO_ACCOUNT_SID` | From Twilio console |
+| `TWILIO_AUTH_TOKEN` | From Twilio console |
+| `TWILIO_WHATSAPP_FROM` | `whatsapp:+14155238886` (sandbox) |
 
-| Env var | Chiave Impostazioni | Valore |
-|---------|--------------------|--------|
-| `WHATSAPP_ENABLED` | `whatsapp_enabled` | `true` per spedire davvero |
-| `META_WA_PHONE_NUMBER_ID` | `meta_wa_phone_number_id` | id del mittente, solo cifre |
-| `META_WA_ACCESS_TOKEN` | `meta_wa_access_token` | token **permanente** (System User) |
-| `META_WA_APP_SECRET` | `meta_wa_app_secret` | firma i webhook in arrivo |
-| `META_WA_VERIFY_TOKEN` | `meta_wa_verify_token` | stringa scelta da te, ripetuta nel pannello |
-| `WHATSAPP_FROM` | `whatsapp_from` | `+393331234567`, formato internazionale |
+### Twilio sandbox setup
 
-Con `whatsapp_enabled` attivo, il salvataggio delle Impostazioni **rifiuta** un
-salvataggio in cui uno qualsiasi degli altri cinque e' vuoto.
+Users must join the sandbox by texting `join <sandbox-word>` to `+14155238886` before messages arrive.  
+The sandbox webhook URL must be set to: `https://testdemo.it/api/whatsapp_webhook.php`
 
 ### Known gaps
 
-- Un token di sviluppo dura 24 ore: scaduto, ogni invio muore con **errore 190**.
-  Serve un token permanente da System User.
-- Finche' l'app Meta e' in **sviluppo**, si scrive solo ai numeri di prova
-  (errore **131030** verso chiunque altro).
-- I template vanno approvati da Meta prima di poter scrivere fuori dalle 24 ore.
+- **No Twilio signature validation** — the webhook does not verify the `X-Twilio-Signature` header. Any POST to that URL will be accepted and saved. Fix: validate using Twilio PHP SDK `validateRequest()` or manual HMAC check.
+- Still on **sandbox** — production requires a paid Twilio WhatsApp Business number
+- No media handling — `media_url` column exists but attachments are not displayed in inbox UI
+- The `api/whatsapp_inbox.php` endpoint (NOT the webhook) handles the inbox UI data — these are two different files
 
 ---
 
@@ -280,16 +254,16 @@ See DEPLOY.md for the full crontab setup instructions.
 
 ```mermaid
 flowchart LR
-    App["PHP App\n(immobiliare.testdemo.it)"]
+    App["PHP App\n(testdemo.it)"]
 
-    App -->|STARTTLS :587| SMTP["Gmail SMTP\nsmtp.gmail.com"]
-    App -->|Graph API| Meta["Meta\ngraph.facebook.com\n(social + WhatsApp)"]
-    Meta -->|POST webhook firmato| App
-    App -->|Checkout API| Stripe["Stripe\napi.stripe.com\n(non configurato)"]
+    App -->|STARTTLS :587| Mailgun["Mailgun EU\nsmtp.eu.mailgun.org"]
+    App -->|REST API| Twilio["Twilio\napi.twilio.com"]
+    Twilio -->|POST webhook| App
+    App -->|Graph API| Meta["Meta\ngraph.facebook.com"]
+    App -->|Checkout API| Stripe["Stripe\napi.stripe.com"]
     Stripe -->|POST webhook| App
-    Mailgun["Mailgun\n(route posta in entrata)"] -->|POST| App
-    App -->|S3 PUT| R2["Cloudflare R2\n(non configurato)"]
+    App -->|S3 PUT| R2["Cloudflare R2\n(planned)"]
 
-    DNS["Cloudflare DNS"] --> App
+    DNS["Cloudflare DNS\ntestdemo.it"] --> App
     Traefik["Traefik\n(coolify-proxy)"] --> App
 ```

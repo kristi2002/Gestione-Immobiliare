@@ -73,26 +73,3 @@ function env(string $key, mixed $default = null): mixed
         default            => $value,
     };
 }
-
-/**
- * Indirizzo pubblico dell'app, senza '/' finale. '' se non configurato.
- *
- * Esiste perche' la costante APP_URL la definisce config/bootstrap.php, che e'
- * un file del percorso HTTP: cinque dei sette script in cron/ caricano solo
- * l'ambiente, quindi li' la VARIABILE c'e' e la COSTANTE no. Chi guardava solo
- * `defined('APP_URL')` funzionava dal browser e taceva proprio nell'esecuzione
- * automatica — il logo spariva dalle email del cron, e la pubblicazione su
- * Instagram rifiutava di partire dicendo di impostare una APP_URL gia'
- * impostata. Nessun errore, nessuna traccia: solo qualcosa che manca.
- *
- * Da preferire alla costante ovunque, anche sul percorso HTTP: cosi' non c'e'
- * un modo giusto e uno sbagliato da ricordare a ogni nuovo uso.
- */
-function appBaseUrl(): string
-{
-    $base = defined('APP_URL') && APP_URL !== ''
-        ? (string) APP_URL
-        : (string) env('APP_URL', '');
-
-    return rtrim($base, '/');
-}

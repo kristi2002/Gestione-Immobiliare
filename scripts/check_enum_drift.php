@@ -38,7 +38,7 @@ const CHECKS = [
     ['agent_commissions',  'agent_role',      'api/commissions.php', 'COMMISSION_AGENT_ROLES'],
     ['property_insurance', 'policy_type',     'api/insurance.php',   'INSURANCE_TYPES'],
     ['documents',          'doc_type',        'api/documents.php',   'DOC_TYPES'],
-    ['leads',              'source',          'config/lead_sources.php', 'LEAD_SOURCE_LABELS'],
+    ['leads',              'source',          'api/leads.php',       'LEAD_SOURCES'],
     ['payments',           'method',          'api/payments.php',    'PAYMENT_METHODS'],
     ['expenses',           'category',        'api/expenses.php',    'EXPENSE_CATEGORIES'],
     ['contracts',          'contract_type',   'api/contracts.php',   'CONTRACT_TYPES'],
@@ -60,13 +60,7 @@ function enumValues(PDO $db, string $table, string $column): ?array
     return array_map(static fn ($v) => str_replace("''", "'", $v), $m[1]);
 }
 
-/**
- * Estrae i valori da `const NOME = ['a','b'];` in un file PHP.
- *
- * Alcune whitelist sono mappe chiave => etichetta (LEAD_SOURCE_LABELS): li' i
- * valori dell'enum sono le CHIAVI, e raccogliere ogni stringa fra apici
- * conterebbe anche le etichette, segnalando una divergenza inventata.
- */
+/** Estrae i valori da `const NOME = ['a','b'];` in un file PHP. */
 function constValues(string $file, string $const): ?array
 {
     $src = @file_get_contents(dirname(__DIR__) . '/' . $file);
@@ -75,10 +69,6 @@ function constValues(string $file, string $const): ?array
     }
     if (!preg_match('/const\s+' . preg_quote($const, '/') . '\s*=\s*\[(.*?)\]\s*;/s', $src, $m)) {
         return null;
-    }
-    if (str_contains($m[1], '=>')) {
-        preg_match_all("/'([^']*)'\s*=>/", $m[1], $q);
-        return $q[1];
     }
     preg_match_all("/'([^']*)'/", $m[1], $q);
     return $q[1];

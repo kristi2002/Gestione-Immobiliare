@@ -53,12 +53,6 @@ const AUTOMATION_TOKEN_GROUPS = [
         'evento.prezzo_attuale'    => 'Prezzo dopo il ribasso',
         'evento.data'              => 'Data dell\'evento',
     ],
-    // Non e' un dato da leggere come gli altri: il link non esiste finche' non
-    // lo si crea, e ne nasce uno diverso per ogni destinatario al momento
-    // dell'invio. Vale solo verso un inquilino; senza, il messaggio non parte.
-    'Sondaggio' => [
-        'sondaggio.link' => 'Link al sondaggio di soddisfazione (solo verso un inquilino)',
-    ],
 ];
 
 /** I token d'evento non esistono in un'automazione a calendario. */

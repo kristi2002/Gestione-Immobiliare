@@ -6,7 +6,6 @@
  * GET  /api/surveys.php?token=X        — public: survey form data (no auth)
  * POST /api/surveys.php?submit=1       — public: submit survey by token (no auth)
  * POST /api/surveys.php                — admin: create survey link (generates token)
- * POST /api/surveys.php?send=1         — admin: create/riusa il link e lo spedisce all'inquilino
  * DELETE /api/surveys.php?id={id}      — admin: delete survey
  */
 
@@ -17,7 +16,6 @@ require_once __DIR__ . '/../config/api_pagination.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/activity_log.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/surveys.php';
 
 apiHandleOptions();
 
@@ -73,27 +71,16 @@ function listSurveys(PDO $db): void
 {
     $pagination = apiGetPagination();
     $propertyId = isset($_GET['property_id']) ? (int) $_GET['property_id'] : null;
-    $search     = trim($_GET['search'] ?? '');
 
     $where  = 'WHERE 1=1';
     $params = [];
-
-    // Stesse join per conteggio e dati: si cerca per inquilino e per immobile.
-    $joins = ' LEFT JOIN tenants t ON t.id = ts.tenant_id
-               LEFT JOIN properties p ON p.id = ts.property_id';
 
     if ($propertyId) {
         $where .= ' AND ts.property_id = :property_id';
         $params['property_id'] = $propertyId;
     }
-    if ($search !== '') {
-        $frag = apiWordSearch($search, [
-            't.name', 't.surname', 'p.address', 'p.city', 'ts.comment',
-        ], $params, 'svs');
-        if ($frag !== '') $where .= " AND ($frag)";
-    }
 
-    $countSql = "SELECT COUNT(*) FROM tenant_surveys ts $joins $where";
+    $countSql = "SELECT COUNT(*) FROM tenant_surveys ts $where";
 
     $dataSql = "SELECT ts.*,
                    ts.overall_rating       AS rating_global,
@@ -102,7 +89,8 @@ function listSurveys(PDO $db): void
                    t.name AS tenant_name, t.surname AS tenant_surname,
                    p.address AS property_address, p.city AS property_city
             FROM tenant_surveys ts
-            $joins
+            LEFT JOIN tenants t ON t.id = ts.tenant_id
+            LEFT JOIN properties p ON p.id = ts.property_id
             $where
             ORDER BY ts.submitted_at DESC, ts.id DESC";
 
@@ -210,55 +198,35 @@ function createSurvey(PDO $db): void
     $data       = apiGetJsonBody();
     $tenantId   = !empty($data['tenant_id']) ? (int) $data['tenant_id'] : null;
     $propertyId = !empty($data['property_id']) ? (int) $data['property_id'] : null;
-    $send       = !empty($_GET['send']) || !empty($data['send']);
 
     if ($tenantId === null && $propertyId === null) {
         apiError('Specifica almeno un inquilino o un immobile.');
     }
-    if ($send && $tenantId === null) {
-        apiError('Per spedire l\'invito serve un inquilino: e\' l\'unico con un indirizzo email.');
-    }
 
-    if ($send) {
-        $result = surveySendInvitation($db, $tenantId, $propertyId, surveyPropertyAddress($db, $propertyId));
-        if (!$result['success']) {
-            apiError($result['error']);
-        }
+    $token = bin2hex(random_bytes(32)); // 64-char hex token
 
-        logActivity('create', 'survey', $result['survey_id'],
-            'Invito sondaggio inviato a ' . $result['email'] . ($result['simulated'] ? ' (invio simulato)' : ''));
+    $stmt = $db->prepare(
+        "INSERT INTO tenant_surveys (tenant_id, property_id, token)
+         VALUES (:tenant_id, :property_id, :token)"
+    );
+    $stmt->execute([
+        'tenant_id'   => $tenantId,
+        'property_id' => $propertyId,
+        'token'       => $token,
+    ]);
 
-        apiSuccess([
-            'id'        => $result['survey_id'],
-            'link'      => $result['link'],
-            'sent_to'   => $result['email'],
-            'simulated' => $result['simulated'],
-        ]);
-    }
+    $newId = (int) $db->lastInsertId();
+    logActivity('create', 'survey', $newId, 'Sondaggio creato con token');
 
-    $survey = surveyEnsureOpen($db, $tenantId, $propertyId);
-
-    if ($survey['created']) {
-        logActivity('create', 'survey', $survey['id'], 'Sondaggio creato con token');
-    }
+    // Build the public survey link
+    $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+    $link    = $baseUrl . '/survey.php?token=' . $token;
 
     apiSuccess([
-        'id'    => $survey['id'],
-        'token' => $survey['token'],
-        // '' se APP_URL non e' configurato: meglio niente link che uno rotto.
-        'link'  => $survey['link'],
+        'id'    => $newId,
+        'token' => $token,
+        'link'  => $link,
     ]);
-}
-
-/** Indirizzo dell'immobile, solo per dare contesto al testo dell'invito. */
-function surveyPropertyAddress(PDO $db, ?int $propertyId): ?string
-{
-    if (!$propertyId) {
-        return null;
-    }
-    $stmt = $db->prepare("SELECT address FROM properties WHERE id = :id");
-    $stmt->execute(['id' => $propertyId]);
-    return $stmt->fetchColumn() ?: null;
 }
 
 function deleteSurvey(PDO $db, int $id): void

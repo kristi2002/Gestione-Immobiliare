@@ -8,12 +8,6 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mail.php';
 require_once __DIR__ . '/mail_html.php';
 require_once __DIR__ . '/automation_templates.php';
-// Il token {{sondaggio.link}} non e' un campo da leggere: crea la riga del
-// sondaggio al momento dell'invio. Vedi processSingleReminder().
-require_once __DIR__ . '/surveys.php';
-// La porta per gli invii commerciali: consenso verificato e link di
-// disiscrizione. Vedi processSingleReminder(), che sceglie quale usare.
-require_once __DIR__ . '/../lib/marketing_mail.php';
 
 const REMINDER_FREQUENCIES = ['once', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -110,54 +104,15 @@ function processSingleReminder(PDO $db, array $reminder): array
 
     $recipient = reminderRecipient($reminder);
 
-    $subjectTpl = $reminder['email_subject'] ?: $reminder['title'];
-    $bodyTpl    = $reminder['email_body'] ?: buildDefaultClientEmailBody($reminder);
-
-    // Il link del sondaggio nasce QUI, come effetto della spedizione: e' diverso
-    // per ogni destinatario e non puo' stare nel modello salvato. Si risolve solo
-    // se un invio al cliente c'e' davvero, altrimenti si creerebbe una riga
-    // `tenant_surveys` per un messaggio che nessuno spedisce.
-    $survey = ['required' => false, 'link' => '', 'error' => null];
     if ($reminder['notify_client'] && $recipient['email'] !== '') {
-        $survey = surveyResolveAutomationLink($db, $reminder, $subjectTpl, $bodyTpl);
-    }
-
-    if ($survey['required'] && $survey['link'] === '') {
-        // Il messaggio esisteva solo per portare quel link: spedirlo con un buco
-        // al suo posto e' peggio che non spedirlo, e va detto in chiaro nel
-        // registro invii, l'unico posto dove l'agente puo' accorgersene.
-        logReminderDispatch($db, $reminder, 'skipped', $recipient, null, null, $survey['error']);
-        $actions['client'] = 'skipped_no_survey';
-    } elseif ($reminder['notify_client'] && $recipient['email'] !== '') {
         // I token si risolvono ORA, non al salvataggio: un'occorrenza generata
         // dieci mesi fa deve comunque riportare l'indirizzo e il prezzo di oggi.
-        $ctx     = buildAutomationContext($reminder, ['sondaggio.link' => $survey['link']]);
-        $subject = renderAutomationTemplate($subjectTpl, $ctx);
-        $body    = renderAutomationTemplate($bodyTpl, $ctx);
+        $ctx     = buildAutomationContext($reminder);
+        $subject = renderAutomationTemplate($reminder['email_subject'] ?: $reminder['title'], $ctx);
+        $body    = renderAutomationTemplate($reminder['email_body'] ?: buildDefaultClientEmailBody($reminder), $ctx);
+        $result  = sendHtmlEmail($recipient['email'], $subject, $body);
 
-        // Un messaggio commerciale passa dalla porta che interroga il registro
-        // consensi e appende il link di disiscrizione. Uno di servizio no: la
-        // scadenza dell'affitto la si deve poter mandare anche a chi non ha mai
-        // dato consenso marketing, perche' non e' su quello che si fonda.
-        $result = !empty($reminder['is_marketing'])
-            ? sendMarketingEmail(
-                $db,
-                $recipient['type'],
-                reminderSubjectId($reminder, $recipient['type']),
-                $recipient['email'],
-                $subject,
-                $body
-              )
-            : sendHtmlEmail($recipient['email'], $subject, $body);
-
-        // Fermato dal consenso: non e' un guasto e non va ritentato. Va scritto
-        // nel registro, che e' il solo posto dove l'agente puo' accorgersi che
-        // la campagna non ha raggiunto quel contatto e perche'.
-        if (!$result['success'] && ($result['status'] ?? '') === 'blocked') {
-            logReminderDispatch($db, $reminder, 'blocked', $recipient, $subject, $body,
-                $result['error'] ?? 'Invio commerciale bloccato dal registro consensi.');
-            $actions['client'] = 'blocked';
-        } elseif ($result['success']) {
+        if ($result['success']) {
             $outcome = !empty($result['simulated']) ? 'simulated' : 'sent';
             logClientNotification($db, $reminder, $subject, $body, $recipient['email'], $outcome);
             logReminderDispatch($db, $reminder, $outcome, $recipient, $subject, $body,
@@ -222,18 +177,6 @@ function processSingleReminder(PDO $db, array $reminder): array
         'title'   => $reminder['title'],
         'actions' => $actions,
     ];
-}
-
-/**
- * L'id del soggetto su cui il registro consensi va interrogato.
- *
- * Deve essere la STESSA persona scelta da reminderRecipient(): chiedere il
- * consenso del proprietario e poi scrivere al lead sarebbe peggio che non
- * chiederlo affatto, perche' avrebbe l'aria di un controllo fatto.
- */
-function reminderSubjectId(array $reminder, string $type): int
-{
-    return (int) ($reminder[$type . '_id'] ?? 0);
 }
 
 /**

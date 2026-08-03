@@ -6,7 +6,6 @@
  * GET  /api/whatsapp_inbox.php?threads=1          — una riga per conversazione, con contesto anagrafico
  * GET  /api/whatsapp_inbox.php?thread=+39X        — conversation thread with a specific number
  * GET  /api/whatsapp_inbox.php?action=search_contacts&q= — ricerca proprietari/inquilini/lead
- * GET  /api/whatsapp_inbox.php?action=compose&phone=+39X — stato finestra 24h + template inviabili
  * PUT  /api/whatsapp_inbox.php?id={id}            — mark as read: {is_read: true}
  * POST /api/whatsapp_inbox.php                    — save outbound message
  * POST /api/whatsapp_inbox.php?action=link        — associa un numero a un contatto esistente
@@ -22,15 +21,6 @@ apiHandleOptions();
 // in uscita è il destinatario. Raggruppare su from_number (com'era) faceva
 // finire ogni conversazione iniziata da noi sotto il NOSTRO stesso numero.
 const WA_COUNTERPARTY = "IF(wm.direction = 'inbound', wm.from_number, wm.to_number)";
-
-/**
- * Quante conversazioni mostra la colonna di sinistra. La ricerca in colonna
- * filtra cio' che e' stato caricato, quindi oltre questo numero non sparivano
- * solo le righe in fondo: sparivano anche dai risultati della ricerca. Il tetto
- * resta (e' una barra laterale, non un elenco), ma ora la risposta dice quante
- * conversazioni esistono davvero e la colonna lo scrive.
- */
-const WA_THREADS_LIMIT = 200;
 
 /**
  * Colonna di whatsapp_messages corrispondente al tipo di contatto.
@@ -60,8 +50,6 @@ try {
         case 'GET':
             if ($action === 'search_contacts') {
                 searchContacts($db, trim($_GET['q'] ?? ''));
-            } elseif ($action === 'compose') {
-                composeState($db, $phone !== '' ? $phone : $thread);
             } elseif (!empty($_GET['threads'])) {
                 listThreads($db);
             } elseif ($thread !== '') {
@@ -130,11 +118,6 @@ function listThreads(PDO $db): void
     // Una riga per conversazione, raggruppata sul numero della CONTROPARTE.
     $cp = WA_COUNTERPARTY;
 
-    $total = (int) $db->query(
-        // L'alias `wm` serve: WA_COUNTERPARTY lo nomina.
-        "SELECT COUNT(*) FROM (SELECT {$cp} AS phone FROM whatsapp_messages wm GROUP BY phone) t"
-    )->fetchColumn();
-
     // contact_key = "tipo:id" del messaggio associato PIÙ RECENTE.
     //
     // Non si può usare MAX(contact_type) + MAX(contact_id) separati: MAX() su
@@ -157,15 +140,11 @@ function listThreads(PDO $db): void
          FROM whatsapp_messages wm
          GROUP BY phone
          ORDER BY last_at DESC
-         LIMIT " . WA_THREADS_LIMIT
+         LIMIT 200"
     );
 
     $rows = $stmt->fetchAll();
-    apiSuccess([
-        'items' => waAttachContacts($db, $rows),
-        'total' => $total,
-        'limit' => WA_THREADS_LIMIT,
-    ]);
+    apiSuccess(waAttachContacts($db, $rows));
 }
 
 /**
@@ -341,49 +320,6 @@ function getThread(PDO $db, string $number): void
     apiPaginatedSuccess($items, $total, $pagination);
 }
 
-/**
- * Cosa puo' scrivere l'agente a questo numero, adesso.
- *
- * La schermata non puo' dedurlo da sola: sapere se la finestra di 24 ore e'
- * aperta richiede l'ultimo messaggio in entrata, e sapere quali template sono
- * spedibili richiede lo stato di approvazione Meta. Senza questa risposta
- * l'inbox mostrerebbe una casella di testo che a WhatsApp acceso rifiuta
- * l'invio, che e' esattamente il modo in cui questa integrazione ha gia'
- * sembrato funzionare senza funzionare.
- */
-function composeState(PDO $db, string $phone): void
-{
-    $cfg    = getWhatsAppConfig();
-    $window = $phone !== ''
-        ? waWindowState($db, $phone)
-        : ['open' => false, 'last_inbound_at' => null, 'expires_at' => null, 'minutes_left' => null];
-
-    // Solo i template realmente spedibili: uno in bozza o rifiutato in elenco
-    // sarebbe una scelta che fallisce al momento dell'invio.
-    $stmt = $db->query(
-        "SELECT id, name, meta_template_name, meta_language, category, body, variables
-           FROM whatsapp_templates
-          WHERE meta_status = 'approvato' AND meta_template_name IS NOT NULL AND meta_template_name <> ''
-          ORDER BY category ASC, name ASC"
-    );
-    $templates = $stmt->fetchAll() ?: [];
-
-    foreach ($templates as &$t) {
-        $t['variables'] = waTemplateVariables($t);
-    }
-    unset($t);
-
-    apiSuccess([
-        'phone'     => $phone !== '' ? normalizeWhatsAppNumber($phone) : '',
-        'enabled'   => $cfg['enabled'],
-        'window'    => $window,
-        // A integrazione spenta il testo libero passa comunque (invio simulato):
-        // la schermata deve poterlo dire, non nasconderlo.
-        'can_send_free_text' => $window['open'] || !$cfg['enabled'],
-        'templates' => $templates,
-    ]);
-}
-
 function markAsRead(PDO $db, int $id): void
 {
     $stmt = $db->prepare("SELECT id FROM whatsapp_messages WHERE id = :id");
@@ -503,13 +439,9 @@ function createLeadFromThread(PDO $db): void
         throw $e;
     }
 
-    // Stessa fonte scritta nell'INSERT qui sopra: il filtro per fonte delle
-    // automazioni confronta questo campo, e un payload muto non fa scattare
-    // nessuna regola ristretta.
     emitAutomationEvent($db, 'lead.created', 'lead', $leadId, [
         'lead_id'     => $leadId,
         'property_id' => null,
-        'source'      => 'whatsapp',
     ]);
 
     logActivity('create', 'lead', $leadId,

@@ -417,36 +417,7 @@
             <div class="form-group">
                 <label>Testo (usa <code>{{variabile}}</code> per i segnaposto)</label>
                 <textarea id="wa-tpl-body" class="form-textarea" rows="5" required></textarea>
-                <small class="form-hint">L'ordine dei segnaposto è quello dei parametri Meta: il primo diventa <code>{{1}}</code>, il secondo <code>{{2}}</code>.</small>
             </div>
-            <fieldset>
-                <legend>Collegamento a Meta</legend>
-                <p class="text-muted" style="font-size:0.85rem">
-                    Serve solo per scrivere fuori dalla finestra di 24 ore. Senza un template approvato,
-                    un primo messaggio viene rifiutato da Meta.
-                </p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="wa-tpl-meta-name">Nome su Meta</label>
-                        <input type="text" id="wa-tpl-meta-name" class="form-input" placeholder="es. sollecito_pagamento">
-                        <small class="form-hint">Solo minuscole, cifre e underscore. È il nome registrato nel Business Manager.</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="wa-tpl-meta-lang">Lingua</label>
-                        <input type="text" id="wa-tpl-meta-lang" class="form-input" value="it" placeholder="it">
-                    </div>
-                    <div class="form-group">
-                        <label for="wa-tpl-meta-status">Stato approvazione</label>
-                        <select id="wa-tpl-meta-status" class="form-select">
-                            <option value="bozza">Bozza</option>
-                            <option value="in_revisione">In revisione</option>
-                            <option value="approvato">Approvato</option>
-                            <option value="rifiutato">Rifiutato</option>
-                        </select>
-                        <small class="form-hint">Solo i template approvati compaiono nell'Inbox.</small>
-                    </div>
-                </div>
-            </fieldset>
             <div class="modal-footer">
                 <button type="button" class="btn btn--ghost" id="wa-tpl-modal-cancel">Annulla</button>
                 <button type="submit" class="btn btn--primary">Salva</button>
