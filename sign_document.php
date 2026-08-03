@@ -36,7 +36,7 @@ const SIGN_INLINE_MIMES = [
 try {
     $db   = getDB();
     $stmt = $db->prepare(
-        'SELECT er.id, er.document_id, er.status, er.expires_at,
+        'SELECT er.id, er.document_id, er.status, er.expires_at, er.signer_email,
                 d.original_name, d.file_path, d.mime_type
            FROM esign_requests er
            LEFT JOIN documents d ON d.id = er.document_id
@@ -70,8 +70,13 @@ try {
     // Tracciamento accessi GDPR: chi apre il documento, e quando.
     require_once __DIR__ . '/config/gdpr.php';
     if (function_exists('logDataAccess')) {
+        // actor_type e' un enum ('admin','owner','tenant','system'): il
+        // firmatario non e' un utente dei portali, quindi va in 'system' con
+        // l'identita' nell'etichetta. Passare 'signer' faceva fallire in
+        // silenzio la scrittura del registro (1265 Data truncated).
         logDataAccess(
-            'view', null, null, 'signer', (int) $req['id'], null,
+            'view', null, null, 'system', null,
+            'firma richiesta #' . (int) $req['id'] . ' — ' . (string) $req['signer_email'],
             'document', (int) $req['document_id'], (string) $req['original_name']
         );
     }

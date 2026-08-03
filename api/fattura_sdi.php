@@ -66,8 +66,16 @@ try {
 function loadInvoice(PDO $db, int $invoiceId): array
 {
     if ($invoiceId <= 0) apiError('invoice_id mancante.');
+    // L'anagrafica fiscale del cliente serve TUTTA: senza indirizzo, P.IVA e
+    // denominazione l'XML usciva con sede "N/D", CAP 00000 e nessuna partita
+    // IVA — formalmente incompleto verso lo SdI.
     $stmt = $db->prepare(
-        "SELECT i.*, c.name AS client_name, c.surname AS client_surname, c.codice_fiscale AS client_cf,
+        "SELECT i.*,
+                c.name AS client_name, c.surname AS client_surname, c.codice_fiscale AS client_cf,
+                c.person_type AS client_person_type, c.company_name AS client_company_name,
+                c.vat_number AS client_vat, c.pec_email AS client_pec,
+                c.address AS client_address, c.city AS client_city,
+                c.cap AS client_cap, c.province AS client_province,
                 l.name AS lead_name, l.surname AS lead_surname, l.codice_fiscale AS lead_cf
          FROM invoices i
          LEFT JOIN clients c ON c.id = i.client_id
@@ -95,12 +103,54 @@ function agencyFromSettings(): array
     ];
 }
 
+/**
+ * Il cessionario/committente come lo vuole la FatturaPA.
+ *
+ * lib/FatturaPA.php sapeva gia' scrivere P.IVA, denominazione, sede e canale
+ * di recapito: era questa funzione a non passarglieli, e il generatore
+ * ripiegava su "N/D" e CAP 00000. Da qui in avanti arriva l'anagrafica intera.
+ *
+ * Una persona giuridica va in <Denominazione>, una fisica in Nome+Cognome:
+ * sono rami alternativi dello schema, non due modi di scrivere la stessa cosa.
+ */
 function customerFromInvoice(array $inv): array
 {
     if (!empty($inv['client_id'])) {
-        return ['nome' => $inv['client_name'] ?? '', 'cognome' => $inv['client_surname'] ?? '', 'cf' => $inv['client_cf'] ?? ''];
+        $isCompany = ($inv['client_person_type'] ?? '') === 'giuridica';
+        return [
+            'denominazione'       => $isCompany ? trim((string) ($inv['client_company_name'] ?? '')) : '',
+            'nome'                => $inv['client_name'] ?? '',
+            'cognome'             => $inv['client_surname'] ?? '',
+            'cf'                  => $inv['client_cf'] ?? '',
+            'piva'                => $inv['client_vat'] ?? '',
+            'indirizzo'           => $inv['client_address'] ?? '',
+            'cap'                 => $inv['client_cap'] ?? '',
+            'comune'              => $inv['client_city'] ?? '',
+            'provincia'           => $inv['client_province'] ?? '',
+            'pec'                 => $inv['client_pec'] ?? '',
+            // Nessuna colonna per il codice destinatario SDI a 7 caratteri:
+            // con la sola PEC il recapito e' comunque valido, altrimenti il
+            // generatore usa 0000000 (privato senza canale telematico).
+            'codice_destinatario' => '',
+        ];
     }
-    return ['nome' => $inv['lead_name'] ?? '', 'cognome' => $inv['lead_surname'] ?? '', 'cf' => $inv['lead_cf'] ?? ''];
+
+    // Fatturare a un lead: in leads non esistono indirizzo ne' P.IVA, quindi
+    // l'XML sarebbe per forza incompleto. Non si inventa: la validazione a
+    // valle lo dira' chiaramente invece di produrre una sede finta.
+    return [
+        'denominazione'       => '',
+        'nome'                => $inv['lead_name'] ?? '',
+        'cognome'             => $inv['lead_surname'] ?? '',
+        'cf'                  => $inv['lead_cf'] ?? '',
+        'piva'                => '',
+        'indirizzo'           => '',
+        'cap'                 => '',
+        'comune'              => '',
+        'provincia'           => '',
+        'pec'                 => '',
+        'codice_destinatario' => '',
+    ];
 }
 
 function getTransmission(PDO $db, int $invoiceId): ?array
@@ -119,8 +169,18 @@ function generateFattura(PDO $db, int $invoiceId): void
         apiError('Completa i dati agenzia in Impostazioni → Fatturazione: ' . implode(', ', $missing));
     }
 
+    $customer        = customerFromInvoice($inv);
+    $missingCustomer = fatturaPaMissingCustomerFields($customer);
+    if (!empty($missingCustomer)) {
+        apiError(
+            'Anagrafica del cliente incompleta per la fattura elettronica: '
+            . implode(', ', $missingCustomer)
+            . '. Completala nella scheda del cliente e rigenera.'
+        );
+    }
+
     $progressivo = (int) $invoiceId;
-    $xml = fatturaPaBuildXml($inv, $agency, customerFromInvoice($inv), $progressivo);
+    $xml = fatturaPaBuildXml($inv, $agency, $customer, $progressivo);
 
     $sender   = preg_replace('/\D/', '', (string) ($agency['piva'] ?: $agency['cf'] ?: '00000000000'));
     $filename = 'IT' . ($sender ?: '00000000000') . '_' . str_pad((string) $progressivo, 5, '0', STR_PAD_LEFT) . '.xml';

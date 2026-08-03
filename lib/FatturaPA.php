@@ -155,6 +155,41 @@ function fatturaPaBuildXml(array $invoice, array $agency, array $customer, int $
     return $dom->saveXML();
 }
 
+/**
+ * Campi del CLIENTE senza i quali la fattura non e' formalmente completa.
+ *
+ * Esisteva solo il controllo sull'agenzia, e questo bastava a far uscire XML
+ * con sede "N/D" e CAP 00000 verso lo SdI. Meglio dire all'agente cosa manca
+ * nell'anagrafica che consegnare un file che verra' scartato — o peggio,
+ * accettato con un indirizzo inventato.
+ *
+ * @return string[] etichette leggibili
+ */
+function fatturaPaMissingCustomerFields(array $customer): array
+{
+    $missing = [];
+
+    $hasName = !empty($customer['denominazione'])
+        || (!empty($customer['nome']) && !empty($customer['cognome']));
+    if (!$hasName)                        $missing[] = 'Denominazione (o nome e cognome) del cliente';
+    if (empty($customer['cf']) && empty($customer['piva'])) {
+        $missing[] = 'Codice Fiscale o Partita IVA del cliente';
+    }
+    if (empty($customer['indirizzo']))    $missing[] = 'Indirizzo del cliente';
+    if (empty($customer['cap']))          $missing[] = 'CAP del cliente';
+    if (empty($customer['comune']))       $missing[] = 'Comune del cliente';
+
+    // Un soggetto con partita IVA deve avere un canale telematico: codice
+    // destinatario oppure PEC. Per un privato 0000000 e' corretto.
+    if (!empty($customer['piva'])
+        && empty($customer['codice_destinatario'])
+        && empty($customer['pec'])) {
+        $missing[] = 'PEC o codice destinatario SDI del cliente (ha partita IVA)';
+    }
+
+    return $missing;
+}
+
 /** Fields the agency MUST fill before a real submission. Returns human labels. */
 function fatturaPaMissingAgencyFields(array $agency): array
 {
