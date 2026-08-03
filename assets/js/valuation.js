@@ -28,6 +28,7 @@
         els.estResult  = document.getElementById('val-estimate-result');
 
         bindEvents();
+        bindRowMenu();
         loadProperties();
         loadOmi();
     }
@@ -364,21 +365,23 @@
             <td data-label="Affitto €/m²">${range(o.rent_min_sqm, o.rent_max_sqm)}</td>
             <td data-label="Periodo">${esc(o.period || '—')}${periodBadge(o.period_level, o.period_level === 'stale' ? 'scaduta' : 'da verificare')}</td>
             <td data-label="Origine">${o.source === 'import' ? '<span class="badge badge--soft">listino</span>' : '<span class="badge badge--soft">override</span>'}</td>
-            <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                <button class="btn btn--sm btn--ghost btn-omi-edit" data-id="${o.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                <button class="btn btn--sm btn--ghost btn-omi-del" data-id="${o.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+            <td data-label="Azioni" class="col-actions lt-actions">
+                ${window.RowMenu.button(o.id, 'Azioni quotazione')}
             </td>
         </tr>`).join('');
 
-        // La riga non si carica più qui: il modulo la rilegge da solo con l'id,
-        // quindi una modifica aperta su un link incollato mostra sempre il dato
-        // fresco invece di quello congelato nell'ultima paginazione.
-        els.tbody.querySelectorAll('.btn-omi-edit').forEach(btn => {
-            btn.addEventListener('click', () => openForm(btn.dataset.id));
-        });
-        els.tbody.querySelectorAll('.btn-omi-del').forEach(btn => {
-            btn.addEventListener('click', () => { deleteTargetId = btn.dataset.id; els.delModal.hidden = false; });
-        });
+    }
+
+    // La riga non si carica più qui: il modulo la rilegge da solo con l'id,
+    // quindi una modifica aperta su un link incollato mostra sempre il dato
+    // fresco invece di quello congelato nell'ultima paginazione.
+    function bindRowMenu() {
+        window.RowMenu.bind(els.tbody, btn => [
+            { label: 'Modifica', icon: 'pencil', onClick: () => openForm(btn.dataset.id) },
+            { sep: true },
+            { label: 'Elimina', icon: 'trash-2', danger: true,
+              onClick: () => { deleteTargetId = btn.dataset.id; els.delModal.hidden = false; } },
+        ]);
     }
 
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }

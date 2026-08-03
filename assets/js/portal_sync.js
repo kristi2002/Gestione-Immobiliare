@@ -41,6 +41,7 @@
         els.fbModal    = document.getElementById('portal-feedback-modal');
 
         bindEvents();
+        bindRowMenu();
         loadProperties();
         loadList();
     }
@@ -215,26 +216,28 @@
                 <td data-label="Stato"><span class="badge ${STATUS_BADGE[l.status] || 'badge'}">${esc(STATUS_LABEL[l.status] || l.status)}</span>${l.status === 'error' && l.error_message ? `<br><small class="text-muted">${esc(l.error_message)}</small>` : ''}</td>
                 <td data-label="ID annuncio">${idCell}</td>
                 <td data-label="Ultimo sync">${fmtDateTime(l.last_synced_at)}</td>
-                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-portal-edit" data-id="${l.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-portal-del" data-id="${l.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                <td data-label="Azioni" class="col-actions lt-actions">
+                    ${window.RowMenu.button(l.id, 'Azioni pubblicazione')}
                 </td>
             </tr>`;
         }).join('');
 
-        els.tbody.querySelectorAll('.btn-portal-edit').forEach(btn => {
-            btn.addEventListener('click', async () => {
+    }
+
+    function bindRowMenu() {
+        window.RowMenu.bind(els.tbody, btn => [
+            { label: 'Modifica', icon: 'pencil', onClick: async () => {
                 try {
                     const res  = await fetch(`${API}?id=${btn.dataset.id}`);
                     const json = await res.json();
                     if (!json.success) throw new Error(json.error);
                     openModal(Array.isArray(json.data) ? json.data[0] : json.data);
                 } catch (e) { showAlert(e.message, 'error'); }
-            });
-        });
-        els.tbody.querySelectorAll('.btn-portal-del').forEach(btn => {
-            btn.addEventListener('click', () => { deleteTargetId = btn.dataset.id; els.delModal.hidden = false; });
-        });
+            } },
+            { sep: true },
+            { label: 'Elimina', icon: 'trash-2', danger: true,
+              onClick: () => { deleteTargetId = btn.dataset.id; els.delModal.hidden = false; } },
+        ]);
     }
 
     function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ''; }
