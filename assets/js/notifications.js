@@ -144,16 +144,37 @@
             : '';
 
         list.innerHTML = notice + items.map(it => `
-            <button type="button" class="notif-item" data-id="${it.id}">
+            <button type="button" class="notif-item" data-id="${it.id}"
+                    data-source="${escapeHtml(it.source || 'reminder')}"
+                    data-view="${escapeHtml(it.view || 'reminders')}">
                 <span class="notif-item__title">${escapeHtml(it.title)}</span>
-                <span class="notif-item__date">${formatDateTime(it.reminder_date)}</span>
+                ${it.body ? `<span class="notif-item__body">${escapeHtml(it.body)}</span>` : ''}
+                <span class="notif-item__date">${formatDateTime(it.date || it.reminder_date)}</span>
             </button>
         `).join('') + more;
 
         list.querySelectorAll('.notif-item').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 dropdown.hidden = true;
-                if (window.App) window.App.navigateTo('reminders');
+                // Un messaggio si legge: senza questo la campanella annuncia lo
+                // stesso WhatsApp all'infinito, perche' la riga resta is_read=0.
+                // Una scadenza no: si chiude evadendola, non aprendola.
+                if (btn.dataset.source === 'notification') {
+                    try {
+                        await fetch(API + '?action=read', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({ id: Number(btn.dataset.id) }),
+                        });
+                    } catch (err) {
+                        console.warn('[notifiche] non segnata come letta:', err.message);
+                    }
+                    poll();
+                }
+                // Ogni tipo porta dove si risponde davvero: l'Inbox per un
+                // WhatsApp, le Comunicazioni per un'email. Prima andavano tutti
+                // ai Promemoria, che per un messaggio in arrivo non c'entra.
+                if (window.App) window.App.navigateTo(btn.dataset.view || 'reminders');
             });
         });
     }

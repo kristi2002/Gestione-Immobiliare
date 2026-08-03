@@ -114,8 +114,9 @@
         // "30 minuti prima" su un appuntamento imminente la scadenza nasce gia'
         // passata, quindi la campanella cambia subito.
         //
-        // notifications.php e' una GET: non rientra in WRITE_METHODS e non
-        // puo' richiamare se stessa.
+        // notifications.php ha ora anche una POST (segna letto), quindi non e'
+        // piu' la GET a proteggere dalla ricorsione: e' il fatto che non sia in
+        // BELL_ENDPOINTS. Non aggiungercelo — si richiamerebbe da sola.
         if (response.ok
             && WRITE_METHODS.includes(method)
             && BELL_ENDPOINTS.some(name => String(url).includes(name))
