@@ -610,17 +610,71 @@ function savePropertyDescriptions(PDO $db, int $propertyId, array $data): void
     }
 }
 
+/**
+ * Archivia gli immobili e ritira gli annunci ancora pubblicati.
+ *
+ * Il ritiro automatico esisteva gia' (lib/portal_lifecycle.php) ma ascoltava
+ * solo il passaggio ad "affittato": archiviare — che e' la via normale per
+ * togliere un immobile dal mercato, dal menu ⋮ o dalla barra di selezione
+ * multipla — lasciava la riga di pubblicazione su 'published'. L'annuncio
+ * restava online a pagamento e continuava a generare richieste di visita per
+ * un immobile che l'agenzia non ha piu'.
+ *
+ * @param int[] $ids
+ * @return array{archived:int, retired:int}
+ */
+function archivePropertiesWithRetire(PDO $db, array $ids): array
+{
+    require_once __DIR__ . '/../lib/portal_lifecycle.php';
+
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if (!$ids) return ['archived' => 0, 'retired' => 0];
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $db->prepare("UPDATE properties SET status = 'archived' WHERE id IN ($placeholders)");
+    $stmt->execute($ids);
+    $archived = $stmt->rowCount();
+
+    $retired = 0;
+    foreach ($ids as $pid) {
+        try {
+            // Il ritiro si fa subito e non solo tramite l'evento: la coda la
+            // drena il cron, e nel frattempo l'annuncio resterebbe online.
+            $retired += portalRetireListingsForProperty($db, $pid, 'archived');
+
+            emitAutomationEvent($db, 'property.status_changed', 'property', $pid, [
+                'property_id' => $pid,
+                'new_status'  => 'archived',
+                'reason'      => 'archive',
+            ]);
+        } catch (Throwable $e) {
+            // Archiviare e' l'operazione richiesta: non deve fallire perche' il
+            // ritiro dal portale e' andato storto. Resta traccia nel log.
+            error_log('[portali] ritiro su archiviazione fallito (#' . $pid . '): ' . $e->getMessage());
+        }
+    }
+
+    return ['archived' => $archived, 'retired' => $retired];
+}
+
 function deleteProperty(PDO $db, int $id): void
 {
     if (!fetchPropertyById($db, $id)) {
         apiError('Immobile non trovato.', 404);
     }
 
-    $stmt = $db->prepare("UPDATE properties SET status = 'archived' WHERE id = :id");
-    $stmt->execute(['id' => $id]);
+    $res = archivePropertiesWithRetire($db, [$id]);
 
-    logActivity('delete', 'property', $id, 'Immobile archiviato #' . $id);
-    apiSuccess(['id' => $id, 'message' => 'Immobile archiviato.']);
+    logActivity('delete', 'property', $id, 'Immobile archiviato #' . $id
+        . ($res['retired'] > 0 ? ' — ' . $res['retired'] . ' pubblicazioni ritirate dai portali' : ''));
+
+    apiSuccess([
+        'id'      => $id,
+        'retired' => $res['retired'],
+        'message' => $res['retired'] > 0
+            ? 'Immobile archiviato e ritirato da ' . $res['retired'] . ' portale/i.'
+            : 'Immobile archiviato.',
+    ]);
 }
 
 function bulkProperties(PDO $db): void
@@ -633,10 +687,13 @@ function bulkProperties(PDO $db): void
     $ids = normalizeBulkIds($data['ids'] ?? []);
 
     if ($operation === 'archive') {
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $db->prepare("UPDATE properties SET status = 'archived' WHERE id IN ($placeholders)");
-        $stmt->execute($ids);
-        apiSuccess(['updated' => $stmt->rowCount(), 'action' => 'archive']);
+        // Stessa strada del menu ⋮: archiviare ritira anche dai portali.
+        $res = archivePropertiesWithRetire($db, $ids);
+        apiSuccess([
+            'updated' => $res['archived'],
+            'retired' => $res['retired'],
+            'action'  => 'archive',
+        ]);
     } elseif ($operation === 'assign') {
         $clientId = !empty($data['client_id']) ? (int) $data['client_id'] : 0;
         if ($clientId <= 0) {
