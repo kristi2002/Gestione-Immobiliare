@@ -281,11 +281,16 @@
         const btnSearch = document.getElementById('btn-scan-key');
         if (!btnSearch) return;
         btnSearch.hidden = false;
-        btnSearch.addEventListener('click', () => startScan('search'));
+        btnSearch.addEventListener('click', () => startScan());
     }
 
-    async function startScan(target) {
-        scanTarget = target;
+    // `scanTarget` era un residuo di quando la scansione poteva scrivere anche
+    // nel campo del modulo: veniva assegnata senza essere mai dichiarata, e in
+    // strict mode questo e' un ReferenceError. Cioe' "Scansiona" moriva alla
+    // prima riga e non apriva nulla. Ora c'e' una sola destinazione — la ricerca
+    // in elenco, che e' quello che applyScannedCode() ha sempre fatto — e la
+    // variabile non serve piu'.
+    async function startScan() {
         els.scanHint.textContent = 'Inquadra il codice a barre o il QR sull\'etichetta.';
         els.scanModal.hidden = false;
         try {

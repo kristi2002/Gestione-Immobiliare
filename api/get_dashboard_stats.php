@@ -48,8 +48,16 @@ try {
 
     // Explicit anchor from the navigator (YYYY-MM-DD); otherwise default to the most
     // recent activity so the chart always opens on a period that has data.
+    // `$maxData` e' la scadenza piu' lontana presente in `payments`, e uno
+    // scadenzario di locazione arriva per definizione anni avanti: usarlo come
+    // ancora apriva il grafico su un anno futuro tutto vuoto (con 37 rate
+    // generate oggi, il 2029). Si parte da oggi, cioe' dal periodo che l'agente
+    // sta guardando; se invece i dati finiscono nel passato — archivio storico,
+    // nessun contratto attivo — si resta sull'ultimo periodo con qualcosa dentro.
+    // La navigazione in avanti resta possibile: $maxNav tiene gia' conto di $maxData.
     $anchorParam = $_GET['chart_anchor'] ?? '';
-    $anchorDate  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $anchorParam) ? $anchorParam : $maxData;
+    $anchorDefault = ($maxData > $today) ? $today : $maxData;
+    $anchorDate  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $anchorParam) ? $anchorParam : $anchorDefault;
 
     $revenueChart = buildRevenueChart($db, $period, $anchorDate, $minNav, $maxNav);
 
