@@ -30,6 +30,7 @@
         els.delModal   = document.getElementById('commissions-delete-modal');
 
         bindEvents();
+        bindRowMenu();
         loadCommissions();
     }
 
@@ -117,33 +118,36 @@
                 <td data-label="Contratto">${c.contract_title ? esc(c.contract_title) : (c.contract_id ? `<code>#${esc(c.contract_id)}</code>` : '<span class="text-muted">—</span>')}</td>
                 <td data-label="Scadenza">${formatDate(c.due_date)}</td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
-                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    ${window.canWrite !== false && isPending ? `<button class="btn btn--sm btn--ghost btn-mark-paid" data-id="${c.id}" title="Segna come pagata" style="color:var(--color-success,#27ae60);"><i data-lucide="check"></i> Pagata</button>` : ''}
-                    ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-c-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-c-del" data-id="${c.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
+                <td data-label="Azioni" class="col-actions lt-actions">
+                    ${window.canWrite !== false
+                        ? window.RowMenu.button(c.id, 'Azioni provvigione', { pending: isPending ? '1' : '' })
+                        : '<span class="text-muted">—</span>'}
                 </td>
             </tr>`;
         }).join('');
 
-        els.tbody.querySelectorAll('.btn-mark-paid').forEach(btn => {
-            btn.addEventListener('click', () => markPaid(btn.dataset.id, btn));
-        });
-
-        // Il record lo rilegge la scheda: qui basta l'id.
-        els.tbody.querySelectorAll('.btn-c-edit').forEach(btn => {
-            btn.addEventListener('click', () => openForm(btn.dataset.id));
-        });
-
-        els.tbody.querySelectorAll('.btn-c-del').forEach(btn => {
-            btn.addEventListener('click', () => {
-                deleteTargetId = btn.dataset.id;
-                els.delModal.hidden = false;
-            });
-        });
     }
 
-    async function markPaid(id, btn) {
-        btn.disabled = true; btn.textContent = '…';
+    function bindRowMenu() {
+        window.RowMenu.bind(els.tbody, btn => [
+            // "Pagata" solo se c'e' ancora da pagare: su una provvigione gia'
+            // saldata la voce non compare invece di comparire inerte.
+            btn.dataset.pending === '1'
+                ? { label: 'Segna come pagata', icon: 'check', onClick: () => markPaid(btn.dataset.id) }
+                : null,
+            // Il record lo rilegge la scheda: qui basta l'id.
+            { label: 'Modifica', icon: 'pencil', onClick: () => openForm(btn.dataset.id) },
+            { sep: true },
+            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
+                deleteTargetId = btn.dataset.id;
+                els.delModal.hidden = false;
+            } },
+        ]);
+    }
+
+    // Nessuno stato "in corso" sul pulsante: il pulsante non c'e' piu' (era una
+    // voce di menu, sparita al click). L'esito lo dicono il ricarico e l'avviso.
+    async function markPaid(id) {
         try {
             const res  = await fetch(`${API}?id=${id}`, {
                 method: 'PATCH',
@@ -156,7 +160,6 @@
             loadCommissions();
         } catch (err) {
             showAlert(err.message, 'error');
-            btn.disabled = false; btn.innerHTML = '<i data-lucide="check"></i> Pagata';
         }
     }
 

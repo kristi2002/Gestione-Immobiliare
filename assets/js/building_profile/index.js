@@ -525,15 +525,21 @@
                            <td><span class="badge">${esc(DOC_LABELS[d.doc_type] || d.doc_type)}</span></td>
                            <td>${esc(d.title || d.original_name)}</td>
                            <td>${esc((d.created_at || '').slice(0, 10))}</td>
-                           <td class="lt-actions">
-                               <a class="btn btn--sm btn--ghost" href="${esc(d.download_url)}" target="_blank" rel="noopener">Scarica</a>
-                               <button class="btn btn--sm btn--ghost btn-doc-del" data-id="${d.id}">Elimina</button>
+                           <td class="col-actions lt-actions">
+                               ${window.RowMenu.button(d.id, 'Azioni documento', { url: d.download_url })}
                            </td></tr>`).join('')}</tbody>
                    </table></div>`
                 : '<p class="text-muted">Nessun documento condominiale. Caricando qui il regolamento o le planimetrie, tutte le unità collegate li vedranno senza doverli ricaricare.</p>';
 
-            list.querySelectorAll('.btn-doc-del').forEach(btn =>
-                btn.addEventListener('click', () => deleteDocument(btn.dataset.id)));
+            // `list` viene ricostruito a ogni ricarica, quindi l'aggancio va
+            // rifatto qui; RowMenu ignora un contenitore gia' agganciato.
+            window.RowMenu.bind(list.querySelector('tbody'), btn => [
+                { label: 'Scarica', icon: 'download', href: btn.dataset.url, target: '_blank' },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true,
+                  onClick: () => deleteDocument(btn.dataset.id) },
+            ]);
+            if (window.lucide) window.lucide.createIcons();
         } catch (err) {
             list.innerHTML = `<p class="text-muted">${esc(err.message)}</p>`;
         }

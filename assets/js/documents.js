@@ -50,6 +50,7 @@
         els.pagination      = document.getElementById('documents-pagination');
 
         bindEvents();
+        bindRowMenu();
         loadClients()
             .then(() => loadProperties())
             .then(() => loadContracts())
@@ -215,10 +216,13 @@
             const contractLabel = (!isContract && d.contract_id && d.contract_title) ? d.contract_title : null;
             const typeLabel     = DOC_TYPE_LABELS[d.doc_type] || d.doc_type;
 
-            const actions = isContract
-                ? `<button class="btn btn--sm btn--ghost btn-open-contract" data-id="${d.contract_id}" title="Apri contratto"><i data-lucide="copy"></i> Apri</button>`
-                : `<a href="${escapeHtml(d.download_url)}" class="btn btn--sm btn--ghost" title="Scarica" download><i data-lucide="download"></i></a>
-                   <button class="btn btn--sm btn--ghost btn-delete-doc" data-id="${d.id}" title="Elimina"><i data-lucide="trash-2"></i></button>`;
+            // Una riga "contratto" non e' un file caricato qui: il suo id e'
+            // quello del contratto, non del documento, e l'unica azione sensata
+            // e' aprirlo. Lo dice il flag, cosi' il menu non offre "Elimina" su
+            // qualcosa che questa pagina non possiede.
+            const actions = window.RowMenu.button(isContract ? d.contract_id : d.id, 'Azioni documento', {
+                contract: isContract ? '1' : '',
+            });
 
             return `
                 <tr>
@@ -232,21 +236,27 @@
                     <td data-label="Immobile">${propertyLabel ? escapeHtml(propertyLabel) : '<span class="text-muted">—</span>'}${contractLabel ? `<br><small class="text-muted"><i data-lucide="copy"></i> ${escapeHtml(contractLabel)}</small>` : ''}</td>
                     <td data-label="Dimensione">${isContract ? '—' : formatFileSize(d.file_size)}</td>
                     <td data-label="Data">${formatDate(d.created_at)}</td>
-                    <td class="col-actions" data-label="Azioni">${actions}</td>
+                    <td class="col-actions lt-actions" data-label="Azioni">${actions}</td>
                 </tr>`;
         }).join('');
 
-        els.tbody.querySelectorAll('.btn-delete-doc').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const doc = documents.find(d => d.id == btn.dataset.id);
-                if (doc) openDeleteModal(doc.id, doc.title || doc.original_name);
-            });
-        });
+    }
 
-        els.tbody.querySelectorAll('.btn-open-contract').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.App) window.App.navigateTo('contracts', { contractId: parseInt(btn.dataset.id, 10) });
-            });
+    function bindRowMenu() {
+        window.RowMenu.bind(els.tbody, btn => {
+            if (btn.dataset.contract === '1') {
+                return [{ label: 'Apri contratto', icon: 'copy', onClick: () => {
+                    if (window.App) window.App.navigateTo('contracts', { contractId: parseInt(btn.dataset.id, 10) });
+                } }];
+            }
+            const doc = documents.find(d => d.id == btn.dataset.id);
+            if (!doc) return [];
+            return [
+                { label: 'Scarica', icon: 'download', href: doc.download_url, download: true },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true,
+                  onClick: () => openDeleteModal(doc.id, doc.title || doc.original_name) },
+            ];
         });
     }
 

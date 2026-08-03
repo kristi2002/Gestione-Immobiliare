@@ -37,6 +37,7 @@
         els.compModal   = document.getElementById('comparison-modal');
 
         bindEvents();
+        bindRowMenu();
         loadCategories();
         loadProperties();
     }
@@ -184,17 +185,18 @@
                 ? `<span class="badge" title="${photos} foto allegate"><i data-lucide="camera"></i> ${photos}</span>`
                 : '<span class="text-muted">—</span>'}</td>
             <td data-label="Note">${esc(item.notes || '—')}</td>
-            <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                <button class="btn btn--sm btn--ghost btn-inv-edit" data-id="${item.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                <button class="btn btn--sm btn--ghost btn-inv-del" data-id="${item.id}" data-name="${esc(item.item_name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
+            <td data-label="Azioni" class="col-actions lt-actions">
+                ${window.RowMenu.button(item.id, 'Azioni bene', { name: item.item_name })}
             </td>
         </tr>`;
         }).join('');
 
         if (window.lucide) window.lucide.createIcons();
+    }
 
-        els.tbody.querySelectorAll('.btn-inv-edit').forEach(btn => {
-            btn.addEventListener('click', async () => {
+    function bindRowMenu() {
+        window.RowMenu.bind(els.tbody, btn => [
+            { label: 'Modifica', icon: 'pencil', onClick: async () => {
                 try {
                     const res  = await fetch(`${API}?id=${btn.dataset.id}`);
                     const json = await res.json();
@@ -202,15 +204,34 @@
                     const item = Array.isArray(json.data) ? json.data[0] : json.data;
                     openForm(item.id);
                 } catch (e) { showAlert(e.message, 'error'); }
-            });
-        });
-
-        els.tbody.querySelectorAll('.btn-inv-del').forEach(btn => {
-            btn.addEventListener('click', () => {
+            } },
+            { sep: true },
+            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
                 deleteTargetId = btn.dataset.id;
                 document.getElementById('inventory-delete-name').textContent = btn.dataset.name;
                 els.delModal.hidden = false;
-            });
+            } },
+        ]);
+
+        // Seconda tabella, altro contenitore: i verbali per contratto.
+        window.RowMenu.bind(els.contractsTbody, btn => {
+            const d = btn.dataset;
+            return [
+                d.checkin
+                    ? { label: 'Apri check-in', icon: 'file-text', onClick: () => openSnapshot(d.checkin) }
+                    : { label: 'Nuovo check-in', icon: 'plus', onClick: () => createSnapshot(d.id, 'check_in') },
+                // Il check-out ha senso solo dopo il check-in: prima non c'e'
+                // niente con cui confrontarlo.
+                d.checkin
+                    ? (d.checkout
+                        ? { label: 'Apri check-out', icon: 'file-text', onClick: () => openSnapshot(d.checkout) }
+                        : { label: 'Nuovo check-out', icon: 'plus', onClick: () => createSnapshot(d.id, 'check_out') })
+                    : null,
+                d.checkin && d.checkout ? { sep: true } : null,
+                d.checkin && d.checkout
+                    ? { label: 'Confronto', icon: 'git-compare', onClick: () => openComparison(d.id) }
+                    : null,
+            ];
         });
     }
 
@@ -284,21 +305,6 @@
 
         els.contractsTbody.innerHTML = rows.map(r => {
             const period = [r.start_date, r.end_date].filter(Boolean).map(formatDate).join(' → ') || '—';
-            const actions = [];
-
-            actions.push(r.check_in_id
-                ? `<button class="btn btn--sm btn--ghost btn-open-snap" data-id="${r.check_in_id}">Check-in</button>`
-                : `<button class="btn btn--sm btn--ghost btn-new-snap" data-contract="${r.id}" data-phase="check_in">+ Check-in</button>`);
-
-            if (r.check_in_id) {
-                actions.push(r.check_out_id
-                    ? `<button class="btn btn--sm btn--ghost btn-open-snap" data-id="${r.check_out_id}">Check-out</button>`
-                    : `<button class="btn btn--sm btn--ghost btn-new-snap" data-contract="${r.id}" data-phase="check_out">+ Check-out</button>`);
-            }
-
-            if (r.check_in_id && r.check_out_id) {
-                actions.push(`<button class="btn btn--sm btn--primary btn-compare" data-contract="${r.id}">Confronto</button>`);
-            }
 
             return `<tr>
                 <td data-label="Contratto">${esc(r.title || `#${r.id}`)}</td>
@@ -306,19 +312,16 @@
                 <td data-label="Periodo">${period}</td>
                 <td data-label="Check-in">${snapshotCell(r.check_in_id, r.check_in_status, r.check_in_date)}</td>
                 <td data-label="Check-out">${snapshotCell(r.check_out_id, r.check_out_status, r.check_out_date)}</td>
-                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">${actions.join(' ')}</td>
+                <td data-label="Azioni" class="col-actions lt-actions">
+                    ${window.RowMenu.button(r.id, 'Azioni verbali contratto', {
+                        checkin:  r.check_in_id  || '',
+                        checkout: r.check_out_id || '',
+                    })}
+                </td>
             </tr>`;
         }).join('');
 
-        els.contractsTbody.querySelectorAll('.btn-new-snap').forEach(btn => {
-            btn.addEventListener('click', () => createSnapshot(btn.dataset.contract, btn.dataset.phase));
-        });
-        els.contractsTbody.querySelectorAll('.btn-open-snap').forEach(btn => {
-            btn.addEventListener('click', () => openSnapshot(btn.dataset.id));
-        });
-        els.contractsTbody.querySelectorAll('.btn-compare').forEach(btn => {
-            btn.addEventListener('click', () => openComparison(btn.dataset.contract));
-        });
+        if (window.lucide) window.lucide.createIcons();
     }
 
     async function createSnapshot(contractId, phase) {
