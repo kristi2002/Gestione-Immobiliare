@@ -109,7 +109,24 @@
     border-top: 1px solid rgba(255, 255, 255, .09);
 }
 
-.tp-user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+/* Non e' piu' solo un'etichetta: e' la porta della scheda Account. */
+.tp-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 7px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: background var(--transition);
+}
+
+.tp-user:hover { background: var(--color-sidebar-hover); }
+.tp-user__text { flex: 1; min-width: 0; }
+.tp-user__chev { width: 15px; height: 15px; flex: 0 0 15px; color: rgba(255, 255, 255, .4); }
+.tp-user.is-active { background: var(--color-sidebar-active); }
 
 .tp-user__avatar {
     width: 34px;
@@ -125,6 +142,7 @@
 }
 
 .tp-user__name {
+    display: block;
     font-size: 13.5px;
     font-weight: 600;
     color: #fff;
@@ -133,7 +151,7 @@
     white-space: nowrap;
 }
 
-.tp-user__role { font-size: 11.5px; color: rgba(255, 255, 255, .5); }
+.tp-user__role { display: block; font-size: 11.5px; color: rgba(255, 255, 255, .5); }
 
 .tp-signout {
     display: flex;
@@ -184,20 +202,29 @@
 
 .tp-topbar__spacer { flex: 1; }
 
-.tp-topbar__out {
+/* Sul telefono l'account si raggiunge da qui: non merita una scheda in basso
+   (ci si entra di rado) ma deve restare a un tocco. */
+.tp-topbar__acc {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-text-muted);
     text-decoration: none;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
 
-.tp-topbar__out:hover { background: var(--color-bg); color: var(--color-text); }
-.tp-topbar__out svg { width: 17px; height: 17px; }
+.tp-topbar__acc:hover,
+.tp-topbar__acc.is-active {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.tp-topbar__acc svg { width: 18px; height: 18px; }
 
 /* ── Contenuto ───────────────────────────────────────────────────────────── */
 
@@ -576,6 +603,316 @@
 
 a.tp-contact__v:hover { color: var(--color-primary); }
 
+/* ── Nota in linea ───────────────────────────────────────────────────────── */
+
+.tp-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 16px 0 0;
+    padding: 11px 13px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--color-text-muted);
+}
+
+.tp-note__ico { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; }
+.tp-note--warn { background: #fff8ec; color: #7a4a05; }
+
+/* ── Griglie di fatti a 2 e 3 colonne ────────────────────────────────────── */
+
+@media (min-width: 640px) {
+    .tp-facts--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tp-facts--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ── Pastiglia in intestazione di scheda ─────────────────────────────────── */
+
+.tp-card__badge { margin-left: auto; }
+
+/* ── Invito (sondaggio da compilare) ─────────────────────────────────────── */
+
+.tp-invite {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.tp-invite__ico {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--color-surface);
+    color: var(--color-primary);
+}
+
+.tp-invite__ico svg { width: 19px; height: 19px; }
+.tp-invite__body { flex: 1; min-width: 190px; }
+.tp-invite__t { font-size: 15px; font-weight: 700; color: var(--color-text); }
+
+.tp-invite__s {
+    margin: 3px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.tp-invite__cta { flex: 0 0 auto; }
+
+/* ── Elenco richieste ────────────────────────────────────────────────────── */
+
+.tp-reqlist { list-style: none; margin: 0; padding: 0; }
+
+.tp-req { padding: 14px 0; border-bottom: 1px solid var(--color-border); }
+.tp-req:last-child { border-bottom: none; }
+
+.tp-req__top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+.tp-req__id {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.tp-req__type {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.tp-req__spacer { flex: 1; }
+
+.tp-req__subject {
+    margin-top: 7px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.tp-req__body {
+    margin: 5px 0 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-text-muted);
+}
+
+.tp-req__meta { margin-top: 7px; font-size: 12px; color: var(--color-text-muted); }
+
+/* ── Impaginatore ────────────────────────────────────────────────────────── */
+
+.tp-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border);
+}
+
+.tp-pager__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    text-decoration: none;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.tp-pager__btn:hover { background: var(--color-primary-light); border-color: var(--color-primary); }
+.tp-pager__btn svg { width: 15px; height: 15px; }
+.tp-pager__btn.is-off { opacity: .4; pointer-events: none; }
+
+.tp-pager__at { font-size: 12.5px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.tp-pager__tot { opacity: .75; }
+
+/* ── Riquadro da copiare (IBAN, causale) ─────────────────────────────────── */
+
+.tp-copy + .tp-copy { margin-top: 12px; }
+
+.tp-copy__k {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 5px;
+}
+
+.tp-copy__row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+}
+
+.tp-copy__v {
+    flex: 1;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-text);
+    word-break: break-all;
+}
+
+.tp-copy__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.tp-copy__btn:hover { background: var(--color-primary-light); color: var(--color-primary); }
+.tp-copy__btn svg { width: 14px; height: 14px; }
+
+.tp-copy__btn.is-done {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #fff;
+}
+
+/* ── Utilita' di modulo ──────────────────────────────────────────────────── */
+
+.tp-btn-block {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+}
+
+.tp-field-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Un campo disabilitato deve SEMBRARE disabilitato: l'email di accesso e' in
+   sola lettura di proposito e senza questo si legge come modificabile. */
+.tp-section .form-input[disabled] {
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+}
+
+/* ── Pagina di accesso ───────────────────────────────────────────────────── */
+
+.tp-auth {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: var(--color-bg);
+}
+
+.tp-auth__card {
+    width: 100%;
+    max-width: 400px;
+    padding: 30px 26px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+}
+
+.tp-auth__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tp-auth__logo { max-height: 34px; max-width: 130px; display: block; }
+
+.tp-auth__mark {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: var(--color-sidebar-bg);
+    color: #fff;
+}
+
+.tp-auth__mark svg { width: 18px; height: 18px; }
+
+.tp-auth__agency {
+    font-family: var(--font-brand);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.tp-auth__title {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -.3px;
+    color: var(--color-text);
+}
+
+.tp-auth__sub {
+    margin: 6px 0 20px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-text-muted);
+}
+
+.tp-auth__link {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 6px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-align: center;
+    cursor: pointer;
+}
+
+.tp-auth__link:hover { text-decoration: underline; }
+
 /* ── Barra schede in basso — il telefono naviga da qui ───────────────────── */
 
 .tp-tabbar {
@@ -668,10 +1005,11 @@ a.tp-contact__v:hover { color: var(--color-primary); }
         background: var(--color-surface);
     }
 
-    /* Sulla scrivania il marchio sta nella barra laterale: qui basta il titolo. */
+    /* Sulla scrivania il marchio sta nella barra laterale: qui basta il titolo.
+       L'account si raggiunge dal piede della barra laterale. */
     .tp-topbar__brand { display: none; }
     .tp-topbar__title { font-size: 19px; }
-    .tp-topbar__out { display: none; }
+    .tp-topbar__acc { display: none; }
 
     .tp-main { padding: 24px 28px 40px; }
     .tp-tabbar { display: none; }

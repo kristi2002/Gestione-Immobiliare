@@ -3,10 +3,19 @@
 > Deciso il 2026-08-03. Ambito approvato: **fasi 0 → 3 complete**, con la correzione
 > del tema estesa anche al **portale proprietario** (stesso identico difetto).
 >
+> **Stato: fase 0 fatta (346cdde), fase 1 fatta (40182a6), fase 2 fatta.**
+> Restano la fase 3 e due code della fase 2 rimandate di proposito, entrambe
+> perché aprono un perimetro nuovo e non vanno infilate di corsa:
+> l'**allegato foto** sulla richiesta (serve un endpoint di caricamento per
+> l'inquilino, cioè una superficie di scrittura nuova da progettare con la sua
+> verifica) e la **risposta scritta dell'agenzia** dentro la richiesta (in
+> `reminders` non esiste un campo per il testo di risposta: serve una migrazione).
+>
 > Stato di partenza rilevato leggendo il codice, non i documenti: `tenant/index.php`
-> è **un solo file da 516 righe**. Non esiste `tenant/views/`, non esiste un modulo JS
-> del portale, non esiste un layer CSS suo. Quattro schede (Immobile, Pagamenti,
-> Documenti, Assistenza) rese inline dal PHP. È di sola lettura tranne un form.
+> era **un solo file da 516 righe**. Non esisteva `tenant/views/`, non esisteva un
+> modulo JS del portale, non esisteva un layer CSS suo. Quattro schede (Immobile,
+> Pagamenti, Documenti, Assistenza) rese inline dal PHP. Di sola lettura tranne un
+> form, che spediva nel vuoto.
 
 ---
 

@@ -11,6 +11,7 @@
 
 import { wireNavigation } from './nav.js';
 import { wireRequestForm } from './requests.js';
+import { wireAccount, wireCopyButtons } from './account.js';
 
 /** Idrata le icone lucide, se la libreria e' arrivata. */
 function paintIcons() {
@@ -40,6 +41,8 @@ function init() {
     paintIcons();
     wireNavigation();
     wireRequestForm(csrf);
+    wireAccount(csrf);
+    wireCopyButtons();
 
     // Ritorno dal pagamento. Il parametro si legge qui invece di far scrivere
     // al PHP un blocco <script> inline (che la CSP di domani rifiuterebbe).

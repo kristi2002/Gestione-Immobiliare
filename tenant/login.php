@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/login_throttle.php';
+require_once __DIR__ . '/../config/settings.php';
 initTenantSession();
 
 if (isTenantLoggedIn()) {
@@ -50,29 +51,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
     <link rel="stylesheet" href="../branding.css.php">
     <link rel="stylesheet" href="../assets/css/theme-orlandi.css?v=<?= @filemtime(__DIR__ . '/../assets/css/theme-orlandi.css') ?: time() ?>">
-    <style>
-        .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg); padding: 24px; }
-        .login-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; }
-    </style>
 </head>
 <body>
-    <div class="login-page">
-        <div class="login-card">
-            <h1>Portale Inquilino</h1>
-            <p class="text-muted">Accedi per vedere il tuo immobile e i documenti.</p>
-            <?php if ($error): ?><div class="alert alert--error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
-            <form method="post">
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" class="form-input" required>
-                </div>
-                <button type="submit" class="btn btn--primary" style="width:100%">Accedi</button>
-            </form>
+    <?php $branding = getPublicBranding(); ?>
+    <div class="tp-auth">
+        <div class="tp-auth__card">
+            <div class="tp-auth__brand">
+                <?php if (!empty($branding['logo_path'])): ?>
+                    <img src="../<?= htmlspecialchars($branding['logo_path'], ENT_QUOTES, 'UTF-8') ?>"
+                         alt="" class="tp-auth__logo">
+                <?php else: ?>
+                    <span class="tp-auth__mark"><i data-lucide="home"></i></span>
+                <?php endif; ?>
+                <span class="tp-auth__agency"><?= htmlspecialchars($branding['agency_name'], ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+
+            <!-- ── Accesso ────────────────────────────────────────────── -->
+            <div id="tp-auth-login">
+                <h1 class="tp-auth__title">Portale Inquilino</h1>
+                <p class="tp-auth__sub">Accedi per vedere il tuo immobile, i pagamenti e i documenti.</p>
+
+                <?php if ($error): ?>
+                    <div class="alert alert--error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+                <?php endif; ?>
+
+                <form method="post">
+                    <div class="form-group">
+                        <label for="tp-login-email">Email</label>
+                        <input type="email" id="tp-login-email" name="email" class="form-input"
+                               autocomplete="username" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label for="tp-login-pwd">Password</label>
+                        <input type="password" id="tp-login-pwd" name="password" class="form-input"
+                               autocomplete="current-password" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary tp-btn-block">Accedi</button>
+                </form>
+
+                <button type="button" class="tp-auth__link" id="tp-show-forgot">Password dimenticata?</button>
+            </div>
+
+            <!-- ── Recupero password ──────────────────────────────────── -->
+            <div id="tp-auth-forgot" hidden>
+                <h1 class="tp-auth__title">Reimposta la password</h1>
+                <p class="tp-auth__sub">
+                    Inserisci l'email con cui accedi: ti mandiamo un link per sceglierne una nuova.
+                </p>
+
+                <div id="tp-forgot-alert" class="alert" hidden></div>
+
+                <form id="tp-forgot-form" novalidate>
+                    <div class="form-group">
+                        <label for="tp-forgot-email">Email</label>
+                        <input type="email" id="tp-forgot-email" class="form-input"
+                               autocomplete="username" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary tp-btn-block" id="tp-forgot-send">
+                        Invia il link
+                    </button>
+                </form>
+
+                <button type="button" class="tp-auth__link" id="tp-show-login">← Torna all'accesso</button>
+            </div>
         </div>
     </div>
+
+    <script src="../assets/vendor/lucide-1.27.0.min.js?v=<?= @filemtime(__DIR__ . '/../assets/vendor/lucide-1.27.0.min.js') ?: time() ?>"></script>
+    <script type="module" src="../assets/js/tenant_portal/login.js?v=<?= @filemtime(__DIR__ . '/../assets/js/tenant_portal/login.js') ?: time() ?>"></script>
 </body>
 </html>

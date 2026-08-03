@@ -24,31 +24,55 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/lib/portal_data.php';
 require_once __DIR__ . '/lib/portal_view.php';
+// Per PASSWORD_MIN_LENGTH: la scheda Account deve dire la stessa soglia che
+// l'endpoint poi applica, altrimenti il modulo promette e il server rifiuta.
+require_once __DIR__ . '/../lib/password_reset.php';
 
 $tenantId = getCurrentTenantId();
-$data     = loadTenantPortalData(getDB(), $tenantId);
+$db       = getDB();
+
+// Le pagine arrivano dalla query string. L'impaginatore le riporta dentro
+// l'intervallo reale (tenantPage) e la vista scrive comunque i numeri veri,
+// cosi' un "?pay=99" non fa finta di niente.
+$data = loadTenantPortalData($db, $tenantId, [
+    'pay' => (int) ($_GET['pay'] ?? 1),
+    'doc' => (int) ($_GET['doc'] ?? 1),
+    'req' => (int) ($_GET['req'] ?? 1),
+]);
 
 // Estratte per le viste, che le leggono per nome.
-$tenant         = $data['tenant'];
-$payments       = $data['payments'];
-$paymentsTotal  = $data['paymentsTotal'];
-$upcoming       = $data['upcoming'];
-$documents      = $data['documents'];
-$documentsTotal = $data['documentsTotal'];
-$paidTotal      = $data['paidTotal'];
-$lateTotal      = $data['lateTotal'];
+$tenant    = $data['tenant'];
+$lease     = $data['lease'];
+$payments  = $data['payments'];
+$upcoming  = $data['upcoming'];
+$totals    = $data['totals'];
+$documents = $data['documents'];
+$requests  = $data['requests'];
+$surveys   = $data['surveys'];
+
+// I documenti del PROPRIO contratto, per la scheda Contratto. Sottoinsieme di
+// quelli gia' autorizzati: nessun perimetro nuovo, solo un filtro in memoria.
+$contractDocs = array_values(array_filter(
+    $documents['rows'],
+    static fn(array $d): bool => (int) ($d['contract_id'] ?? 0) > 0
+));
 
 $branding    = getPublicBranding();
 $name        = $_SESSION['tenant_name'] ?? 'Inquilino';
 $agencyPhone = getSetting('agency_phone');
 $agencyEmail = getSetting('agency_email');
+$agencyName  = (string) ($branding['agency_name'] ?? '');
+// L'IBAN e' gia' validato in fase di salvataggio (config/settings.php ne
+// verifica il codice di controllo): qui basta sapere se c'e'.
+$agencyIban  = trim((string) getSetting('agency_iban'));
 
 /** Le voci di navigazione: una sola lista, usata da entrambe le barre. */
 $navItems = [
-    ['key' => 'immobile',   'icon' => 'building-2', 'label' => 'Immobile',   'long' => 'Il mio immobile'],
-    ['key' => 'pagamenti',  'icon' => 'wallet',     'label' => 'Pagamenti',  'long' => 'Pagamenti'],
-    ['key' => 'documenti',  'icon' => 'folder',     'label' => 'Documenti',  'long' => 'Documenti'],
-    ['key' => 'assistenza', 'icon' => 'life-buoy',  'label' => 'Assistenza', 'long' => 'Assistenza'],
+    ['key' => 'immobile',   'icon' => 'building-2',     'label' => 'Immobile',   'long' => 'Il mio immobile'],
+    ['key' => 'contratto',  'icon' => 'file-signature', 'label' => 'Contratto',  'long' => 'Contratto'],
+    ['key' => 'pagamenti',  'icon' => 'wallet',         'label' => 'Pagamenti',  'long' => 'Pagamenti'],
+    ['key' => 'documenti',  'icon' => 'folder',         'label' => 'Documenti',  'long' => 'Documenti'],
+    ['key' => 'assistenza', 'icon' => 'life-buoy',      'label' => 'Assistenza', 'long' => 'Assistenza'],
 ];
 
 $distCss = __DIR__ . '/../assets/dist/app.min.css';
@@ -112,13 +136,14 @@ $entryJs = __DIR__ . '/../assets/js/tenant_portal/index.js';
         </nav>
 
         <div class="tp-sidebar__foot">
-            <div class="tp-user">
+            <a href="#account" class="tp-user" data-section="account">
                 <span class="tp-user__avatar"><?= tEsc(strtoupper(mb_substr($name, 0, 1))) ?></span>
-                <span>
-                    <span class="tp-user__name"><?= tEsc($name) ?></span><br>
-                    <span class="tp-user__role">Inquilino</span>
+                <span class="tp-user__text">
+                    <span class="tp-user__name"><?= tEsc($name) ?></span>
+                    <span class="tp-user__role">Il mio account</span>
                 </span>
-            </div>
+                <?= tIcon('chevron-right', 'tp-user__chev') ?>
+            </a>
             <a href="logout.php" class="tp-signout">
                 <?= tIcon('log-out', 'tp-signout__ico') ?> Esci
             </a>
@@ -137,15 +162,18 @@ $entryJs = __DIR__ . '/../assets/js/tenant_portal/index.js';
             </span>
             <h1 class="tp-topbar__title" id="tp-title">Il mio immobile</h1>
             <span class="tp-topbar__spacer"></span>
-            <a href="logout.php" class="tp-topbar__out" title="Esci" aria-label="Esci"><?= tIcon('log-out') ?></a>
+            <a href="#account" class="tp-topbar__acc" data-section="account"
+               title="Il mio account" aria-label="Il mio account"><?= tIcon('user-round') ?></a>
         </header>
 
         <main class="tp-main">
             <?php
             require __DIR__ . '/views/immobile.php';
+            require __DIR__ . '/views/contratto.php';
             require __DIR__ . '/views/pagamenti.php';
             require __DIR__ . '/views/documenti.php';
             require __DIR__ . '/views/assistenza.php';
+            require __DIR__ . '/views/account.php';
             ?>
         </main>
     </div>

@@ -2,7 +2,7 @@
 /**
  * Scheda "Documenti".
  *
- * Attese: $documents, $documentsTotal.
+ * Attese: $documents (insieme impaginato).
  *
  * Il perimetro di cosa finisce in questo elenco e' deciso in
  * lib/portal_data.php, non qui: la vista non filtra nulla.
@@ -13,13 +13,17 @@
         <div class="tp-card__head">
             <?= tIcon('folder', 'tp-card__ico') ?>
             <h3 class="tp-card__title">I miei documenti</h3>
+            <?php if ($documents['total'] > 0): ?>
+                <span class="tp-card__badge"><span class="badge badge--muted"><?= (int) $documents['total'] ?></span></span>
+            <?php endif; ?>
         </div>
 
-        <?php if (empty($documents)): ?>
-            <?= tEmpty('folder-open', 'Nessun documento disponibile', 'Qui troverai il contratto e le carte legate al tuo immobile.') ?>
+        <?php if (empty($documents['rows'])): ?>
+            <?= tEmpty('folder-open', 'Nessun documento disponibile',
+                'Qui troverai il contratto e le carte legate al tuo immobile.') ?>
         <?php else: ?>
             <ul class="tp-doclist">
-                <?php foreach ($documents as $d): ?>
+                <?php foreach ($documents['rows'] as $d): ?>
                     <?php
                     $label = $d['title'] ?: $d['original_name'];
                     $size  = tFileSize($d['file_size'] ?? 0);
@@ -39,7 +43,7 @@
                     </li>
                 <?php endforeach; ?>
             </ul>
-            <?= tTruncNote(count($documents), $documentsTotal) ?>
+            <?= tPager($documents, 'doc', 'documenti') ?>
         <?php endif; ?>
     </div>
 </div>

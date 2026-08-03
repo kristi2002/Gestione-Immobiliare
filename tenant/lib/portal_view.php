@@ -90,6 +90,80 @@ function tDocIcon(?string $filename): string
     };
 }
 
+/**
+ * Pastiglia di avanzamento di una richiesta.
+ *
+ * Si legge `maintenance_status`, non `status`: e' quello che muove la bacheca
+ * dell'agenzia. Se una richiesta e' stata annullata, pero', quello vince —
+ * altrimenti l'inquilino continuerebbe a leggere "Ricevuta" per sempre.
+ */
+function tRequestBadge(?string $maintenanceStatus, ?string $status): string
+{
+    if ($status === 'cancelled') {
+        return '<span class="badge badge--muted">Annullata</span>';
+    }
+    $key = $maintenanceStatus ?: 'aperta';
+    $variant = match ($key) {
+        'completata', 'chiusa' => 'success',
+        'in_lavorazione'       => 'info',
+        default                => 'warning',
+    };
+    $label = TENANT_REQUEST_PROGRESS[$key] ?? $key;
+    return '<span class="badge badge--' . $variant . '">' . tEsc($label) . '</span>';
+}
+
+/**
+ * Barra di impaginazione.
+ *
+ * Il numero di pagine arriva gia' calcolato da tenantPage(): qui non si
+ * ricontano le righe caricate — contarle darebbe il numero della sola pagina.
+ *
+ * @param string $param nome del parametro in query string (es. 'pay')
+ * @param string $anchor frammento a cui tornare (es. 'pagamenti'), cosi' il
+ *               ricaricamento riapre la sezione giusta invece della prima.
+ */
+function tPager(array $set, string $param, string $anchor): string
+{
+    $pages = (int) ($set['pages'] ?? 1);
+    if ($pages <= 1) return '';
+
+    $page  = (int) ($set['page'] ?? 1);
+    $total = (int) ($set['total'] ?? 0);
+
+    // Gli altri parametri di pagina vanno conservati: cambiare pagina ai
+    // pagamenti non deve riportare i documenti alla prima.
+    $keep = [];
+    foreach (['pay', 'doc', 'req'] as $k) {
+        if ($k !== $param && isset($_GET[$k]) && (int) $_GET[$k] > 1) {
+            $keep[$k] = (int) $_GET[$k];
+        }
+    }
+    $href = static function (int $n) use ($param, $keep, $anchor): string {
+        $q = array_merge($keep, [$param => $n]);
+        return '?' . http_build_query($q) . '#' . $anchor;
+    };
+
+    $out = '<nav class="tp-pager" aria-label="Impaginazione">';
+    $out .= $page > 1
+        ? '<a class="tp-pager__btn" href="' . tEsc($href($page - 1)) . '" rel="prev">' . tIcon('chevron-left') . '<span>Precedenti</span></a>'
+        : '<span class="tp-pager__btn is-off">' . tIcon('chevron-left') . '<span>Precedenti</span></span>';
+
+    $out .= '<span class="tp-pager__at">Pagina ' . $page . ' di ' . $pages
+          . ' <span class="tp-pager__tot">(' . $total . ' in tutto)</span></span>';
+
+    $out .= $page < $pages
+        ? '<a class="tp-pager__btn" href="' . tEsc($href($page + 1)) . '" rel="next"><span>Successivi</span>' . tIcon('chevron-right') . '</a>'
+        : '<span class="tp-pager__btn is-off"><span>Successivi</span>' . tIcon('chevron-right') . '</span>';
+
+    return $out . '</nav>';
+}
+
+/** IBAN a gruppi di quattro: si copia a mano, e a blocchi si sbaglia meno. */
+function tIbanGroups(string $iban): string
+{
+    return trim(chunk_split(str_replace(' ', '', strtoupper($iban)), 4, ' '));
+}
+
 /** Dimensione file leggibile. Torna stringa vuota se il dato non c'e'. */
 function tFileSize($bytes): string
 {

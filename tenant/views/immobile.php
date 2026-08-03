@@ -2,11 +2,27 @@
 /**
  * Scheda "Il mio immobile".
  *
- * Attese: $tenant (array|null), $upcoming (array), $agencyPhone, $agencyEmail.
+ * Attese: $tenant (array|null), $upcoming, $surveys, $agencyPhone, $agencyEmail.
  */
 ?>
 <div class="tp-section is-active" id="tp-section-immobile" role="tabpanel" aria-labelledby="tp-tab-immobile">
     <div class="tp-stack">
+
+        <?php if (!empty($surveys)): ?>
+            <?php $s = $surveys[0]; ?>
+            <div class="card tp-invite">
+                <div class="tp-invite__ico"><?= tIcon('message-square-heart') ?></div>
+                <div class="tp-invite__body">
+                    <div class="tp-invite__t">Com'è andata?</div>
+                    <p class="tp-invite__s">
+                        C'è un breve questionario da compilare: bastano due minuti e aiuta
+                        l'agenzia a capire come sta andando la tua locazione.
+                    </p>
+                </div>
+                <a class="btn btn--primary tp-invite__cta"
+                   href="survey.php?token=<?= tEsc($s['token']) ?>">Rispondi</a>
+            </div>
+        <?php endif; ?>
 
         <?php if (!$tenant || !$tenant['address']): ?>
             <div class="card">

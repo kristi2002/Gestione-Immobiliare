@@ -6,14 +6,21 @@
  * gia' quello nuovo. Tutto cio' che serve viene passato o riletto dal DOM.
  */
 
-/** Le quattro sezioni, nell'ordine in cui compaiono. */
-export const SECTIONS = ['immobile', 'pagamenti', 'documenti', 'assistenza'];
+/**
+ * Le sezioni, nell'ordine in cui compaiono.
+ * `account` non sta nella barra in basso — ci si arriva dall'icona in alto —
+ * ma e' una sezione a tutti gli effetti e deve poter essere aperta da un
+ * frammento, altrimenti il tasto indietro la salterebbe.
+ */
+export const SECTIONS = ['immobile', 'contratto', 'pagamenti', 'documenti', 'assistenza', 'account'];
 
 export const SECTION_TITLES = {
     immobile: 'Il mio immobile',
+    contratto: 'Contratto',
     pagamenti: 'Pagamenti',
     documenti: 'Documenti',
     assistenza: 'Assistenza',
+    account: 'Il mio account',
 };
 
 /** Sezione valida a partire da un frammento tipo "#pagamenti". */
