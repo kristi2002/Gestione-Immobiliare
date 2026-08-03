@@ -56,7 +56,7 @@ export function buildSocialCaption(p) {
     if (p.rooms) specs.push(`${p.rooms} camere`);
     if (p.bathrooms) specs.push(`${p.bathrooms} bagni`);
     if (specs.length) lines.push(`🏠 ${specs.join(' · ')}`);
-    if (p.price) lines.push(`💶 € ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}`);
+    if (p.price) lines.push(`💶 ${window.Fmt.money(p.price, { decimals: 'auto' })}${p.price_type === 'affitto' ? '/mese' : ''}`);
     if (p.description) { lines.push(''); lines.push(p.description); }
     lines.push('');
     lines.push('📞 Contattaci per maggiori informazioni!');

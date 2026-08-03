@@ -221,6 +221,14 @@
          * scelta di design, non la correzione di un difetto, e non e' una cosa
          * da far succedere di straforo dentro una pulizia della formattazione.
          * Qui si unifica il numero (raggruppamento e decimali), non l'aspetto.
+         *
+         * `useGrouping: 'always'` non e' un dettaglio di stile: l'italiano CLDR
+         * ha `minimumGroupingDigits: 2`, cioe' in "auto" il separatore compare
+         * solo da CINQUE cifre in su. Un canone di 1235 usciva "€ 1235,00"
+         * mentre un prezzo di vendita usciva "€ 199.000" — e i canoni stanno
+         * quasi tutti fra 500 e 2000, cioe' proprio nella fascia che non veniva
+         * mai raggruppata. Corretto per la locale, illeggibile in un gestionale
+         * dove le due cifre finiscono una accanto all'altra.
          */
         money: function (value, opts) {
             var n = Number(value);
@@ -228,17 +236,31 @@
                 return (opts && opts.empty !== undefined) ? opts.empty : EMPTY;
             }
             var decimals = (opts && opts.decimals !== undefined) ? opts.decimals : 2;
-            return '€ ' + new Intl.NumberFormat('it-IT', {
-                minimumFractionDigits: decimals,
-                maximumFractionDigits: decimals,
-            }).format(n);
+            // 'auto' = i decimali solo se ci sono davvero. Serve ai prezzi di
+            // vendita, che in italiano si scrivono "€ 199.000" e non
+            // "€ 199.000,00": e' il comportamento del vecchio
+            // `toLocaleString('it-IT')` sparso per l'app, tenuto identico
+            // mentre gli si aggiunge il separatore.
+            var fraction = decimals === 'auto'
+                ? { minimumFractionDigits: 0, maximumFractionDigits: 2 }
+                : { minimumFractionDigits: decimals, maximumFractionDigits: decimals };
+            return '€ ' + new Intl.NumberFormat('it-IT', Object.assign({
+                useGrouping: 'always',
+            }, fraction)).format(n);
         },
 
-        /** 1.234,5 — numeri non monetari (mq, consumi, contatori). */
+        /**
+         * 1.234,5 — numeri non monetari (mq, consumi, contatori).
+         *
+         * Stesso raggruppamento forzato di money(): oggi i cinque chiamanti
+         * sono tutti helper di prezzo (formatPrice/fmt), e devono leggersi
+         * come gli altri importi.
+         */
         number: function (value, decimals) {
             var n = Number(value);
             if (value === null || value === undefined || value === '' || !isFinite(n)) return EMPTY;
             return new Intl.NumberFormat('it-IT', {
+                useGrouping: 'always',
                 minimumFractionDigits: decimals || 0,
                 maximumFractionDigits: decimals === undefined ? 2 : decimals,
             }).format(n);

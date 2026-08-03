@@ -116,7 +116,7 @@ async function openRail(id) {
                 ? `<span class="rail-prop__img" style="background-image:url('${escapeHtml(p.cover_url)}')"></span>`
                 : '<span class="rail-prop__img"><i data-lucide="home"></i></span>';
             const price = p.price != null
-                ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '')
+                ? window.Fmt.money(p.price, { decimals: 'auto' }) + (p.price_type === 'affitto' ? '/mese' : '')
                 : '';
             return `<div class="rail-prop" data-prop="${p.id}">${img}
                 <div class="rail-prop__txt"><b>${escapeHtml(p.address || '')}, ${escapeHtml(p.city || '')}</b><span>${price}</span></div>

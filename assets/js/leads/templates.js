@@ -35,7 +35,7 @@ export function matchItemHtml(p) {
                 <div class="match-item">
                     <div>
                         <strong>${escapeHtml(p.address)}</strong>, ${escapeHtml(p.city)}<br>
-                        <small class="text-muted">${p.rooms != null ? p.rooms + ' stanze · ' : ''}${p.sqm != null ? p.sqm + ' mq · ' : ''}${p.price != null ? '€ ' + p.price + ' (' + escapeHtml(p.price_type) + ')' : 'prezzo n.d.'}</small>
+                        <small class="text-muted">${p.rooms != null ? p.rooms + ' stanze · ' : ''}${p.sqm != null ? p.sqm + ' mq · ' : ''}${p.price != null ? window.Fmt.money(p.price, { decimals: 'auto' }) + ' (' + escapeHtml(p.price_type) + ')' : 'prezzo n.d.'}</small>
                     </div>
                     <button class="btn btn--sm btn--ghost btn-open-prop" data-prop-id="${p.id}">Apri</button>
                 </div>`;

@@ -296,7 +296,7 @@ import {
                 : '';
             const inCompare = compareIds.has(p.id);
             const priceHtml = p.price != null
-                ? `<div class="prop-price">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '<small>/mese</small>' : ''}</div>`
+                ? `<div class="prop-price">${window.Fmt.money(p.price, { decimals: 'auto' })}${p.price_type === 'affitto' ? '<small>/mese</small>' : ''}</div>`
                 : '';
             const coverHtml = p.cover_url
                 ? `<img src="${escapeHtml(mediaUrl(p.cover_url))}" alt="Anteprima ${escapeHtml(p.address)}" class="entity-card__cover-img" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;entity-card__cover-placeholder&quot; aria-hidden=&quot;true&quot;><span class=&quot;entity-card__cover-icon&quot;>&#x1F3E0;</span><span>Nessuna foto</span></div>'">`
@@ -480,7 +480,7 @@ import {
             }).addTo(propMap);
 
             const price = p.price != null
-                ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '')
+                ? window.Fmt.money(p.price, { decimals: 'auto' }) + (p.price_type === 'affitto' ? '/mese' : '')
                 : 'prezzo n.d.';
             marker.bindPopup(
                 `<div class="map-pop">
@@ -595,10 +595,10 @@ import {
                 ['Bagni',            p => p.bathrooms ?? '—'],
                 ['Piano',            p => p.floor ?? '—'],
                 ['Anno costruzione', p => p.year_built ?? '—'],
-                [priceLabel,         p => p.price ? '€ ' + Number(p.price).toLocaleString('it-IT') : '—'],
-                ['Valore stimato',   p => p.current_value ? '€ ' + Number(p.current_value).toLocaleString('it-IT') : '—'],
-                ['Canone mensile',   p => p.monthly_rent ? '€ ' + Number(p.monthly_rent).toLocaleString('it-IT') : '—'],
-                ['Reddito 12m',      p => p.total_income_12m != null ? '€ ' + Number(p.total_income_12m).toLocaleString('it-IT') : '—'],
+                [priceLabel,         p => window.Fmt.money(p.price, { decimals: 'auto' })],
+                ['Valore stimato',   p => window.Fmt.money(p.current_value, { decimals: 'auto' })],
+                ['Canone mensile',   p => window.Fmt.money(p.monthly_rent, { decimals: 'auto' })],
+                ['Reddito 12m',      p => window.Fmt.money(p.total_income_12m, { decimals: 'auto' })],
                 ['ROI lordo',        p => {
                     if (!p.monthly_rent) return '—';
                     const base = (p.price_type === 'vendita' && p.price) ? p.price
@@ -909,8 +909,8 @@ import {
             }
             container.innerHTML = items.map(a => `
                 <div class="appraisal-item">
-                    <div><strong>€ ${Number(a.estimated_value).toLocaleString('it-IT')}</strong>
-                        ${a.estimated_rent ? ` · canone € ${Number(a.estimated_rent).toLocaleString('it-IT')}` : ''}
+                    <div><strong>${window.Fmt.money(a.estimated_value, { decimals: 'auto' })}</strong>
+                        ${a.estimated_rent ? ` · canone ${window.Fmt.money(a.estimated_rent, { decimals: 'auto' })}` : ''}
                         <span class="badge">${escapeHtml(RATING_LABELS[a.condition_rating] || a.condition_rating)}</span></div>
                     <div class="text-muted">${window.Fmt.date(a.appraisal_date)}${a.appraiser_name ? ' · ' + escapeHtml(a.appraiser_name) : ''}</div>
                     ${a.notes ? `<div class="text-muted">${escapeHtml(a.notes)}</div>` : ''}

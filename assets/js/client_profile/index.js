@@ -185,7 +185,7 @@ async function loadProperties() {
                 ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;prop-card-thumb prop-card-thumb--empty&quot;>&#x1F3E2;</div>'">`
                 : `<div class="prop-card-thumb prop-card-thumb--empty"><i data-lucide="building-2"></i></div>`;
             const color = PROP_COLOR[p.status] || '#94a3b8';
-            const price = p.price ? `<span class="profile-prop-rent">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';
+            const price = p.price ? `<span class="profile-prop-rent">${window.Fmt.money(p.price, { decimals: 'auto' })}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';
             return `
             <div class="entity-card profile-prop-card entity-card--clickable" data-prop-id="${p.id}" style="cursor:pointer;">
                 <div class="prop-card-thumb-wrap">${photo}</div>
@@ -281,13 +281,13 @@ async function loadFatture() {
             const st = invState(i);
             const color  = st.color;
             const label  = st.label;
-            const total  = Number(i.total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const total  = window.Fmt.money(i.total || 0);
             const desc   = (i.description || '').length > 60 ? i.description.slice(0, 60) + '…' : (i.description || '');
             return `
             <div class="doc-item">
                 <span class="doc-item__icon"><i data-lucide="euro"></i></span>
                 <div class="doc-item__info">
-                    <div class="doc-item__name">${esc(i.invoice_number)} — € ${total}</div>
+                    <div class="doc-item__name">${esc(i.invoice_number)} — ${total}</div>
                     <div class="doc-item__meta">
                         <span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40;font-size:11px;">${label}</span>
                         · ${fmtDate(i.issue_date)}${desc ? ' · ' + esc(desc) : ''}
@@ -371,7 +371,7 @@ async function loadContratti() {
             const type   = CT_TYPE[c.contract_type] || c.contract_type;
             const where  = c.property_address ? `${esc(c.property_address)}, ${esc(c.property_city)}` : '—';
             const tenant = c.tenant_name ? `${esc(c.tenant_name)} ${esc(c.tenant_surname)}` : '';
-            const rent   = c.monthly_rent ? `€ ${Number(c.monthly_rent).toLocaleString('it-IT')}/mese` : '';
+            const rent   = c.monthly_rent ? `${window.Fmt.money(c.monthly_rent, { decimals: 'auto' })}/mese` : '';
             const period = [c.start_date ? fmtDate(c.start_date) : null, c.end_date ? fmtDate(c.end_date) : null].filter(Boolean).join(' → ');
             return `
             <div class="doc-item">

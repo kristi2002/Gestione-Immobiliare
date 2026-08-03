@@ -131,7 +131,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             mandate: { esclusiva:'In esclusiva', non_esclusiva:'Non in esclusiva' },
             surface: { abitazione:'Abitazione', balcone:'Balcone', terrazzo:'Terrazzo', giardino:'Giardino', box:'Box', posto_auto:'Posto auto', cantina:'Cantina', mansarda:'Mansarda', taverna:'Taverna', soffitta:'Soffitta', seminterrato:'Seminterrato', altro:'Altro' },
         };
-        const eur = (n) => '€ ' + Number(n).toLocaleString('it-IT');
+        const eur = (n) => window.Fmt.money(n, { decimals: 'auto' });
         const yesno = (v) => v == null || v === '' ? null : (Number(v) ? 'Sì' : 'No');
         const fmt1 = (n) => Number(n).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         // Classe energetica: i valori speciali "in_attesa"/"esente" non sono lettere → etichetta leggibile.
@@ -294,7 +294,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         const linksEl = document.getElementById('pp-subnav-links');
         if (titleEl) titleEl.textContent = (p.address || 'Immobile') + (p.city ? ', ' + p.city : '');
         window.App?.setCrumb((p.address || 'Immobile') + (p.city ? ', ' + p.city : ''));
-        if (priceEl) priceEl.textContent = p.price ? '€ ' + Number(p.price).toLocaleString('it-IT') + (p.price_type === 'affitto' ? '/mese' : '') : '';
+        if (priceEl) priceEl.textContent = p.price ? window.Fmt.money(p.price, { decimals: 'auto' }) + (p.price_type === 'affitto' ? '/mese' : '') : '';
 
         const links = [
             ['pp-sec-caratteristiche', 'Caratteristiche'],
@@ -381,7 +381,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         const STATUS = { available:'Disponibile', rented:'Affittato', sold:'Venduto', archived:'Archiviato' };
         const ownerName = p.client_name ? `${p.client_name} ${p.client_surname || ''}`.trim() : (p.owner_name || '—');
         const ownerId = p.client_id || p.owner_id;
-        const priceFormatted = p.price ? '€ ' + parseFloat(p.price).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : null;
+        const priceFormatted = p.price ? window.Fmt.money(p.price, { decimals: 0 }) : null;
         const priceTypeLabel = p.price_type === 'affitto' ? ' /mese' : '';
 
         const facts = [];
@@ -389,7 +389,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         if (p.floor) facts.push(['Piano', p.floor]);
         if (p.cap) facts.push(['CAP', p.cap]);
         if (p.reference_code) facts.push(['Riferimento', p.reference_code]);
-        if (p.condo_fees) facts.push(['Spese cond.', '€ ' + Number(p.condo_fees).toLocaleString('it-IT') + '/mese']);
+        if (p.condo_fees) facts.push(['Spese cond.', window.Fmt.money(p.condo_fees, { decimals: 'auto' }) + '/mese']);
 
         card.innerHTML = `
             <div class="pp-summary-price">
@@ -412,7 +412,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
                 <button class="btn btn--ghost" id="btn-pp-mandato"><i data-lucide="file-pen-line"></i> Mandato agenzia</button>
                 <button class="btn btn--ghost" id="btn-pp-qr"><i data-lucide="qr-code"></i> QR Code</button>
                 <button class="btn btn--ghost" id="btn-pp-social"><i data-lucide="megaphone"></i> Pubblica post</button>
-                ${window.WA ? `<a href="${window.WA.shareLink((p.address || 'Immobile') + (p.city ? ', ' + p.city : '') + (p.price ? ' — € ' + Number(p.price).toLocaleString('it-IT') : '') + '\n' + window.location.origin + '/property/' + propertyId)}" target="_blank" rel="noopener" class="btn btn--whatsapp">${window.WA.icon} Condividi su WhatsApp</a>` : ''}
+                ${window.WA ? `<a href="${window.WA.shareLink((p.address || 'Immobile') + (p.city ? ', ' + p.city : '') + (p.price ? ' — ' + window.Fmt.money(p.price, { decimals: 'auto' }) : '') + '\n' + window.location.origin + '/property/' + propertyId)}" target="_blank" rel="noopener" class="btn btn--whatsapp">${window.WA.icon} Condividi su WhatsApp</a>` : ''}
                 <button class="btn btn--danger" id="btn-pp-archive"><i data-lucide="archive"></i> Archivia</button>
             </div>`;
 
@@ -559,7 +559,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
         add(!!p.garden && p.garden !== 'no', 'trees', GARD[p.garden] || p.garden, 'Giardino');
         add(num(p.year_built), 'calendar', p.year_built, 'Anno');
         add(!!p.condition_state, 'wrench', COND[p.condition_state] || p.condition_state, 'Stato');
-        add(num(p.condo_fees), 'receipt', '€ ' + Number(p.condo_fees).toLocaleString('it-IT'), 'Spese cond.');
+        add(num(p.condo_fees), 'receipt', window.Fmt.money(p.condo_fees, { decimals: 'auto' }), 'Spese cond.');
 
         if (!items.length) { el.hidden = true; return; }
         el.innerHTML = items.map(it =>
@@ -1310,7 +1310,7 @@ import { buildGalleryHtml, buildSocialCaption, docFilesHtml } from './templates.
             <thead><tr><th>Data</th><th>Prezzo</th><th>Tipo</th><th>Note</th></tr></thead>
             <tbody>${history.map(h => `<tr>
                 <td>${h.changed_at ? window.Fmt.date(h.changed_at) : '—'}</td>
-                <td>€ ${parseFloat(h.price).toLocaleString('it-IT')}</td>
+                <td>${window.Fmt.money(h.price, { decimals: 'auto' })}</td>
                 <td>${h.price_type || '—'}</td>
                 <td>${esc(h.notes || '')}</td>
             </tr>`).join('')}</tbody>

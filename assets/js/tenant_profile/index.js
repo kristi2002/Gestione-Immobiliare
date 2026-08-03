@@ -146,7 +146,7 @@ async function loadLease() {
             ? `<img src="${esc(p.cover_url)}" class="prop-card-thumb" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;prop-card-thumb prop-card-thumb--empty&quot;>&#x1F3E2;</div>'">`
             : `<div class="prop-card-thumb prop-card-thumb--empty"><i data-lucide="building-2"></i></div>`;
         const color = PROP_COLOR[p.status] || '#94a3b8';
-        const rent  = tenant.monthly_rent ? `<span class="profile-prop-rent">€ ${Number(tenant.monthly_rent).toLocaleString('it-IT')}/mese</span>` : '';
+        const rent  = tenant.monthly_rent ? `<span class="profile-prop-rent">${window.Fmt.money(tenant.monthly_rent, { decimals: 'auto' })}/mese</span>` : '';
         const period = [tenant.lease_start ? fmtDate(tenant.lease_start) : null, tenant.lease_end ? fmtDate(tenant.lease_end) : null].filter(Boolean).join(' → ');
 
         grid.innerHTML = `
@@ -210,7 +210,7 @@ async function loadContratti() {
             const st = ctState(c);
             const type = CT_TYPE[c.contract_type] || c.contract_type;
             const where = c.property_address ? `${esc(c.property_address)}, ${esc(c.property_city)}` : '—';
-            const rent = c.monthly_rent ? `€ ${Number(c.monthly_rent).toLocaleString('it-IT')}/mese` : '';
+            const rent = c.monthly_rent ? `${window.Fmt.money(c.monthly_rent, { decimals: 'auto' })}/mese` : '';
             const period = [c.start_date ? fmtDate(c.start_date) : null, c.end_date ? fmtDate(c.end_date) : null].filter(Boolean).join(' → ');
             return `
             <div class="doc-item">
@@ -251,7 +251,7 @@ async function loadPagamenti() {
         list.innerHTML = items.map(p => {
             const color = PAY_COLOR[p.status] || '#94a3b8';
             const label = PAY_STATUS[p.status] || p.status;
-            const amount = Number(p.amount || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const amount = window.Fmt.money(p.amount || 0);
             return `
             <div class="doc-item">
                 <span class="doc-item__icon"><i data-lucide="euro"></i></span>

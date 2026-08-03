@@ -162,7 +162,7 @@
                 ? `<img src="${esc(mediaUrl(p.cover_url))}" class="prop-card-thumb" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<div class=&quot;prop-card-thumb prop-card-thumb--empty&quot;>&#x1F3E2;</div>'">`
                 : `<div class="prop-card-thumb prop-card-thumb--empty"><i data-lucide="building-2"></i></div>`;
             const color = PROP_COLOR[p.status] || '#94a3b8';
-            const price = p.price ? `<span class="profile-prop-rent">€ ${Number(p.price).toLocaleString('it-IT')}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';
+            const price = p.price ? `<span class="profile-prop-rent">${window.Fmt.money(p.price, { decimals: 'auto' })}${p.price_type === 'affitto' ? '/mese' : ''}</span>` : '';
             const owner = p.client_name ? `<span class="text-muted" style="font-size:12px;">${esc(p.client_name)} ${esc(p.client_surname || '')}</span>` : '';
             return `
             <div class="entity-card profile-prop-card entity-card--clickable" data-prop-id="${p.id}" style="cursor:pointer;">
@@ -439,7 +439,7 @@
         const amount = parseFloat(document.getElementById('distribute-amount').value) || 0;
         const el = document.getElementById('distribute-preview');
         el.textContent = amount > 0
-            ? `€ ${amount.toLocaleString('it-IT', { minimumFractionDigits: 2 })} verranno divisi fra le unità con quota nella tabella scelta. La spesa resta una sola: le quote sono la sua imputazione per unità.`
+            ? `${window.Fmt.money(amount)} verranno divisi fra le unità con quota nella tabella scelta. La spesa resta una sola: le quote sono la sua imputazione per unità.`
             : '';
     }
 
@@ -477,10 +477,10 @@
                     <tbody>${(data.allocated || []).map(a => `<tr>
                         <td>${esc(a.address)}</td>
                         <td>${esc(a.quota)}</td>
-                        <td>€ ${Number(a.amount).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</td>
+                        <td>${window.Fmt.money(a.amount)}</td>
                     </tr>`).join('')}</tbody>
                     <tfoot><tr><th>Totale ripartito</th><th></th>
-                        <th>€ ${Number(data.allocated_total).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</th></tr></tfoot>
+                        <th>${window.Fmt.money(data.allocated_total)}</th></tr></tfoot>
                 </table></div>`;
         } catch (err) {
             showAlert(err.message, 'error');

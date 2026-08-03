@@ -242,8 +242,8 @@
     function priceLabel(p) {
         if (p.price == null || p.price === '') return 'Prezzo n.d.';
         const n = Number(p.price);
-        const val = isNaN(n) ? p.price : n.toLocaleString('it-IT');
-        return `€ ${val}${p.price_type === 'affitto' ? '/mese' : ''}`;
+        const val = isNaN(n) ? '€ ' + p.price : window.Fmt.money(n, { decimals: 'auto' });
+        return `${val}${p.price_type === 'affitto' ? '/mese' : ''}`;
     }
 
     function hasCoords(p) {

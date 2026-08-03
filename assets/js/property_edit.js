@@ -388,8 +388,8 @@
         if (!history || !history.length) { section.hidden = true; return; }
         section.hidden = false;
         container.innerHTML = history.map(h => {
-            const oldP = h.old_price != null ? `€ ${Number(h.old_price).toLocaleString('it-IT')}` : '—';
-            const newP = h.new_price != null ? `€ ${Number(h.new_price).toLocaleString('it-IT')}` : '—';
+            const oldP = window.Fmt.money(h.old_price, { decimals: 'auto' });
+            const newP = window.Fmt.money(h.new_price, { decimals: 'auto' });
             const date = window.Fmt.dateTime(h.changed_at);
             return `<div class="price-history-item">${date}: ${oldP} → <strong>${newP}</strong></div>`;
         }).join('');
