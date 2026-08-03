@@ -54,9 +54,8 @@
     margin: 0;
 }
 
-/* ---- Schede della pagina ------------------------------------------------- */
-/* `.db-card` non ha margini propri: la spaziatura verticale la mette la pagina. */
-.inv-card + .inv-card { margin-top: 18px; }
+/* La spaziatura fra le due schede e' condivisa (`.list-card + .list-card`,
+   09-filter-toolbar.css): la stessa cosa serve a Contatori. */
 
 /* ---- Stato vuoto: nessun immobile scelto -------------------------------- */
 /* Finche' non si sceglie un immobile la pagina non ha contenuto: il messaggio

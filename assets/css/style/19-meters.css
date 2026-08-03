@@ -1,0 +1,25 @@
+/* ============================================================================
+   Contatori — impaginazione della pagina (letture + censimento).
+
+   Le due tabelle vivono in una `.db-card.list-card` come ogni altro elenco; la
+   spaziatura fra le schede e il resto dell'anatomia stanno nei layer condivisi.
+   Qui resta solo quello che e' davvero di questa pagina.
+   ============================================================================ */
+
+/* La spunta "Mostra anche i disattivati" sta nella testata della seconda
+   scheda, di fianco al titolo. `.db-card__head` e' una riga senza a-capo: senza
+   questo la scritta si stringe finche' non si spezza fra due parole appena la
+   finestra si restringe, mentre il titolo a sinistra ha ancora spazio. */
+.mtr-head-check {
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* Sotto i 720px la riga non ci sta piu': titolo sopra, spunta sotto. */
+@media (max-width: 720px) {
+    .meters-view .db-card__head { flex-wrap: wrap; }
+    .mtr-head-check { white-space: normal; }
+}

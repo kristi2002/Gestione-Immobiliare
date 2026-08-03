@@ -202,6 +202,14 @@
     .list-card .toolbar--sticky.is-stuck { background: transparent; }
 }
 
+/* A page with more than one list stacks them down the page. `.db-card` carries
+   no margin of its own (theme-orlandi.css), so without this two consecutive
+   lists touch, with only their 1px borders between them — and the second card's
+   head reads as a row of the first table. Shared, not per-page: Inventario
+   (arredi + verbali) and Contatori (letture + censimento) both need it, and so
+   will the next page with two lists. */
+.list-card + .list-card { margin-top: 18px; }
+
 /* ---- Card alignment: one shared left edge, no wrapping headers ---- */
 .entity-card__prop-header { padding-left: 16px; padding-right: 16px; flex-wrap: nowrap; }
 .entity-card--property .entity-card__prop-header { padding-left: 16px; padding-right: 16px; }

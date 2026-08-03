@@ -47,83 +47,92 @@
     })();
     </script>
 
-    <div class="toolbar">
-        <div class="search-box">
-            <input type="search" id="meters-search" class="form-input" placeholder="Cerca immobile, POD/PDR, matricola o ubicazione…" autocomplete="off">
-        </div>
-        <select id="meters-property-filter" class="form-select" style="max-width:280px;">
-            <option value="">Tutti gli immobili</option>
-        </select>
-        <select id="meters-type-filter" class="form-select">
-            <option value="">Tutti i tipi</option>
-            <option value="gas">Gas</option>
-            <option value="electricity">Elettricità</option>
-            <option value="water">Acqua</option>
-            <option value="heating">Riscaldamento</option>
-        </select>
-    </div>
+    <div class="db-card list-card">
+        <div class="db-card__head"><h3>Letture registrate</h3></div>
 
-    <div class="table-wrapper">
-        <table class="data-table" id="meters-table">
-            <thead>
-                <tr>
-                    <th>Immobile</th>
-                    <th>Contatore</th>
-                    <th>Ultima lettura</th>
-                    <th>Consumo stimato</th>
-                    <th>Data lettura</th>
-                    <th>Prova</th>
-                    <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody id="meters-tbody">
-                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
-            </tbody>
-        </table>
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="search" id="meters-search" class="form-input" placeholder="Cerca immobile, POD/PDR, matricola o ubicazione…" autocomplete="off">
+            </div>
+            <select id="meters-property-filter" class="form-select" style="max-width:280px;">
+                <option value="">Tutti gli immobili</option>
+            </select>
+            <select id="meters-type-filter" class="form-select">
+                <option value="">Tutti i tipi</option>
+                <option value="gas">Gas</option>
+                <option value="electricity">Elettricità</option>
+                <option value="water">Acqua</option>
+                <option value="heating">Riscaldamento</option>
+            </select>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="data-table" id="meters-table">
+                <thead>
+                    <tr>
+                        <th>Immobile</th>
+                        <th>Contatore</th>
+                        <th>Ultima lettura</th>
+                        <th>Consumo stimato</th>
+                        <th>Data lettura</th>
+                        <th>Prova</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="meters-tbody">
+                    <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="meters-pagination" class="pagination-container"></div>
     </div>
-    <div id="meters-pagination" class="pagination-container"></div>
 
     <!--
         Censimento dei contatori (l'oggetto fisico), separato dalle letture.
         Prima non c'era: si poteva solo crearne uno al volo registrando una
         lettura, quindi un POD sbagliato non si correggeva e un contatore
         sostituito restava per sempre nelle tendine.
+
+        Titolo e spiegazione nella testata della scheda, non in un
+        `.view-header__text`: quello il tema lo nasconde apposta (app.js copia
+        quel testo nella topbar), quindi qui restava solo una striscia vuota con
+        la spunta a destra, e la tabella sotto senza intestazione.
     -->
-    <div class="view-header" style="margin-top:2rem;">
-        <div class="view-header__text">
-            <h3 style="margin:0;">
-                Contatori censiti
-                <span id="meters-registry-todo" class="badge badge--warning" style="display:none;"></span>
-            </h3>
-            <p style="margin:0;">L'apparecchio fisico: codice, fornitore e dove si trova il quadrante.
-               I filtri in cima valgono anche qui.</p>
-        </div>
-        <div class="view-header__actions">
-            <label class="form-check" style="margin:0;">
+    <section class="db-card list-card">
+        <div class="db-card__head">
+            <div>
+                <h3>
+                    Contatori censiti
+                    <span id="meters-registry-todo" class="badge badge--warning" style="display:none;"></span>
+                </h3>
+                <p>L'apparecchio fisico: codice, fornitore e dove si trova il quadrante.
+                   I filtri in cima valgono anche qui.</p>
+            </div>
+            <label class="form-check mtr-head-check">
                 <input type="checkbox" id="meters-show-inactive"> Mostra anche i disattivati
             </label>
         </div>
-    </div>
 
-    <div class="table-wrapper">
-        <table class="data-table" id="meters-registry-table">
-            <thead>
-                <tr>
-                    <th>Immobile</th>
-                    <th>Tipo</th>
-                    <th>Codice</th>
-                    <th>Fornitore</th>
-                    <th>Ubicazione</th>
-                    <th>Stato</th>
-                    <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody id="meters-registry-tbody">
-                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <div id="meters-registry-pagination" class="pagination-container"></div>
+        <div class="table-wrapper">
+            <table class="data-table" id="meters-registry-table">
+                <thead>
+                    <tr>
+                        <th>Immobile</th>
+                        <th>Tipo</th>
+                        <th>Codice</th>
+                        <th>Fornitore</th>
+                        <th>Ubicazione</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="meters-registry-tbody">
+                    <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="meters-registry-pagination" class="pagination-container"></div>
+    </section>
 </div>
 
 <!-- New reading modal -->
