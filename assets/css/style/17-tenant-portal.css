@@ -1,0 +1,679 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   17 — Portale Inquilino (e proprietario): shell propria, pensata prima per il
+   telefono.
+
+   PERCHE' UNA SHELL SUA E NON `.sidebar`/`.topbar` DELL'ADMIN
+   Quelle classi sono ridefinite 3-5 volte fra 01/03/08/theme-orlandi (vedi
+   assets/css/README.md §4): ereditarle significa combattere una cascata scritta
+   per una scrivania. Il portale ha quattro sezioni e un pubblico che lo apre dal
+   telefono, quindi si prende un prefisso tutto suo — `.tp-` — che nessun altro
+   layer conosce. Nessuna collisione, in nessuna direzione.
+
+   ATTENZIONE ALLA POSIZIONE NELLA CASCATA: questo file sta DENTRO il bundle,
+   quindi carica PRIMA di branding.css.php e theme-orlandi.css. Il tema vince su
+   di noi. E' voluto: qui si usano i token del tema (--color-*, --radius,
+   --shadow), non si ridefiniscono. Se un colore va cambiato si cambia il token.
+
+   ICONE: lucide sostituisce `<i data-lucide>` con un `<svg>` e ricopia la
+   class sull'svg. Percio' si stila SEMPRE la classe (`.tp-tab__ico`), MAI il
+   selettore di elemento `i` — quello smette di esistere all'idratazione.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Guscio ──────────────────────────────────────────────────────────────── */
+
+.tp-shell {
+    min-height: 100vh;
+    min-height: 100dvh;               /* le barre del browser mobile non tagliano */
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Barra laterale — solo da 1024px in su (vedi in fondo) ───────────────── */
+
+.tp-sidebar {
+    display: none;
+    background: var(--color-sidebar-bg);
+    color: #fff;
+}
+
+.tp-sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, .09);
+}
+
+.tp-sidebar__logo { max-height: 34px; max-width: 128px; display: block; }
+
+.tp-sidebar__brand-ico {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, .12);
+}
+
+.tp-sidebar__brand-ico svg { width: 18px; height: 18px; }
+
+.tp-sidebar__name {
+    font-family: var(--font-brand);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: .1px;
+}
+
+.tp-sidebar__label {
+    padding: 18px 20px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .42);
+}
+
+.tp-sidebar__nav { flex: 1; padding: 0 12px; }
+.tp-sidebar__nav ul { list-style: none; margin: 0; padding: 0; }
+.tp-sidebar__nav li + li { margin-top: 2px; }
+
+.tp-navlink {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, .76);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+}
+
+.tp-navlink:hover { background: var(--color-sidebar-hover); color: #fff; }
+
+.tp-navlink.is-active {
+    background: var(--color-sidebar-active);
+    color: #fff;
+    font-weight: 600;
+}
+
+.tp-navlink__ico { width: 18px; height: 18px; flex: 0 0 18px; }
+
+/* Piede: chi sei, e la via d'uscita. */
+.tp-sidebar__foot {
+    padding: 14px 16px 18px;
+    border-top: 1px solid rgba(255, 255, 255, .09);
+}
+
+.tp-user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
+.tp-user__avatar {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.tp-user__name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tp-user__role { font-size: 11.5px; color: rgba(255, 255, 255, .5); }
+
+.tp-signout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    padding: 9px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: transparent;
+    color: rgba(255, 255, 255, .82);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+}
+
+.tp-signout:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.tp-signout__ico { width: 15px; height: 15px; }
+
+/* ── Barra in alto ───────────────────────────────────────────────────────── */
+
+.tp-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;                     /* sotto le tendine (1300+), vedi scala */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tp-topbar__brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.tp-topbar__logo { max-height: 28px; max-width: 104px; display: block; }
+
+.tp-topbar__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tp-topbar__spacer { flex: 1; }
+
+.tp-topbar__out {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    text-decoration: none;
+}
+
+.tp-topbar__out:hover { background: var(--color-bg); color: var(--color-text); }
+.tp-topbar__out svg { width: 17px; height: 17px; }
+
+/* ── Contenuto ───────────────────────────────────────────────────────────── */
+
+.tp-main {
+    flex: 1;
+    width: 100%;
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 16px 16px 92px;           /* 92px = spazio per la barra in basso */
+}
+
+.tp-section { display: none; }
+.tp-section.is-active { display: block; animation: tp-fade .18s ease-out; }
+
+@keyframes tp-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tp-section.is-active { animation: none; }
+}
+
+.tp-stack { display: flex; flex-direction: column; gap: 14px; }
+
+.tp-section__head { margin: 2px 0 12px; }
+
+.tp-section__title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.2px;
+    color: var(--color-text);
+}
+
+.tp-section__sub { margin: 3px 0 0; font-size: 13.5px; color: var(--color-text-muted); }
+
+/* ── Intestazione di scheda ──────────────────────────────────────────────────
+   NON si riusa `.card-title`: non esiste in nessun layer (il vecchio portale la
+   scriveva e non stilava niente), e `.card-header` porta la sola riga
+   `align-items:center` da 09. Qui l'intestazione se la definisce il portale. */
+
+.tp-card__head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 12px;
+}
+
+.tp-card__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.1px;
+    color: var(--color-text);
+}
+
+/* Sottotitolo di scheda: sale sotto l'intestazione, che ha gia' il suo margine. */
+.tp-card__sub {
+    margin: -6px 0 16px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-text-muted);
+}
+
+.tp-card__ico { width: 17px; height: 17px; flex: 0 0 17px; color: var(--color-text-muted); }
+.tp-alert-card .tp-card__ico { color: var(--color-danger); }
+
+/* ── Scheda immobile ─────────────────────────────────────────────────────── */
+
+.tp-hero__addr {
+    margin: 0;
+    font-family: var(--font-brand);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--color-text);
+}
+
+.tp-hero__city { margin: 5px 0 0; font-size: 14px; color: var(--color-text-muted); }
+
+.tp-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin-top: 18px;
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.tp-fact { background: var(--color-surface); padding: 12px 14px; }
+
+.tp-fact__k {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.tp-fact__v {
+    display: block;
+    margin-top: 3px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.tp-hero__desc {
+    margin: 16px 0 0;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--color-text-muted);
+}
+
+/* ── Riquadri di riepilogo (importi) ─────────────────────────────────────── */
+
+.tp-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.tp-tile {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+}
+
+.tp-tile__k { font-size: 11.5px; font-weight: 600; color: var(--color-text-muted); }
+
+.tp-tile__v {
+    margin-top: 5px;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -.4px;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.tp-tile--ok   .tp-tile__v { color: var(--color-success); }
+.tp-tile--late .tp-tile__v { color: var(--color-danger); }
+.tp-tile--late { border-color: #f6cccc; background: #fffafa; }
+
+/* ── Avviso scadenze ─────────────────────────────────────────────────────── */
+
+.tp-alert-card { border-color: #f6cccc; background: #fffafa; }
+
+.tp-duelist { list-style: none; margin: 0; padding: 0; }
+
+.tp-due {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tp-due:last-child { border-bottom: none; }
+.tp-due__amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tp-due__date { font-size: 13px; color: var(--color-text-muted); }
+
+/* ── Elenco documenti ────────────────────────────────────────────────────── */
+
+.tp-doclist { list-style: none; margin: 0; padding: 0; }
+
+.tp-doc {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tp-doc:last-child { border-bottom: none; }
+
+.tp-doc__ico {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.tp-doc__ico svg { width: 18px; height: 18px; }
+.tp-doc__body { flex: 1; min-width: 0; }
+
+.tp-doc__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tp-doc__meta { margin-top: 2px; font-size: 12px; color: var(--color-text-muted); }
+
+.tp-doc__get {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+}
+
+.tp-doc__get:hover { background: var(--color-primary-light); color: var(--color-primary); }
+.tp-doc__get svg { width: 16px; height: 16px; }
+
+/* ── Tabella pagamenti: su telefono diventa un elenco di schede ──────────── */
+
+.tp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.tp-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+.tp-table thead th {
+    text-align: left;
+    padding: 9px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+}
+
+.tp-table tbody td { padding: 11px 10px; border-bottom: 1px solid var(--color-border); }
+.tp-table tbody tr:last-child td { border-bottom: none; }
+.tp-table__amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tp-table__note { font-size: 12px; color: var(--color-text-muted); }
+
+@media (max-width: 639px) {
+    .tp-table, .tp-table tbody, .tp-table tr, .tp-table td { display: block; width: 100%; }
+    .tp-table thead { display: none; }
+
+    .tp-table tbody tr {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        padding: 4px 12px;
+        margin-bottom: 9px;
+    }
+
+    .tp-table tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 7px 0;
+        border-bottom: 1px dashed var(--color-border);
+    }
+
+    .tp-table tbody td:last-child { border-bottom: none; }
+
+    /* L'intestazione di colonna riappare come etichetta, da data-k. */
+    .tp-table tbody td::before {
+        content: attr(data-k);
+        flex: 0 0 auto;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+
+    .tp-table tbody td:empty { display: none; }
+}
+
+/* ── Nota di troncamento ─────────────────────────────────────────────────── */
+
+.tp-trunc {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+}
+
+/* ── Vuoto ───────────────────────────────────────────────────────────────── */
+
+.tp-empty { padding: 30px 16px; text-align: center; }
+
+.tp-empty__ico {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+}
+
+.tp-empty__ico svg { width: 21px; height: 21px; }
+.tp-empty__t { font-size: 14.5px; font-weight: 600; color: var(--color-text); }
+.tp-empty__s { margin-top: 4px; font-size: 13px; color: var(--color-text-muted); }
+
+/* ── Assistenza: scelta del tipo ─────────────────────────────────────────── */
+
+.tp-types {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 18px;
+}
+
+.tp-type {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+
+.tp-type:hover { border-color: var(--color-border-strong); }
+
+.tp-type.is-on {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.tp-type__ico { width: 17px; height: 17px; flex: 0 0 17px; }
+
+/* ── Contatti ────────────────────────────────────────────────────────────── */
+
+.tp-contact { display: flex; align-items: center; gap: 11px; padding: 9px 0; }
+
+.tp-contact + .tp-contact { border-top: 1px solid var(--color-border); }
+
+.tp-contact__ico {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.tp-contact__ico svg { width: 16px; height: 16px; }
+.tp-contact__k { font-size: 11.5px; color: var(--color-text-muted); }
+
+.tp-contact__v {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+    text-decoration: none;
+    word-break: break-word;
+}
+
+a.tp-contact__v:hover { color: var(--color-primary); }
+
+/* ── Barra schede in basso — il telefono naviga da qui ───────────────────── */
+
+.tp-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 950;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    /* La barra gesti dell'iPhone mangia i tocchi sull'ultima riga. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -1px 3px rgba(30, 42, 58, .05);
+}
+
+.tp-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    /* 56px: sopra il minimo di 44px per un bersaglio da dito. */
+    min-height: 56px;
+    padding: 7px 4px;
+    border: none;
+    background: none;
+    color: var(--color-text-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--transition);
+}
+
+.tp-tab__ico { width: 20px; height: 20px; }
+.tp-tab.is-active { color: var(--color-primary); }
+.tp-tab.is-active .tp-tab__ico { stroke-width: 2.4; }
+
+/* ── Messaggio a comparsa ────────────────────────────────────────────────── */
+
+.tp-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 1400;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    font-size: 13.5px;
+    font-weight: 500;
+}
+
+/* ── Da tablet in su ─────────────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+    .tp-main { padding: 20px 24px 92px; }
+    .tp-types { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .tp-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ── Da desktop: compare la barra laterale, sparisce quella in basso ─────── */
+
+@media (min-width: 1024px) {
+    .tp-shell {
+        display: grid;
+        grid-template-columns: 252px minmax(0, 1fr);
+        grid-template-rows: 100vh;
+        grid-template-rows: 100dvh;
+    }
+
+    .tp-sidebar {
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100dvh;
+        overflow-y: auto;
+    }
+
+    .tp-pane { display: flex; flex-direction: column; min-width: 0; overflow-y: auto; }
+
+    .tp-topbar {
+        padding: 14px 28px;
+        background: var(--color-surface);
+    }
+
+    /* Sulla scrivania il marchio sta nella barra laterale: qui basta il titolo. */
+    .tp-topbar__brand { display: none; }
+    .tp-topbar__title { font-size: 19px; }
+    .tp-topbar__out { display: none; }
+
+    .tp-main { padding: 24px 28px 40px; }
+    .tp-tabbar { display: none; }
+    .tp-toast { bottom: 24px; left: auto; right: 24px; transform: none; }
+}
