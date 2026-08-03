@@ -705,10 +705,6 @@ function patchReminder(PDO $db, int $id): void
         $supplierName = trim($data['supplier_name'] ?? '') ?: null;
         $stmt = $db->prepare("UPDATE reminders SET supplier_id = :sid, supplier_name = :sname WHERE id = :id");
         $stmt->execute(['sid' => $supplierId, 'sname' => $supplierName, 'id' => $id]);
-        // Le azioni della bacheca manutenzione non finivano nel registro
-        // attivita': chi ha affidato l'intervento, e a chi, non era ricostruibile.
-        logActivity('update', 'reminder', $id, 'Intervento #' . $id . ' assegnato a: '
-            . ($supplierName ?: ($supplierId ? 'fornitore #' . $supplierId : 'nessuno')));
         getReminder($db, $id);
         return;
     }
@@ -739,8 +735,6 @@ function patchReminder(PDO $db, int $id): void
 
         $db->prepare("UPDATE reminders SET inventory_item_id = :iid WHERE id = :id")
            ->execute(['iid' => $itemId, 'id' => $id]);
-        logActivity('update', 'reminder', $id, 'Intervento #' . $id . ' collegato al bene '
-            . ($itemId ? '#' . $itemId : '(scollegato)'));
         getReminder($db, $id);
         return;
     }
@@ -779,9 +773,6 @@ function patchReminder(PDO $db, int $id): void
 
         $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms, status = :st WHERE id = :id");
         $stmt->execute(['ms' => $newStatus, 'st' => $rowStatus, 'id' => $id]);
-
-        logActivity('update', 'reminder', $id, 'Intervento #' . $id . ' — stato: '
-            . ($ticket['maintenance_status'] ?: 'nessuno') . ' → ' . $newStatus);
 
         if ($newStatus !== ($ticket['maintenance_status'] ?? '') && in_array($newStatus, ['completata', 'chiusa'], true)) {
             // Nel payload NON va il proprietario: 'event_contact' sceglie il primo

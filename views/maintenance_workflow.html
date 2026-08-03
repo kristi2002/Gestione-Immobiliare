@@ -56,9 +56,7 @@
                         <th>Immobile</th>
                         <th>Titolo</th>
                         <th>Bene</th>
-                        <!-- "Tipo" tolta: la bacheca è già filtrata sugli
-                             interventi, quindi la colonna poteva solo ripetere
-                             la parola "maintenance" o un trattino. -->
+                        <th>Tipo</th>
                         <th>Priorità</th>
                         <th>Stato</th>
                         <th>Fornitore</th>
@@ -67,7 +65,7 @@
                     </tr>
                 </thead>
                 <tbody id="mw-tbody">
-                    <tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                    <tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -175,27 +173,6 @@
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="mw-asset-cancel">Annulla</button>
             <button type="button" class="btn btn--primary" id="mw-asset-confirm">Collega</button>
-        </div>
-    </div>
-</div>
-
-<!-- Delete modal -->
-<div class="modal-overlay" id="mw-delete-modal" hidden>
-    <div class="modal modal--sm" role="dialog" aria-labelledby="mw-delete-title">
-        <div class="modal-header">
-            <h3 id="mw-delete-title">Elimina intervento</h3>
-            <button class="modal-close" id="mw-delete-close" aria-label="Chiudi">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p>Vuoi eliminare l'intervento <strong id="mw-delete-name"></strong>?</p>
-            <p class="text-muted" style="font-size:13px;">
-                Sparisce dalla bacheca e non è recuperabile. Se l'intervento è stato
-                fatto, chiudilo con «Cambia stato» invece di eliminarlo: lo storico serve.
-            </p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn--ghost" id="mw-delete-cancel">Annulla</button>
-            <button type="button" class="btn btn--danger" id="mw-delete-confirm">Elimina</button>
         </div>
     </div>
 </div>

@@ -107,10 +107,6 @@
         document.getElementById('mw-asset-cancel').addEventListener('click', closeAssetModal);
         els.assetModal.addEventListener('click', e => { if (e.target === els.assetModal) closeAssetModal(); });
         document.getElementById('mw-asset-confirm').addEventListener('click', confirmLinkAsset);
-
-        document.getElementById('mw-delete-close')?.addEventListener('click', closeDeleteModal);
-        document.getElementById('mw-delete-cancel')?.addEventListener('click', closeDeleteModal);
-        document.getElementById('mw-delete-confirm')?.addEventListener('click', confirmDelete);
         document.getElementById('mw-asset-select').addEventListener('change', renderAssetDetail);
     }
 
@@ -162,7 +158,7 @@
         // verrebbe tagliato in silenzio.
         params.set('limit', currentView === 'kanban' ? 100 : PAGE_LIMIT);
 
-        softLoad(els.tbody, '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
+        softLoad(els.tbody, '<tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 
         try {
             const res  = await fetch(`${API}?${params}`);
@@ -183,14 +179,14 @@
             }
         } catch (err) {
             els.tbody.classList.remove('is-loading');
-            els.tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
+            els.tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
         }
     }
 
     function renderTable(items) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
-            els.tbody.innerHTML = '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Nessuna richiesta di manutenzione trovata.</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="10" class="text-muted" style="text-align:center;padding:2rem;">Nessuna richiesta di manutenzione trovata.</td></tr>';
             return;
         }
 
@@ -208,10 +204,11 @@
                 <td data-label="Immobile">${esc(r.property_address || `#${r.property_id}` || '—')}</td>
                 <td data-label="Descrizione" title="${esc(r.note || '')}">${esc(r.title || (r.note ? r.note.substring(0, 50) : '—'))}</td>
                 <td data-label="Bene">${assetCellHtml(r)}</td>
+                <td data-label="Tipo">${esc(r.request_type || r.category || '—')}</td>
                 <td data-label="Priorità"><span style="color:${priorityColor};font-weight:600;">${esc(priority)}</span></td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
                 <td data-label="Fornitore">${supplierName !== '—'
-                    ? `<span style="font-size:0.85rem;">${esc(supplierName)}</span>`
+                    ? `<a href="#" class="btn-view-supplier text-muted" style="font-size:0.85rem;" data-supplier-id="${esc(r.supplier_id || '')}">${esc(supplierName)}</a>`
                     : '<span class="text-muted">—</span>'}</td>
                 <td data-label="Data">${formatDate(r.created_at || r.due_date)}</td>
                 <td data-label="Azioni" class="col-actions lt-actions">
@@ -240,14 +237,6 @@
                   onClick: () => openSupplierModal(r.id, r.supplier_id || '') },
                 { label: 'Cambia stato', icon: 'refresh-cw',
                   onClick: () => openStatusModal(r.id, r.maintenance_status || 'aperta') },
-                { sep: true },
-                // Mancavano entrambe: un intervento aperto per errore, o con la
-                // descrizione sbagliata, non si poteva ne' correggere ne'
-                // togliere dalla bacheca.
-                { label: 'Modifica', icon: 'pencil',
-                  onClick: () => window.App.navigateTo('entity_edit', { entity: 'maintenance', id: r.id }) },
-                { label: 'Elimina', icon: 'trash-2', danger: true,
-                  onClick: () => askDelete(r.id, r.title || ('#' + r.id)) },
             ];
         });
     }
@@ -368,38 +357,6 @@
     }
 
     function closeSupplierModal() { els.supplierModal.hidden = true; }
-
-    // ── Eliminazione ─────────────────────────────────────────────────────────
-    let deleteTargetId = null;
-
-    function askDelete(id, label) {
-        deleteTargetId = id;
-        document.getElementById('mw-delete-name').textContent = label;
-        document.getElementById('mw-delete-modal').hidden = false;
-    }
-
-    function closeDeleteModal() {
-        deleteTargetId = null;
-        document.getElementById('mw-delete-modal').hidden = true;
-    }
-
-    async function confirmDelete() {
-        if (!deleteTargetId) return;
-        const btn = document.getElementById('mw-delete-confirm');
-        btn.disabled = true;
-        try {
-            const res  = await fetch(`${API}?id=${encodeURIComponent(deleteTargetId)}`, { method: 'DELETE' });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            closeDeleteModal();
-            showAlert('Intervento eliminato.', 'success');
-            loadRequests();
-        } catch (err) {
-            showAlert(err.message, 'error');
-        } finally {
-            btn.disabled = false;
-        }
-    }
 
     async function confirmAssignSupplier() {
         const requestId  = document.getElementById('mw-supplier-request-id').value;
