@@ -21,6 +21,7 @@ import valuation  from './valuation.js';
 import applications from './applications.js';
 import inventory  from './inventory.js';
 import maintenance from './maintenance.js';
+import meters     from './meters.js';
 
 // Keep this list, ENTITY_FORM_VIEWS in config/roles.php and
 // App.entityFormTitles in assets/js/app.js in step: un'entita' presente qui ma
@@ -36,6 +37,7 @@ const REGISTRY = {
     applications,
     inventory,
     maintenance,
+    meters,
 };
 
 export function getSchema(entity) {

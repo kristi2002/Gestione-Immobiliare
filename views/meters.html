@@ -5,6 +5,7 @@
             <p>Gestisci le letture dei contatori per ogni immobile.</p>
         </div>
         <div class="view-header__actions">
+            <button class="btn btn--ghost" id="btn-new-meter">+ Nuovo contatore</button>
             <button class="btn btn--primary" id="btn-new-reading">+ Inserisci lettura</button>
         </div>
     </div>
@@ -81,6 +82,44 @@
         </table>
     </div>
     <div id="meters-pagination" class="pagination-container"></div>
+
+    <!--
+        Censimento dei contatori (l'oggetto fisico), separato dalle letture.
+        Prima non c'era: si poteva solo crearne uno al volo registrando una
+        lettura, quindi un POD sbagliato non si correggeva e un contatore
+        sostituito restava per sempre nelle tendine.
+    -->
+    <div class="view-header" style="margin-top:2rem;">
+        <div class="view-header__text">
+            <h3 style="margin:0;">Contatori censiti</h3>
+            <p style="margin:0;">L'apparecchio fisico: codice, fornitore e dove si trova il quadrante.</p>
+        </div>
+        <div class="view-header__actions">
+            <label class="form-check" style="margin:0;">
+                <input type="checkbox" id="meters-show-inactive"> Mostra anche i disattivati
+            </label>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="data-table" id="meters-registry-table">
+            <thead>
+                <tr>
+                    <th>Immobile</th>
+                    <th>Tipo</th>
+                    <th>Codice</th>
+                    <th>Fornitore</th>
+                    <th>Ubicazione</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="meters-registry-tbody">
+                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="meters-registry-pagination" class="pagination-container"></div>
 </div>
 
 <!-- New reading modal -->

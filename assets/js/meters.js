@@ -29,6 +29,7 @@
     const TYPE_UNITS  = { gas: 'm³', electricity: 'kWh', water: 'm³', heating: 'kWh' };
 
     let currentPage    = 1;
+    let registryPage   = 1;   // il censimento contatori ha la sua paginazione
     const PAGE_LIMIT   = 25;
     let deleteTargetId = null;
     const els          = {};
@@ -47,10 +48,130 @@
         els.meterSel   = document.getElementById('meters-meter-id');
         els.newMeter   = document.getElementById('meters-new-meter');
 
+        els.registryBody       = document.getElementById('meters-registry-tbody');
+        els.registryPagination = document.getElementById('meters-registry-pagination');
+        els.showInactive       = document.getElementById('meters-show-inactive');
+
         bindEvents();
         bindRowMenu();
+        bindRegistry();
         loadProperties();
         loadReadings();
+        loadRegistry();
+    }
+
+    // ── Censimento contatori ─────────────────────────────────────────────────
+    // Il contatore e' l'oggetto fisico; le letture sono un'altra cosa. Finora
+    // se ne poteva solo creare uno al volo registrando una lettura: un POD
+    // digitato male non si correggeva piu', un contatore sostituito non si
+    // poteva disattivare, e il messaggio dell'API ("Disattivalo se non e' piu'
+    // in uso") indicava un'azione che non esisteva in nessuna schermata.
+
+    function bindRegistry() {
+        document.getElementById('btn-new-meter')?.addEventListener('click', () => {
+            window.App.navigateTo('entity_edit', { entity: 'meters' });
+        });
+        els.showInactive?.addEventListener('change', () => { registryPage = 1; loadRegistry(); });
+
+        window.RowMenu.bind(els.registryBody, btn => {
+            const active = btn.dataset.active === '1';
+            return [
+                { label: 'Modifica', icon: 'pencil', onClick: () => {
+                    window.App.navigateTo('entity_edit', { entity: 'meters', id: btn.dataset.id });
+                } },
+                { label: active ? 'Disattiva' : 'Riattiva', icon: active ? 'power-off' : 'power',
+                  onClick: () => setMeterActive(btn.dataset.id, !active) },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true,
+                  onClick: () => deleteMeter(btn.dataset.id, btn.dataset.label) },
+            ];
+        });
+    }
+
+    async function loadRegistry() {
+        if (!els.registryBody) return;
+        const params = new URLSearchParams();
+        // active=1 filtra i disattivati; senza il parametro li mostra tutti.
+        if (!els.showInactive?.checked) params.set('active', '1');
+        params.set('page', registryPage);
+        params.set('limit', PAGE_LIMIT);
+
+        try {
+            const res  = await fetch(`${METER_API}?${params}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            // Impaginato sul serio: l'API taglia comunque a 100 per pagina, e
+            // con 300 contatori una tabella "senza paginazione" ne mostrerebbe
+            // un terzo senza dirlo.
+            const parsed = window.Pagination.parseResponse(json);
+            renderRegistry(parsed.items);
+            window.Pagination.render(els.registryPagination, parsed, p => { registryPage = p; loadRegistry(); });
+        } catch (e) {
+            els.registryBody.innerHTML =
+                `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">${esc(e.message)}</td></tr>`;
+        }
+    }
+
+    function renderRegistry(items) {
+        if (!items.length) {
+            els.registryBody.innerHTML =
+                '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Nessun contatore censito.</td></tr>';
+            return;
+        }
+        els.registryBody.innerHTML = items.map(m => {
+            const codeLabel = CODE_LABELS[m.meter_type] || 'Codice';
+            const label     = `${TYPE_LABELS[m.meter_type] || m.meter_type} — ${m.code || m.serial_number || 'senza codice'}`;
+            const active    = Number(m.is_active) === 1;
+            return `<tr${active ? '' : ' class="is-muted"'}>
+                <td>${esc(m.property_address || ('#' + m.property_id))}</td>
+                <td>${esc(TYPE_LABELS[m.meter_type] || m.meter_type || '—')}</td>
+                <td>${m.code ? `<span class="text-muted">${esc(codeLabel)}</span> ${esc(m.code)}` : '<span class="text-muted">—</span>'}</td>
+                <td>${esc(m.supplier_display || m.supplier_name || '—')}</td>
+                <td>${esc(m.location || '—')}</td>
+                <td>${active ? '<span class="badge badge--success">Attivo</span>' : '<span class="badge">Disattivato</span>'}</td>
+                <td>${window.RowMenu.button(m.id, 'Azioni contatore', { active: active ? '1' : '0', label })}</td>
+            </tr>`;
+        }).join('');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function setMeterActive(id, active) {
+        try {
+            // L'API riscrive tutte le colonne: si rilegge la riga e si rimanda
+            // intera, altrimenti disattivare cancellerebbe fornitore e ubicazione.
+            const cur = await fetch(`${METER_API}?id=${encodeURIComponent(id)}`).then(r => r.json());
+            if (!cur.success) throw new Error(cur.error);
+            const m = Array.isArray(cur.data) ? cur.data[0] : cur.data;
+
+            const res = await fetch(`${METER_API}?id=${encodeURIComponent(id)}`, {
+                method:  'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    property_id: m.property_id, meter_type: m.meter_type, code: m.code,
+                    serial_number: m.serial_number, supplier_id: m.supplier_id,
+                    supplier_name: m.supplier_name, location: m.location,
+                    installed_on: m.installed_on, removed_on: m.removed_on,
+                    notes: m.notes, is_active: active ? 1 : 0,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert(active ? 'Contatore riattivato.' : 'Contatore disattivato: lo storico delle letture resta consultabile.', 'success');
+            loadRegistry();
+        } catch (e) { showAlert(e.message, 'error'); }
+    }
+
+    async function deleteMeter(id, label) {
+        try {
+            const res  = await fetch(`${METER_API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+            const json = await res.json();
+            // L'API rifiuta con 409 se ci sono letture e spiega di disattivare:
+            // e' il messaggio giusto, si mostra e basta.
+            if (!json.success) throw new Error(json.error);
+            showAlert(`Contatore eliminato (${label}).`, 'success');
+            loadRegistry();
+        } catch (e) { showAlert(e.message, 'error'); }
     }
 
     function bindEvents() {

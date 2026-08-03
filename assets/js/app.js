@@ -253,6 +253,7 @@
             applications: { create: 'Nuova Candidatura',  edit: 'Modifica Candidatura' },
             inventory:    { create: 'Nuovo bene',         edit: 'Modifica bene' },
             maintenance:  { create: 'Nuovo intervento',   edit: 'Modifica intervento' },
+            meters:       { create: 'Nuovo Contatore',    edit: 'Modifica Contatore' },
         },
 
         /**
