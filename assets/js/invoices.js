@@ -24,6 +24,7 @@
         els.pagination   = document.getElementById('invoices-pagination');
 
         bindEvents();
+        bindRowMenu();
         Promise.resolve().then(() => {
             loadInvoices();
             // Legacy "+ Nuova Fattura" entry now redirects to the dedicated page.
@@ -113,27 +114,11 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${i.id}" title="Anteprima PDF"><i data-lucide="file-text"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-xml" data-id="${i.id}" title="Scarica XML FatturaPA"><i data-lucide="file-code-2"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-sdi" data-id="${i.id}" data-num="${esc(i.invoice_number || '')}" title="Fattura elettronica / SdI"><i data-lucide="send-horizontal"></i></button>
-                        ${i.status === 'draft' ? `<button class="btn btn--sm btn--ghost btn-send" data-id="${i.id}" title="Segna come inviata"><i data-lucide="send"></i></button>` : ''}
-                        ${i.status !== 'paid' && i.status !== 'cancelled' ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${i.id}" title="Segna come pagata"><i data-lucide="check"></i></button>` : ''}
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${i.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        ${i.status === 'draft' ? `<button class="btn btn--sm btn--ghost btn-delete" data-id="${i.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
+                        ${window.RowMenu.button(i.id, 'Azioni fattura', { num: i.invoice_number || '', state: i.status })}
                     </div>
                 </div>
             </div>`;
         }).join('');
-
-        els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => {
-            if (window.App) window.App.navigateTo('invoice_edit', { invoiceId: b.dataset.id });
-        }));
-        els.grid.querySelectorAll('.btn-pdf').forEach(b => b.addEventListener('click', () => generatePdf(b.dataset.id)));
-        els.grid.querySelectorAll('.btn-xml').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); downloadFatturaXml(b.dataset.id); }));
-        els.grid.querySelectorAll('.btn-sdi').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); openSdiModal(b.dataset.id, b.dataset.num); }));
-        els.grid.querySelectorAll('.btn-send').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'sent')));
-        els.grid.querySelectorAll('.btn-paid').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'paid')));
-        els.grid.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => deleteInvoice(b.dataset.id)));
 
         els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
             card.addEventListener('click', (e) => {
@@ -141,6 +126,30 @@
                 const i = invoices.find(x => x.id == card.dataset.id);
                 if (i) openSchedaModal(i);
             });
+        });
+    }
+
+    // Sette icone in fila su ogni scheda: nessuna diceva cosa faceva senza
+    // passarci sopra col mouse. Ora sono voci scritte dentro il ⋮.
+    function bindRowMenu() {
+        window.RowMenu.bind(els.grid, b => {
+            const id = b.dataset.id;
+            const st = b.dataset.state;
+            return [
+                { label: 'Anteprima PDF', icon: 'file-text', onClick: () => generatePdf(id) },
+                { label: 'Scarica XML FatturaPA', icon: 'file-code-2', onClick: () => downloadFatturaXml(id) },
+                { label: 'Fattura elettronica / SdI', icon: 'send-horizontal', onClick: () => openSdiModal(id, b.dataset.num) },
+                st === 'draft' ? { label: 'Segna come inviata', icon: 'send', onClick: () => quickStatus(id, 'sent') } : null,
+                st !== 'paid' && st !== 'cancelled'
+                    ? { label: 'Segna come pagata', icon: 'check', onClick: () => quickStatus(id, 'paid') } : null,
+                { label: 'Modifica', icon: 'pencil', onClick: () => {
+                    if (window.App) window.App.navigateTo('invoice_edit', { invoiceId: id });
+                } },
+                // Solo una bozza si elimina: emessa, la fattura ha un numero
+                // progressivo che non puo' restare un buco.
+                st === 'draft' ? { sep: true } : null,
+                st === 'draft' ? { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => deleteInvoice(id) } : null,
+            ];
         });
     }
 

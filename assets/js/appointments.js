@@ -39,6 +39,7 @@
         els.pagination   = document.getElementById('appointments-pagination');
 
         bindEvents();
+        bindRowMenu();
         loadAgents();
         loadAppointments();
     }
@@ -233,22 +234,11 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${a.status === 'scheduled' ? `<button class="btn btn--sm btn--ghost btn-complete" data-id="${a.id}" title="Completa"><i data-lucide="check"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${a.id}" title="Annulla"><i data-lucide="x"></i></button>` : ''}
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${a.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${a.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                        ${window.RowMenu.button(a.id, 'Azioni appuntamento', { state: a.status })}
                     </div>
                 </div>
             </div>`;
         }).join('');
-
-        els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (window.App) window.App.navigateTo('appointment_edit', { appointmentId: Number(b.dataset.id) });
-        }));
-        els.grid.querySelectorAll('.btn-complete').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'completed')));
-        els.grid.querySelectorAll('.btn-cancel').forEach(b => b.addEventListener('click', () => quickStatus(b.dataset.id, 'cancelled')));
-        els.grid.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => deleteAppointment(b.dataset.id)));
 
         els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
             card.addEventListener('click', (e) => {
@@ -258,6 +248,24 @@
         });
 
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    function bindRowMenu() {
+        window.RowMenu.bind(els.grid, b => {
+            const id = b.dataset.id;
+            // Completa e Annulla valgono solo su un appuntamento in programma:
+            // su uno gia' concluso sarebbero due voci inerti.
+            const scheduled = b.dataset.state === 'scheduled';
+            return [
+                scheduled ? { label: 'Completa', icon: 'check', onClick: () => quickStatus(id, 'completed') } : null,
+                scheduled ? { label: 'Annulla', icon: 'x', onClick: () => quickStatus(id, 'cancelled') } : null,
+                { label: 'Modifica', icon: 'pencil', onClick: () => {
+                    if (window.App) window.App.navigateTo('appointment_edit', { appointmentId: Number(id) });
+                } },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => deleteAppointment(id) },
+            ];
+        });
     }
 
     async function quickStatus(id, status) {

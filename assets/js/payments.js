@@ -45,6 +45,7 @@
         els.pagination   = document.getElementById('payments-pagination');
 
         bindEvents();
+        bindRowMenu();
         loadStripeStatus()
             .then(() => loadPayments())
             .catch(err => {
@@ -205,10 +206,6 @@
 
         els.grid.innerHTML = payments.map(p => {
             const st = effStatus(p);
-            const markPaidBtn = window.canWrite !== false && (st === 'pending' || st === 'late')
-                ? `<button class="btn btn--sm btn--ghost btn-paid" data-id="${p.id}" title="Segna come pagato"><i data-lucide="check"></i> Pagato</button>`
-                : '';
-
             return `
             <div class="entity-card payment-card payment-card--${st} entity-card--clickable" data-id="${p.id}">
                 <div class="entity-card__header">
@@ -226,30 +223,13 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${markPaidBtn}
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${p.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-cancel" data-id="${p.id}" title="Annulla"><i data-lucide="x"></i></button>` : ''}
+                        ${window.canWrite !== false
+                            ? window.RowMenu.button(p.id, 'Azioni pagamento', { state: st })
+                            : ''}
                     </div>
                 </div>
             </div>`;
         }).join('');
-
-        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                if (window.App) window.App.navigateTo('payment_edit', { paymentId: Number(btn.dataset.id) });
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-paid').forEach(btn => {
-            btn.addEventListener('click', () => markPaid(btn.dataset.id));
-        });
-
-        els.grid.querySelectorAll('.btn-cancel').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (await confirmDialog('Vuoi annullare questo pagamento?', { title: 'Annulla pagamento', confirmText: 'Annulla pagamento', cancelText: 'Indietro' })) cancelPayment(btn.dataset.id);
-            });
-        });
 
         els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
             card.addEventListener('click', (e) => {
@@ -257,6 +237,26 @@
                 const p = payments.find(x => x.id == card.dataset.id);
                 if (p) openSchedaModal(p);
             });
+        });
+    }
+
+    function bindRowMenu() {
+        window.RowMenu.bind(els.grid, btn => {
+            const id = btn.dataset.id;
+            const st = btn.dataset.state;
+            return [
+                // "Pagato" solo su quello che non lo e' ancora: `effStatus`
+                // considera anche il ritardo, non il solo campo `status`.
+                (st === 'pending' || st === 'late')
+                    ? { label: 'Segna come pagato', icon: 'check', onClick: () => markPaid(id) } : null,
+                { label: 'Modifica', icon: 'pencil', onClick: () => {
+                    if (window.App) window.App.navigateTo('payment_edit', { paymentId: Number(id) });
+                } },
+                { sep: true },
+                { label: 'Annulla', icon: 'x', danger: true, onClick: async () => {
+                    if (await confirmDialog('Vuoi annullare questo pagamento?', { title: 'Annulla pagamento', confirmText: 'Annulla pagamento', cancelText: 'Indietro' })) cancelPayment(id);
+                } },
+            ];
         });
     }
 

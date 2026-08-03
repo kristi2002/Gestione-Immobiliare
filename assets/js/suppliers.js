@@ -107,9 +107,7 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions" style="margin-left:auto;">
-                        ${s.phone && window.WA ? window.WA.buttonHtml(s.phone) : ''}
-                        <button class="btn btn--sm btn--ghost btn-s-edit" data-id="${s.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-s-del" data-id="${s.id}" data-name="${esc(s.name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                        ${window.RowMenu.button(s.id, 'Azioni fornitore', { name: s.name, phone: s.phone || '' })}
                     </div>
                 </div>
             </div>
@@ -119,16 +117,18 @@
             btn.addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(btn.dataset.copy, btn); });
         });
 
-        els.grid.querySelectorAll('.btn-s-edit').forEach(btn => {
-            btn.addEventListener('click', () => openForm(btn.dataset.id));
-        });
-
-        els.grid.querySelectorAll('.btn-s-del').forEach(btn => {
-            btn.addEventListener('click', () => {
-                deleteTargetId = btn.dataset.id;
-                document.getElementById('suppliers-delete-name').textContent = btn.dataset.name;
-                els.delModal.hidden = false;
-            });
+        window.RowMenu.bind(els.grid, btn => {
+            const waUrl = btn.dataset.phone && window.WA ? window.WA.link(btn.dataset.phone) : '';
+            return [
+                waUrl ? { label: 'Scrivi su WhatsApp', html: window.WA.icon, href: waUrl, target: '_blank' } : null,
+                { label: 'Modifica', icon: 'pencil', onClick: () => openForm(btn.dataset.id) },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
+                    deleteTargetId = btn.dataset.id;
+                    document.getElementById('suppliers-delete-name').textContent = btn.dataset.name;
+                    els.delModal.hidden = false;
+                } },
+            ];
         });
     }
 

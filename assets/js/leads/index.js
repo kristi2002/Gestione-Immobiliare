@@ -296,15 +296,7 @@ function renderCards() {
             <div class="entity-card__footer">
                 <button class="btn btn--sm btn--ghost btn-match" data-id="${l.id}"><i data-lucide="search"></i> Trova immobili compatibili</button>
                 <div class="entity-card__actions">
-                    ${l.phone && window.WA ? window.WA.buttonHtml(l.phone) : ''}
-                    <button class="btn btn--sm btn--ghost btn-edit" data-id="${l.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    ${(l.interest_type === 'acquisto' || l.interest_type === 'entrambi')
-                        ? `<button class="btn btn--sm btn--ghost btn-convert" data-id="${l.id}" title="Converti in proprietario"><i data-lucide="user-round"></i></button>`
-                        : ''}
-                    ${(l.interest_type === 'affitto' || l.interest_type === 'entrambi')
-                        ? `<button class="btn btn--sm btn--ghost btn-convert-tenant" data-id="${l.id}" title="Converti in inquilino"><i data-lucide="key-round"></i></button>`
-                        : ''}
-                    <button class="btn btn--sm btn--ghost btn-delete" data-id="${l.id}" title="Archivia"><i data-lucide="archive"></i></button>
+                    ${RowMenu.button(l.id, 'Azioni lead', { phone: l.phone || '', interest: l.interest_type || '' })}
                 </div>
             </div>
         </div>`;
@@ -319,17 +311,34 @@ function renderCards() {
         });
     });
 
-    els.grid.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(b.dataset.id) });
-    }));
+    // "Trova immobili compatibili" resta un pulsante scritto fuori dal menu:
+    // e' l'azione per cui si apre questa pagina, non una delle tante.
     els.grid.querySelectorAll('.btn-match').forEach(b => b.addEventListener('click', () => showMatches(b.dataset.id)));
-    els.grid.querySelectorAll('.btn-convert').forEach(b => b.addEventListener('click', () => convertLead(b.dataset.id)));
-    els.grid.querySelectorAll('.btn-convert-tenant').forEach(b => b.addEventListener('click', () => {
-        const l = leads.find(x => x.id == b.dataset.id);
-        if (l) openTenantModal(l);
-    }));
-    els.grid.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => archiveLead(b.dataset.id)));
+
+    RowMenu.bind(els.grid, b => {
+        const id = b.dataset.id;
+        const interest = b.dataset.interest;
+        const phone = b.dataset.phone;
+        // Un lead si converte in cio' che stava cercando: chi cerca da comprare
+        // diventa un proprietario, chi cerca in affitto un inquilino.
+        const buys  = interest === 'acquisto' || interest === 'entrambi';
+        const rents = interest === 'affitto'  || interest === 'entrambi';
+        const waUrl = phone && window.WA ? window.WA.link(phone) : '';
+        return [
+            waUrl ? { label: 'Scrivi su WhatsApp', html: window.WA.icon, href: waUrl, target: '_blank' } : null,
+            { label: 'Modifica', icon: 'pencil', onClick: () => {
+                if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(id) });
+            } },
+            buys  ? { label: 'Converti in proprietario', icon: 'user-round', onClick: () => convertLead(id) } : null,
+            rents ? { label: 'Converti in inquilino', icon: 'key-round', onClick: () => {
+                const l = leads.find(x => x.id == id);
+                if (l) openTenantModal(l);
+            } } : null,
+            { sep: true },
+            { label: 'Archivia', icon: 'archive', danger: true, onClick: () => archiveLead(id) },
+        ];
+    });
+
     updateBulkToolbar();
 }
 

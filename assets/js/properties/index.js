@@ -331,13 +331,7 @@ import {
                         <span class="entity-card__stat-label">${mediaLabel}${filesLabel}</span>
                     </div>
                     <div class="entity-card__actions">
-                        <button class="btn btn--sm btn--ghost btn-qr" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Link pubblico & QR"><i data-lucide="qr-code"></i></button>
-                        <button class="btn btn--sm ${inCompare ? 'btn--primary' : 'btn--ghost'} btn-compare-add" data-id="${p.id}" title="Aggiungi al confronto"><i data-lucide="bar-chart-2"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-pdf" data-id="${p.id}" title="Scheda PDF"><i data-lucide="file-text"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-match" data-id="${p.id}" data-address="${escapeHtml(p.address)}" title="Trova lead compatibili"><i data-lucide="users-round"></i></button>
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-appraisal" data-id="${p.id}" title="Valutazione"><i data-lucide="calculator"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${p.id}" title="Archivia"><i data-lucide="archive"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-social" data-id="${p.id}" title="Crea post social"><i data-lucide="megaphone"></i></button>` : ''}
+                        ${RowMenu.button(p.id, 'Azioni immobile', { address: p.address, incompare: inCompare ? '1' : '' })}
                     </div>
                 </div>
             </div>`;
@@ -379,77 +373,64 @@ import {
             });
         });
 
-        els.grid.querySelectorAll('.btn-pdf').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const res = await fetch('api/generate_pdf.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'report', property_id: parseInt(btn.dataset.id, 10) }),
-                });
-                const json = await res.json();
-                if (json.success) window.open(json.data.download, '_blank');
-                else alert(json.error || 'Errore PDF');
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-match').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showMatchingLeads(btn.dataset.id, btn.dataset.address);
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const prop = properties.find(p => p.id == btn.dataset.id);
-                if (prop) openDeleteModal(prop.id, `${prop.address}, ${prop.city}`);
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-appraisal').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openAppraisalModal(btn.dataset.id);
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-social').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const prop = properties.find(p => p.id == btn.dataset.id);
-                if (prop) openSocialModal(prop);
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-qr').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openQrModal(parseInt(btn.dataset.id, 10), btn.dataset.address);
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-compare-add').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = parseInt(btn.dataset.id, 10);
-                if (compareIds.has(id)) {
-                    compareIds.delete(id);
-                    btn.classList.replace('btn--primary', 'btn--ghost');
-                } else if (compareIds.size < 4) {
-                    compareIds.add(id);
-                    btn.classList.replace('btn--ghost', 'btn--primary');
-                } else {
-                    showAlert('Puoi confrontare al massimo 4 immobili.', 'error');
-                    return;
-                }
-                updateCompareButton();
-            });
+        // "Scheda" e "Modifica" restano i due pulsanti scritti della scheda
+        // (prop-cta, dal mockup): sono cio' che si fa nove volte su dieci.
+        // Le altre sette icone stavano in fila sotto senza etichetta: ora sono
+        // voci del menu, con scritto cosa fanno.
+        RowMenu.bind(els.grid, btn => {
+            const id = parseInt(btn.dataset.id, 10);
+            const inCompare = btn.dataset.incompare === '1';
+            return [
+                { label: 'Link pubblico & QR', icon: 'qr-code',
+                  onClick: () => openQrModal(id, btn.dataset.address) },
+                { label: inCompare ? 'Togli dal confronto' : 'Aggiungi al confronto', icon: 'bar-chart-2',
+                  onClick: () => toggleCompare(id) },
+                { label: 'Scheda PDF', icon: 'file-text', onClick: () => downloadPropertyPdf(id) },
+                { label: 'Trova lead compatibili', icon: 'users-round',
+                  onClick: () => showMatchingLeads(id, btn.dataset.address) },
+                window.canWrite !== false
+                    ? { label: 'Valutazione', icon: 'calculator', onClick: () => openAppraisalModal(id) } : null,
+                window.canWrite !== false
+                    ? { label: 'Crea post social', icon: 'megaphone', onClick: () => {
+                        const prop = properties.find(x => x.id == id);
+                        if (prop) openSocialModal(prop);
+                    } } : null,
+                window.canWrite !== false ? { sep: true } : null,
+                window.canWrite !== false
+                    ? { label: 'Archivia', icon: 'archive', danger: true, onClick: () => {
+                        const prop = properties.find(x => x.id == id);
+                        if (prop) openDeleteModal(prop.id, `${prop.address}, ${prop.city}`);
+                    } } : null,
+            ];
         });
 
         updateBulkToolbar();
         if (mapMode) renderPropertyMap();
+    }
+
+    /** Il confronto vive nella lista: senza pulsante da ricolorare, si ridisegna. */
+    function toggleCompare(id) {
+        if (compareIds.has(id)) {
+            compareIds.delete(id);
+        } else if (compareIds.size < 4) {
+            compareIds.add(id);
+        } else {
+            showAlert('Puoi confrontare al massimo 4 immobili.', 'error');
+            return;
+        }
+        updateCompareButton();
+        renderCards();
+    }
+
+    async function downloadPropertyPdf(id) {
+        const res = await fetch('api/generate_pdf.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'report', property_id: id }),
+        });
+        const json = await res.json();
+        if (json.success) window.open(json.data.download, '_blank');
+        else showAlert(json.error || 'Errore PDF', 'error');
     }
 
     // ── Immobili map (portal-style split view) ────────────────────────────────

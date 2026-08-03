@@ -41,6 +41,7 @@
         els.pagination     = document.getElementById('expenses-pagination');
 
         bindEvents();
+        bindRowMenu();
         Promise.all([loadProperties(), loadClients(), loadSuppliers()])
             .then(() => loadExpenses())
             .catch(err => {
@@ -161,25 +162,11 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-edit" data-id="${e.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${e.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
+                        ${window.canWrite !== false ? window.RowMenu.button(e.id, 'Azioni spesa') : ''}
                     </div>
                 </div>
             </div>`;
         }).join('');
-
-        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                if (window.App) window.App.navigateTo('expense_edit', { expenseId: Number(btn.dataset.id) });
-            });
-        });
-
-        els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (await confirmDialog('Vuoi eliminare questa spesa?', { title: 'Elimina spesa' })) deleteExpense(btn.dataset.id);
-            });
-        });
 
         els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {
             card.addEventListener('click', (ev) => {
@@ -188,6 +175,18 @@
                 if (e) openSchedaModal(e);
             });
         });
+    }
+
+    function bindRowMenu() {
+        window.RowMenu.bind(els.grid, btn => [
+            { label: 'Modifica', icon: 'pencil', onClick: () => {
+                if (window.App) window.App.navigateTo('expense_edit', { expenseId: Number(btn.dataset.id) });
+            } },
+            { sep: true },
+            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: async () => {
+                if (await confirmDialog('Vuoi eliminare questa spesa?', { title: 'Elimina spesa' })) deleteExpense(btn.dataset.id);
+            } },
+        ]);
     }
 
     // -------------------------------------------------------------------------

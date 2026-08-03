@@ -103,6 +103,7 @@
         els.logBody    = document.getElementById('automation-log-body');
 
         bindEvents();
+        bindRowMenu();
         Promise.all([loadVocabulary(), loadContacts(), loadProperties()])
             .then(() => loadAutomations());
     }
@@ -360,18 +361,12 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions">
-                        ${a.status === 'pending'
-                            ? `<button class="btn btn--sm btn--ghost btn-pause" data-id="${a.id}" title="Metti in pausa"><i data-lucide="pause"></i></button>`
-                            : `<button class="btn btn--sm btn--ghost btn-resume" data-id="${a.id}" title="Riattiva"><i data-lucide="play"></i></button>`}
-                        <button class="btn btn--sm btn--ghost btn-log" data-id="${a.id}" title="Storico invii"><i data-lucide="history"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-edit" data-id="${a.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                        <button class="btn btn--sm btn--ghost btn-delete" data-id="${a.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                        ${window.RowMenu.button(a.id, 'Azioni automazione', { state: a.status })}
                     </div>
                 </div>
             </div>`;
         }).join('');
 
-        wireCardActions();
         if (window.lucide) lucide.createIcons();
     }
 
@@ -497,33 +492,31 @@
         return `Ultimo invio: ${fmtDateTime(a.last_dispatch_at)} <span class="badge badge--${meta.cls}">${esc(meta.text)}</span>${err}`;
     }
 
-    function wireCardActions() {
-        els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const a = automations.find(x => String(x.id) === btn.dataset.id);
-                if (a) openModal(a);
-            });
-        });
-        els.grid.querySelectorAll('.btn-pause').forEach(btn => {
-            btn.addEventListener('click', () => patchStatus(btn.dataset.id, 'cancel'));
-        });
-        els.grid.querySelectorAll('.btn-resume').forEach(btn => {
-            btn.addEventListener('click', () => patchStatus(btn.dataset.id, 'reopen'));
-        });
-        els.grid.querySelectorAll('.btn-log').forEach(btn => {
-            btn.addEventListener('click', () => openLog(btn.dataset.id));
-        });
-        els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                // Adesso elimina davvero: il messaggio deve dire cosa se ne va
-                // con la regola, e che esiste una strada che non perde niente.
-                const ok = await confirmDialog(
-                    'Spariscono anche gli invii già programmati e lo storico degli invii fatti. '
-                    + 'Per sospenderla senza perdere nulla usa invece la pausa.',
-                    { title: 'Eliminare questa automazione?', confirmText: 'Elimina' }
-                );
-                if (ok) deleteAutomation(btn.dataset.id);
-            });
+    function bindRowMenu() {
+        window.RowMenu.bind(els.grid, btn => {
+            const id = btn.dataset.id;
+            const pending = btn.dataset.state === 'pending';
+            return [
+                pending
+                    ? { label: 'Metti in pausa', icon: 'pause', onClick: () => patchStatus(id, 'cancel') }
+                    : { label: 'Riattiva', icon: 'play', onClick: () => patchStatus(id, 'reopen') },
+                { label: 'Storico invii', icon: 'history', onClick: () => openLog(id) },
+                { label: 'Modifica', icon: 'pencil', onClick: () => {
+                    const a = automations.find(x => String(x.id) === id);
+                    if (a) openModal(a);
+                } },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true, onClick: async () => {
+                    // Adesso elimina davvero: il messaggio deve dire cosa se ne va
+                    // con la regola, e che esiste una strada che non perde niente.
+                    const ok = await confirmDialog(
+                        'Spariscono anche gli invii già programmati e lo storico degli invii fatti. '
+                        + 'Per sospenderla senza perdere nulla usa invece la pausa.',
+                        { title: 'Eliminare questa automazione?', confirmText: 'Elimina' }
+                    );
+                    if (ok) deleteAutomation(id);
+                } },
+            ];
         });
     }
 

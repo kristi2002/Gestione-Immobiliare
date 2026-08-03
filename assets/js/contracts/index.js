@@ -224,8 +224,7 @@ function renderDocCard(d) {
             </div>
             <div class="entity-card__footer">
                 <div class="entity-card__actions">
-                    <a class="btn btn--sm btn--ghost" href="${escapeHtml(d.file_path)}" target="_blank"><i data-lucide="external-link"></i> Apri</a>
-                    ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost" data-doc-del="${d.id}" title="Elimina file"><i data-lucide="trash-2"></i></button>` : ''}
+                    ${RowMenu.button(d.id, 'Azioni file', { doc: '1', path: d.download_url })}
                 </div>
             </div>
         </div>`;
@@ -246,10 +245,6 @@ function renderCards() {
         const dateRange = (c.start_date || c.end_date)
             ? `${formatDate(c.start_date)} → ${formatDate(c.end_date)}`
             : null;
-
-        const advanceBtn = nextStatus(c.status)
-            ? `<button class="btn btn--sm btn--ghost btn-advance" data-id="${c.id}" title="Avanza stato">→ ${STATUS_LABELS[nextStatus(c.status)]}</button>`
-            : '';
 
         const eff    = effectiveStatus(c);
         const amount = contractAmount(c);
@@ -272,49 +267,46 @@ function renderCards() {
             </div>
             <div class="entity-card__footer">
                 <div class="entity-card__actions">
-                    <button class="btn btn--sm btn--ghost btn-contract-pdf" data-id="${c.id}" title="Scarica contratto"><i data-lucide="file-down"></i></button>
-                    ${window.canWrite !== false ? advanceBtn : ''}
-                    ${window.canWrite !== false ? `<button class="btn btn--sm btn--ghost btn-esign" data-id="${c.id}" title="Firma digitale"><i data-lucide="pen-tool"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-edit" data-id="${c.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-delete" data-id="${c.id}" title="Elimina"><i data-lucide="trash-2"></i></button>` : ''}
+                    ${RowMenu.button(c.id, 'Azioni contratto', { next: nextStatus(c.status) || '' })}
                 </div>
             </div>
         </div>`;
     }).join('') + contractDocs.map(renderDocCard).join('');
 
-    els.grid.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (window.App) window.App.navigateTo('contract_edit', { contractId: Number(btn.dataset.id) });
-        });
-    });
-
-    els.grid.querySelectorAll('[data-doc-del]').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (await confirmDialog('Eliminare questo file contratto?', { title: 'Elimina file' })) deleteContractDoc(btn.dataset.docDel);
-        });
-    });
-
-    els.grid.querySelectorAll('.btn-contract-pdf').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            downloadContractPdf(btn.dataset.id);
-        });
-    });
-
-    els.grid.querySelectorAll('.btn-advance').forEach(btn => {
-        btn.addEventListener('click', () => advanceStatus(btn.dataset.id));
-    });
-
-    els.grid.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            if (await confirmDialog('Vuoi eliminare questo contratto?', { title: 'Elimina contratto' })) deleteContract(btn.dataset.id);
-        });
-    });
-
-    els.grid.querySelectorAll('.btn-esign').forEach(btn => {
-        btn.addEventListener('click', () => openEsignModal(btn.dataset.id));
+    // Una scheda "file contratto" non e' un contratto: il suo id e' quello del
+    // documento, e le sue uniche azioni sono aprirlo e cancellarlo.
+    RowMenu.bind(els.grid, btn => {
+        const id = btn.dataset.id;
+        if (btn.dataset.doc === '1') {
+            return [
+                { label: 'Apri file', icon: 'external-link', href: btn.dataset.path, target: '_blank' },
+                window.canWrite !== false ? { sep: true } : null,
+                window.canWrite !== false
+                    ? { label: 'Elimina file', icon: 'trash-2', danger: true, onClick: async () => {
+                        if (await confirmDialog('Eliminare questo file contratto?', { title: 'Elimina file' })) deleteContractDoc(id);
+                    } }
+                    : null,
+            ];
+        }
+        const next = btn.dataset.next;
+        return [
+            { label: 'Scarica contratto', icon: 'file-down', onClick: () => downloadContractPdf(id) },
+            (window.canWrite !== false && next)
+                ? { label: `Avanza a “${STATUS_LABELS[next] || next}”`, icon: 'arrow-right',
+                    onClick: () => advanceStatus(id) }
+                : null,
+            window.canWrite !== false
+                ? { label: 'Firma digitale', icon: 'pen-tool', onClick: () => openEsignModal(id) } : null,
+            window.canWrite !== false
+                ? { label: 'Modifica', icon: 'pencil', onClick: () => {
+                    if (window.App) window.App.navigateTo('contract_edit', { contractId: Number(id) });
+                } } : null,
+            window.canWrite !== false ? { sep: true } : null,
+            window.canWrite !== false
+                ? { label: 'Elimina', icon: 'trash-2', danger: true, onClick: async () => {
+                    if (await confirmDialog('Vuoi eliminare questo contratto?', { title: 'Elimina contratto' })) deleteContract(id);
+                } } : null,
+        ];
     });
 
     els.grid.querySelectorAll('.entity-card--clickable').forEach(card => {

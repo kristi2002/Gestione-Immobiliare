@@ -105,6 +105,11 @@
 
         document.body.appendChild(menu);
 
+        // Le icone si disegnano PRIMA di misurare: un <i data-lucide> non
+        // occupa spazio, l'<svg> che lo sostituisce si'. Misurando prima, un
+        // menu con etichette lunghe si allineava sui pixel sbagliati.
+        if (window.lucide) window.lucide.createIcons();
+
         // Allineato a destra sotto il ⋮; se sotto non ci sta, sopra. Mai fuori
         // dai bordi: un menu mezzo fuori schermo e' un menu con voci
         // irraggiungibili.
@@ -116,8 +121,6 @@
         if (top + mh > window.innerHeight - 8) top = r.top - mh - 6;
         menu.style.left = Math.max(8, left) + 'px';
         menu.style.top  = Math.max(8, top) + 'px';
-
-        if (window.lucide) window.lucide.createIcons();
 
         menuEl    = menu;
         openerBtn = btn;

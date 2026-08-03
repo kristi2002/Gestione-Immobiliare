@@ -408,24 +408,21 @@ async function loadReminders() {
                     </div>
                 </div>
                 <div class="reminder-item__actions">
-                    ${r.status === 'pending' ? `<button class="btn btn--sm btn--ghost btn-done-rem" data-id="${r.id}" title="Segna completato"><i data-lucide="check-circle"></i></button>` : ''}
-                    <button class="btn btn--sm btn--ghost btn-edit-rem" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-del-rem" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                    ${window.RowMenu.button(r.id, 'Azioni promemoria', { state: r.status })}
                 </div>
             </div>`).join('');
 
-        list.querySelectorAll('.btn-done-rem').forEach(btn => {
-            btn.addEventListener('click', () => completeReminder(btn.dataset.id));
-        });
-        list.querySelectorAll('.btn-edit-rem').forEach(btn => {
-            btn.addEventListener('click', () => {
+        window.RowMenu.bind(list, btn => [
+            btn.dataset.state === 'pending'
+                ? { label: 'Segna completato', icon: 'check-circle', onClick: () => completeReminder(btn.dataset.id) }
+                : null,
+            { label: 'Modifica', icon: 'pencil', onClick: () => {
                 const r = reminders.find(x => x.id == btn.dataset.id);
                 if (r) openReminderModal(r);
-            });
-        });
-        list.querySelectorAll('.btn-del-rem').forEach(btn => {
-            btn.addEventListener('click', () => deleteReminder(btn.dataset.id));
-        });
+            } },
+            { sep: true },
+            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => deleteReminder(btn.dataset.id) },
+        ]);
     } catch (err) {
         list.innerHTML = `<div class="entity-error">${esc(err.message)}</div>`;
     }

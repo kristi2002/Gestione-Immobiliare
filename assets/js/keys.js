@@ -46,6 +46,7 @@
         els.scanHint = document.getElementById('key-scan-hint');
 
         bindEvents();
+        bindRowMenu();
         setupScanner();
         loadKeys();
     }
@@ -127,28 +128,30 @@
                     ${k.returned_at ? `<div class="entity-card__info text-muted"><i data-lucide="calendar-x"></i> Restituite: ${formatDate(k.returned_at)}</div>` : ''}
                 </div>
                 <div class="entity-card__footer">
-                    ${k.status === 'out' ? `<button class="btn btn--sm btn--ghost btn-return-key" data-id="${k.id}">Registra rientro</button>` : ''}
-                    <button class="btn btn--sm btn--ghost btn-history-key" data-id="${k.id}" title="Storico custodia"><i data-lucide="history"></i></button>
-                    <button class="btn btn--sm btn--ghost btn-edit-key" data-id="${k.id}">Modifica</button>
-                    <button class="btn btn--sm btn--ghost btn-del-key" data-id="${k.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
+                    <div class="entity-card__actions" style="margin-left:auto;">
+                        ${window.RowMenu.button(k.id, 'Azioni chiavi', { state: k.status })}
+                    </div>
                 </div>
             </div>`;
         }).join('');
 
-        els.grid.querySelectorAll('.btn-edit-key').forEach(btn => {
-            btn.addEventListener('click', () => openForm(btn.dataset.id));
-        });
-        els.grid.querySelectorAll('.btn-del-key').forEach(btn => {
-            btn.addEventListener('click', () => deleteKey(btn.dataset.id));
-        });
-        els.grid.querySelectorAll('.btn-return-key').forEach(btn => {
-            btn.addEventListener('click', () => returnKey(btn.dataset.id));
-        });
-        els.grid.querySelectorAll('.btn-history-key').forEach(btn => {
-            btn.addEventListener('click', () => openHistory(btn.dataset.id));
-        });
         // Le icone le idrata l'observer globale di app.js: chiamare qui
         // createIcons() rimpiazzerebbe nodi a metà click (vedi app.js).
+    }
+
+    function bindRowMenu() {
+        window.RowMenu.bind(els.grid, btn => {
+            const id = btn.dataset.id;
+            return [
+                // Il rientro si registra solo su chiavi che sono fuori.
+                btn.dataset.state === 'out'
+                    ? { label: 'Registra rientro', icon: 'undo-2', onClick: () => returnKey(id) } : null,
+                { label: 'Storico custodia', icon: 'history', onClick: () => openHistory(id) },
+                { label: 'Modifica', icon: 'pencil', onClick: () => openForm(id) },
+                { sep: true },
+                { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => deleteKey(id) },
+            ];
+        });
     }
 
     async function deleteKey(id) {
