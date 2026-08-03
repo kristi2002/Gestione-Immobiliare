@@ -365,7 +365,7 @@ async function confirmDelete() {
     try {
         await archiveClient(deleteTargetId);
         closeDeleteModal();
-        showAlert('Proprietario eliminato (spostato in archivio).', 'success');
+        showAlert('Proprietario archiviato.', 'success');
         loadClients();
     } catch (err) {
         showAlert(err.message, 'error');
@@ -424,19 +424,25 @@ function openRowMenu(btn, client) {
     menu.className = 'lt-menu';
     menu.dataset.id = client.id;
     menu.setAttribute('role', 'menu');
+    // "Modifica" e' l'azione piu' frequente di questo elenco e mancava: per
+    // correggere un numero di telefono si doveva aprire la scheda e cercare il
+    // pulsante li' dentro. E la voce "Archivia — Funzione in arrivo" era morta
+    // mentre "Elimina", subito sotto, archiviava davvero (confirmDelete chiama
+    // archiveClient): due voci che si contraddicono nella pagina piu' usata.
+    // Resta una sola azione, chiamata con il suo nome.
     menu.innerHTML = `
+        <button type="button" class="lt-menu__item" data-act="edit" role="menuitem">
+            <i data-lucide="pencil"></i> Modifica
+        </button>
         <button type="button" class="lt-menu__item" data-act="message" role="menuitem">
             <i data-lucide="mail"></i> Invia messaggio
         </button>
         <button type="button" class="lt-menu__item" data-act="merge" role="menuitem">
             <i data-lucide="merge"></i> Unisci duplicati
         </button>
-        <button type="button" class="lt-menu__item" data-act="archive" role="menuitem" disabled title="Funzione in arrivo">
-            <i data-lucide="archive"></i> Archivia
-        </button>
         <div class="lt-menu__sep"></div>
         <button type="button" class="lt-menu__item lt-menu__item--danger" data-act="delete" role="menuitem">
-            <i data-lucide="trash-2"></i> Elimina
+            <i data-lucide="archive"></i> Archivia
         </button>`;
     document.body.appendChild(menu);
 
@@ -451,6 +457,10 @@ function openRowMenu(btn, client) {
     menu.style.left = Math.max(8, left) + 'px';
     menu.style.top  = Math.max(8, top) + 'px';
 
+    menu.querySelector('[data-act="edit"]').addEventListener('click', () => {
+        closeRowMenu();
+        if (window.App) window.App.navigateTo('client_edit', { clientId: client.id });
+    });
     menu.querySelector('[data-act="message"]').addEventListener('click', () => {
         closeRowMenu();
         openMessageModal(client);

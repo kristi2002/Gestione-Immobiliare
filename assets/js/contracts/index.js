@@ -549,6 +549,9 @@ async function downloadContractPdf(id) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 type: 'contract',
+                // Senza contract_id il generatore non sa che contratto sia e
+                // produceva sempre una locazione, anche su una compravendita.
+                contract_id: c.id,
                 property_id: c.property_id,
                 client_id: c.client_id,
                 tenant_id: c.tenant_id,

@@ -379,6 +379,11 @@ async function uploadDocuments(e) {
 
 // ── Reminders ────────────────────────────────────────────────────
 
+// Come nella scheda proprietario: RowMenu.bind() aggancia una volta sola, quindi
+// la funzione che costruisce le voci deve leggere l'elenco corrente e non quello
+// catturato al primo caricamento (altrimenti "Modifica" apre dati vecchi).
+let remindersCache = [];
+
 async function loadReminders() {
     const list = document.getElementById('profile-reminders-list');
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
@@ -388,6 +393,7 @@ async function loadReminders() {
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
         reminders = json.data?.items ?? (Array.isArray(json.data) ? json.data : []);
+        remindersCache = reminders;
         const cnt = reminders.length;
         document.getElementById('profile-reminders-count').textContent =
             cnt ? `${cnt} promemori${cnt === 1 ? 'o' : 'a'}` : '';
@@ -417,7 +423,7 @@ async function loadReminders() {
                 ? { label: 'Segna completato', icon: 'check-circle', onClick: () => completeReminder(btn.dataset.id) }
                 : null,
             { label: 'Modifica', icon: 'pencil', onClick: () => {
-                const r = reminders.find(x => x.id == btn.dataset.id);
+                const r = remindersCache.find(x => x.id == btn.dataset.id);
                 if (r) openReminderModal(r);
             } },
             { sep: true },

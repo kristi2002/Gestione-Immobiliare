@@ -546,6 +546,14 @@ async function sendEmail(e) {
 
 // ── Reminders ────────────────────────────────────────────────────
 
+// RowMenu.bind() aggancia UNA volta sola per contenitore (WeakSet `bound` in
+// row_menu.js): la funzione che costruisce le voci e' quella del primo
+// caricamento, e resta viva per sempre. Se la lista fosse una variabile locale,
+// "Modifica" continuerebbe a cercare dentro l'elenco della prima lettura — dopo
+// aver aggiunto o completato un promemoria apriva dati vecchi, o non faceva
+// nulla. Tenendola qui, la funzione legge sempre l'elenco corrente.
+let remindersCache = [];
+
 async function loadReminders() {
     const list = document.getElementById('profile-reminders-list');
     list.innerHTML = '<div class="entity-loading">Caricamento…</div>';
@@ -556,6 +564,7 @@ async function loadReminders() {
         if (!json.success) throw new Error(json.error);
         const remW = window.Pagination.unwrap(json);
         reminders  = remW.items;
+        remindersCache = reminders;
         const cnt  = reminders.length;
         remindersTotal = remW.total;
         document.getElementById('profile-reminders-count').textContent =
@@ -587,7 +596,7 @@ async function loadReminders() {
                 ? { label: 'Segna completato', icon: 'check-circle', onClick: () => completeReminder(btn.dataset.id) }
                 : null,
             { label: 'Modifica', icon: 'pencil', onClick: () => {
-                const r = reminders.find(x => x.id == btn.dataset.id);
+                const r = remindersCache.find(x => x.id == btn.dataset.id);
                 if (r) openReminderModal(r);
             } },
             { sep: true },

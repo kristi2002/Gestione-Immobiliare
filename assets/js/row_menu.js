@@ -45,7 +45,17 @@
     let menuEl    = null;
     let openerBtn = null;
 
-    function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+    // La serializzazione di un nodo di testo protegge & < >, ma NON le virgolette:
+    // qui esc() finisce dentro gli attributi del pulsante (data-*, aria-label), e
+    // un apostrofo o una virgoletta nel dato — "Impresa Rossi "Il Mattone"", un
+    // indirizzo, il nome di un file caricato — chiudeva l'attributo e spezzava il
+    // menu ⋮. Con le virgolette convertite il pulsante regge qualsiasi testo, su
+    // tutte le pagine che usano RowMenu.
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s ?? '';
+        return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
 
     function close() {
         if (!menuEl) return;
