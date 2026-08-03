@@ -19,6 +19,7 @@ require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/api_helpers.php';
 require_once __DIR__ . '/../config/gdpr.php';
+require_once __DIR__ . '/../config/automation_events.php';
 
 apiHandleOptions();
 
@@ -178,6 +179,17 @@ try {
     $requestId = (int) $db->lastInsertId();
 
     $db->commit();
+
+    // Il lead nasceva senza annunciarlo, quindi il modello "Risposta a chi ci
+    // scrive" (trigger lead.created, filtro sulle fonti in entrata che include
+    // 'web') non scattava mai proprio per chi compila il modulo del sito: la
+    // strada piu' pubblica che l'agenzia abbia. Si emette DOPO il commit, cosi'
+    // nessuna automazione parte per un lead che non e' stato scritto.
+    emitAutomationEvent($db, 'lead.created', 'lead', $leadId, [
+        'lead_id'     => $leadId,
+        'property_id' => null,
+        'source'      => 'web',
+    ]);
 
     // Persist proof of the consent enforced above (best-effort — the gate already
     // required acceptance). Attached to the lead created for this request.
