@@ -63,6 +63,12 @@ try {
         case 'POST':
             uploadDocument($db);
             break;
+        case 'PUT':
+            if (!$id) {
+                apiError('ID documento mancante.');
+            }
+            updateDocument($db, $id);
+            break;
         case 'DELETE':
             if (!$id) {
                 apiError('ID documento mancante.');
@@ -337,49 +343,11 @@ function uploadDocument(PDO $db): void
     $inventoryItemId = !empty($_POST['inventory_item_id']) ? (int) $_POST['inventory_item_id'] : null;
     $amlRecordId = !empty($_POST['aml_record_id']) ? (int) $_POST['aml_record_id'] : null;
     $notes      = trim($_POST['notes'] ?? '') ?: null;
-
-    if (!in_array($docType, DOC_TYPES, true)) {
-        apiError('Tipo documento non valido.');
-    }
-
-    if (!$clientId && !$propertyId && !$contractId && !$buildingId && !$readingId && !$inventoryItemId && !$amlRecordId) {
-        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto, un edificio, una lettura, un articolo di inventario o una pratica antiriciclaggio.');
-    }
-
-    if ($clientId && !clientExists($db, $clientId)) {
-        apiError('Proprietario non trovato.');
-    }
-
-    if ($propertyId && !propertyExists($db, $propertyId)) {
-        apiError('Immobile non trovato.');
-    }
-
-    if ($contractId && !contractExists($db, $contractId)) {
-        apiError('Contratto non trovato.');
-    }
-
-    if ($buildingId && !buildingExists($db, $buildingId)) {
-        apiError('Edificio non trovato.');
-    }
-
-    if ($readingId && !meterReadingExists($db, $readingId)) {
-        apiError('Lettura contatore non trovata.');
-    }
-
-    if ($inventoryItemId && !inventoryItemExists($db, $inventoryItemId)) {
-        apiError('Articolo di inventario non trovato.');
-    }
-
-    if ($amlRecordId && !amlRecordExists($db, $amlRecordId)) {
-        apiError('Pratica antiriciclaggio non trovata.');
-    }
-
-    // Un documento legato all'edificio E a una sua unita' non verrebbe ereditato
-    // dalle altre unita' (vedi listDocuments): sarebbe un regolamento visibile a
-    // un appartamento solo. Se vale per tutto lo stabile, non ha un'unita'.
-    if ($buildingId && $propertyId) {
-        apiError('Un documento condominiale vale per tutto l\'edificio: non collegarlo anche a una singola unità.');
-    }
+    assertValidDocumentMeta($db, $docType, [
+        "client_id" => $clientId, "property_id" => $propertyId, "contract_id" => $contractId,
+        "building_id" => $buildingId, "meter_reading_id" => $readingId,
+        "inventory_item_id" => $inventoryItemId, "aml_record_id" => $amlRecordId,
+    ]);
 
     if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
         apiError('Nessun file caricato o errore durante l\'upload.');
@@ -484,6 +452,116 @@ function deleteDocument(PDO $db, int $id): void
 
     logActivity('delete', 'document', $id, 'Documento eliminato: ' . ($doc['original_name'] ?? ('#' . $id)));
     apiSuccess(['id' => $id, 'message' => 'Documento eliminato.']);
+}
+
+/**
+ * Tipo e collegamenti di un documento — le stesse regole al caricamento e alla
+ * modifica.
+ *
+ * Stava tutta dentro uploadDocument(): estrarla e' il presupposto per poter
+ * MODIFICARE un documento senza riscrivere (e far divergere) i controlli.
+ *
+ * @param array<string,?int> $links
+ */
+function assertValidDocumentMeta(PDO $db, string $docType, array $links): void
+{
+    if (!in_array($docType, DOC_TYPES, true)) {
+        apiError('Tipo documento non valido.');
+    }
+
+    if (!array_filter($links)) {
+        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto, un edificio, una lettura, un articolo di inventario o una pratica antiriciclaggio.');
+    }
+
+    $checks = [
+        'client_id'         => ['clientExists',        'Proprietario non trovato.'],
+        'property_id'       => ['propertyExists',      'Immobile non trovato.'],
+        'contract_id'       => ['contractExists',      'Contratto non trovato.'],
+        'building_id'       => ['buildingExists',      'Edificio non trovato.'],
+        'meter_reading_id'  => ['meterReadingExists',  'Lettura contatore non trovata.'],
+        'inventory_item_id' => ['inventoryItemExists', 'Articolo di inventario non trovato.'],
+        'aml_record_id'     => ['amlRecordExists',     'Pratica antiriciclaggio non trovata.'],
+    ];
+    foreach ($checks as $key => [$fn, $message]) {
+        if (!empty($links[$key]) && !$fn($db, (int) $links[$key])) {
+            apiError($message);
+        }
+    }
+
+    // Un documento legato all'edificio E a una sua unita' non verrebbe ereditato
+    // dalle altre unita' (vedi listDocuments): sarebbe un regolamento visibile a
+    // un appartamento solo. Se vale per tutto lo stabile, non ha un'unita'.
+    if (!empty($links['building_id']) && !empty($links['property_id'])) {
+        apiError('Un documento condominiale vale per tutto l\'edificio: non collegarlo anche a una singola unità.');
+    }
+}
+
+/**
+ * Modifica i METADATI di un documento: titolo, tipo, note e collegamenti.
+ *
+ * Il file non si tocca mai — sostituirlo sotto lo stesso id vorrebbe dire
+ * cambiare il contenuto di un documento che qualcuno ha gia' visto o firmato.
+ * Per un file diverso si carica un documento nuovo.
+ *
+ * Serviva soprattutto per SCOLLEGARE: eliminando un contratto l'API dice
+ * "scollegali o annulla il contratto invece di eliminarlo", ma scollegare non
+ * era possibile da nessuna parte — non esisteva un PUT. Il messaggio indicava
+ * un'azione che l'applicazione non aveva.
+ */
+function updateDocument(PDO $db, int $id): void
+{
+    $stmt = $db->prepare('SELECT * FROM documents WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $doc = $stmt->fetch();
+    if (!$doc) {
+        apiError('Documento non trovato.', 404);
+    }
+
+    $data = apiGetJsonBody();
+
+    // Chiave assente = campo non toccato; chiave presente e vuota = scollega.
+    $pick = static function (string $key, $current) use ($data) {
+        if (!array_key_exists($key, $data)) return $current;
+        return !empty($data[$key]) ? (int) $data[$key] : null;
+    };
+
+    $docType = array_key_exists('doc_type', $data)
+        ? trim((string) $data['doc_type'])
+        : (string) $doc['doc_type'];
+
+    $links = [
+        'client_id'         => $pick('client_id',         $doc['client_id']),
+        'property_id'       => $pick('property_id',       $doc['property_id']),
+        'contract_id'       => $pick('contract_id',       $doc['contract_id']),
+        'building_id'       => $pick('building_id',       $doc['building_id']),
+        'meter_reading_id'  => $pick('meter_reading_id',  $doc['meter_reading_id']),
+        'inventory_item_id' => $pick('inventory_item_id', $doc['inventory_item_id']),
+        'aml_record_id'     => $pick('aml_record_id',     $doc['aml_record_id']),
+    ];
+
+    assertValidDocumentMeta($db, $docType, $links);
+
+    $title = array_key_exists('title', $data)
+        ? (trim((string) $data['title']) ?: null)
+        : $doc['title'];
+    $notes = array_key_exists('notes', $data)
+        ? (trim((string) $data['notes']) ?: null)
+        : $doc['notes'];
+
+    $sql = 'UPDATE documents SET title = :title, doc_type = :doc_type, notes = :notes,
+                   client_id = :client_id, property_id = :property_id, contract_id = :contract_id,
+                   building_id = :building_id, meter_reading_id = :meter_reading_id,
+                   inventory_item_id = :inventory_item_id, aml_record_id = :aml_record_id
+             WHERE id = :id';
+    $db->prepare($sql)->execute(array_merge($links, [
+        'title'    => $title,
+        'doc_type' => $docType,
+        'notes'    => $notes,
+        'id'       => $id,
+    ]));
+
+    logActivity('update', 'document', $id, 'Documento aggiornato: ' . ($title ?: $doc['original_name']));
+    getDocument($db, $id);
 }
 
 function contractExists(PDO $db, int $id): bool
