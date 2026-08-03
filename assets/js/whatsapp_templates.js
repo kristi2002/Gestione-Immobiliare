@@ -47,6 +47,7 @@
                 <div class="template-item">
                     <div>
                         <strong>${esc(t.name)}</strong> <span class="badge">${esc(t.category)}</span>
+                        ${metaBadge(t)}
                         <div class="text-muted">${esc(t.body)}</div>
                     </div>
                     <div class="entity-card__actions">
@@ -68,10 +69,15 @@
         document.getElementById('wa-tpl-form').reset();
         document.getElementById('wa-tpl-id').value = t ? t.id : '';
         document.getElementById('wa-tpl-modal-title').textContent = t ? 'Modifica template' : 'Nuovo template';
+        // Il reset del form riporta la lingua al value dell'HTML ("it"), che è
+        // il default giusto per un template nuovo.
         if (t) {
             document.getElementById('wa-tpl-name').value = t.name;
             document.getElementById('wa-tpl-category').value = t.category;
             document.getElementById('wa-tpl-body').value = t.body;
+            document.getElementById('wa-tpl-meta-name').value = t.meta_template_name || '';
+            document.getElementById('wa-tpl-meta-lang').value = t.meta_language || 'it';
+            document.getElementById('wa-tpl-meta-status').value = t.meta_status || 'bozza';
         }
         document.getElementById('wa-tpl-modal').hidden = false;
     }
@@ -87,6 +93,9 @@
             name: document.getElementById('wa-tpl-name').value.trim(),
             category: document.getElementById('wa-tpl-category').value,
             body: document.getElementById('wa-tpl-body').value.trim(),
+            meta_template_name: document.getElementById('wa-tpl-meta-name').value.trim(),
+            meta_language: document.getElementById('wa-tpl-meta-lang').value.trim() || 'it',
+            meta_status: document.getElementById('wa-tpl-meta-status').value,
         };
         try {
             const url = id ? `${API}?id=${id}` : API;
@@ -112,6 +121,25 @@
             if (!json.success) throw new Error(json.error);
             load();
         } catch (err) { alert(err.message); }
+    }
+
+    /**
+     * Stato Meta a colpo d'occhio: solo un "approvato" con nome collegato è
+     * spedibile fuori dalla finestra di 24 ore. Senza questa etichetta la
+     * differenza fra un template usabile e uno decorativo non si vede.
+     */
+    function metaBadge(t) {
+        if (!t.meta_template_name) {
+            return '<span class="badge badge--muted" title="Non collegato a Meta: utilizzabile solo entro la finestra di 24 ore">solo 24h</span>';
+        }
+        const labels = {
+            approvato:    ['badge--success', 'Meta: approvato'],
+            in_revisione: ['badge--warning', 'Meta: in revisione'],
+            rifiutato:    ['badge--danger',  'Meta: rifiutato'],
+            bozza:        ['badge--muted',   'Meta: bozza'],
+        };
+        const [cls, label] = labels[t.meta_status] || labels.bozza;
+        return `<span class="badge ${cls}" title="${esc(t.meta_template_name)}">${esc(label)}</span>`;
     }
 
     function esc(s) {

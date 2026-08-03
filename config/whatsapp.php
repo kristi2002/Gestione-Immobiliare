@@ -156,8 +156,16 @@ function sendWhatsAppTemplate(string $toPhone, string $templateName, array $para
     if ($params) {
         $template['components'] = [[
             'type'       => 'body',
+            // Meta rifiuta un parametro che contenga a capo, tabulazioni o
+            // quattro spazi di fila (errore 132000, "parameter format
+            // mismatch"). Un indirizzo copiato da una scheda su due righe basta
+            // a far fallire l'invio, e il messaggio d'errore non nomina il
+            // parametro colpevole: si normalizza qui, una volta sola.
             'parameters' => array_map(
-                static fn($p): array => ['type' => 'text', 'text' => (string) $p],
+                static fn($p): array => [
+                    'type' => 'text',
+                    'text' => trim((string) preg_replace('/\s+/u', ' ', (string) $p)),
+                ],
                 array_values($params)
             ),
         ]];
@@ -181,6 +189,113 @@ function sendWhatsAppTemplate(string $toPhone, string $templateName, array $para
     }
 
     return metaSendResult($data ?? []);
+}
+
+/**
+ * Durata della finestra di servizio WhatsApp, in ore. E' la regola di Meta, non
+ * una nostra scelta: si puo' scrivere in testo libero solo entro 24 ore
+ * dall'ultimo messaggio ricevuto dal cliente.
+ */
+const WA_WINDOW_HOURS = 24;
+
+/**
+ * Stato della finestra di 24 ore per un numero.
+ *
+ * L'ultimo messaggio in entrata e' gia' in `whatsapp_messages`: non serve una
+ * colonna dedicata, serve leggerla prima di spedire. Senza questa verifica un
+ * invio fuori finestra parte comunque, Meta risponde 131047 e l'agente vede solo
+ * "errore invio" — senza sapere che il problema non e' il numero, ma l'orologio.
+ *
+ * @return array{open: bool, last_inbound_at: ?string, expires_at: ?string, minutes_left: ?int}
+ */
+function waWindowState(PDO $db, string $phone): array
+{
+    $closed = ['open' => false, 'last_inbound_at' => null, 'expires_at' => null, 'minutes_left' => null];
+
+    $norm = normalizeWhatsAppNumber($phone);
+    if ($norm === '' || $norm === '+') {
+        return $closed;
+    }
+
+    try {
+        $stmt = $db->prepare(
+            "SELECT MAX(received_at) FROM whatsapp_messages
+              WHERE direction = 'inbound' AND from_number = :num"
+        );
+        $stmt->execute(['num' => $norm]);
+        $last = (string) ($stmt->fetchColumn() ?: '');
+    } catch (PDOException) {
+        // Non poter leggere non e' "finestra aperta": in dubbio si sta chiusi,
+        // cosi' l'errore diventa un template invece di un invio rifiutato.
+        return $closed;
+    }
+
+    if ($last === '') {
+        return $closed;
+    }
+
+    $at = date_create_immutable($last);
+    if ($at === false) {
+        return $closed;
+    }
+
+    // Ore, non mesi: l'aritmetica di PHP sulle ore e' esatta e non trabocca come
+    // "+1 month" a fine mese.
+    $expires = $at->modify('+' . WA_WINDOW_HOURS . ' hours');
+    $now     = new DateTimeImmutable('now');
+    $left    = (int) floor(($expires->getTimestamp() - $now->getTimestamp()) / 60);
+
+    return [
+        'open'            => $left > 0,
+        'last_inbound_at' => $at->format('Y-m-d H:i:s'),
+        'expires_at'      => $expires->format('Y-m-d H:i:s'),
+        'minutes_left'    => max(0, $left),
+    ];
+}
+
+/**
+ * I segnaposto di un template locale, nell'ordine in cui diventano {{1}}, {{2}}…
+ *
+ * La colonna `variables` e' scritta da api/whatsapp_templates.php leggendo il
+ * corpo nell'ordine di prima comparsa: e' quello, e solo quello, l'ordine che
+ * deve corrispondere al template registrato su Meta.
+ *
+ * @param array<string,mixed> $tpl riga di whatsapp_templates
+ * @return string[]
+ */
+function waTemplateVariables(array $tpl): array
+{
+    $raw = $tpl['variables'] ?? null;
+
+    if (is_string($raw) && $raw !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            return array_values(array_map('strval', $decoded));
+        }
+    }
+
+    // Riga vecchia senza `variables`: si rilegge dal corpo con la stessa regola.
+    preg_match_all('/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/', (string) ($tpl['body'] ?? ''), $m);
+    return array_values(array_unique($m[1]));
+}
+
+/**
+ * Sostituisce {{nome}} con i valori forniti: e' il testo che finisce in archivio
+ * e sotto gli occhi dell'agente.
+ *
+ * Meta riceve i valori posizionali e rende il messaggio per conto suo; questa
+ * resa serve a noi, perche' una riga di archivio che dicesse
+ * "conferma_appuntamento [4 parametri]" non e' consultabile da nessuno.
+ *
+ * @param array<string,string> $values
+ */
+function waRenderTemplate(string $body, array $values): string
+{
+    return (string) preg_replace_callback(
+        '/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/',
+        static fn(array $m): string => (string) ($values[$m[1]] ?? $m[0]),
+        $body
+    );
 }
 
 /**
@@ -531,13 +646,30 @@ function parseMetaWebhook(array $payload): array
                     ];
                 }
 
+                // Il testo non sta sempre in `body`. Un tocco su un pulsante di
+                // un template arriva come type=button con l'etichetta in
+                // `text`, e una risposta a lista/bottone interattivo la porta
+                // dentro *_reply.title. Leggendo solo body/caption il messaggio
+                // risultava vuoto e senza allegati, e il filtro del webhook lo
+                // scartava: il cliente toccava "Confermo", vedeva la spunta di
+                // consegna, e in agenzia non arrivava niente.
+                $body = match ($type) {
+                    'button'      => (string) ($part['text'] ?? ''),
+                    'interactive' => (string) (
+                        $part['button_reply']['title']
+                        ?? $part['list_reply']['title']
+                        ?? ''
+                    ),
+                    default       => (string) ($part['body'] ?? $part['caption'] ?? ''),
+                };
+
                 $messages[] = [
                     // Meta consegna il numero senza "+": rimetterlo qui tiene una
                     // sola forma in tutta l'applicazione (+39...), che e' quella
                     // su cui le conversazioni vengono raggruppate.
                     'from'        => '+' . ltrim((string) ($m['from'] ?? ''), '+'),
                     'to'          => $to !== '' ? '+' . ltrim($to, '+') : '',
-                    'body'        => (string) ($part['body'] ?? $part['caption'] ?? ''),
+                    'body'        => $body,
                     'external_id' => (string) ($m['id'] ?? '') ?: null,
                     'type'        => $type,
                     'media'       => $media,

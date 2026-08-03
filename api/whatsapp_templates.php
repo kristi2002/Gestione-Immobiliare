@@ -14,6 +14,7 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 apiHandleOptions();
 
 const WA_TEMPLATE_CATEGORIES = ['benvenuto', 'scadenza', 'pagamento', 'visita', 'generico'];
+const WA_TEMPLATE_META_STATUSES = ['bozza', 'in_revisione', 'approvato', 'rifiutato'];
 
 try {
     $db     = getDB();
@@ -65,8 +66,10 @@ function createTemplate(PDO $db): void
 {
     $validated = validateTemplateInput(apiGetJsonBody());
     $stmt = $db->prepare(
-        "INSERT INTO whatsapp_templates (name, category, body, variables)
-         VALUES (:name, :category, :body, :variables)"
+        "INSERT INTO whatsapp_templates
+            (name, meta_template_name, meta_language, meta_status, category, body, variables)
+         VALUES
+            (:name, :meta_template_name, :meta_language, :meta_status, :category, :body, :variables)"
     );
     $stmt->execute($validated);
     getTemplate($db, (int) $db->lastInsertId());
@@ -77,7 +80,8 @@ function updateTemplate(PDO $db, int $id): void
     if (!templateExists($db, $id)) apiError('Template non trovato.', 404);
     $validated = validateTemplateInput(apiGetJsonBody());
     $stmt = $db->prepare(
-        "UPDATE whatsapp_templates SET name = :name, category = :category,
+        "UPDATE whatsapp_templates SET name = :name, meta_template_name = :meta_template_name,
+             meta_language = :meta_language, meta_status = :meta_status, category = :category,
              body = :body, variables = :variables WHERE id = :id"
     );
     $stmt->execute(array_merge($validated, ['id' => $id]));
@@ -97,9 +101,31 @@ function validateTemplateInput(array $data): array
     $category = trim($data['category'] ?? 'generico');
     $body     = trim($data['body'] ?? '');
 
+    // Identita' Meta: il nome registrato nel Business Manager e' l'unica cosa
+    // che viaggia davvero in un invio fuori finestra. Il nome qui sopra resta
+    // quello leggibile dall'agente e non ha alcun valore per Meta.
+    $metaName   = trim($data['meta_template_name'] ?? '');
+    $metaLang   = trim($data['meta_language'] ?? 'it');
+    $metaStatus = trim($data['meta_status'] ?? 'bozza');
+
     if ($name === '') apiError('Il nome è obbligatorio.');
     if ($body === '') apiError('Il testo del template è obbligatorio.');
     if (!in_array($category, WA_TEMPLATE_CATEGORIES, true)) apiError('Categoria non valida.');
+    if (!in_array($metaStatus, WA_TEMPLATE_META_STATUSES, true)) apiError('Stato Meta non valido.');
+
+    // Meta accetta come nome solo minuscole, cifre e underscore. Rifiutarlo qui
+    // evita un template che sembra collegato e viene rifiutato solo all'invio.
+    if ($metaName !== '' && !preg_match('/^[a-z0-9_]{1,200}$/', $metaName)) {
+        apiError('Il nome del template Meta ammette solo lettere minuscole, cifre e underscore.');
+    }
+    if ($metaLang === '' || !preg_match('/^[a-z]{2}(_[A-Z]{2})?$/', $metaLang)) {
+        apiError('Lingua Meta non valida (es. "it", oppure "pt_BR").');
+    }
+    // Dichiarare approvato un template che non esiste su Meta e' il modo piu'
+    // rapido di far fallire ogni invio fuori finestra senza capire perche'.
+    if ($metaName === '' && $metaStatus === 'approvato') {
+        apiError('Per marcare il template come approvato serve il nome registrato su Meta.');
+    }
 
     // Derive variables from the body ({{var}}) unless explicitly provided.
     $variables = $data['variables'] ?? null;
@@ -111,10 +137,13 @@ function validateTemplateInput(array $data): array
     }
 
     return [
-        'name'      => $name,
-        'category'  => $category,
-        'body'      => $body,
-        'variables' => $variables,
+        'name'               => $name,
+        'meta_template_name' => $metaName !== '' ? $metaName : null,
+        'meta_language'      => $metaLang,
+        'meta_status'        => $metaStatus,
+        'category'           => $category,
+        'body'               => $body,
+        'variables'          => $variables,
     ];
 }
 
