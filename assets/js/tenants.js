@@ -147,7 +147,7 @@
                 <i data-lucide="pencil"></i> Modifica
             </button>
             <button type="button" class="lt-menu__item" data-act="wa" role="menuitem" ${tenant.phone ? '' : 'disabled title="Nessun numero registrato"'}>
-                <i data-lucide="message-circle"></i> Invia WhatsApp
+                <svg class="icon-brand-whatsapp" aria-hidden="true" focusable="false"><use href="#icon-whatsapp"></use></svg> Invia WhatsApp
             </button>
             <div class="lt-menu__sep"></div>
             <button type="button" class="lt-menu__item lt-menu__item--danger" data-act="archive" role="menuitem">
