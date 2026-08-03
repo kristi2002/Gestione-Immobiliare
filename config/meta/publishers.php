@@ -4,6 +4,8 @@
  * and the low-level Graph transport. Included by config/meta.php.
  */
 
+require_once __DIR__ . '/../env.php';
+
 /**
  * Base pubblica da cui Meta scarica le immagini per Instagram.
  *
@@ -21,7 +23,11 @@ function metaPublicBaseUrl(): string
         return rtrim($override, '/');
     }
 
-    return rtrim((string) (defined('APP_URL') ? APP_URL : ''), '/');
+    // appBaseUrl() e non la costante: chi pubblica davvero e'
+    // cron/publish_social_posts.php, che non carica bootstrap.php. Con la sola
+    // costante l'unica strada automatica si fermava da sola chiedendo di
+    // impostare una APP_URL gia' impostata.
+    return appBaseUrl();
 }
 
 /**
