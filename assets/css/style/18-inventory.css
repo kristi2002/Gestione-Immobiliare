@@ -1,0 +1,81 @@
+/* ============================================================================
+   Inventario — impaginazione della pagina (arredi + verbali di consegna).
+
+   Due cose che questo file esiste per impedire, viste dal vivo sul markup
+   precedente:
+
+   1. `.toolbar` nasce `flex-direction: column` (01-base.css): la riga che hanno
+      tutte le altre pagine la applica filters.js al contenitore
+      `.filter-bar__controls` che inietta lui. Qui la barra e' esclusa
+      (`data-no-filterbar`: la tendina dell'immobile e' il parametro che comanda
+      la pagina, non un filtro di elenco), quindi quel contenitore non arrivava
+      mai e i tre controlli si impilavano su tre righe alte quanto la barra.
+      La riga si dichiara qui.
+
+   2. I titoli di sezione erano scritti come `.view-header` +
+      `.view-header__text`, che theme-orlandi.css nasconde apposta (app.js copia
+      quel testo nella topbar). "Verbali di consegna" e la sua spiegazione
+      finivano a `display: none`: una seconda tabella senza alcuna intestazione.
+      Adesso i sotto-titoli usano la testata della scheda (`.db-card__head`),
+      cioe' quello che usano le altre pagine a elenco.
+   ============================================================================ */
+
+/* ---- Barra dei parametri (immobile + filtri elenco) ---------------------- */
+.inv-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px;
+}
+.inv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    flex: 0 1 220px;
+}
+/* L'immobile e' il comando principale: parte piu' largo e si prende lo spazio
+   che avanza prima che lo facciano i due filtri. */
+.inv-field--wide { flex: 1 1 320px; max-width: 380px; }
+.inv-field > label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+    margin: 0;
+}
+/* Stessa altezza dei controlli della barra filtri condivisa (09-filter-toolbar):
+   quella regola vale per `.toolbar > .form-select`, e qui i select stanno dentro
+   un campo con etichetta, quindi non la intercettano. */
+.inv-field > .form-select {
+    height: 40px;
+    border-radius: 9px;
+    width: 100%;
+    margin: 0;
+}
+
+/* ---- Schede della pagina ------------------------------------------------- */
+/* `.db-card` non ha margini propri: la spaziatura verticale la mette la pagina. */
+.inv-card + .inv-card { margin-top: 18px; }
+
+/* ---- Stato vuoto: nessun immobile scelto -------------------------------- */
+/* Finche' non si sceglie un immobile la pagina non ha contenuto: il messaggio
+   merita un pannello vero, non una riga di testo grigio sul fondo della shell. */
+.inv-empty { padding: 44px 24px; text-align: center; }
+.inv-empty [data-lucide],
+.inv-empty svg {
+    width: 34px;
+    height: 34px;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+}
+.inv-empty h3 { font-size: 15.5px; font-weight: 700; margin-top: 12px; }
+.inv-empty p { font-size: 13px; color: var(--color-text-muted); margin-top: 5px; }
+
+/* ---- Note sotto le tabelle dei modali ----------------------------------- */
+.inv-note { font-size: 12.5px; color: var(--color-text-muted); margin-top: 12px; }
+
+@media (max-width: 720px) {
+    .inv-field,
+    .inv-field--wide { flex: 1 1 100%; max-width: none; }
+}

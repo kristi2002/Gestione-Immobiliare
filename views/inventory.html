@@ -6,29 +6,34 @@
         </div>
         <div class="view-header__actions">
             <button class="btn btn--ghost" id="btn-print-inventory" style="display:none;"><i data-lucide="printer"></i> Stampa report check-in</button>
-            <button class="btn btn--primary" id="btn-new-item" style="display:none;">+ Aggiungi articolo</button>
+            <button class="btn btn--primary" id="btn-new-item" style="display:none;"><i data-lucide="plus"></i> Aggiungi articolo</button>
         </div>
     </div>
 
     <div id="inventory-alert" class="alert" style="display:none;"></div>
 
-    <div class="toolbar" data-no-filterbar style="margin-bottom:1rem;">
-        <div class="form-group" style="margin:0;max-width:320px;">
-            <label for="inventory-property-select" style="font-weight:600;">Seleziona immobile</label>
+    <!-- data-no-filterbar: l'immobile non e' un filtro di elenco, e' il
+         parametro che apre la pagina. Chiuso dietro il pulsante "Filtri" della
+         barra condivisa sarebbe l'unico comando della pagina, invisibile.
+         Con l'esclusione pero' non arriva nemmeno il contenitore che dispone i
+         controlli in riga: la disposizione la porta .inv-bar (18-inventory.css). -->
+    <div class="toolbar inv-bar" data-no-filterbar>
+        <div class="inv-field inv-field--wide">
+            <label for="inventory-property-select">Immobile</label>
             <select id="inventory-property-select" class="form-select">
                 <option value="">— Scegli un immobile —</option>
             </select>
         </div>
-        <div class="form-group" style="margin:0;max-width:220px;">
-            <label for="inventory-category-filter" style="font-weight:600;">Categoria</label>
+        <div class="inv-field">
+            <label for="inventory-category-filter">Categoria</label>
             <!-- Le opzioni arrivano da api/inventory.php?action=categories: la
                  lista sta nel database, non qui. -->
             <select id="inventory-category-filter" class="form-select">
                 <option value="">Tutte le categorie</option>
             </select>
         </div>
-        <div class="form-group" style="margin:0;max-width:220px;">
-            <label for="inventory-condition-filter" style="font-weight:600;">Condizione minima</label>
+        <div class="inv-field">
+            <label for="inventory-condition-filter">Condizione minima</label>
             <select id="inventory-condition-filter" class="form-select">
                 <option value="">Tutte</option>
                 <option value="1">★ 1+</option>
@@ -40,40 +45,50 @@
         </div>
     </div>
 
-    <div id="inventory-placeholder" class="text-muted" style="padding:2rem;text-align:center;">
-        Seleziona un immobile per visualizzare l'inventario.
+    <div id="inventory-placeholder" class="db-card inv-empty">
+        <i data-lucide="package-search"></i>
+        <h3>Nessun immobile selezionato</h3>
+        <p>Scegli un immobile qui sopra per vederne arredi, accessori e verbali di consegna.</p>
     </div>
 
     <div id="inventory-content" style="display:none;">
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Articolo</th>
-                        <th>Categoria</th>
-                        <th>Marca / Modello</th>
-                        <th>Valore</th>
-                        <th>Quantità</th>
-                        <th>Condizione</th>
-                        <th>Foto</th>
-                        <th>Note</th>
-                        <th>Azioni</th>
-                    </tr>
-                </thead>
-                <tbody id="inventory-tbody">
-                    <tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
-                </tbody>
-            </table>
+        <div class="db-card list-card inv-card">
+            <div class="db-card__head">
+                <h3>Arredi e accessori</h3>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Articolo</th>
+                            <th>Categoria</th>
+                            <th>Marca / Modello</th>
+                            <th>Valore</th>
+                            <th>Quantità</th>
+                            <th>Condizione</th>
+                            <th>Foto</th>
+                            <th>Note</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        <tr><td colspan="9" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="inventory-pagination" class="pagination-container"></div>
         </div>
-        <div id="inventory-pagination" class="pagination-container"></div>
 
         <!-- Verbali di consegna: l'inventario è dell'immobile, la contestazione
-             è del contratto. Qui si passa dall'uno all'altra. -->
-        <section id="inventory-snapshots" style="margin-top:2rem;">
-            <div class="view-header" style="margin-bottom:0.75rem;">
-                <div class="view-header__text">
-                    <h3 style="margin:0;">Verbali di consegna</h3>
-                    <p style="margin:0;">Foto e condizioni congelate per ogni locazione: è ciò che regge in una contestazione sulla cauzione.</p>
+             è del contratto. Qui si passa dall'uno all'altra.
+             Titolo e spiegazione nella testata della scheda, non in un
+             .view-header: quello il tema lo nasconde (app.js copia il suo testo
+             nella topbar), e questa sezione restava senza intestazione. -->
+        <section id="inventory-snapshots" class="db-card list-card inv-card">
+            <div class="db-card__head">
+                <div>
+                    <h3>Verbali di consegna</h3>
+                    <p>Foto e condizioni congelate per ogni locazione: è ciò che regge in una contestazione sulla cauzione.</p>
                 </div>
             </div>
             <div class="table-wrapper">
@@ -139,7 +154,7 @@
                     <tbody id="snapshot-items-tbody"></tbody>
                 </table>
             </div>
-            <p class="text-muted" style="font-size:0.85rem;margin-top:0.75rem;">
+            <p class="inv-note">
                 Quantità <strong>0</strong> = bene mancante alla riconsegna.
             </p>
         </div>
@@ -208,7 +223,7 @@
                     <tbody id="comparison-tbody"></tbody>
                 </table>
             </div>
-            <p class="text-muted" style="font-size:0.85rem;margin-top:0.75rem;">
+            <p class="inv-note">
                 Le stime sono proporzionali al valore dichiarato e al peggioramento rilevato: sono una base
                 di discussione tra le parti, non una perizia.
             </p>
