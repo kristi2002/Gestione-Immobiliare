@@ -246,23 +246,45 @@ async function setLeadStatus(id, status) {
 function renderStatsBar(total) {
     const shown = leads.length;
     if (!Number.isFinite(total)) total = shown;
+    // Il totale della board e il set caricato divergono solo oltre il limite di
+    // 500: finche' combaciano la percentuale e' esatta, dopo e' calcolata sul
+    // sottoinsieme e va detto invece che spacciata per definitiva.
+    const truncated = total > shown;
     const converted = leads.filter(l => l.status === 'converted').length;
-    const active = leads.filter(l => l.status !== 'converted' && l.status !== 'lost').length;
+    const activeLeads = leads.filter(l => l.status !== 'converted' && l.status !== 'lost');
+    const active = activeLeads.length;
     const convRate = shown ? Math.round((converted / shown) * 100) : 0;
-    // Pipeline value = sum of the upper budget (fallback lower) of still-active leads.
-    const pipeline = leads
-        .filter(l => l.status !== 'converted' && l.status !== 'lost')
-        .reduce((sum, l) => sum + (Number(l.budget_max) || Number(l.budget_min) || 0), 0);
+
+    // Vendita e affitto NON si sommano: `budget_max` e' un prezzo di acquisto
+    // per chi compra e un canone mensile per chi affitta. Sommandoli insieme un
+    // solo lead d'acquisto da 300.000 € cancellava dal totale tutti gli altri, e
+    // il numero non voleva dire niente in nessuna delle due valute.
+    const budgetOf = l => Number(l.budget_max) || Number(l.budget_min) || 0;
+    const sumFor = type => activeLeads.filter(l => l.interest_type === type).reduce((s, l) => s + budgetOf(l), 0);
+    const vendita = sumFor('acquisto');
+    const affitto = sumFor('affitto');
+    // I lead "Entrambi" hanno un unico budget che non sappiamo a quale dei due
+    // mercati appartenga: restano fuori da entrambe le somme, ma il loro numero
+    // si vede — un lead esistente escluso in silenzio e' peggio del vecchio bug.
+    const daQualificare = activeLeads.filter(l => l.interest_type === 'entrambi').length;
+    const notaAmbigui = daQualificare
+        ? ` · ${daQualificare} da qualificare`
+        : '';
+    const titleAmbigui = daQualificare
+        ? ` title="${daQualificare} lead con interesse &quot;Entrambi&quot;: budget non attribuibile a vendita o affitto, esclusi dal calcolo."`
+        : '';
+
     const fmtEur = n => {
         if (n >= 1e6) return '€' + (n / 1e6).toFixed(1).replace('.0', '') + 'M';
         if (n >= 1e3) return '€' + Math.round(n / 1e3) + 'k';
         return '€' + n;
     };
     els.statsbar.innerHTML = `
-        <div class="stat"><b>${convRate}%</b><span>Tasso di conversione</span><div class="bar"><i style="width:${convRate}%"></i></div></div>
-        <div class="stat"><b>${active}</b><span>Lead attivi in pipeline</span></div>
-        <div class="stat"><b>${fmtEur(pipeline)}</b><span>Valore stimato pipeline</span></div>
-        <div class="stat"><b>${total}</b><span>Lead totali${total > shown ? ` (mostrati ${shown})` : ''}</span></div>`;
+        <div class="stat"${truncated ? ` title="Calcolato sui ${shown} lead caricati, su ${total} totali."` : ''}><b>${convRate}%</b><span>Tasso di conversione${truncated ? ` (su ${shown})` : ''}</span><div class="bar"><i style="width:${convRate}%"></i></div></div>
+        <div class="stat"><b>${active}</b><span>Lead attivi</span></div>
+        <div class="stat"${titleAmbigui}><b>${fmtEur(vendita)}</b><span>Pipeline vendita${notaAmbigui}</span></div>
+        <div class="stat"${titleAmbigui}><b>${fmtEur(affitto)}</b><span>Pipeline affitto (€/mese)${notaAmbigui}</span></div>
+        <div class="stat" title="Esclusi i lead persi."><b>${total}</b><span>Lead in pipeline${truncated ? ` (mostrati ${shown})` : ''}</span></div>`;
 }
 
 function renderCards() {

@@ -114,14 +114,27 @@ function listLeads(PDO $db): void
             $params["st$i"] = $s;
         }
         $where .= ' AND l.status IN (' . implode(',', $ph) . ')';
-    } elseif ($status !== '' && in_array($status, LEAD_STATUSES, true)) {
+    } elseif ($status !== '') {
+        // Uno stato sconosciuto va rifiutato, non ignorato: ignorarlo faceva
+        // cadere anche il filtro di default qui sotto, e la risposta tornava
+        // PIU' larga di quella normale (persi e convertiti compresi). Una
+        // ricerca salvata con una chiave vecchia mostrava cosi' l'archivio
+        // intero credendo di star restringendo.
+        if (!in_array($status, LEAD_STATUSES, true)) {
+            apiError('Stato non valido.');
+        }
         $where .= ' AND l.status = :status';
         $params['status'] = $status;
-    } else if ($status === '') {
+    } else {
         // By default exclude converted and lost leads
         $where .= " AND l.status NOT IN ('converted', 'lost')";
     }
-    if ($interest !== '' && in_array($interest, LEAD_INTERESTS, true)) {
+    if ($interest !== '') {
+        // Stessa ragione dello stato: un tipo interesse sconosciuto spariva in
+        // silenzio e la lista restava non filtrata.
+        if (!in_array($interest, LEAD_INTERESTS, true)) {
+            apiError('Tipo interesse non valido.');
+        }
         $where .= ' AND l.interest_type = :interest';
         $params['interest'] = $interest;
     }
