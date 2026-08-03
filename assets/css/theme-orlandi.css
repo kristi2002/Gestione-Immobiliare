@@ -871,7 +871,17 @@ details.nav-group > summary:hover .nav-group-label { color: rgba(255, 255, 255, 
 
 .map-canvas { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--color-border); box-shadow: var(--shadow); }
 .map-canvas .leaflet-map, .map-view .leaflet-map { height: 100%; min-height: 460px; }
-.map-canvas .map-legend { position: absolute; top: 14px; left: 14px; z-index: 500; background: rgba(255,255,255,.94); backdrop-filter: blur(4px); border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 12px; display: flex; gap: 14px; box-shadow: var(--shadow); font-size: 12.5px; }
+/* La legenda sta a destra: l'angolo in alto a sinistra è dello zoom di Leaflet,
+   e sovrapposta gli copriva il pulsante "+". pointer-events:none così la mappa
+   si trascina anche passando sotto la legenda. */
+.map-canvas .map-legend { position: absolute; top: 14px; right: 14px; z-index: 500; max-width: calc(100% - 28px); pointer-events: none; background: rgba(255,255,255,.94); backdrop-filter: blur(4px); border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 12px; display: flex; gap: 14px; box-shadow: var(--shadow); font-size: 12.5px; }
+.map-canvas .map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.map-canvas .map-legend .map-dot { margin: 0; flex-shrink: 0; }
+/* Su schermo stretto la tela si restringe e la legenda tornerebbe comunque
+   addosso allo zoom: scende in basso, dove non c'è nessun comando. */
+@media (max-width: 900px) {
+    .map-canvas .map-legend { top: auto; bottom: 14px; left: 14px; right: auto; font-size: 11.5px; gap: 10px; padding: 6px 10px; }
+}
 .map-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .map-dot--available { background: #16a34a; }
 .map-dot--rented { background: #2563eb; }
