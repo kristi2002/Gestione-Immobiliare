@@ -233,6 +233,20 @@ function updateTenant(PDO $db, int $id): void
         apiError('Il telefono è obbligatorio.');
     }
 
+    // Canone e date non sono colonne dell'inquilino: vivono su una riga
+    // `contracts`, che nasce solo legata a un immobile. Senza property_id piu'
+    // sotto non viene chiamato createOrUpdateLeaseContract() e monthly_rent non
+    // e' fra le colonne aggiornabili — la richiesta tornava 200 con i termini
+    // scartati in silenzio, e la colonna "Canone" della lista restava vuota
+    // senza che nulla lo avesse detto. Meglio un rifiuto che spiega il legame.
+    $terms = leaseTermsFromInput($data);
+    $hasLeaseTerms = $terms['start_date'] !== null
+        || $terms['end_date'] !== null
+        || $terms['monthly_rent'] !== null;
+    if ($hasLeaseTerms && empty($data['property_id'])) {
+        apiError('Canone e date della locazione richiedono un immobile: selezionalo nel campo "Immobile".');
+    }
+
     $fields = [];
     $params = ['id' => $id];
     foreach (['name', 'surname', 'email', 'codice_fiscale', 'phone', 'notes', 'status', 'iban', 'sdd_mandate_ref', 'sdd_mandate_date'] as $f) {

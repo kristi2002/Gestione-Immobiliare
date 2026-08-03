@@ -63,7 +63,7 @@
                 <td data-label="Nome">${esc(t.name)} ${esc(t.surname)}</td>
                 <td data-label="Email">${esc(t.email)}</td>
                 <td data-label="Immobile">${esc(t.property_address)}, ${esc(t.property_city)}</td>
-                <td data-label="Canone">${t.monthly_rent ? '€ ' + Number(t.monthly_rent).toFixed(2) : '—'}</td>
+                <td data-label="Canone">${fmtMoney(t.monthly_rent)}</td>
                 <td data-label="Contratto">${fmtDate(t.lease_start)} → ${fmtDate(t.lease_end)}</td>
                 <td data-label="Portale">${t.has_portal_access ? '<i data-lucide="check-circle"></i>' : '—'}</td>
                 <td class="lt-actions" data-label="Azioni">
@@ -239,7 +239,7 @@
 
         const propsEl = document.getElementById('tenant-rail-props');
         if (t.property_address) {
-            const rent = t.monthly_rent ? `€ ${Number(t.monthly_rent).toLocaleString('it-IT')}/mese` : '';
+            const rent = t.monthly_rent ? `${fmtMoney(t.monthly_rent)}/mese` : '';
             const period = [fmtDate(t.lease_start), fmtDate(t.lease_end)].filter(d => d !== '—').join(' → ');
             propsEl.innerHTML = `
                 <div class="rail-prop" data-prop-id="${t.property_id || ''}" style="cursor:${t.property_id ? 'pointer' : 'default'};">
@@ -340,6 +340,11 @@
     }
 
     function fmtDate(d) { return window.Fmt.date(d); }
+    // Lo stesso canone si leggeva "€ 1322.00" in tabella e "€ 1.322" nel rail:
+    // due formati per un unico numero, entrambi scritti a mano. Fmt.money e' la
+    // convenzione dell'app (raggruppamento italiano, due decimali, trattino sul
+    // vuoto) e vale per tutte e due le superfici.
+    function fmtMoney(v) { return window.Fmt.money(v); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 })();

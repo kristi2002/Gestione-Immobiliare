@@ -46,6 +46,26 @@
         $('tne-residence-legend').textContent = isCompany ? 'Sede legale' : 'Residenza';
     }
 
+    /**
+     * Canone e date finiscono su una riga `contracts`, che senza immobile non
+     * puo' nascere: l'API rifiuta la coppia (vedi updateTenant).
+     *
+     * Il messaggio va messo sul select, non in un controllo dentro save(): il
+     * campo e' gia' `required`, quindi il form non passa la validazione nativa
+     * e l'evento 'submit' non scatta nemmeno — un `if` la' dentro sarebbe
+     * codice morto. Il fumetto del browser lo dice invece al posto del suo
+     * "seleziona una voce", che non spiega cosa c'entri l'immobile con il
+     * canone appena digitato tre campi piu' in la'.
+     */
+    function syncLeaseValidity() {
+        const sel = $('tne-property');
+        if (!sel) return;
+        const hasTerms = [$('tne-lease-start').value, $('tne-lease-end').value, $('tne-rent').value].some(Boolean);
+        sel.setCustomValidity(!sel.value && hasTerms
+            ? 'Canone e date della locazione richiedono un immobile: selezionalo qui.'
+            : '');
+    }
+
     async function loadProperties() {
         const j = await fetch(`${PROP_API}?limit=500&page=1`).then(r => r.json());
         if (j.success) {
@@ -77,6 +97,17 @@
         $('tne-cap').value = t.cap || '';
         $('tne-province').value = t.province || '';
         applyPersonType();
+        // L'elenco degli immobili esclude gli archiviati (api/properties.php li
+        // filtra a monte): se la locazione punta a uno di quelli il select
+        // ricadeva su "— Seleziona —" e l'inquilino sembrava senza immobile.
+        // Ora che canone e date senza immobile vengono rifiutati, la scheda
+        // diventerebbe pure impossibile da salvare: l'opzione va ricostruita.
+        if (t.property_id && ![...$('tne-property').options].some(o => o.value === String(t.property_id))) {
+            const label = [t.property_address, t.property_city].filter(Boolean).join(', ')
+                || `Immobile #${t.property_id}`;
+            $('tne-property').insertAdjacentHTML('beforeend',
+                `<option value="${t.property_id}">${esc(label)} (archiviato)</option>`);
+        }
         $('tne-property').value = t.property_id || '';
         $('tne-lease-start').value = t.lease_start || '';
         $('tne-lease-end').value = t.lease_end || '';
@@ -224,8 +255,8 @@
         // la riga a cui agganciarlo. Nascosto, non disabilitato — un bottone
         // grigio accanto a "Salva" si legge come un permesso mancante.
         $('tne-pdf').hidden = !isEdit;
-        $('tne-form').addEventListener('input',  () => { dirty = true; });
-        $('tne-form').addEventListener('change', () => { dirty = true; });
+        $('tne-form').addEventListener('input',  () => { dirty = true; syncLeaseValidity(); });
+        $('tne-form').addEventListener('change', () => { dirty = true; syncLeaseValidity(); });
 
         // Su un inquilino esistente la password non si digita piu': si manda il
         // link e la sceglie lui. Il campo resta solo alla creazione, dove non
@@ -241,6 +272,7 @@
             $('tne-title').textContent = 'Modifica inquilino';
             try { await loadTenant(); }
             catch (err) { showAlert('Impossibile caricare l\'inquilino: ' + err.message, 'error'); }
+            syncLeaseValidity();
         } else {
             $('tne-title').textContent = 'Nuovo inquilino';
             applyPersonType();
