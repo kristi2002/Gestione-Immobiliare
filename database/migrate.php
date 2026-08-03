@@ -64,9 +64,19 @@ if ($coreExists && !$hasPhaseRecorded) {
     if ($seeded) {
         echo 'Baseline detected — marked as already applied: ' . implode(', ', $seeded) . "\n";
     }
-    // 000_helpers is idempotent and needed by later migrations — ensure it ran.
-    ensureHelpers($db, $files);
 }
+
+// 000_helpers e' idempotente (DROP PROCEDURE IF EXISTS + CREATE) e serve alle
+// migrazioni successive: si riesegue SEMPRE, prima di applicare le pendenti.
+//
+// Prima stava dentro il ramo del baseline, cioe' girava solo su un database
+// nuovo. Su qualunque installazione esistente non veniva piu' eseguito, e
+// 000_helpers risulta gia' "applicato" per il seed del baseline, quindi non
+// entrava nemmeno fra le pendenti: una procedura AGGIUNTA al file dopo il
+// baseline non arrivava mai in banca dati, e la prima migrazione che la
+// chiamava falliva con "PROCEDURE ... does not exist" — bloccando da li' in
+// poi tutte le successive.
+ensureHelpers($db, $files);
 
 // ---- Apply pending ---------------------------------------------------------
 $pending = [];

@@ -7,6 +7,5 @@
 -- il percorso relativo. Servono il tipo e il nome originale per poterlo
 -- rimandare al browser con l'intestazione giusta.
 
-ALTER TABLE whatsapp_messages
-    ADD COLUMN media_mime VARCHAR(120) NULL AFTER media_url,
-    ADD COLUMN media_name VARCHAR(255) NULL AFTER media_mime;
+CALL migration_add_column('whatsapp_messages', 'media_mime', 'VARCHAR(120) NULL AFTER media_url');
+CALL migration_add_column('whatsapp_messages', 'media_name', 'VARCHAR(255) NULL AFTER media_mime');

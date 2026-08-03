@@ -30,9 +30,7 @@
 -- vuole davvero eliminare la pratica stacca prima i documenti, e lo fa
 -- guardandoli.
 
-ALTER TABLE documents
-    ADD COLUMN aml_record_id INT UNSIGNED NULL DEFAULT NULL AFTER inventory_item_id,
-    ADD INDEX idx_documents_aml (aml_record_id),
-    ADD CONSTRAINT fk_documents_aml
-        FOREIGN KEY (aml_record_id) REFERENCES aml_records (id)
-        ON DELETE RESTRICT ON UPDATE CASCADE;
+CALL migration_add_column('documents', 'aml_record_id', 'INT UNSIGNED NULL DEFAULT NULL AFTER inventory_item_id');
+CALL migration_add_index('documents', 'idx_documents_aml', '`aml_record_id`');
+-- migration_add_fk aggiunge sempre ON UPDATE CASCADE, che e' quel che serve qui.
+CALL migration_add_fk('documents', 'fk_documents_aml', 'aml_record_id', 'aml_records', 'id', 'RESTRICT');

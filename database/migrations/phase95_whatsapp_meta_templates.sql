@@ -15,9 +15,7 @@
 -- Meta al momento dell'invio, e senza questo campo l'agente lo scoprirebbe solo
 -- da un errore in fondo ai log.
 
-ALTER TABLE whatsapp_templates
-    ADD COLUMN meta_template_name VARCHAR(200) NULL AFTER name,
-    ADD COLUMN meta_language VARCHAR(10) NOT NULL DEFAULT 'it' AFTER meta_template_name,
-    ADD COLUMN meta_status ENUM('bozza','in_revisione','approvato','rifiutato') NOT NULL DEFAULT 'bozza' AFTER meta_language;
-
-CREATE INDEX idx_wa_tpl_meta_name ON whatsapp_templates (meta_template_name);
+CALL migration_add_column('whatsapp_templates', 'meta_template_name', 'VARCHAR(200) NULL AFTER name');
+CALL migration_add_column('whatsapp_templates', 'meta_language', "VARCHAR(10) NOT NULL DEFAULT 'it' AFTER meta_template_name");
+CALL migration_add_column('whatsapp_templates', 'meta_status', "ENUM('bozza','in_revisione','approvato','rifiutato') NOT NULL DEFAULT 'bozza' AFTER meta_language");
+CALL migration_add_index('whatsapp_templates', 'idx_wa_tpl_meta_name', '`meta_template_name`');

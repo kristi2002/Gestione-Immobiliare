@@ -4,7 +4,7 @@
 -- vecchio nome significava che fra sei mesi qualcuno l'avrebbe letta come un
 -- residuo Twilio da ripulire. Stesso dato, nome onesto.
 
-ALTER TABLE whatsapp_messages CHANGE COLUMN twilio_sid external_id VARCHAR(64) NULL;
+CALL migration_rename_column('whatsapp_messages', 'twilio_sid', 'external_id', 'VARCHAR(64) NULL');
 
 -- Le credenziali Twilio non servono piu' a nessuno. Restassero in tabella,
 -- comparirebbero nei backup e nelle esportazioni come segreti ancora validi.

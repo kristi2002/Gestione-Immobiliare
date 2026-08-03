@@ -636,12 +636,56 @@ function mergeClients(PDO $db): void
     logActivity('update', 'client', $targetId,
         "Unione proprietari: #{$sourceId} → #{$targetId}" . ($summary ? ' (' . implode(', ', $summary) . ')' : ''));
 
+    $constraintCreated = tryCreateClientCfUniqueIndex($db);
+
     apiSuccess([
         'target_id' => $targetId,
         'source_id' => $sourceId,
         'moved'     => $moved,
-        'message'   => 'Proprietari uniti. Il duplicato #' . $sourceId . ' è stato archiviato.',
+        'cf_unique_constraint_created' => $constraintCreated,
+        'message'   => 'Proprietari uniti. Il duplicato #' . $sourceId . ' è stato archiviato.'
+            . ($constraintCreated ? ' Non ci sono più codici fiscali duplicati: il vincolo di unicità è stato attivato.' : ''),
     ]);
+}
+
+/**
+ * Crea uq_clients_cf se ora e' possibile.
+ *
+ * phase67 crea quel vincolo solo quando non esistono gia' duplicati; se ce
+ * n'era anche una coppia sola — lo scenario noto: import CSV senza codice
+ * fiscale e riallineamento successivo — la migrazione salta il vincolo e si
+ * registra come applicata. Nessuna migrazione futura ci riprova, e l'unicita'
+ * non arriva mai, nemmeno dopo aver ripulito i duplicati.
+ *
+ * Unire due proprietari e' esattamente il momento in cui la condizione puo'
+ * essersi appena avverata: si riprova qui, e alla prima unione che azzera i
+ * duplicati il vincolo compare da solo. Non lancia mai: l'unione e' gia'
+ * riuscita e non deve fallire per questo.
+ */
+function tryCreateClientCfUniqueIndex(PDO $db): bool
+{
+    try {
+        $exists = (int) $db->query(
+            "SELECT COUNT(*) FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND INDEX_NAME = 'uq_clients_cf'"
+        )->fetchColumn();
+        if ($exists > 0) return false;
+
+        $dupes = (int) $db->query(
+            "SELECT COUNT(*) FROM (
+                SELECT codice_fiscale FROM clients
+                 WHERE codice_fiscale IS NOT NULL AND codice_fiscale <> ''
+                 GROUP BY codice_fiscale HAVING COUNT(*) > 1) d"
+        )->fetchColumn();
+        if ($dupes > 0) return false;
+
+        $db->exec('ALTER TABLE clients ADD UNIQUE INDEX uq_clients_cf (codice_fiscale)');
+        logActivity('update', 'client', 0, 'Vincolo di unicità sul codice fiscale attivato dopo l\'unione dei duplicati');
+        return true;
+    } catch (Throwable $e) {
+        error_log('[clients] creazione uq_clients_cf non riuscita: ' . $e->getMessage());
+        return false;
+    }
 }
 
 function fetchClientById(PDO $db, int $id): ?array

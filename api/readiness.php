@@ -70,6 +70,38 @@ try {
     $add('migrations', 'warn', 'Impossibile verificare le migrazioni: ' . $e->getMessage());
 }
 
+// ── Unicità del codice fiscale dei proprietari ──────────────────────────────
+// phase67 crea uq_clients_cf solo se non ci sono gia' duplicati, altrimenti
+// salta e si registra come applicata: su un database che al momento della
+// migrazione aveva anche una sola coppia di CF ripetuti il vincolo non esiste,
+// nessuna migrazione futura ci riprova, e niente lo dice. Qui lo dice.
+try {
+    $hasIdx = (int) $db->query(
+        "SELECT COUNT(*) FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND INDEX_NAME = 'uq_clients_cf'"
+    )->fetchColumn();
+
+    if ($hasIdx > 0) {
+        $add('clients_cf_unique', 'ok', 'Vincolo di unicità sul codice fiscale dei proprietari attivo.');
+    } else {
+        $dupes = (int) $db->query(
+            "SELECT COUNT(*) FROM (
+                SELECT codice_fiscale FROM clients
+                 WHERE codice_fiscale IS NOT NULL AND codice_fiscale <> ''
+                 GROUP BY codice_fiscale HAVING COUNT(*) > 1) d"
+        )->fetchColumn();
+
+        $add('clients_cf_unique', 'warn', $dupes > 0
+            ? "Il codice fiscale dei proprietari NON è univoco: $dupes codici risultano duplicati. "
+              . 'Unisci i duplicati (Proprietari → Unisci duplicati): il vincolo viene creato da solo appena non ce ne sono più.'
+            : 'Il codice fiscale dei proprietari non ha un vincolo di unicità, ma non ci sono duplicati: '
+              . 'verrà creato alla prossima unione duplicati, oppure a mano con '
+              . 'ALTER TABLE clients ADD UNIQUE INDEX uq_clients_cf (codice_fiscale).');
+    }
+} catch (Throwable $e) {
+    $add('clients_cf_unique', 'warn', 'Impossibile verificare l\'unicità del codice fiscale: ' . $e->getMessage());
+}
+
 // ── Uploads: writable + sensitive tree denied ───────────────────────────────
 $root = dirname(__DIR__);
 $uplWritable = is_dir("$root/uploads") && is_writable("$root/uploads");
