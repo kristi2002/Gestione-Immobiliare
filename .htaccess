@@ -41,6 +41,13 @@ DirectoryIndex index.php
     RewriteRule ^scripts/ - [F,L]
     RewriteRule ^tests/ - [F,L]
     RewriteRule ^vendor/ - [F,L]
+    # docs/ non e' documentazione pubblica: e' la nostra. DEPLOY.md porta l'IP
+    # del server e "ssh root@", GAPS.md l'elenco di cosa non e' ancora a posto,
+    # 04-DATABASE-SCHEMA.md lo schema intero. Erano tutti raggiungibili perche'
+    # il "*.md" di .dockerignore non scende nelle sottocartelle e l'albero
+    # finiva nell'immagine. Quel glob e' stato corretto; questa riga e' la
+    # seconda serratura, per il giorno in cui un file .md rientra per altra via.
+    RewriteRule ^docs/ - [F,L]
     # Session jars, dumps and dependency manifests that have no business being
     # fetchable if one ever lands in the image.
     RewriteRule ^(cookies\.txt|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml)$ - [F,L]

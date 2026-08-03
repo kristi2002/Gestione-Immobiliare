@@ -10,7 +10,14 @@ mcps
 backups/*
 !backups/.gitkeep
 .setup_complete
+# "*.md" combacia SOLO con la radice del contesto: docs/deployment/DEPLOY.md,
+# docs/planning/GAPS.md e tutto il resto dell'albero entravano comunque
+# nell'immagine, dove Apache li serviva a chiunque (200, senza sessione) —
+# IP del VPS, "ssh root@", hostname interno del DB e l'elenco delle debolezze
+# note, offerti a chi passa. Ci vuole "**/*.md" perche' la regola scenda nelle
+# sottocartelle. Il README di radice resta, e' l'unico che ha senso spedire.
 *.md
+**/*.md
 !README.md
 node_modules
 assets/dist
