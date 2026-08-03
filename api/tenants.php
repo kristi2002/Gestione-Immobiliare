@@ -164,12 +164,7 @@ function createTenant(PDO $db): void
     if ($phone === '') {
         apiError('Il telefono è obbligatorio.');
     }
-    // CF obbligatorio per la registrazione del contratto (RLI). Validazione di
-    // formato volutamente permissiva (16 alfanumerici): scarta i refusi evidenti
-    // senza rifiutare codici insoliti/esteri.
-    if (!preg_match('/^[A-Z0-9]{16}$/', $cf)) {
-        apiError('Codice Fiscale non valido: sono richiesti 16 caratteri (obbligatorio per la registrazione del contratto).');
-    }
+    assertValidTenantCf($cf, $data);
 
     $propStmt = $db->prepare('SELECT client_id FROM properties WHERE id = :id');
     $propStmt->execute(['id' => $propertyId]);
@@ -231,9 +226,7 @@ function updateTenant(PDO $db, int $id): void
     // deve poter essere svuotato una volta impostato (serve per l'RLI).
     if (array_key_exists('codice_fiscale', $data)) {
         $cf = strtoupper(trim((string) $data['codice_fiscale']));
-        if (!preg_match('/^[A-Z0-9]{16}$/', $cf)) {
-            apiError('Codice Fiscale non valido: sono richiesti 16 caratteri.');
-        }
+        assertValidTenantCf($cf, $data);
         $data['codice_fiscale'] = $cf;
     }
     if (array_key_exists('phone', $data) && trim((string) $data['phone']) === '') {
@@ -336,6 +329,42 @@ function createOrUpdateLeaseContract(PDO $db, int $tenantId, int $propertyId, in
         ]);
     } catch (LeaseOverlapException $e) {
         apiError($e->getMessage(), 409);
+    }
+}
+
+/**
+ * Il codice fiscale del conduttore, obbligatorio per la registrazione del
+ * contratto (RLI).
+ *
+ * Una PERSONA FISICA ha 16 caratteri alfanumerici. Una persona GIURIDICA ha
+ * un codice fiscale numerico di 11 cifre, che di norma coincide con la partita
+ * IVA — alcune societa' ne hanno comunque uno a 16.
+ *
+ * Prima la regola era 16 caratteri e basta, su entrambe le vie: il modulo
+ * offriva "persona giuridica" (person_type e' una colonna vera, phase60) ma un
+ * conduttore societa' era impossibile da salvare. Offrire una scelta che poi
+ * si rifiuta e' peggio che non offrirla.
+ *
+ * La validazione resta volutamente permissiva sulla forma — scarta i refusi
+ * evidenti, non i codici insoliti o esteri.
+ */
+function assertValidTenantCf(string $cf, array $data): void
+{
+    $isCompany = trim((string) ($data['person_type'] ?? '')) === 'giuridica';
+
+    if ($isCompany) {
+        // 11 cifre (CF numerico / partita IVA) oppure 16 alfanumerici.
+        if (!preg_match('/^(\d{11}|[A-Z0-9]{16})$/', $cf)) {
+            apiError(
+                'Codice Fiscale non valido per una persona giuridica: '
+                . 'sono ammessi 11 cifre (codice fiscale o partita IVA) oppure 16 caratteri.'
+            );
+        }
+        return;
+    }
+
+    if (!preg_match('/^[A-Z0-9]{16}$/', $cf)) {
+        apiError('Codice Fiscale non valido: sono richiesti 16 caratteri (obbligatorio per la registrazione del contratto).');
     }
 }
 

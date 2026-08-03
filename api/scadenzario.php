@@ -155,7 +155,13 @@ function makeItem(string $type, string $label, ?string $subject, ?string $contex
     $severity = 'upcoming';
     if ($date) {
         $today = new DateTime('today');
-        $due   = DateTime::createFromFormat('Y-m-d', substr($date, 0, 10)) ?: $today;
+        // '!Y-m-d' azzera l'orario. Senza il '!', createFromFormat eredita
+        // l'ora CORRENTE: la scadenza di ieri finiva a ieri-alle-10:14, la
+        // differenza da mezzanotte di oggi era di poche ore e %a la tronca a 0.
+        // Risultato: una scadenza gia' passata risultava "0 giorni" e severita'
+        // 'soon' invece di 'overdue' — e ogni conteggio era sbagliato di un
+        // giorno. Proprio nella pagina che serve a sapere cosa e' in ritardo.
+        $due   = DateTime::createFromFormat('!Y-m-d', substr($date, 0, 10)) ?: $today;
         $days  = (int) $today->diff($due)->format('%r%a');
         if ($days < 0)       $severity = 'overdue';
         elseif ($days <= 30) $severity = 'soon';

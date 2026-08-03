@@ -29,6 +29,17 @@ if (!$viaCron && !(function_exists('isLoggedIn') && isLoggedIn())) {
     exit;
 }
 
+// Questa sonda racconta l'utente del database, lo stato delle migrazioni,
+// l'host SMTP e QUALI segreti sono impostati: e' una radiografia
+// dell'installazione, non un cruscotto operativo. Era leggibile da qualsiasi
+// ruolo collegato, `agent` e `readonly` compresi. Chi arriva col segreto del
+// cron passa lo stesso: li' non c'e' una sessione da interrogare.
+if (!$viaCron && function_exists('getCurrentRole') && getCurrentRole() !== 'super_admin') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Permesso negato: sezione riservata al super amministratore.']);
+    exit;
+}
+
 $isProd  = strtolower((string) env('APP_ENV', 'production')) === 'production';
 $checks   = [];
 $add = function (string $key, string $status, string $message) use (&$checks) {
