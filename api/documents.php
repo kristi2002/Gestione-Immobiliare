@@ -2,7 +2,9 @@
 /**
  * Documents API — upload, list, delete.
  *
- * GET    /api/documents.php                        — list (filters: search, doc_type, client_id, property_id)
+ * GET    /api/documents.php                        — list (filters: search, doc_type, client_id,
+ *                                                    property_id, contract_id, building_id,
+ *                                                    meter_reading_id, inventory_item_id, aml_record_id)
  * GET    /api/documents.php?id={id}              — single document metadata
  * POST   /api/documents.php                        — upload (multipart)
  * DELETE /api/documents.php?id={id}              — delete document + file
@@ -89,6 +91,7 @@ function listDocuments(PDO $db): void
     $buildingId = isset($_GET['building_id']) ? (int) $_GET['building_id'] : null;
     $readingId  = isset($_GET['meter_reading_id']) ? (int) $_GET['meter_reading_id'] : null;
     $inventoryItemId = isset($_GET['inventory_item_id']) ? (int) $_GET['inventory_item_id'] : null;
+    $amlRecordId = isset($_GET['aml_record_id']) ? (int) $_GET['aml_record_id'] : null;
 
     // Ereditarieta' condominiale (phase74): chiedendo i documenti di un immobile
     // si ricevono anche quelli caricati sull'edificio che lo contiene —
@@ -154,10 +157,14 @@ function listDocuments(PDO $db): void
             $dWhere .= ' AND d.inventory_item_id = :inventory_item_id';
             $dParams['inventory_item_id'] = $inventoryItemId;
         }
+        if ($amlRecordId) {
+            $dWhere .= ' AND d.aml_record_id = :aml_record_id';
+            $dParams['aml_record_id'] = $amlRecordId;
+        }
 
         $stmt = $db->prepare(
             "SELECT d.id, d.doc_type, d.title, d.client_id, d.property_id, d.contract_id, d.building_id,
-                    d.meter_reading_id, d.inventory_item_id,
+                    d.meter_reading_id, d.inventory_item_id, d.aml_record_id,
                     d.original_name, d.mime_type, d.file_size, d.notes, d.created_at,
                     c.name AS client_name, c.surname AS client_surname,
                     p.address AS property_address, p.city AS property_city,
@@ -209,8 +216,18 @@ function listDocuments(PDO $db): void
     }
 
     // ── Part 2: contracts (as virtual document entries) ───────────────────
+    //
+    // Un contratto sa rispondere solo a tre filtri: proprietario, immobile e se
+    // stesso. Gli altri legami di `documents` — edificio, lettura, articolo di
+    // inventario, pratica antiriciclaggio — un contratto non li ha proprio, e
+    // finora questo ramo li ignorava: chiedere i documenti di UNA pratica
+    // restituiva quel documento piu' l'intero archivio contratti, perche' la
+    // WHERE dei contratti non conteneva nessuna condizione che li escludesse.
+    // Se il filtro nomina un'entita' che un contratto non puo' avere, la
+    // risposta giusta e' "nessun contratto", non "tutti".
     $ctItems = [];
-    if ($docType === '' || $docType === 'contratto') {
+    $entityContractsCannotHave = $buildingId || $readingId || $inventoryItemId || $amlRecordId;
+    if (($docType === '' || $docType === 'contratto') && !$entityContractsCannotHave) {
         $cWhere  = 'WHERE 1=1';
         $cParams = [];
 
@@ -318,14 +335,15 @@ function uploadDocument(PDO $db): void
     $buildingId = !empty($_POST['building_id']) ? (int) $_POST['building_id'] : null;
     $readingId  = !empty($_POST['meter_reading_id']) ? (int) $_POST['meter_reading_id'] : null;
     $inventoryItemId = !empty($_POST['inventory_item_id']) ? (int) $_POST['inventory_item_id'] : null;
+    $amlRecordId = !empty($_POST['aml_record_id']) ? (int) $_POST['aml_record_id'] : null;
     $notes      = trim($_POST['notes'] ?? '') ?: null;
 
     if (!in_array($docType, DOC_TYPES, true)) {
         apiError('Tipo documento non valido.');
     }
 
-    if (!$clientId && !$propertyId && !$contractId && !$buildingId && !$readingId && !$inventoryItemId) {
-        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto, un edificio, una lettura o un articolo di inventario.');
+    if (!$clientId && !$propertyId && !$contractId && !$buildingId && !$readingId && !$inventoryItemId && !$amlRecordId) {
+        apiError('Associa il documento ad almeno un proprietario, un immobile, un contratto, un edificio, una lettura, un articolo di inventario o una pratica antiriciclaggio.');
     }
 
     if ($clientId && !clientExists($db, $clientId)) {
@@ -350,6 +368,10 @@ function uploadDocument(PDO $db): void
 
     if ($inventoryItemId && !inventoryItemExists($db, $inventoryItemId)) {
         apiError('Articolo di inventario non trovato.');
+    }
+
+    if ($amlRecordId && !amlRecordExists($db, $amlRecordId)) {
+        apiError('Pratica antiriciclaggio non trovata.');
     }
 
     // Un documento legato all'edificio E a una sua unita' non verrebbe ereditato
@@ -413,11 +435,11 @@ function uploadDocument(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO documents
             (doc_type, title, client_id, property_id, contract_id, building_id, meter_reading_id,
-             inventory_item_id, file_path,
+             inventory_item_id, aml_record_id, file_path,
              original_name, mime_type, file_size, notes)
          VALUES
             (:doc_type, :title, :client_id, :property_id, :contract_id, :building_id, :meter_reading_id,
-             :inventory_item_id, :file_path,
+             :inventory_item_id, :aml_record_id, :file_path,
              :original_name, :mime_type, :file_size, :notes)"
     );
     $stmt->execute([
@@ -429,6 +451,7 @@ function uploadDocument(PDO $db): void
         'building_id'      => $buildingId,
         'meter_reading_id' => $readingId,
         'inventory_item_id' => $inventoryItemId,
+        'aml_record_id' => $amlRecordId,
         'file_path'     => $relativePath,
         'original_name' => $file['name'],
         'mime_type'     => $mime,
@@ -501,6 +524,13 @@ function meterReadingExists(PDO $db, int $id): bool
 function inventoryItemExists(PDO $db, int $id): bool
 {
     $stmt = $db->prepare("SELECT id FROM property_inventory WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return (bool) $stmt->fetch();
+}
+
+function amlRecordExists(PDO $db, int $id): bool
+{
+    $stmt = $db->prepare("SELECT id FROM aml_records WHERE id = :id");
     $stmt->execute(['id' => $id]);
     return (bool) $stmt->fetch();
 }

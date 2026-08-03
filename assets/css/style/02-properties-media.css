@@ -254,6 +254,10 @@
     background: #eef4ff;
 }
 
+/* Righe che aprono una scheda. Il puntatore è l'unico segnale che la riga è
+   cliccabile; il percorso da tastiera resta il link dentro la prima cella. */
+.data-table tbody tr.row-clickable { cursor: pointer; }
+
 .data-table a {
     color: var(--color-primary);
     text-decoration: none;

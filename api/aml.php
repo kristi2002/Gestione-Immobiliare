@@ -78,7 +78,8 @@ function listAml(PDO $db): void
     $countSql = "SELECT COUNT(*) FROM aml_records a $where";
     $dataSql  = "SELECT a.*,
                     TRIM(CONCAT(COALESCE(c.name,''),' ',COALESCE(c.surname,''))) AS client_name,
-                    p.address AS property_address
+                    p.address AS property_address,
+                    (SELECT COUNT(*) FROM documents d WHERE d.aml_record_id = a.id) AS document_count
                  FROM aml_records a
                  LEFT JOIN clients c ON c.id = a.client_id
                  LEFT JOIN properties p ON p.id = a.property_id
@@ -117,7 +118,8 @@ function getAml(PDO $db, int $id): void
     $stmt = $db->prepare(
         "SELECT a.*,
                 TRIM(CONCAT(COALESCE(c.name,''),' ',COALESCE(c.surname,''))) AS client_name,
-                p.address AS property_address
+                p.address AS property_address,
+                (SELECT COUNT(*) FROM documents d WHERE d.aml_record_id = a.id) AS document_count
          FROM aml_records a
          LEFT JOIN clients c ON c.id = a.client_id
          LEFT JOIN properties p ON p.id = a.property_id
@@ -179,6 +181,23 @@ function updateAml(PDO $db, int $id): void
 function deleteAml(PDO $db, int $id): void
 {
     if (!amlExists($db, $id)) apiError('Pratica non trovata.', 404);
+
+    // La FK e' RESTRICT (phase94): senza questo controllo il DELETE morirebbe in
+    // un 1451 catturato piu' su come "Errore database", che non dice niente a
+    // chi sta guardando. Gli allegati di una pratica sono le copie dei documenti
+    // di identificazione: si staccano guardandoli, uno per uno, dalla scheda.
+    $stmt = $db->prepare('SELECT COUNT(*) FROM documents WHERE aml_record_id = :id');
+    $stmt->execute(['id' => $id]);
+    $docs = (int) $stmt->fetchColumn();
+    if ($docs > 0) {
+        apiError(
+            $docs === 1
+                ? 'La pratica ha 1 documento allegato: eliminalo dalla scheda prima di eliminare la pratica.'
+                : "La pratica ha $docs documenti allegati: eliminali dalla scheda prima di eliminare la pratica.",
+            409
+        );
+    }
+
     $db->prepare('DELETE FROM aml_records WHERE id = :id')->execute(['id' => $id]);
     logActivity('delete', 'aml', $id, 'Pratica antiriciclaggio eliminata #' . $id);
     apiSuccess(['id' => $id, 'message' => 'Pratica eliminata.']);

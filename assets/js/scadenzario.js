@@ -111,10 +111,10 @@
                 const view = b.dataset.view;
                 const id   = parseInt(b.dataset.id, 10);
                 // Deep-link into the specific record where a dedicated view exists;
-                // insurance/aml have no per-record view yet, so those still land
-                // on the list (same as before — not a regression, just not deep).
+                // insurance still has no per-record view, so it lands on the list.
                 if (view === 'contracts' && id) window.App.navigateTo('contract_edit', { contractId: id });
                 else if (view === 'properties' && id) window.App.navigateTo('property_profile', { propertyId: id });
+                else if (view === 'aml' && id) window.App.navigateTo('aml_profile', { amlId: id });
                 else window.App.navigateTo(view);
             });
         });

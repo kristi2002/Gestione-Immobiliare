@@ -12,7 +12,7 @@ $allowed = [
     'buildings', 'insurance', 'meters', 'suppliers', 'inventory', 'commissions', 'surveys', 'forecast',
     'maintenance_workflow', 'whatsapp_inbox', 'property_applications', 'client_profile', 'automations',
     'property_profile', 'agent_profile', 'client_edit', 'property_edit', 'tenant_profile', 'building_profile',
-    'aml', 'scadenzario', 'portal_sync', 'valuation',
+    'aml', 'aml_profile', 'scadenzario', 'portal_sync', 'valuation',
     'contract_edit', 'invoice_edit', 'lead_edit', 'tenant_edit', 'appointment_edit', 'expense_edit', 'payment_edit',
     'appointment_profile', 'entity_edit', 'account',
     'esign', 'payment_reminders',
