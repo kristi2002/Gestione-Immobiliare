@@ -51,11 +51,29 @@
         els.registryBody       = document.getElementById('meters-registry-tbody');
         els.registryPagination = document.getElementById('meters-registry-pagination');
         els.showInactive       = document.getElementById('meters-show-inactive');
+        els.registryTodo       = document.getElementById('meters-registry-todo');
 
         bindEvents();
         bindRowMenu();
         bindRegistry();
         loadProperties();
+        loadReadings();
+        loadRegistry();
+        loadRegistryTodo();
+    }
+
+    // I filtri in cima sono di TUTTA la pagina, non delle sole letture: cercare
+    // un POD o scegliere un immobile e vedere il censimento qui sotto restare su
+    // tutte e trecento le righe faceva sembrare rotto il collegamento fra le due
+    // tabelle. La riga da completare c'era, a pagina sette, e nessun filtro la
+    // avvicinava.
+    function hasFilters() {
+        return !!(els.search.value.trim() || els.propFilter.value || els.typeFilter.value);
+    }
+
+    function applyFilters() {
+        currentPage  = 1;
+        registryPage = 1;
         loadReadings();
         loadRegistry();
     }
@@ -72,6 +90,16 @@
             window.App.navigateTo('entity_edit', { entity: 'meters' });
         });
         els.showInactive?.addEventListener('change', () => { registryPage = 1; loadRegistry(); });
+
+        // Il pulsante dentro una cella vuota porta dove porta "Modifica": la
+        // scheda del contatore. Serve perche' il campo mancante e la strada per
+        // riempirlo devono stare nello stesso posto — chi guarda una colonna di
+        // trattini non ha modo di sapere che si compilano dal menu della riga.
+        els.registryBody?.addEventListener('click', e => {
+            const btn = e.target.closest('[data-fill]');
+            if (!btn) return;
+            window.App.navigateTo('entity_edit', { entity: 'meters', id: btn.dataset.fill });
+        });
 
         window.RowMenu.bind(els.registryBody, btn => {
             const active = btn.dataset.active === '1';
@@ -93,6 +121,14 @@
         const params = new URLSearchParams();
         // active=1 filtra i disattivati; senza il parametro li mostra tutti.
         if (!els.showInactive?.checked) params.set('active', '1');
+
+        // Stessi filtri della barra in cima: l'API li accetta gia' tutti e tre
+        // (search su codice, matricola, fornitore, ubicazione e indirizzo).
+        const search = els.search.value.trim();
+        if (search) params.set('search', search);
+        if (els.propFilter.value) params.set('property_id', els.propFilter.value);
+        if (els.typeFilter.value) params.set('meter_type', els.typeFilter.value);
+
         params.set('page', registryPage);
         params.set('limit', PAGE_LIMIT);
 
@@ -113,27 +149,58 @@
         }
     }
 
+    // Un campo del censimento che nessuno ha ancora compilato non e' un dato
+    // assente: e' una riga da finire. I contatori nati dal backfill dello storico
+    // letture hanno solo immobile e tipo — codice, fornitore e ubicazione
+    // arrivano tutti vuoti — quindi un trattino muto qui e' la regola, non
+    // l'eccezione, e non dice a chi guarda che quei campi si scrivono.
+    function fillCell(meterId, label) {
+        return `<button type="button" class="cell-fill" data-fill="${esc(meterId)}"
+                        title="Compila la scheda del contatore">+ ${esc(label)}</button>`;
+    }
+
     function renderRegistry(items) {
         if (!items.length) {
+            const msg = hasFilters()
+                ? 'Nessun contatore corrisponde ai filtri.'
+                : 'Nessun contatore censito.';
             els.registryBody.innerHTML =
-                '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Nessun contatore censito.</td></tr>';
+                `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">${msg}</td></tr>`;
             return;
         }
         els.registryBody.innerHTML = items.map(m => {
             const codeLabel = CODE_LABELS[m.meter_type] || 'Codice';
             const label     = `${TYPE_LABELS[m.meter_type] || m.meter_type} — ${m.code || m.serial_number || 'senza codice'}`;
             const active    = Number(m.is_active) === 1;
+            const supplier  = m.supplier_display || m.supplier_name;
+            // La citta' accanto all'indirizzo perche' due immobili con lo stesso
+            // civico in comuni diversi altrimenti sono la stessa riga.
+            const place     = [m.property_address, m.property_city].filter(Boolean).join(' · ');
             return `<tr${active ? '' : ' class="is-muted"'}>
-                <td>${esc(m.property_address || ('#' + m.property_id))}</td>
+                <td>${esc(place || ('#' + m.property_id))}</td>
                 <td>${esc(TYPE_LABELS[m.meter_type] || m.meter_type || '—')}</td>
-                <td>${m.code ? `<span class="text-muted">${esc(codeLabel)}</span> ${esc(m.code)}` : '<span class="text-muted">—</span>'}</td>
-                <td>${esc(m.supplier_display || m.supplier_name || '—')}</td>
-                <td>${esc(m.location || '—')}</td>
+                <td>${m.code ? `<span class="text-muted">${esc(codeLabel)}</span> ${esc(m.code)}` : fillCell(m.id, codeLabel)}</td>
+                <td>${supplier ? esc(supplier) : fillCell(m.id, 'Fornitore')}</td>
+                <td>${m.location ? esc(m.location) : fillCell(m.id, 'Ubicazione')}</td>
                 <td>${active ? '<span class="badge badge--success">Attivo</span>' : '<span class="badge">Disattivato</span>'}</td>
                 <td>${window.RowMenu.button(m.id, 'Azioni contatore', { active: active ? '1' : '0', label })}</td>
             </tr>`;
         }).join('');
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    // Quanti contatori sono ancora senza codice. Sta accanto al titolo di QUESTA
+    // tabella e non fra le KPI in cima, perche' parla delle celle vuote qui
+    // sotto, non delle letture.
+    async function loadRegistryTodo() {
+        if (!els.registryTodo) return;
+        try {
+            const json = await fetch(`${METER_API}?action=stats`).then(r => r.json());
+            if (!json.success) return;
+            const n = Number(json.data.no_code || 0);
+            els.registryTodo.textContent   = n ? `${n} senza codice` : '';
+            els.registryTodo.style.display = n ? '' : 'none';
+        } catch (e) { /* non-critical */ }
     }
 
     async function setMeterActive(id, active) {
@@ -186,9 +253,9 @@
         document.getElementById('meters-delete-confirm').addEventListener('click', confirmDelete);
         els.delModal.addEventListener('click', e => { if (e.target === els.delModal) closeDeleteModal(); });
 
-        els.search.addEventListener('input', debounce(() => { currentPage = 1; loadReadings(); }, 400));
-        els.propFilter.addEventListener('change', () => { currentPage = 1; loadReadings(); });
-        els.typeFilter.addEventListener('change', () => { currentPage = 1; loadReadings(); });
+        els.search.addEventListener('input', debounce(applyFilters, 400));
+        els.propFilter.addEventListener('change', applyFilters);
+        els.typeFilter.addEventListener('change', applyFilters);
 
         els.propSelect.addEventListener('change', () => loadMetersFor(els.propSelect.value));
         els.meterSel.addEventListener('change', syncNewMeterFields);
@@ -259,7 +326,12 @@
                 items.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.id;
-                    opt.textContent = p.address || p.title || `#${p.id}`;
+                    // Stessa etichetta delle altre tendine (lookups.js): col solo
+                    // indirizzo due immobili con lo stesso civico in comuni
+                    // diversi diventano due voci identiche, e la lettura finisce
+                    // sul contatore sbagliato senza che nulla lo segnali.
+                    opt.textContent = [p.reference_code, p.address, p.city].filter(Boolean).join(' — ')
+                        || p.title || `#${p.id}`;
                     sel.appendChild(opt);
                 });
             });
