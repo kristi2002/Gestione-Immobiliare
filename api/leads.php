@@ -14,6 +14,9 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/automation_events.php';
+// La locazione che nasce dalla conversione passa dalle stesse guardie del
+// modulo Contratti (doppia locazione, scadenzario, stato immobile).
+require_once __DIR__ . '/../lib/contract_lifecycle.php';
 
 apiHandleOptions();
 
@@ -392,44 +395,77 @@ function convertLeadToTenant(PDO $db, int $id): void
     $prop     = $ownerStmt->fetch();
     $clientId = (int) ($prop['client_id'] ?? 0);
 
+    // La doppia locazione si controlla PRIMA di creare l'inquilino: se
+    // l'immobile e' gia' occupato in quelle date la conversione non deve
+    // lasciare in anagrafica una persona senza contratto.
+    $conflict = leaseOverlapConflict($db, [
+        'contract_type' => 'locazione',
+        'status'        => 'signed',
+        'property_id'   => $propertyId,
+        'start_date'    => $leaseStart ?: null,
+        'end_date'      => $leaseEnd ?: null,
+    ]);
+    if ($conflict) {
+        apiError((new LeaseOverlapException($conflict))->getMessage(), 409);
+    }
+
     // A tenant is a PERSON: property + lease terms live in CONTRACTS, not on the
     // tenant row (those columns were dropped in phase26). Insert the tenant, then
     // create the lease as a contract — mirroring createTenant/createOrUpdateLeaseContract.
-    $insert = $db->prepare(
-        "INSERT INTO tenants (name, surname, email, phone, codice_fiscale, notes, status)
-         VALUES (:name, :surname, :email, :phone, :codice_fiscale, :notes, 'active')"
-    );
-    $insert->execute([
-        'name'           => $lead['name'],
-        'surname'        => $lead['surname'],
-        'email'          => $email,
-        'phone'          => $lead['phone'],
-        'codice_fiscale' => $lead['codice_fiscale'] ?? null,
-        'notes'          => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
-    ]);
-    $tenantId = (int) $db->lastInsertId();
-
+    //
+    // Tutto in una transazione: inquilino, contratto e lead marcato "convertito"
+    // sono un'unica operazione. Prima non lo erano, e un errore a meta' lasciava
+    // un inquilino orfano con il lead ancora aperto.
     $title = 'Locazione ' . ($prop ? $prop['address'] . ', ' . $prop['city'] : "immobile #$propertyId");
-    $db->prepare(
-        "INSERT INTO contracts
-            (property_id, tenant_id, client_id, title, contract_type, status, start_date, end_date, monthly_rent, created_by)
-         VALUES
-            (:property_id, :tenant_id, :client_id, :title, 'locazione', 'signed', :start_date, :end_date, :monthly_rent, :created_by)"
-    )->execute([
-        'property_id'  => $propertyId,
-        'tenant_id'    => $tenantId,
-        'client_id'    => $clientId,
-        'title'        => $title,
-        'start_date'   => $leaseStart,
-        'end_date'     => $leaseEnd,
-        'monthly_rent' => $monthlyRent,
-        'created_by'   => getCurrentAdminId() ?: null,
-    ]);
 
-    $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
+    $db->beginTransaction();
+    try {
+        $insert = $db->prepare(
+            "INSERT INTO tenants (name, surname, email, phone, codice_fiscale, notes, status)
+             VALUES (:name, :surname, :email, :phone, :codice_fiscale, :notes, 'active')"
+        );
+        $insert->execute([
+            'name'           => $lead['name'],
+            'surname'        => $lead['surname'],
+            'email'          => $email,
+            'phone'          => $lead['phone'],
+            'codice_fiscale' => $lead['codice_fiscale'] ?? null,
+            'notes'          => 'Convertito da lead #' . $id . ($lead['notes'] ? "\n" . $lead['notes'] : ''),
+        ]);
+        $tenantId = (int) $db->lastInsertId();
+
+        // Stesse guardie e stesse conseguenze del modulo Contratti: scadenzario
+        // generato e immobile portato ad "affittato" con ritiro dai portali.
+        $lease = contractCreateLease($db, [
+            'property_id'  => $propertyId,
+            'tenant_id'    => $tenantId,
+            'client_id'    => $clientId,
+            'title'        => $title,
+            'start_date'   => $leaseStart ?: null,
+            'end_date'     => $leaseEnd ?: null,
+            'monthly_rent' => $monthlyRent,
+            'created_by'   => getCurrentAdminId() ?: null,
+        ]);
+
+        $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
+        $db->commit();
+    } catch (LeaseOverlapException $e) {
+        $db->rollBack();
+        apiError($e->getMessage(), 409);
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+
     logActivity('create', 'tenant', $tenantId, 'Inquilino creato da lead #' . $id);
 
-    apiSuccess(['lead_id' => $id, 'tenant_id' => $tenantId, 'message' => 'Lead convertito in inquilino.']);
+    apiSuccess([
+        'lead_id'          => $id,
+        'tenant_id'        => $tenantId,
+        'contract_id'      => $lease['id'],
+        'payments_created' => $lease['payments_created'],
+        'message'          => 'Lead convertito in inquilino.',
+    ]);
 }
 
 function matchProperties(PDO $db, int $leadId): void

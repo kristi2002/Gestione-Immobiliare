@@ -13,6 +13,8 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/consent.php';
+// La locazione che nasce da qui passa dalle stesse guardie del modulo Contratti.
+require_once __DIR__ . '/../lib/contract_lifecycle.php';
 
 apiHandleOptions();
 requireViewAccess('tenants');
@@ -176,6 +178,11 @@ function createTenant(PDO $db): void
         apiError('Immobile non trovato.');
     }
 
+    // La doppia locazione si controlla PRIMA di scrivere l'inquilino: il
+    // contratto nasce poche righe piu' sotto, e rifiutarlo a quel punto
+    // lascerebbe in anagrafica una persona senza contratto.
+    assertLeaseFree($db, $propertyId, leaseTermsFromInput($data));
+
     $cols = [
         'name'    => $name,
         'surname' => $surname,
@@ -281,21 +288,30 @@ function updateTenant(PDO $db, int $id): void
  */
 function createOrUpdateLeaseContract(PDO $db, int $tenantId, int $propertyId, int $clientId, array $data): void
 {
-    $leaseStart = trim($data['lease_start'] ?? '') ?: null;
-    $leaseEnd   = trim($data['lease_end'] ?? '') ?: null;
-    $rent       = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? (float) $data['monthly_rent'] : null;
-
+    $terms   = leaseTermsFromInput($data);
     $current = getTenantCurrentContract($db, $tenantId);
 
     if ($current && (int) $current['property_id'] === $propertyId) {
+        // Stesso immobile: si stanno correggendo i termini di una locazione che
+        // esiste gia'. Il controllo di sovrapposizione esclude il contratto
+        // stesso, altrimenti si bloccherebbe da solo.
+        $contractId = (int) $current['contract_id'];
+        assertLeaseFree($db, $propertyId, $terms, $contractId);
+
         $db->prepare(
             'UPDATE contracts SET start_date = :start_date, end_date = :end_date, monthly_rent = :monthly_rent WHERE id = :id'
         )->execute([
-            'start_date'   => $leaseStart,
-            'end_date'     => $leaseEnd,
-            'monthly_rent' => $rent,
-            'id'           => $current['contract_id'],
+            'start_date'   => $terms['start_date'],
+            'end_date'     => $terms['end_date'],
+            'monthly_rent' => $terms['monthly_rent'],
+            'id'           => $contractId,
         ]);
+
+        // Prorogare la locazione da qui deve produrre le rate dei mesi aggiunti,
+        // come dal modulo Contratti: prima questa via spostava end_date e basta,
+        // e il canone dei mesi in piu' non veniva mai chiesto a nessuno.
+        autoGeneratePaymentSchedule($db, $contractId);
+        contractSyncOccupancyForContract($db, $contractId);
         return;
     }
 
@@ -304,21 +320,56 @@ function createOrUpdateLeaseContract(PDO $db, int $tenantId, int $propertyId, in
     $prop  = $propStmt->fetch();
     $title = 'Locazione ' . ($prop ? $prop['address'] . ', ' . $prop['city'] : "immobile #$propertyId");
 
-    $db->prepare(
-        "INSERT INTO contracts
-            (property_id, tenant_id, client_id, title, contract_type, status, start_date, end_date, monthly_rent, created_by)
-         VALUES
-            (:property_id, :tenant_id, :client_id, :title, 'locazione', 'signed', :start_date, :end_date, :monthly_rent, :created_by)"
-    )->execute([
-        'property_id'  => $propertyId,
-        'tenant_id'    => $tenantId,
-        'client_id'    => $clientId,
-        'title'        => $title,
-        'start_date'   => $leaseStart,
-        'end_date'     => $leaseEnd,
-        'monthly_rent' => $rent,
-        'created_by'   => getCurrentAdminId() ?: null,
-    ]);
+    // Passa dalle stesse guardie del modulo Contratti: doppia locazione
+    // rifiutata, scadenzario generato, immobile portato ad "affittato" e
+    // annunci ritirati dai portali.
+    try {
+        contractCreateLease($db, [
+            'property_id'  => $propertyId,
+            'tenant_id'    => $tenantId,
+            'client_id'    => $clientId,
+            'title'        => $title,
+            'start_date'   => $terms['start_date'],
+            'end_date'     => $terms['end_date'],
+            'monthly_rent' => $terms['monthly_rent'],
+            'created_by'   => getCurrentAdminId() ?: null,
+        ]);
+    } catch (LeaseOverlapException $e) {
+        apiError($e->getMessage(), 409);
+    }
+}
+
+/**
+ * Termini della locazione cosi' come li manda il modulo Inquilino.
+ *
+ * @return array{start_date:?string, end_date:?string, monthly_rent:?float}
+ */
+function leaseTermsFromInput(array $data): array
+{
+    return [
+        'start_date'   => trim($data['lease_start'] ?? '') ?: null,
+        'end_date'     => trim($data['lease_end'] ?? '') ?: null,
+        'monthly_rent' => isset($data['monthly_rent']) && $data['monthly_rent'] !== ''
+            ? (float) $data['monthly_rent'] : null,
+    ];
+}
+
+/**
+ * Rifiuta con 409 se l'immobile ha gia' una locazione in vigore su quelle date.
+ */
+function assertLeaseFree(PDO $db, int $propertyId, array $terms, ?int $excludeId = null): void
+{
+    $conflict = leaseOverlapConflict($db, [
+        'contract_type' => 'locazione',
+        'status'        => 'signed',
+        'property_id'   => $propertyId,
+        'start_date'    => $terms['start_date'],
+        'end_date'      => $terms['end_date'],
+    ], $excludeId);
+
+    if ($conflict) {
+        apiError((new LeaseOverlapException($conflict))->getMessage(), 409);
+    }
 }
 
 /**

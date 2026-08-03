@@ -10,6 +10,10 @@
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
+// Guardie e conseguenze della locazione (doppia prenotazione, scadenzario,
+// stato immobile): stanno nel lib perche' valgano anche per le locazioni che
+// nascono da "Nuovo Inquilino" e dalla conversione di un lead.
+require_once __DIR__ . '/../lib/contract_lifecycle.php';
 
 apiHandleOptions();
 requireViewAccess('contracts');
@@ -661,42 +665,12 @@ function validateContractInput(array $data): array
  */
 function assertNoOverlappingLease(PDO $db, array $v, ?int $excludeId = null): void
 {
-    $inForce = $v['status'] === null || $v['status'] === 'signed';
-    if ($v['contract_type'] !== 'locazione' || !$inForce || $v['start_date'] === null) {
-        return;
-    }
-
-    // Inclusive range overlap; a NULL end_date means open-ended (occupied forever).
-    $sql = "SELECT id, title, start_date, end_date
-              FROM contracts
-             WHERE property_id = :property_id
-               AND contract_type = 'locazione'
-               AND (status IS NULL OR status = 'signed')
-               AND start_date IS NOT NULL
-               AND (:new_end IS NULL OR start_date <= :new_end2)
-               AND (end_date IS NULL OR end_date >= :new_start)";
-    $params = [
-        'property_id' => $v['property_id'],
-        'new_end'     => $v['end_date'],
-        'new_end2'    => $v['end_date'],
-        'new_start'   => $v['start_date'],
-    ];
-    if ($excludeId !== null) {
-        $sql .= ' AND id <> :exclude_id';
-        $params['exclude_id'] = $excludeId;
-    }
-
-    $stmt = $db->prepare($sql . ' LIMIT 1');
-    $stmt->execute($params);
-    $conflict = $stmt->fetch();
-
+    // La query vive in lib/contract_lifecycle.php: qui si decide solo che un
+    // conflitto e' un 409. Il testo del messaggio sta nell'eccezione, cosi'
+    // l'agente legge la stessa frase anche entrando da Inquilini o da Lead.
+    $conflict = leaseOverlapConflict($db, $v, $excludeId);
     if ($conflict) {
-        $range = $conflict['start_date'] . ' → ' . ($conflict['end_date'] ?: 'aperto');
-        apiError(
-            "Doppia prenotazione: l'immobile ha già un contratto di locazione in vigore che si sovrappone alle date indicate "
-            . "(#{$conflict['id']} «{$conflict['title']}», {$range}). Modifica le date oppure annulla l'altro contratto.",
-            409
-        );
+        apiError((new LeaseOverlapException($conflict))->getMessage(), 409);
     }
 }
 
@@ -790,145 +764,6 @@ function syncPropertyOccupancy(PDO $db, int $contractId): void
     }
 }
 
-/**
- * Why a contract cannot have a rent schedule generated. Empty array = eligible.
- *
- * Shared by the manual "Genera scadenzario" button (which surfaces the reason to
- * the agent) and the automatic generation on save (which just stays quiet).
- *
- * @return string[]
- */
-function paymentScheduleBlockers(array $contract): array
-{
-    $blockers = [];
-    if (($contract['contract_type'] ?? '') !== 'locazione')
-        $blockers[] = 'La generazione dello scadenzario è disponibile solo per contratti di locazione.';
-    if (empty($contract['tenant_id']))
-        $blockers[] = 'Il contratto non ha un inquilino associato.';
-    if (empty($contract['monthly_rent']))
-        $blockers[] = 'Il contratto non ha un canone mensile.';
-    if (empty($contract['start_date']))
-        $blockers[] = 'Il contratto non ha una data di inizio.';
-    if (empty($contract['end_date']))
-        $blockers[] = 'Il contratto non ha una data di fine.';
-    return $blockers;
-}
-
-/**
- * A contract is "in force" when it is signed or left on Automatico (NULL status)
- * — the same rule the "Attivi" list filter uses. Drafts and cancelled contracts
- * must NOT auto-generate a schedule: that would fill the payments module with
- * rent rows for a lease nobody has signed yet.
- */
-function contractIsInForce(array $contract): bool
-{
-    $status = $contract['status'] ?? null;
-    return $status === null || $status === '' || $status === 'signed';
-}
-
-/**
- * Insert the full rent schedule for a contract.
- *
- * @return int rows created, or -1 when a schedule already exists (caller decides
- *             whether that is an error or a no-op).
- */
-function insertPaymentSchedule(PDO $db, array $contract): int
-{
-    $id = (int) $contract['id'];
-
-    // Run the whole generation inside a transaction and lock the contract row so
-    // two concurrent "genera scadenzario" requests can't both pass the guard and
-    // create a duplicate schedule.
-    $db->beginTransaction();
-    try {
-        // Re-read + lock the contract row.
-        $lock = $db->prepare("SELECT id FROM contracts WHERE id = :id FOR UPDATE");
-        $lock->execute(['id' => $id]);
-
-        // Uno scadenzario gia' presente non e' piu' un rifiuto secco: prorogare
-        // un contratto (spostare end_date, il caso piu' comune nella vita di una
-        // locazione) non produceva NESSUNA rata nuova e non c'era modo di
-        // rigenerarlo — il canone dei mesi aggiunti non veniva mai richiesto e il
-        // buco si scopriva a fine anno guardando i conti.
-        //
-        // Si aggiungono percio' solo le mensilita' FUORI dall'intervallo gia'
-        // coperto: prima della prima rata o dopo l'ultima. Le eventuali lacune
-        // interne restano intatte, perche' una rata cancellata a mano nel mezzo
-        // (un mese di comodato, un canone azzerato) e' una decisione dell'agenzia
-        // e non un buco da ricucire. Cosi' la seconda esecuzione su un contratto
-        // invariato continua a non creare nulla.
-        $rangeStmt = $db->prepare(
-            "SELECT MIN(due_date) AS first_due, MAX(due_date) AS last_due, COUNT(*) AS n
-               FROM payments WHERE contract_id = :cid"
-        );
-        $rangeStmt->execute(['cid' => $id]);
-        $existing = $rangeStmt->fetch();
-
-        $coveredFrom = ($existing && $existing['n'] > 0 && $existing['first_due'])
-            ? DateTime::createFromFormat('!Y-m-d', $existing['first_due']) : null;
-        $coveredTo   = ($existing && $existing['n'] > 0 && $existing['last_due'])
-            ? DateTime::createFromFormat('!Y-m-d', $existing['last_due']) : null;
-
-        $start = new DateTime($contract['start_date']);
-        $end   = new DateTime($contract['end_date']);
-        // Anchor on the lease start day-of-month; clamp to each month's length so
-        // an end-of-month start (e.g. the 31st) does NOT roll over into the next
-        // month. `DateTime::modify('+1 month')` overflows (Jan 31 -> Mar 3), which
-        // previously skipped/shifted months — this computes each due date directly.
-        $anchorDay  = (int) $start->format('j');
-        $monthStart = (clone $start)->modify('first day of this month');
-
-        $insert = $db->prepare(
-            "INSERT INTO payments (contract_id, tenant_id, property_id, amount, due_date, status)
-             VALUES (:contract_id, :tenant_id, :property_id, :amount, :due_date, 'pending')"
-        );
-
-        $count = 0;
-        for ($i = 0; ; $i++) {
-            $month       = (clone $monthStart)->modify("+$i month");
-            $daysInMonth = (int) $month->format('t');
-            $day         = min($anchorDay, $daysInMonth);
-            // '!Y-m-d' resets the time to 00:00:00 (createFromFormat otherwise
-            // inherits the current time-of-day, which would push an end-date match
-            // past `end` and drop the final payment).
-            $due         = DateTime::createFromFormat('!Y-m-d', $month->format('Y-m-') . sprintf('%02d', $day));
-
-            if ($due < $start || $due > $end) {
-                // Before the lease start (only possible at i=0 if start day was clamped
-                // upward, which cannot happen) or past the end — stop.
-                if ($due > $end) break;
-                continue;
-            }
-
-            // Gia' dentro il tratto coperto: non si tocca (vedi sopra).
-            if ($coveredFrom && $coveredTo && $due >= $coveredFrom && $due <= $coveredTo) {
-                continue;
-            }
-
-            $insert->execute([
-                'contract_id' => $id,
-                'tenant_id'   => $contract['tenant_id'],
-                'property_id' => $contract['property_id'],
-                'amount'      => $contract['monthly_rent'],
-                'due_date'    => $due->format('Y-m-d'),
-            ]);
-            $count++;
-
-            // Safety valve: a lease longer than 50 years is certainly bad data.
-            if ($i > 600) break;
-        }
-
-        $db->commit();
-    } catch (Throwable $e) {
-        if ($db->inTransaction()) {
-            $db->rollBack();
-        }
-        throw $e;
-    }
-
-    return $count;
-}
-
 function generatePayments(PDO $db, int $id): void
 {
     $stmt = $db->prepare("SELECT * FROM contracts WHERE id = :id");
@@ -958,39 +793,6 @@ function generatePayments(PDO $db, int $id): void
         'payments_created' => $count,
         'message'          => $count === 1 ? '1 rata aggiunta.' : "$count rate create.",
     ]);
-}
-
-/**
- * Generate the rent schedule automatically when a lease is saved in force.
- *
- * Before this, a contract saved without clicking "Genera scadenzario" was
- * invisible to the entire payments module — no rows, no KPI contribution, no
- * overdue reminders. Silent by design: an ineligible or already-scheduled
- * contract is simply skipped, and a failure here must never take down the save
- * the agent actually asked for.
- *
- * @return int rows created (0 when skipped)
- */
-function autoGeneratePaymentSchedule(PDO $db, int $id): int
-{
-    try {
-        $stmt = $db->prepare("SELECT * FROM contracts WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        $contract = $stmt->fetch();
-
-        if (!$contract) return 0;
-        if (!contractIsInForce($contract)) return 0;
-        if (paymentScheduleBlockers($contract)) return 0;
-
-        $count = insertPaymentSchedule($db, $contract);
-        if ($count > 0) {
-            logActivity('create', 'contract', $id, "Scadenzario generato automaticamente: $count pagamenti per contratto #$id");
-        }
-        return max(0, $count);
-    } catch (Throwable $e) {
-        error_log('autoGeneratePaymentSchedule failed for contract #' . $id . ': ' . $e->getMessage());
-        return 0;
-    }
 }
 
 function contractExists(PDO $db, int $id): bool
