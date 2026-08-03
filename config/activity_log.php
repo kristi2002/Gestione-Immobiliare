@@ -21,7 +21,11 @@
 if (!function_exists('logActivity')) {
 function logActivity(string $action, ?string $entityType = null, ?int $entityId = null, ?string $description = null): void
 {
-    static $allowed = ['create', 'update', 'delete', 'login', 'logout'];
+    // 'login_failed' (phase97): senza di lui i tentativi a vuoto non lasciavano
+    // traccia, cioe' proprio la meta' che serve per accorgersi di qualcuno che
+    // sta provando password. Un'azione fuori da questo elenco viene scartata in
+    // SILENZIO, quindi la lista va tenuta allineata all'enum della colonna.
+    static $allowed = ['create', 'update', 'delete', 'login', 'logout', 'login_failed'];
     if (!in_array($action, $allowed, true)) {
         return;
     }

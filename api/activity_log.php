@@ -12,7 +12,7 @@ apiHandleOptions();
 apiRequireMethod('GET');
 requireRole('super_admin');
 
-const LOG_ACTIONS  = ['create', 'update', 'delete', 'login', 'logout'];
+const LOG_ACTIONS  = ['create', 'update', 'delete', 'login', 'logout', 'login_failed'];
 const LOG_PER_PAGE = 50;
 
 try {

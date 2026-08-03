@@ -217,6 +217,22 @@ function attemptLoginStep(string $username, string $password): string
     $user = $stmt->fetch();
 
     if (!$user || !(int) $user['is_active'] || !password_verify($password, $user['password_hash'])) {
+        // Il registro attivita' annotava gli accessi RIUSCITI e non quelli
+        // falliti: cioe' proprio la meta' che serve per accorgersi di qualcuno
+        // che sta provando password. Il blocco a 5 tentativi scattava, ma in
+        // silenzio, e nessuna schermata poteva raccontarlo dopo.
+        //
+        // Si registra il nome TENTATO, non un utente: puo' benissimo non
+        // esistere. E non si distingue "utente inesistente" da "password
+        // sbagliata" da "utenza disattivata" — la differenza servirebbe solo a
+        // chi sta cercando di indovinare quali utenze esistono.
+        require_once __DIR__ . '/activity_log.php';
+        logActivity(
+            'login_failed',
+            'admin_user',
+            $user ? (int) $user['id'] : null,
+            'Accesso fallito per: ' . mb_substr($username, 0, 100)
+        );
         return 'fail';
     }
 
