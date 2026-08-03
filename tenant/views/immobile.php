@@ -88,6 +88,132 @@
             </div>
         <?php endif; ?>
 
+        <?php if (!empty($appointments)): ?>
+            <div class="card">
+                <div class="tp-card__head">
+                    <?= tIcon('calendar-days', 'tp-card__ico') ?>
+                    <h3 class="tp-card__title">Appuntamenti</h3>
+                </div>
+                <ul class="tp-reqlist">
+                    <?php foreach ($appointments as $a): ?>
+                        <?php
+                        $ts     = strtotime((string) $a['appointment_date']);
+                        $future = $ts >= time();
+                        ?>
+                        <li class="tp-appt<?= $future ? ' is-next' : '' ?>">
+                            <div class="tp-appt__when">
+                                <span class="tp-appt__day"><?= date('d', $ts) ?></span>
+                                <span class="tp-appt__mon"><?= strtoupper(date('M', $ts)) ?></span>
+                            </div>
+                            <div class="tp-appt__body">
+                                <div class="tp-appt__t">
+                                    <?= tEsc(TENANT_APPT_TYPES[$a['appointment_type']] ?? $a['appointment_type']) ?>
+                                </div>
+                                <div class="tp-appt__meta">
+                                    <?= date('H:i', $ts) ?>
+                                    <?= $a['duration_minutes'] ? ' · ' . (int) $a['duration_minutes'] . ' min' : '' ?>
+                                    · <?= tEsc(TENANT_APPT_PLACES[$a['location_type']] ?? $a['location_type']) ?>
+                                </div>
+                                <?php if (!empty($a['location_detail'])): ?>
+                                    <div class="tp-appt__meta"><?= tEsc($a['location_detail']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($a['status'] === 'completed'): ?>
+                                <span class="badge badge--muted">Concluso</span>
+                            <?php elseif ($future): ?>
+                                <span class="badge badge--info">In programma</span>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <p class="tp-note">
+                    <?= tIcon('info', 'tp-note__ico') ?>
+                    Per chiedere o spostare un appuntamento scrivi dalla scheda Assistenza,
+                    scegliendo «Appuntamento».
+                </p>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($meters)): ?>
+            <div class="card">
+                <div class="tp-card__head">
+                    <?= tIcon('gauge', 'tp-card__ico') ?>
+                    <h3 class="tp-card__title">Contatori</h3>
+                </div>
+                <p class="tp-card__sub">
+                    Puoi comunicare tu la lettura: l'agenzia la verifica prima di usarla.
+                </p>
+
+                <div id="tp-reading-alert" class="alert" hidden></div>
+
+                <ul class="tp-meterlist">
+                    <?php foreach ($meters as $m): ?>
+                        <?php [$mLabel, $mIcon] = TENANT_METER_TYPES[$m['meter_type']] ?? ['Contatore', 'gauge']; ?>
+                        <li class="tp-meter">
+                            <span class="tp-meter__ico"><?= tIcon($mIcon) ?></span>
+                            <div class="tp-meter__body">
+                                <div class="tp-meter__t">
+                                    <?= tEsc($mLabel) ?>
+                                    <?php if ($m['code'] || $m['serial_number']): ?>
+                                        <small class="tp-meter__code"><?= tEsc($m['code'] ?: $m['serial_number']) ?></small>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="tp-meter__meta">
+                                    <?php if ($m['last_reading'] !== null): ?>
+                                        Ultima: <strong><?= tEsc(tNum($m['last_reading'])) ?></strong>
+                                        del <?= tDate($m['last_date']) ?>
+                                        <?= $m['last_source'] === 'tenant' ? ' (tua)' : '' ?>
+                                    <?php else: ?>
+                                        Nessuna lettura registrata
+                                    <?php endif; ?>
+                                </div>
+                                <?php if (!empty($m['pending'])): ?>
+                                    <div class="tp-meter__pending">
+                                        <?= tIcon('clock', 'tp-note__ico') ?>
+                                        Hai inviato <strong><?= tEsc(tNum($m['pending']['reading_value'])) ?></strong>
+                                        il <?= tDate($m['pending']['reading_date']) ?>: in attesa di verifica.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <button type="button" class="btn btn--outline btn--sm tp-meter__send"
+                                    data-meter="<?= (int) $m['id'] ?>"
+                                    data-label="<?= tEsc($mLabel) ?>">Invia lettura</button>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($inventories)): ?>
+            <div class="card">
+                <div class="tp-card__head">
+                    <?= tIcon('clipboard-list', 'tp-card__ico') ?>
+                    <h3 class="tp-card__title">Verbali di consegna</h3>
+                </div>
+                <ul class="tp-doclist">
+                    <?php foreach ($inventories as $inv): ?>
+                        <li class="tp-doc">
+                            <span class="tp-doc__ico"><?= tIcon('clipboard-check') ?></span>
+                            <div class="tp-doc__body">
+                                <div class="tp-doc__name">
+                                    <?= $inv['phase'] === 'check_in' ? 'Verbale di consegna' : 'Verbale di riconsegna' ?>
+                                </div>
+                                <div class="tp-doc__meta">
+                                    <?= tDate($inv['snapshot_date']) ?> · <?= (int) $inv['item_count'] ?> voci
+                                </div>
+                            </div>
+                            <?php if ($inv['document_id']): ?>
+                                <a class="tp-doc__get"
+                                   href="../api/download_document.php?id=<?= (int) $inv['document_id'] ?>"
+                                   target="_blank" rel="noopener"
+                                   aria-label="Scarica il verbale"><?= tIcon('download') ?></a>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
+
         <?php if ($agencyPhone || $agencyEmail): ?>
             <div class="card">
                 <div class="tp-card__head">

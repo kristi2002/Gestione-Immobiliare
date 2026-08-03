@@ -5,8 +5,10 @@
  *
  * Access is scoped to the caller's identity:
  *   - Admin session  → any document (staff).
- *   - Tenant session → only documents on the tenant's current-contract property,
- *                      or documents linked to that property's owner (client).
+ *   - Tenant session → only documents on the tenant's current-contract property
+ *                      (ristretti per tipo), sul proprio contratto, o allegati a
+ *                      una propria richiesta. NON quelli del proprietario: vedi
+ *                      la nota nel ramo inquilino, e' una fuga gia' avvenuta.
  *   - Owner session  → only documents linked to the owner (client), or to a
  *                      property the owner owns.
  * A logged-in tenant/owner requesting another account's document gets 404
@@ -94,14 +96,28 @@ try {
         // fosse piu' largo, il documento non comparirebbe in elenco ma sarebbe
         // comunque scaricabile indovinando l'id. Un solo punto di verita':
         // config/portal_documents.php.
+        // Terzo ramo (phase98): le foto che l'inquilino ha allegato alle PROPRIE
+        // richieste. Non hanno ne' property_id ne' contract_id — sono agganciate
+        // alla segnalazione — quindi senza questo non sarebbero scaricabili
+        // nemmeno da chi le ha caricate. Il filtro passa comunque da `reminders`
+        // con `tenant_id`, cioe' resta il suo perimetro: la foto di una richiesta
+        // altrui non entra.
         $stmt = $db->prepare(
             "SELECT original_name, file_path, mime_type
                FROM documents
               WHERE id = :id
                 AND ( (property_id IS NOT NULL AND property_id = :pid AND " . tenantPropertyDocTypesSql() . ")
-                   OR (contract_id IS NOT NULL AND contract_id = :cid) )"
+                   OR (contract_id IS NOT NULL AND contract_id = :cid)
+                   OR (reminder_id IS NOT NULL AND reminder_id IN (
+                           SELECT r.id FROM reminders r
+                            WHERE r.tenant_id = :tid AND r.request_type IS NOT NULL)) )"
         );
-        $stmt->execute(['id' => $id, 'pid' => $tenantPropId, 'cid' => $tenantContractId]);
+        $stmt->execute([
+            'id'  => $id,
+            'pid' => $tenantPropId,
+            'cid' => $tenantContractId,
+            'tid' => $tenantId,
+        ]);
 
     } else { // owner portal
         $stmt = $db->prepare(

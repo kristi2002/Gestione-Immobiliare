@@ -15,7 +15,7 @@
 export const SECTIONS = ['immobile', 'contratto', 'pagamenti', 'documenti', 'assistenza', 'account'];
 
 export const SECTION_TITLES = {
-    immobile: 'Il mio immobile',
+    immobile: 'La mia casa',
     contratto: 'Contratto',
     pagamenti: 'Pagamenti',
     documenti: 'Documenti',

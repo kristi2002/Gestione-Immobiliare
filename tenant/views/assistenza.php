@@ -12,10 +12,11 @@
  * Attese: $requests (insieme impaginato), $agencyPhone, $agencyEmail.
  */
 $types = [
-    ['key' => 'maintenance', 'icon' => 'wrench',        'label' => 'Manutenzione'],
-    ['key' => 'document',    'icon' => 'file-text',     'label' => 'Documento'],
-    ['key' => 'info',        'icon' => 'circle-help',   'label' => 'Informazioni'],
-    ['key' => 'other',       'icon' => 'message-circle','label' => 'Altro'],
+    ['key' => 'maintenance', 'icon' => 'wrench',         'label' => 'Manutenzione'],
+    ['key' => 'document',    'icon' => 'file-text',      'label' => 'Documento'],
+    ['key' => 'appointment', 'icon' => 'calendar-plus',  'label' => 'Appuntamento'],
+    ['key' => 'info',        'icon' => 'circle-help',    'label' => 'Informazioni'],
+    ['key' => 'other',       'icon' => 'message-circle', 'label' => 'Altro'],
 ];
 ?>
 <div class="tp-section" id="tp-section-assistenza" role="tabpanel" aria-labelledby="tp-tab-assistenza">
@@ -96,16 +97,87 @@ $types = [
                             <?php if (trim((string) $body) !== ''): ?>
                                 <p class="tp-req__body"><?= nl2br(tEsc(trim($body))) ?></p>
                             <?php endif; ?>
+                            <?php if (!empty($r['photos'])): ?>
+                                <div class="tp-req__photos">
+                                    <?php foreach ($r['photos'] as $ph): ?>
+                                        <a class="tp-chip"
+                                           href="../api/download_document.php?id=<?= (int) $ph['id'] ?>"
+                                           target="_blank" rel="noopener">
+                                            <?= tIcon('paperclip', 'tp-chip__ico') ?>
+                                            <span><?= tEsc($ph['original_name'] ?: 'foto') ?></span>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (trim((string) ($r['reply_text'] ?? '')) !== ''): ?>
+                                <div class="tp-reply">
+                                    <div class="tp-reply__head">
+                                        <?= tIcon('corner-down-right', 'tp-reply__ico') ?>
+                                        Risposta dell'agenzia
+                                        <?php if ($r['replied_at']): ?>
+                                            <span class="tp-reply__when">· <?= tDate($r['replied_at']) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <p class="tp-reply__body"><?= nl2br(tEsc(trim((string) $r['reply_text']))) ?></p>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="tp-req__meta">
                                 Inviata il <?= tDate($r['created_at']) ?>
                                 <?php if ($r['updated_at'] && substr((string) $r['updated_at'], 0, 10) !== substr((string) $r['created_at'], 0, 10)): ?>
                                     · aggiornata il <?= tDate($r['updated_at']) ?>
+                                <?php endif; ?>
+                                <?php if ($r['status'] !== 'cancelled' && !in_array($r['maintenance_status'], ['completata','chiusa'], true)): ?>
+                                    <button type="button" class="tp-req__attach" data-attach="<?= (int) $r['id'] ?>">
+                                        <?= tIcon('image-plus', 'tp-chip__ico') ?> Allega una foto
+                                    </button>
                                 <?php endif; ?>
                             </div>
                         </li>
                     <?php endforeach; ?>
                 </ul>
                 <?= tPager($requests, 'req', 'assistenza') ?>
+            <?php endif; ?>
+        </div>
+
+        <div class="card">
+            <div class="tp-card__head">
+                <?= tIcon('messages-square', 'tp-card__ico') ?>
+                <h3 class="tp-card__title">Messaggi con l'agenzia</h3>
+            </div>
+            <p class="tp-card__sub">
+                Per due parole veloci. Per un problema da tracciare usa il modulo qui sopra.
+            </p>
+
+            <div id="tp-msg-alert" class="alert" hidden></div>
+
+            <form id="tp-msg-form" novalidate>
+                <div class="form-group">
+                    <label for="tp-msg-body" class="tp-sr-only">Messaggio</label>
+                    <textarea id="tp-msg-body" class="form-textarea" rows="3" maxlength="4000"
+                              placeholder="Scrivi un messaggio…"></textarea>
+                </div>
+                <button type="submit" class="btn btn--primary" id="tp-msg-send">Invia messaggio</button>
+            </form>
+
+            <?php if (empty($messages['rows'])): ?>
+                <?= tEmpty('messages-square', 'Nessun messaggio',
+                    'Qui resta traccia di quello che scrivi e di quello che ti rispondono.') ?>
+            <?php else: ?>
+                <ul class="tp-thread">
+                    <?php foreach ($messages['rows'] as $m): ?>
+                        <?php /* `received` = ricevuto DALL'AGENZIA, cioe' scritto dall'inquilino. */ ?>
+                        <li class="tp-msg tp-msg--<?= $m['direction'] === 'received' ? 'mine' : 'theirs' ?>">
+                            <div class="tp-msg__bubble"><?= nl2br(tEsc((string) $m['body'])) ?></div>
+                            <div class="tp-msg__meta">
+                                <?= $m['direction'] === 'received' ? 'Tu' : 'Agenzia' ?>
+                                · <?= tDate($m['created_at']) ?>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?= tPager($messages, 'msg', 'assistenza') ?>
             <?php endif; ?>
         </div>
 

@@ -93,6 +93,58 @@
         </div>
 
         <div class="card">
+            <div class="tp-card__head">
+                <?= tIcon('shield-check', 'tp-card__ico') ?>
+                <h3 class="tp-card__title">Privacy e dati personali</h3>
+            </div>
+            <p class="tp-card__sub">
+                Puoi chiedere una copia dei dati che l'agenzia tratta sul tuo conto, oppure
+                la loro cancellazione. La richiesta viene registrata e gestita dall'agenzia,
+                che risponde entro 30 giorni.
+            </p>
+
+            <div id="tp-privacy-alert" class="alert" hidden></div>
+
+            <?php
+            $pendingExport  = false;
+            $pendingErasure = false;
+            foreach ($privacy['exports'] as $e)  { if ($e['status'] === 'pending') $pendingExport = true; }
+            foreach ($privacy['erasures'] as $e) { if ($e['status'] === 'pending') $pendingErasure = true; }
+            ?>
+
+            <?php if ($pendingExport || $pendingErasure): ?>
+                <p class="tp-note">
+                    <?= tIcon('clock', 'tp-note__ico') ?>
+                    <?php if ($pendingExport && $pendingErasure): ?>
+                        Hai una richiesta di copia e una di cancellazione in corso.
+                    <?php elseif ($pendingExport): ?>
+                        Hai una richiesta di copia dei dati in corso.
+                    <?php else: ?>
+                        Hai una richiesta di cancellazione in corso.
+                    <?php endif; ?>
+                </p>
+            <?php endif; ?>
+
+            <div class="tp-privacy-actions">
+                <button type="button" class="btn btn--outline" data-privacy="export"
+                        <?= $pendingExport ? 'disabled' : '' ?>>
+                    <?= tIcon('download') ?> Chiedi una copia dei miei dati
+                </button>
+                <button type="button" class="btn btn--outline btn--danger-soft" data-privacy="erasure"
+                        <?= $pendingErasure ? 'disabled' : '' ?>>
+                    <?= tIcon('trash-2') ?> Chiedi la cancellazione
+                </button>
+            </div>
+
+            <p class="tp-note">
+                <?= tIcon('info', 'tp-note__ico') ?>
+                La cancellazione non può portarsi via i documenti che la legge obbliga a
+                conservare (per esempio le scritture contabili e il contratto registrato):
+                l'agenzia ti spiegherà cosa resta e perché.
+            </p>
+        </div>
+
+        <div class="card">
             <a href="logout.php" class="btn btn--outline tp-btn-block">
                 <?= tIcon('log-out') ?> Esci dal portale
             </a>

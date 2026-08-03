@@ -24,6 +24,30 @@ require_once __DIR__ . '/../../config/portal_documents.php';
 const TENANT_PAYMENTS_PER_PAGE = 12;
 const TENANT_DOCS_PER_PAGE     = 10;
 const TENANT_REQUESTS_PER_PAGE = 10;
+const TENANT_MESSAGES_PER_PAGE = 15;
+
+/** Tipi di contatore, con etichetta e icona. */
+const TENANT_METER_TYPES = [
+    'gas'         => ['Gas',          'flame'],
+    'electricity' => ['Elettricità',  'zap'],
+    'water'       => ['Acqua',        'droplet'],
+    'heating'     => ['Riscaldamento','thermometer'],
+];
+
+/** Tipi di appuntamento, come li chiama l'agenzia. */
+const TENANT_APPT_TYPES = [
+    'visita'       => 'Visita',
+    'acquisizione' => 'Sopralluogo',
+    'atto'         => 'Atto',
+    'chiamata'     => 'Chiamata',
+];
+
+/** Dove ci si vede. */
+const TENANT_APPT_PLACES = [
+    'immobile' => "Presso l'immobile",
+    'agenzia'  => 'In agenzia',
+    'virtuale' => 'Da remoto',
+];
 
 /** Etichette italiane degli stati di pagamento. */
 const TENANT_PAY_STATUS = [
@@ -37,14 +61,20 @@ const TENANT_PAY_STATUS = [
  * I tipi di richiesta che il portale sa creare (vedi api_maintenance.php).
  * Serve anche a rileggerle: le righe `reminders` SENZA `request_type` sono
  * promemoria interni dell'agenzia e non devono comparire all'inquilino.
+ *
+ * `appointment` si aggiunge in coda (phase98): chiedere un appuntamento passa
+ * dalla stessa tubatura di ogni altra richiesta — finisce in `reminders`, la
+ * bacheca dell'agenzia la vede insieme alle altre, e l'inquilino la ritrova
+ * nello storico con il suo avanzamento. Nessuna superficie nuova.
  */
-const TENANT_REQUEST_TYPES = ['maintenance', 'document', 'info', 'other'];
+const TENANT_REQUEST_TYPES = ['maintenance', 'document', 'info', 'appointment', 'other'];
 
 /** Etichette delle richieste, per tipo. */
 const TENANT_REQUEST_LABELS = [
     'maintenance' => 'Manutenzione',
     'document'    => 'Documento',
     'info'        => 'Informazioni',
+    'appointment' => 'Appuntamento',
     'other'       => 'Altro',
 ];
 
@@ -106,16 +136,218 @@ function loadTenantPortalData(PDO $db, int $tenantId, array $pages = []): array
     $contractId = (int) ($contract['contract_id'] ?? 0);
 
     return [
-        'tenant'    => $tenant,
-        'contract'  => $contract,
-        'lease'     => tenantLeaseDetail($db, $contractId, $tenantId),
-        'payments'  => tenantPayments($db, $tenantId, (int) ($pages['pay'] ?? 1)),
-        'upcoming'  => tenantUpcoming($db, $tenantId),
-        'totals'    => tenantPayTotals($db, $tenantId),
-        'documents' => tenantDocuments($db, $propertyId, $contractId, (int) ($pages['doc'] ?? 1)),
-        'requests'  => tenantRequests($db, $tenantId, (int) ($pages['req'] ?? 1)),
-        'surveys'   => tenantPendingSurveys($db, $tenantId),
+        'tenant'       => $tenant,
+        'contract'     => $contract,
+        'lease'        => tenantLeaseDetail($db, $contractId, $tenantId),
+        'payments'     => tenantPayments($db, $tenantId, (int) ($pages['pay'] ?? 1)),
+        'upcoming'     => tenantUpcoming($db, $tenantId),
+        'totals'       => tenantPayTotals($db, $tenantId),
+        'documents'    => tenantDocuments($db, $propertyId, $contractId, (int) ($pages['doc'] ?? 1)),
+        'requests'     => tenantRequests($db, $tenantId, (int) ($pages['req'] ?? 1)),
+        'surveys'      => tenantPendingSurveys($db, $tenantId),
+        'appointments' => tenantAppointments($db, $tenantId),
+        'meters'       => tenantMeters($db, $propertyId, $tenantId),
+        'inventories'  => tenantInventories($db, $contractId),
+        'signatures'   => tenantSignatures($db, $tenantId),
+        'messages'     => tenantMessages($db, $tenantId, (int) ($pages['msg'] ?? 1)),
+        'privacy'      => tenantPrivacyState($db, $tenantId),
     ];
+}
+
+/**
+ * Appuntamenti che riguardano l'inquilino.
+ *
+ * Filtro sul solo `tenant_id` (colonna nuova, phase98) e NON sull'immobile:
+ * sullo stesso immobile l'agenzia fissa anche visite di potenziali nuovi
+ * inquilini e sopralluoghi col proprietario. Mostrarli sarebbe dire a chi ci
+ * abita che la sua casa e' gia' in visita — un fatto che non gli spetta da qui.
+ */
+function tenantAppointments(PDO $db, int $tenantId): array
+{
+    $stmt = $db->prepare(
+        "SELECT a.id, a.appointment_type, a.appointment_date, a.duration_minutes,
+                a.location_type, a.location_detail, a.status, a.notes,
+                p.address AS property_address
+         FROM appointments a
+         LEFT JOIN properties p ON p.id = a.property_id
+         WHERE a.tenant_id = :tid AND a.status IN ('scheduled','completed')
+         ORDER BY (a.appointment_date >= NOW()) DESC, a.appointment_date ASC
+         LIMIT 10"
+    );
+    $stmt->execute(['tid' => $tenantId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Contatori dell'immobile, con l'ultima lettura di ciascuno.
+ *
+ * Il perimetro e' l'IMMOBILE: i contatori sono della casa, non della persona.
+ * L'inquilino puo' vederli e mandare la propria lettura; quella resta
+ * `verified_at IS NULL` finche' l'agenzia non la conferma — un'autolettura
+ * dichiarata non e' un numero su cui conguagliare.
+ */
+function tenantMeters(PDO $db, int $propertyId, int $tenantId): array
+{
+    if ($propertyId <= 0) return [];
+
+    $stmt = $db->prepare(
+        // `last_value` NON si puo' usare come alias: in MySQL 8 e' una funzione
+        // finestra riservata, e l'errore che restituisce (1064 su una riga che
+        // sembra corretta) non lo dice.
+        "SELECT m.id, m.meter_type, m.code, m.serial_number, m.location,
+                r.reading_value AS last_reading, r.reading_date AS last_date,
+                r.source AS last_source, r.verified_at AS last_verified
+         FROM meters m
+         LEFT JOIN meter_readings r
+                ON r.id = (SELECT r2.id FROM meter_readings r2
+                            WHERE r2.meter_id = m.id
+                            ORDER BY r2.reading_date DESC, r2.id DESC LIMIT 1)
+         WHERE m.property_id = :pid AND m.is_active = 1
+         ORDER BY m.meter_type"
+    );
+    $stmt->execute(['pid' => $propertyId]);
+    $meters = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Le autoletture ancora in attesa di conferma, per dire all'inquilino che
+    // la sua e' arrivata invece di lasciarlo nel dubbio.
+    $pend = $db->prepare(
+        "SELECT meter_id, reading_value, reading_date
+         FROM meter_readings
+         WHERE submitted_by_tenant_id = :tid AND verified_at IS NULL
+         ORDER BY reading_date DESC"
+    );
+    $pend->execute(['tid' => $tenantId]);
+    $pending = [];
+    foreach ($pend->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $pending[(int) $row['meter_id']] = $row;
+    }
+
+    foreach ($meters as &$m) {
+        $m['pending'] = $pending[(int) $m['id']] ?? null;
+    }
+    return $meters;
+}
+
+/**
+ * Verbali di consegna e riconsegna del PROPRIO contratto.
+ *
+ * Solo quelli bloccati (`locked`): una bozza e' un foglio ancora in mano
+ * all'agenzia, e mostrarla farebbe discutere su numeri non definitivi.
+ */
+function tenantInventories(PDO $db, int $contractId): array
+{
+    if ($contractId <= 0) return [];
+
+    $stmt = $db->prepare(
+        "SELECT s.id, s.phase, s.snapshot_date, s.notes, s.document_id, s.locked_at,
+                (SELECT COUNT(*) FROM inventory_snapshot_items i WHERE i.snapshot_id = s.id) AS item_count
+         FROM inventory_snapshots s
+         WHERE s.contract_id = :cid AND s.status = 'locked'
+         ORDER BY s.snapshot_date DESC"
+    );
+    $stmt->execute(['cid' => $contractId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Richieste di firma in attesa.
+ *
+ * Si filtra su `tenant_id` (colonna nuova, phase98) e non su `signer_email`:
+ * l'email e' un dato modificabile e due persone possono condividere una
+ * casella. Il link di firma resta quello a token gia' esistente — qui il
+ * portale si limita a dire che c'e' qualcosa da firmare, che prima si sapeva
+ * solo se l'email non era finita nello spam.
+ */
+function tenantSignatures(PDO $db, int $tenantId): array
+{
+    $stmt = $db->prepare(
+        "SELECT e.id, e.token, e.status, e.expires_at, e.created_at, e.signed_at,
+                d.title AS document_title, d.original_name
+         FROM esign_requests e
+         LEFT JOIN documents d ON d.id = e.document_id
+         WHERE e.tenant_id = :tid AND e.status = 'pending' AND e.expires_at > NOW()
+         ORDER BY e.created_at DESC"
+    );
+    $stmt->execute(['tid' => $tenantId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Il filo diretto con l'agenzia, impaginato.
+ *
+ * Perimetro sul solo `tenant_id`: `communications` porta anche `client_id`,
+ * che e' il PROPRIETARIO — filtrare per quello darebbe all'inquilino la
+ * corrispondenza del padrone di casa. E' lo stesso errore gia' costato una
+ * fuga sui documenti.
+ */
+function tenantMessages(PDO $db, int $tenantId, int $page): array
+{
+    $where = "tenant_id = :tid AND channel = 'portale'";
+
+    $totalStmt = $db->prepare("SELECT COUNT(*) FROM communications WHERE $where");
+    $totalStmt->execute(['tid' => $tenantId]);
+    $total = (int) $totalStmt->fetchColumn();
+
+    $p = tenantPage($page, $total, TENANT_MESSAGES_PER_PAGE);
+
+    $stmt = $db->prepare(
+        "SELECT id, direction, subject, body, created_at
+         FROM communications WHERE $where
+         ORDER BY created_at DESC, id DESC
+         LIMIT " . TENANT_MESSAGES_PER_PAGE . " OFFSET " . $p['offset']
+    );
+    $stmt->execute(['tid' => $tenantId]);
+
+    return ['rows' => $stmt->fetchAll(PDO::FETCH_ASSOC), 'total' => $total] + $p;
+}
+
+/**
+ * Stato delle richieste privacy gia' inoltrate.
+ *
+ * `data_export_requests` ed `erasure_requests` avevano gia' `subject_type`
+ * con il valore 'tenant': non serviva nessuna migrazione, mancava solo la
+ * porta dal lato dell'interessato.
+ */
+function tenantPrivacyState(PDO $db, int $tenantId): array
+{
+    $exp = $db->prepare(
+        "SELECT id, status, created_at, completed_at FROM data_export_requests
+         WHERE subject_type = 'tenant' AND subject_id = :tid
+         ORDER BY id DESC LIMIT 3"
+    );
+    $exp->execute(['tid' => $tenantId]);
+
+    $era = $db->prepare(
+        "SELECT id, status, created_at, processed_at FROM erasure_requests
+         WHERE subject_type = 'tenant' AND subject_id = :tid
+         ORDER BY id DESC LIMIT 3"
+    );
+    $era->execute(['tid' => $tenantId]);
+
+    return [
+        'exports'  => $exp->fetchAll(PDO::FETCH_ASSOC),
+        'erasures' => $era->fetchAll(PDO::FETCH_ASSOC),
+    ];
+}
+
+/** Le foto allegate a un insieme di richieste, raggruppate per richiesta. */
+function tenantRequestPhotos(PDO $db, array $reminderIds): array
+{
+    $ids = array_values(array_filter(array_map('intval', $reminderIds)));
+    if (!$ids) return [];
+
+    $in = implode(',', $ids);
+    $rows = $db->query(
+        "SELECT id, reminder_id, title, original_name, created_at
+         FROM documents WHERE reminder_id IN ($in)
+         ORDER BY created_at"
+    )->fetchAll(PDO::FETCH_ASSOC);
+
+    $out = [];
+    foreach ($rows as $r) {
+        $out[(int) $r['reminder_id']][] = $r;
+    }
+    return $out;
 }
 
 /**
@@ -263,15 +495,22 @@ function tenantRequests(PDO $db, int $tenantId, int $page): array
     $p = tenantPage($page, $total, TENANT_REQUESTS_PER_PAGE);
 
     $stmt = $db->prepare(
-        "SELECT id, title, description, request_type, maintenance_status, status,
-                created_at, updated_at
+        "SELECT id, title, description, reply_text, replied_at, request_type,
+                maintenance_status, status, created_at, updated_at
          FROM reminders WHERE $where
          ORDER BY created_at DESC, id DESC
          LIMIT " . TENANT_REQUESTS_PER_PAGE . " OFFSET " . $p['offset']
     );
     $stmt->execute(['tid' => $tenantId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    return ['rows' => $stmt->fetchAll(PDO::FETCH_ASSOC), 'total' => $total] + $p;
+    // Le foto allegate, in una query sola invece di una per riga.
+    $photos = tenantRequestPhotos($db, array_column($rows, 'id'));
+    foreach ($rows as &$r) {
+        $r['photos'] = $photos[(int) $r['id']] ?? [];
+    }
+
+    return ['rows' => $rows, 'total' => $total] + $p;
 }
 
 /**

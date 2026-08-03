@@ -44,9 +44,13 @@ if (!$tenant) {
 $input   = $parsed; // already decoded above (php://input is a one-shot stream)
 $subject = trim($input['subject'] ?? '');
 $message = trim($input['message'] ?? '');
-$type    = in_array($input['type'] ?? '', ['maintenance', 'document', 'info', 'other'])
-           ? $input['type']
-           : 'other';
+// La lista vive in lib/portal_data.php: qui si rilegge da li' invece di
+// ripeterla, o il giorno che se ne aggiunge una il modulo la offre e questo
+// endpoint la declassa a 'other' in silenzio.
+require_once __DIR__ . '/lib/portal_data.php';
+$type = in_array($input['type'] ?? '', TENANT_REQUEST_TYPES, true)
+        ? $input['type']
+        : 'other';
 
 if ($subject === '' || $message === '') {
     http_response_code(400);

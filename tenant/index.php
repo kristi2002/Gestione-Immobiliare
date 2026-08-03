@@ -38,17 +38,24 @@ $data = loadTenantPortalData($db, $tenantId, [
     'pay' => (int) ($_GET['pay'] ?? 1),
     'doc' => (int) ($_GET['doc'] ?? 1),
     'req' => (int) ($_GET['req'] ?? 1),
+    'msg' => (int) ($_GET['msg'] ?? 1),
 ]);
 
 // Estratte per le viste, che le leggono per nome.
-$tenant    = $data['tenant'];
-$lease     = $data['lease'];
-$payments  = $data['payments'];
-$upcoming  = $data['upcoming'];
-$totals    = $data['totals'];
-$documents = $data['documents'];
-$requests  = $data['requests'];
-$surveys   = $data['surveys'];
+$tenant       = $data['tenant'];
+$lease        = $data['lease'];
+$payments     = $data['payments'];
+$upcoming     = $data['upcoming'];
+$totals       = $data['totals'];
+$documents    = $data['documents'];
+$requests     = $data['requests'];
+$surveys      = $data['surveys'];
+$appointments = $data['appointments'];
+$meters       = $data['meters'];
+$inventories  = $data['inventories'];
+$signatures   = $data['signatures'];
+$messages     = $data['messages'];
+$privacy      = $data['privacy'];
 
 // I documenti del PROPRIO contratto, per la scheda Contratto. Sottoinsieme di
 // quelli gia' autorizzati: nessun perimetro nuovo, solo un filtro in memoria.
@@ -68,7 +75,7 @@ $agencyIban  = trim((string) getSetting('agency_iban'));
 
 /** Le voci di navigazione: una sola lista, usata da entrambe le barre. */
 $navItems = [
-    ['key' => 'immobile',   'icon' => 'building-2',     'label' => 'Immobile',   'long' => 'Il mio immobile'],
+    ['key' => 'immobile',   'icon' => 'house',          'label' => 'Casa',       'long' => 'La mia casa'],
     ['key' => 'contratto',  'icon' => 'file-signature', 'label' => 'Contratto',  'long' => 'Contratto'],
     ['key' => 'pagamenti',  'icon' => 'wallet',         'label' => 'Pagamenti',  'long' => 'Pagamenti'],
     ['key' => 'documenti',  'icon' => 'folder',         'label' => 'Documenti',  'long' => 'Documenti'],
@@ -85,7 +92,7 @@ $entryJs = __DIR__ . '/../assets/js/tenant_portal/index.js';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#06224F">
-    <title>Il mio immobile — Portale Inquilino</title>
+    <title>La mia casa — Portale Inquilino</title>
     <link rel="icon" type="image/png" href="../favicon.png">
     <link rel="apple-touch-icon" href="../favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -160,7 +167,7 @@ $entryJs = __DIR__ . '/../assets/js/tenant_portal/index.js';
                     <span class="tp-sidebar__brand-ico"><?= tIcon('home') ?></span>
                 <?php endif; ?>
             </span>
-            <h1 class="tp-topbar__title" id="tp-title">Il mio immobile</h1>
+            <h1 class="tp-topbar__title" id="tp-title">La mia casa</h1>
             <span class="tp-topbar__spacer"></span>
             <a href="#account" class="tp-topbar__acc" data-section="account"
                title="Il mio account" aria-label="Il mio account"><?= tIcon('user-round') ?></a>

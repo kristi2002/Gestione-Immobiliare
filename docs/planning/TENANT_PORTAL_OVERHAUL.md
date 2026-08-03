@@ -3,13 +3,16 @@
 > Deciso il 2026-08-03. Ambito approvato: **fasi 0 → 3 complete**, con la correzione
 > del tema estesa anche al **portale proprietario** (stesso identico difetto).
 >
-> **Stato: fase 0 fatta (346cdde), fase 1 fatta (40182a6), fase 2 fatta.**
-> Restano la fase 3 e due code della fase 2 rimandate di proposito, entrambe
-> perché aprono un perimetro nuovo e non vanno infilate di corsa:
-> l'**allegato foto** sulla richiesta (serve un endpoint di caricamento per
-> l'inquilino, cioè una superficie di scrittura nuova da progettare con la sua
-> verifica) e la **risposta scritta dell'agenzia** dentro la richiesta (in
-> `reminders` non esiste un campo per il testo di risposta: serve una migrazione).
+> **Stato: TUTTE le fasi fatte** — 0 (346cdde), 1 (40182a6), 2 (a53e923),
+> 3 (con la migrazione `phase98_tenant_portal_phase3.sql`). Comprese le due
+> code della fase 2: l'**allegato foto** sulla richiesta e la **risposta
+> scritta dell'agenzia**.
+>
+> Cosa resta, e non è codice del portale: l'agenzia deve poter *scrivere* la
+> risposta, *confermare* un'autolettura e *agganciare* un appuntamento a un
+> inquilino dalle proprie schede. Il portale legge e mostra quei campi — le
+> colonne esistono e sono verificate — ma l'interfaccia amministrativa che li
+> riempie va aggiunta lato admin, altrimenti restano vuoti per sempre.
 >
 > Stato di partenza rilevato leggendo il codice, non i documenti: `tenant/index.php`
 > era **un solo file da 516 righe**. Non esisteva `tenant/views/`, non esisteva un

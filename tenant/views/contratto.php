@@ -29,6 +29,26 @@ $CONTRACT_STATUS = [
 <div class="tp-section" id="tp-section-contratto" role="tabpanel" aria-labelledby="tp-tab-contratto">
     <div class="tp-stack">
 
+        <?php if (!empty($signatures)): ?>
+            <div class="card tp-invite">
+                <div class="tp-invite__ico"><?= tIcon('pen-line') ?></div>
+                <div class="tp-invite__body">
+                    <div class="tp-invite__t">
+                        <?= count($signatures) === 1 ? 'C\'è un documento da firmare' : 'Ci sono documenti da firmare' ?>
+                    </div>
+                    <p class="tp-invite__s">
+                        <?php foreach ($signatures as $s): ?>
+                            <?= tEsc($s['document_title'] ?: $s['original_name'] ?: 'Documento') ?>
+                            — entro il <?= tDate($s['expires_at']) ?><br>
+                        <?php endforeach; ?>
+                    </p>
+                </div>
+                <?php /* La pagina pubblica di firma e' /sign.php?token=… (vedi api/esign.php). */ ?>
+                <a class="btn btn--primary tp-invite__cta"
+                   href="../sign.php?token=<?= tEsc($signatures[0]['token']) ?>">Firma</a>
+            </div>
+        <?php endif; ?>
+
         <?php if (!$lease): ?>
             <div class="card">
                 <?= tEmpty('file-text', 'Nessun contratto disponibile',
