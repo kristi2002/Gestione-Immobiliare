@@ -247,7 +247,7 @@ Online enquiries from prospective tenants or buyers who filled in an application
 
 ### Comunicazioni (Communications)
 
-A chat-style inbox grouped by client. Tracks all email and WhatsApp messages sent to or received from each client. You can compose emails (via SMTP) or WhatsApp messages (via Twilio) directly, and manually log inbound messages.
+A chat-style inbox grouped by client. Tracks all email and WhatsApp messages sent to or received from each client. You can compose emails (via SMTP) or WhatsApp messages (via Meta Cloud API) directly, and manually log inbound messages.
 
 **Connects to:** Clients (conversation partner), WhatsApp templates, Email templates.
 
@@ -255,9 +255,9 @@ A chat-style inbox grouped by client. Tracks all email and WhatsApp messages sen
 
 ### WhatsApp Inbox
 
-A dedicated view for WhatsApp conversation threads — similar to Communications but focused on incoming messages from any phone number, not just registered clients. Shows full message history with timestamps and delivery status. Powered by Twilio.
+A dedicated view for WhatsApp conversation threads — similar to Communications but focused on incoming messages from any phone number, not just registered clients. Shows full message history with timestamps and delivery status. Powered by Meta Cloud API (gli stati di consegna arrivano dallo stesso webhook dei messaggi).
 
-**Connects to:** Clients / Tenants (by phone number, optional), Twilio (integration).
+**Connects to:** Clients / Tenants (by phone number, optional), Meta Cloud API (integration).
 
 ---
 
@@ -329,7 +329,7 @@ System-wide configuration. Organised into tabs:
 
 - **Branding** — agency name, tagline, logo, primary colour.
 - **Email (SMTP)** — outgoing mail server credentials, test button.
-- **WhatsApp** — Twilio credentials for WhatsApp messaging.
+- **WhatsApp** — credenziali Meta Cloud API (`META_WA_*`) e interruttore `whatsapp_enabled`.
 - **Backup** — S3-compatible cloud backup configuration.
 - **Social / Meta** — Facebook / Instagram OAuth connection.
 - **WhatsApp Templates** — reusable message templates with `{{variables}}`.
@@ -420,7 +420,7 @@ Reminder ──► Client (optional) + Property (optional) ──► Email notif
 Calendar ──reads──► Reminders
 
 Communications ──► Client (email / WhatsApp thread)
-WhatsApp Inbox ──► Any phone number (Twilio inbound)
+WhatsApp Inbox ──► Any phone number (inbound via webhook Meta)
 Automations    ──► Client (scheduled email)
 
 Social Posts ──► Property (photos) ──► Facebook / Instagram

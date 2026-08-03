@@ -406,6 +406,21 @@ function dispatchMessage(string $channel, array $client, ?string $subject, strin
 
     if ($channel === 'whatsapp') {
         require_once __DIR__ . '/../config/whatsapp.php';
+
+        // Stessa regola dell'Inbox: fuori dalla finestra di 24 ore Meta accetta
+        // solo un template approvato. Senza il controllo qui, un messaggio
+        // scritto da Comunicazioni parte, viene rifiutato da Meta e resta in
+        // archivio come 'failed' con un codice numerico al posto del motivo.
+        // Comunicazioni non ha (ancora) un selettore di template: si dice che
+        // serve l'Inbox, invece di far fallire l'invio in silenzio.
+        if (getWhatsAppConfig()['enabled'] && !waWindowState(getDB(), (string) $client['phone'])['open']) {
+            return [
+                'success' => false,
+                'error'   => 'Sono passate più di 24 ore dall\'ultimo messaggio del cliente: '
+                           . 'WhatsApp accetta solo un template approvato. Invialo dalla Inbox WhatsApp.',
+            ];
+        }
+
         return sendWhatsAppMessage($client['phone'], $body);
     }
 

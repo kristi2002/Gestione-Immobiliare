@@ -24,6 +24,7 @@
 
     function init() {
         els.alert      = document.getElementById('commissions-alert');
+        els.search     = document.getElementById('commission-search');
         els.tbody      = document.getElementById('commissions-tbody');
         els.pagination = document.getElementById('commissions-pagination');
         els.delModal   = document.getElementById('commissions-delete-modal');
@@ -46,6 +47,11 @@
         document.getElementById('commissions-delete-confirm').addEventListener('click', confirmDelete);
         els.delModal.addEventListener('click', e => { if (e.target === els.delModal) closeDeleteModal(); });
 
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(() => { currentPage = 1; loadCommissions(); }, 400);
+        });
+
         document.querySelectorAll('.comm-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.comm-tab').forEach(t => t.classList.remove('active'));
@@ -60,6 +66,7 @@
     async function loadCommissions() {
         const params = new URLSearchParams({ page: currentPage, limit: PAGE_LIMIT });
         if (statusFilter) params.set('status', statusFilter);
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
 
         softLoad(els.tbody, '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
 

@@ -105,8 +105,18 @@ function getSetting(string $key, ?string $default = null): ?string
         'smtp_user'        => 'SMTP_USER',
         'smtp_pass'        => 'SMTP_PASS',
         'smtp_secure'      => 'SMTP_SECURE',
+        // Senza questa riga la chiave restava irraggiungibile dall'ambiente: la
+        // posta in ENTRATA (route Mailgun -> api/email_inbound.php) rifiuta ogni
+        // richiesta non firmata in produzione, quindi impostarla su Coolify non
+        // aveva alcun effetto e l'acquisizione dei lead dai portali taceva.
+        'mailgun_webhook_key' => 'MAILGUN_WEBHOOK_KEY',
         'meta_app_id'      => 'META_APP_ID',
         'meta_app_secret'  => 'META_APP_SECRET',
+        // L'interruttore mancava mentre c'erano tutte le sue credenziali: si
+        // potevano configurare i cinque campi dall'ambiente e i messaggi
+        // restavano comunque "simulati", perche' l'unico modo di accenderlo era
+        // la pagina Impostazioni. Come mail_enabled, ora si accende anche da qui.
+        'whatsapp_enabled'        => 'WHATSAPP_ENABLED',
         'meta_wa_phone_number_id' => 'META_WA_PHONE_NUMBER_ID',
         'meta_wa_access_token'    => 'META_WA_ACCESS_TOKEN',
         'meta_wa_app_secret'      => 'META_WA_APP_SECRET',

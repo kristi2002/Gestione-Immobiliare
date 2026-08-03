@@ -181,6 +181,7 @@ function renderKanban(total) {
     els.kanban.querySelectorAll('.kcard').forEach(c => {
         c.addEventListener('click', (e) => {
             if (e.target.closest('.kcard__status')) return; // dropdown, not navigation
+            if (e.target.closest('.kcard__archive')) return; // archive button, not navigation
             if (window.App) window.App.navigateTo('lead_edit', { leadId: Number(c.dataset.id) });
         });
         c.addEventListener('dragstart', (e) => {
@@ -195,6 +196,14 @@ function renderKanban(total) {
     els.kanban.querySelectorAll('.kcard__status').forEach(sel => {
         sel.addEventListener('click', (e) => e.stopPropagation());
         sel.addEventListener('change', () => setLeadStatus(sel.dataset.id, sel.value));
+    });
+
+    // Same action as the grid card's archive button (status → perso), confirm included.
+    els.kanban.querySelectorAll('.kcard__archive').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            archiveLead(btn.dataset.id);
+        });
     });
 
     // Columns accept dropped cards: drop = move to that column's status.

@@ -2,19 +2,24 @@
 /**
  * Reminders (Promemoria) CRUD API.
  *
- * GET    /api/reminders.php              — list (search, status, frequency, due_soon)
+ * GET    /api/reminders.php              — list (search, status, frequency, due_soon,
+ *                                          exclude_status=a,b per togliere stati)
  * GET    /api/reminders.php?id={id}      — single reminder
  * GET    /api/reminders.php?action=contacts — rubrica unificata per il picker
  * GET    /api/reminders.php?action=agents   — agenti a cui assegnare
  * POST   /api/reminders.php              — create
  * PUT    /api/reminders.php?id={id}      — update
  * PATCH  /api/reminders.php?id={id}      — quick status update (?action=complete|cancel)
- * DELETE /api/reminders.php?id={id}      — cancel reminder
+ * DELETE /api/reminders.php?id={id}      — elimina (le occorrenze della serie e
+ *                                          il registro invii vanno in cascata).
+ *                                          Per sospendere senza perdere:
+ *                                          PATCH ?action=cancel
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/reminders.php';
 require_once __DIR__ . '/../config/automation_events.php';
+require_once __DIR__ . '/../config/automation_presets.php';
 
 apiHandleOptions();
 
@@ -63,7 +68,11 @@ try {
             }
             break;
         case 'POST':
-            createReminder($db);
+            if ($action === 'test_send') {
+                sendAutomationTestEmail($db);
+            } else {
+                createReminder($db);
+            }
             break;
         case 'PUT':
             if (!$id) apiError('ID promemoria mancante.');
@@ -75,7 +84,7 @@ try {
             break;
         case 'DELETE':
             if (!$id) apiError('ID promemoria mancante.');
-            cancelReminder($db, $id);
+            deleteReminder($db, $id);
             break;
         default:
             apiError('Metodo non consentito.', 405);
@@ -131,6 +140,20 @@ function listReminders(PDO $db): void
     if ($status !== '' && in_array($status, REMINDER_STATUSES, true)) {
         $where .= ' AND r.status = :status';
         $params['status'] = $status;
+    }
+
+    // Escludere uno stato non e' esprimibile con `status`, che e' un uguale.
+    // Serve alle schede che nascondono gli annullati: filtrandoli nel browser,
+    // la pagina mostrava 95 righe mentre `total` ne contava 150 (annullati
+    // inclusi), cioe' due numeri che descrivono insiemi diversi. Il taglio deve
+    // avvenire dove si conta, altrimenti il conteggio parla d'altro.
+    $excludeStatus = array_values(array_filter(
+        array_map('trim', explode(',', (string) ($_GET['exclude_status'] ?? ''))),
+        fn($s) => in_array($s, REMINDER_STATUSES, true)
+    ));
+    foreach ($excludeStatus as $i => $st) {
+        $where .= " AND r.status <> :excl_$i";
+        $params["excl_$i"] = $st;
     }
 
     if ($frequency !== '' && in_array($frequency, REMINDER_FREQUENCIES, true)) {
@@ -324,6 +347,53 @@ function listContacts(PDO $db): void
 }
 
 /**
+ * Restringe una regola a evento a un sottoinsieme di valori del payload.
+ *
+ * Accetta solo i campi che il catalogo dichiara per QUEL evento e solo i valori
+ * che quel campo ammette: un filtro su una chiave sconosciuta non scatterebbe
+ * mai e la regola sembrerebbe attiva restando morta.
+ *
+ * Selezionare tutte le opzioni equivale a non filtrare (NULL): due modi di
+ * scrivere la stessa cosa, e il dispatcher ne deve leggere uno solo.
+ *
+ * @return string|null JSON da scrivere in `reminders.trigger_filter`
+ */
+function validateTriggerFilter(string $event, $raw): ?string
+{
+    // Una stringa arriva da updateReminder(), che ricopia dalla riga esistente
+    // le chiavi assenti dal corpo: senza decodificarla, un salvataggio che non
+    // parla del filtro lo cancellerebbe invece di lasciarlo com'e'.
+    if (is_string($raw) && $raw !== '') {
+        $raw = json_decode($raw, true);
+    }
+
+    $declared = AUTOMATION_EVENT_CATALOGUE[$event]['filters'] ?? [];
+    if (!$declared || !is_array($raw) || !$raw) {
+        return null;
+    }
+
+    $out = [];
+    foreach ($declared as $field => $spec) {
+        $picked = $raw[$field] ?? null;
+        if (!is_array($picked)) {
+            continue;
+        }
+        $options = array_keys($spec['options']);
+        $clean   = array_values(array_unique(array_intersect(array_map('strval', $picked), $options)));
+
+        if (!$clean) {
+            apiError('Seleziona almeno una voce per "' . $spec['label'] . '", oppure tutte per non filtrare.');
+        }
+        if (count($clean) === count($options)) {
+            continue; // tutte = nessun vincolo
+        }
+        $out[$field] = $clean;
+    }
+
+    return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : null;
+}
+
+/**
  * Vocabolario delle automazioni: token, eventi, strategie di destinatario.
  *
  * Serve al form, che altrimenti manterrebbe una copia di queste liste in JS —
@@ -337,7 +407,163 @@ function listAutomationVocabulary(): void
         'event_token_group' => AUTOMATION_EVENT_TOKEN_GROUP,
         'events'          => AUTOMATION_EVENT_CATALOGUE,
         'recipient_rules' => AUTOMATION_RECIPIENT_RULES,
+        // I modelli viaggiano con il resto del vocabolario: la pagina li mostra
+        // prima ancora del modulo, e una seconda chiamata li farebbe comparire
+        // dopo che l'agente ha già cliccato "Nuova".
+        'presets'         => AUTOMATION_PRESETS,
+        'sample_context'  => automationPreviewContext(),
     ]);
+}
+
+/**
+ * Valori con cui il modulo disegna l'anteprima.
+ *
+ * Arrivano da qui e non da una tabella in JS perché metà sono veri: il nome
+ * dell'agenzia e la data di oggi il browser non li sa, e mostrarli come
+ * `{{agenzia.nome}}` faceva sembrare rotto un segnaposto che al momento
+ * dell'invio funziona benissimo. Gli altri (contatto, immobile, evento)
+ * dipendono da scelte che il modulo può ancora non aver fatto: lì l'esempio
+ * resta esempio, e la UI lo sostituisce appena l'agente sceglie qualcosa.
+ */
+function automationPreviewContext(): array
+{
+    return array_merge(
+        buildAutomationContext([]),
+        automationSampleSubset('contatto.'),
+        automationSampleSubset('immobile.'),
+        automationSampleSubset('evento.'),
+        ['evento.data' => (new DateTime())->format('d/m/Y')]
+    );
+}
+
+/**
+ * Invio di prova: la stessa email che riceverebbe il cliente, spedita a chi è
+ * collegato adesso.
+ *
+ * Prima l'unico modo di sapere se un'automazione funziona era aspettare il giro
+ * di cron e poi guardare il registro invii — cioè scoprire un token scritto
+ * male dopo che è partito verso un cliente vero.
+ *
+ * Tre vincoli che tengono questa strada separata da quella di produzione:
+ *  - il destinatario è SEMPRE l'email dell'admin in sessione, mai un indirizzo
+ *    che arriva dal browser. Altrimenti sarebbe un modo per spedire a chiunque
+ *    saltando il registro consensi.
+ *  - niente registro invii e niente `communications`: una prova non è la storia
+ *    dell'automazione, e sporcherebbe l'unica prova di cosa ha ricevuto il
+ *    cliente.
+ *  - i token che il modulo non può conoscere (contatto non ancora scelto,
+ *    prezzo prima del ribasso) si riempiono con valori di esempio, così il
+ *    testo si legge per intero invece di mostrare buchi.
+ */
+function sendAutomationTestEmail(PDO $db): void
+{
+    $data    = apiGetJsonBody();
+    $subject = trim((string) ($data['email_subject'] ?? ''));
+    $body    = trim((string) ($data['email_body'] ?? ''));
+
+    if ($subject === '' || $body === '') {
+        apiError('Scrivi oggetto e corpo del messaggio prima di provarlo.');
+    }
+
+    $stmt = $db->prepare('SELECT email FROM admin_users WHERE id = :id');
+    $stmt->execute(['id' => getCurrentAdminId()]);
+    $to = trim((string) ($stmt->fetchColumn() ?: ''));
+
+    if ($to === '') {
+        apiError('Il tuo utente non ha un indirizzo email: aggiungilo in "Il mio account" per ricevere le prove.');
+    }
+
+    $ctx = buildAutomationTestContext($db, $data);
+
+    $renderedSubject = renderAutomationTemplate($subject, $ctx);
+    $renderedBody    = renderAutomationTemplate($body, $ctx);
+
+    // La riga in testa serve a chi la riceve fra sei mesi cercando nella posta:
+    // senza, una prova è indistinguibile da un invio vero.
+    $noticeBody = "— Invio di prova generato dal gestionale. Il cliente non ha ricevuto nulla. —\n\n" . $renderedBody;
+
+    $result = sendHtmlEmail($to, '[PROVA] ' . $renderedSubject, $noticeBody);
+
+    if (!$result['success']) {
+        apiError('Invio non riuscito: ' . ($result['error'] ?? 'errore sconosciuto.'), 502);
+    }
+
+    apiSuccess([
+        'to'        => $to,
+        'subject'   => $renderedSubject,
+        'body'      => $renderedBody,
+        'simulated' => !empty($result['simulated']),
+    ]);
+}
+
+/**
+ * Valori dei token per l'invio di prova: reali dove il modulo ha già scelto un
+ * contatto o un immobile, di esempio dove ancora non c'è nulla da leggere.
+ */
+function buildAutomationTestContext(PDO $db, array $data): array
+{
+    $row = [];
+
+    $contactType = (string) ($data['contact_type'] ?? '');
+    $contactId   = (int) ($data['contact_id'] ?? 0);
+    $hasContact  = false;
+
+    if ($contactId > 0 && isset(REMINDER_CONTACT_TYPES[$contactType])) {
+        // Gli inquilini portano nome e cognome su colonne che
+        // buildAutomationContext() legge con nomi propri (vedi
+        // automationContactParts): l'alias va fatto qui, non lì.
+        $sources = [
+            'client' => ['clients', 'name AS client_name, surname AS client_surname, email AS client_email'],
+            'lead'   => ['leads',   'name AS lead_name, surname AS lead_surname, email AS lead_email'],
+            'tenant' => ['tenants', 'name AS tenant_first_name, surname AS tenant_surname, email AS tenant_email'],
+        ];
+        [$table, $columns] = $sources[$contactType];
+
+        $stmt = $db->prepare("SELECT {$columns} FROM {$table} WHERE id = :id");
+        $stmt->execute(['id' => $contactId]);
+        if ($found = $stmt->fetch()) {
+            $row        = array_merge($row, $found);
+            $hasContact = true;
+        }
+    }
+
+    $propertyId  = (int) ($data['property_id'] ?? 0);
+    $hasProperty = false;
+
+    if ($propertyId > 0) {
+        $stmt = $db->prepare(
+            'SELECT address AS property_address, city AS property_city,
+                    reference_code AS property_reference, price AS property_price
+             FROM properties WHERE id = :id'
+        );
+        $stmt->execute(['id' => $propertyId]);
+        if ($found = $stmt->fetch()) {
+            $row         = array_merge($row, $found);
+            $hasProperty = true;
+        }
+    }
+
+    $ctx = buildAutomationContext($row);
+
+    // `evento.*` è sempre di esempio: l'evento non è ancora accaduto, e il
+    // ribasso di cui parla il modello non esiste da nessuna parte.
+    $fill = automationSampleSubset('evento.');
+    if (!$hasContact)  $fill += automationSampleSubset('contatto.');
+    if (!$hasProperty) $fill += automationSampleSubset('immobile.');
+
+    return array_merge($ctx, $fill);
+}
+
+/** I valori di esempio di un gruppo di token (`contatto.`, `immobile.`, …). */
+function automationSampleSubset(string $prefix): array
+{
+    $out = [];
+    foreach (AUTOMATION_SAMPLE_CONTEXT as $token => $value) {
+        if (str_starts_with($token, $prefix)) {
+            $out[$token] = $value;
+        }
+    }
+    return $out;
 }
 
 /**
@@ -382,15 +608,15 @@ function createReminder(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO reminders
             (title, description, reminder_date, end_date, frequency, schedule_time, day_rule,
-             trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, status,
+             trigger_type, trigger_event, trigger_delay_minutes, recipient_rule, trigger_filter, status,
              client_id, lead_id, property_id, tenant_id, assigned_agent_id,
-             notify_admin, notify_client, email_subject, email_body, request_type,
+             notify_admin, notify_client, is_marketing, email_subject, email_body, request_type,
              maintenance_status, priority)
          VALUES
             (:title, :description, :reminder_date, :end_date, :frequency, :schedule_time, :day_rule,
-             :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :status,
+             :trigger_type, :trigger_event, :trigger_delay_minutes, :recipient_rule, :trigger_filter, :status,
              :client_id, :lead_id, :property_id, :tenant_id, :assigned_agent_id,
-             :notify_admin, :notify_client, :email_subject, :email_body, :request_type,
+             :notify_admin, :notify_client, :is_marketing, :email_subject, :email_body, :request_type,
              :maintenance_status, :priority)"
     );
     $stmt->execute($validated);
@@ -443,9 +669,11 @@ function updateReminder(PDO $db, int $id): void
              schedule_time = :schedule_time, day_rule = :day_rule,
              trigger_type = :trigger_type, trigger_event = :trigger_event,
              trigger_delay_minutes = :trigger_delay_minutes, recipient_rule = :recipient_rule,
+             trigger_filter = :trigger_filter,
              client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
              tenant_id = :tenant_id, assigned_agent_id = :assigned_agent_id,
              notify_admin = :notify_admin, notify_client = :notify_client,
+             is_marketing = :is_marketing,
              email_subject = :email_subject, email_body = :email_body,
              request_type = :request_type, maintenance_status = :maintenance_status,
              priority = :priority
@@ -519,8 +747,45 @@ function patchReminder(PDO $db, int $id): void
         if (!in_array($newStatus, $allowed, true)) {
             apiError('Stato manutenzione non valido.');
         }
-        $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms WHERE id = :id");
-        $stmt->execute(['ms' => $newStatus, 'id' => $id]);
+        // Lo stato di prima serve per non riemettere l'evento a ogni salvataggio:
+        // riaprire e richiudere un ticket manderebbe due volte lo stesso invito.
+        $before = $db->prepare("SELECT maintenance_status, tenant_id, property_id FROM reminders WHERE id = :id");
+        $before->execute(['id' => $id]);
+        $ticket = $before->fetch();
+        if (!$ticket) {
+            apiError('Promemoria non trovato.', 404);
+        }
+
+        // `maintenance_status` e `status` erano due verita' separate sulla
+        // stessa riga. Chiudere il ticket dalla bacheca aggiornava solo la
+        // prima: la riga restava 'pending' e, con la data ormai passata,
+        // continuava a contare fra le scadenze in ritardo della campanella —
+        // per sempre, perche' sulla bacheca il pulsante "Completa" non c'e' e
+        // da li' non si puo' evadere. Restava anche in pasto al motore, che
+        // ogni notte rispediva il promemoria di un lavoro gia' finito.
+        //
+        // Il confine e' lo stesso che questo handler usa poche righe sotto per
+        // far partire il questionario di gradimento: se l'intervento e' finito
+        // abbastanza da chiedere un riscontro, e' finito anche come promemoria.
+        // Tornare indietro lo riapre, altrimenti un ticket riaperto resterebbe
+        // fuori dal motore, che lavora solo sui 'pending'.
+        $rowStatus = in_array($newStatus, ['completata', 'chiusa'], true) ? 'completed' : 'pending';
+
+        $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms, status = :st WHERE id = :id");
+        $stmt->execute(['ms' => $newStatus, 'st' => $rowStatus, 'id' => $id]);
+
+        if ($newStatus !== ($ticket['maintenance_status'] ?? '') && in_array($newStatus, ['completata', 'chiusa'], true)) {
+            // Nel payload NON va il proprietario: 'event_contact' sceglie il primo
+            // fra lead/cliente/inquilino, e il riscontro su un intervento lo deve
+            // dare chi ci abita. Il proprietario resta raggiungibile con la
+            // strategia 'property_owner', che lo risale dall'immobile.
+            emitAutomationEvent($db, 'maintenance.completed', 'reminder', $id, [
+                'tenant_id'   => $ticket['tenant_id'] !== null ? (int) $ticket['tenant_id'] : null,
+                'property_id' => $ticket['property_id'] !== null ? (int) $ticket['property_id'] : null,
+                'new_status'  => $newStatus,
+            ]);
+        }
+
         getReminder($db, $id);
         return;
     }
@@ -567,18 +832,44 @@ function applySeriesStatusSideEffects(PDO $db, int $id, string $action): void
     syncReminderSeries($db, $id);
 }
 
-function cancelReminder(PDO $db, int $id): void
+/**
+ * Elimina davvero.
+ *
+ * Prima questa funzione scriveva `status='cancelled'`, cioè esattamente ciò che
+ * fa il pulsante pausa: entrambe le pagine che la chiamano chiedono "Eliminare
+ * questo promemoria?", la UI rispondeva "eliminato", e la riga restava lì —
+ * ricompariva al primo filtro "Tutte" e nessuno capiva perché. Chi vuole
+ * sospendere senza perdere ha già `PATCH ?action=cancel`, che resta.
+ *
+ * Occorrenze della serie e righe del registro invii se ne vanno da sole:
+ * `fk_reminders_series` e `fk_disp_reminder` sono ON DELETE CASCADE.
+ * Cancellarle a mano qui sarebbe una seconda verità, destinata a divergere
+ * dalla prima migrazione che tocca quelle chiavi.
+ */
+function deleteReminder(PDO $db, int $id): void
 {
-    if (!reminderExists($db, $id)) {
+    $stmt = $db->prepare('SELECT title, series_id FROM reminders WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
         apiError('Promemoria non trovato.', 404);
     }
 
-    $stmt = $db->prepare("UPDATE reminders SET status = 'cancelled' WHERE id = :id");
-    $stmt->execute(['id' => $id]);
+    // Contate PRIMA: dopo il DELETE non esistono più, e l'agente ha diritto di
+    // sapere quante occorrenze programmate sono sparite con la regola.
+    $count = $db->prepare('SELECT COUNT(*) FROM reminders WHERE series_id = :id');
+    $count->execute(['id' => $id]);
+    $occurrences = (int) $count->fetchColumn();
 
-    applySeriesStatusSideEffects($db, $id, 'cancel');
-    logActivity('delete', 'reminder', $id, 'Promemoria annullato #' . $id);
-    apiSuccess(['id' => $id, 'message' => 'Promemoria annullato.']);
+    $db->prepare('DELETE FROM reminders WHERE id = :id')->execute(['id' => $id]);
+
+    logActivity('delete', 'reminder', $id, 'Promemoria eliminato: ' . ($row['title'] ?: ('#' . $id)));
+    apiSuccess([
+        'id'          => $id,
+        'occurrences' => $occurrences,
+        'message'     => 'Promemoria eliminato.',
+    ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -599,6 +890,9 @@ function validateReminderInput(PDO $db, array $data): array
     $agentId      = !empty($data['assigned_agent_id']) ? (int) $data['assigned_agent_id'] : null;
     $notifyAdmin  = !empty($data['notify_admin']) ? 1 : 0;
     $notifyClient = !empty($data['notify_client']) ? 1 : 0;
+    // Commerciale o di servizio. Da questo dipende se l'invio passa dal
+    // registro consensi: vedi processSingleReminder() in config/reminders.php.
+    $isMarketing  = !empty($data['is_marketing']) ? 1 : 0;
     // Un intervento di manutenzione E' un promemoria con request_type='maintenance':
     // e' cosi' che la bacheca lo trova (riga 182). Finora quella colonna la
     // scriveva SOLO il portale inquilino (tenant/api_maintenance.php:67), quindi
@@ -650,6 +944,8 @@ function validateReminderInput(PDO $db, array $data): array
     $recipientRule = trim($data['recipient_rule'] ?? '') ?: null;
     $triggerDelay  = max(0, (int) ($data['trigger_delay_minutes'] ?? 0));
 
+    $triggerFilter = null;
+
     if ($triggerType === 'event') {
         if (!isset(AUTOMATION_EVENT_CATALOGUE[$triggerEvent])) {
             apiError('Evento non valido.');
@@ -658,6 +954,7 @@ function validateReminderInput(PDO $db, array $data): array
         if (!in_array($recipientRule, $allowed, true)) {
             apiError('Destinatario non compatibile con l\'evento scelto.');
         }
+        $triggerFilter = validateTriggerFilter($triggerEvent, $data['trigger_filter'] ?? null);
         // Una regola a evento non ha una cadenza: la data serve solo perché la
         // colonna è NOT NULL, e la frequenza resta 'once' per non farla entrare
         // nel materializzatore di serie.
@@ -751,6 +1048,7 @@ function validateReminderInput(PDO $db, array $data): array
         'trigger_event'     => $triggerEvent,
         'trigger_delay_minutes' => $triggerDelay,
         'recipient_rule'    => $recipientRule,
+        'trigger_filter'    => $triggerFilter,
         'status'            => $status,
         'client_id'         => $clientId,
         'lead_id'           => $leadId,
@@ -759,6 +1057,7 @@ function validateReminderInput(PDO $db, array $data): array
         'assigned_agent_id' => $agentId,
         'notify_admin'      => $notifyAdmin,
         'notify_client'     => $notifyClient,
+        'is_marketing'      => $isMarketing,
         'email_subject'     => $emailSubject,
         'email_body'        => $emailBody,
         // Manutenzione: e' `request_type` a far comparire la riga nella bacheca

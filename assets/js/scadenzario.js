@@ -29,9 +29,14 @@
         els.tbody    = document.getElementById('scad-tbody');
         els.horizon  = document.getElementById('scad-horizon');
         els.typeF    = document.getElementById('scad-type');
+        els.search   = document.getElementById('scad-search');
 
         els.horizon.addEventListener('change', load);
         els.typeF.addEventListener('change', load);
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(load, 400);
+        });
         load();
     }
 
@@ -39,6 +44,7 @@
         const params = new URLSearchParams();
         params.set('horizon', els.horizon.value);
         if (els.typeF.value) params.set('type', els.typeF.value);
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
 
         softLoad(els.tbody, '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Caricamento…</td></tr>');
         try {
@@ -46,7 +52,11 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             renderStats(json.data.stats || {});
-            renderRows(json.data.items || []);
+            // Oltre il tetto l'API manda `truncated`/`shown` apposta. Finche'
+            // nessuno li leggeva, l'elenco si fermava in silenzio mentre i
+            // contatori — calcolati sull'insieme completo — dicevano un altro
+            // numero: sembrava un errore di conteggio, era una lista tagliata.
+            renderRows(json.data.items || [], json.data);
         } catch (err) {
             els.tbody.classList.remove('is-loading');
             els.tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-danger);padding:2rem;">${esc(err.message)}</td></tr>`;
@@ -60,7 +70,7 @@
         document.getElementById('stat-scad-total').textContent    = s.total ?? '—';
     }
 
-    function renderRows(items) {
+    function renderRows(items, meta = {}) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
             els.tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:2rem;">Nessuna scadenza nel periodo selezionato.</td></tr>';
@@ -83,16 +93,28 @@
             </tr>`;
         }).join('');
 
+        // `stats.total` conta tutta la finestra, `shown` solo cio' che e' in
+        // tabella: quando divergono lo si dice, invece di lasciare due numeri
+        // diversi a schermo senza spiegazione.
+        if (meta.truncated) {
+            els.tbody.insertAdjacentHTML('beforeend', window.Pagination.truncationNote(
+                meta.shown ?? items.length,
+                meta.stats?.total ?? items.length,
+                6,
+                'Restringi l\'orizzonte o filtra per tipo per vedere le altre.'
+            ));
+        }
+
         els.tbody.querySelectorAll('.btn-scad-go').forEach(b => {
             b.addEventListener('click', () => {
                 if (!window.App) return;
                 const view = b.dataset.view;
                 const id   = parseInt(b.dataset.id, 10);
                 // Deep-link into the specific record where a dedicated view exists;
-                // insurance/aml have no per-record view yet, so those still land
-                // on the list (same as before — not a regression, just not deep).
+                // insurance still has no per-record view, so it lands on the list.
                 if (view === 'contracts' && id) window.App.navigateTo('contract_edit', { contractId: id });
                 else if (view === 'properties' && id) window.App.navigateTo('property_profile', { propertyId: id });
+                else if (view === 'aml' && id) window.App.navigateTo('aml_profile', { amlId: id });
                 else window.App.navigateTo(view);
             });
         });

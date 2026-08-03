@@ -70,7 +70,7 @@ try {
         apiError('Manca un indirizzo email valido: senza non c\'e\' dove mandare il link.');
     }
 
-    $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+    $baseUrl = appBaseUrl();
     if ($baseUrl === '') {
         // Un link relativo in un'email non e' cliccabile. Meglio dirlo che
         // spedire un messaggio inservibile.

@@ -3,7 +3,7 @@
  * Activity log read API (super_admin only).
  *
  * GET /api/activity_log.php — list with pagination (50/page),
- *     filters: action, entity_type, from, to, page.
+ *     filters: search, action, entity_type, from, to, page.
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
@@ -18,6 +18,7 @@ const LOG_PER_PAGE = 50;
 try {
     $db = getDB();
 
+    $search     = trim($_GET['search'] ?? '');
     $action     = trim($_GET['action'] ?? '');
     $entityType = trim($_GET['entity_type'] ?? '');
     $from       = trim($_GET['from'] ?? '');
@@ -27,6 +28,11 @@ try {
     $where  = " WHERE 1=1";
     $params = [];
 
+    if ($search !== '') {
+        $where .= " AND (username LIKE :search OR description LIKE :search
+                         OR entity_type LIKE :search OR ip_address LIKE :search)";
+        $params['search'] = '%' . $search . '%';
+    }
     if ($action !== '' && in_array($action, LOG_ACTIONS, true)) {
         $where .= " AND action = :action";
         $params['action'] = $action;

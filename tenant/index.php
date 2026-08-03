@@ -14,6 +14,23 @@ require_once __DIR__ . '/../config/settings.php';
 $tenantId = getCurrentTenantId();
 $db = getDB();
 
+/**
+ * Quante righe mostra ogni riquadro. Il portale non ha impaginatore: oltre
+ * questi numeri le righe non sono raggiungibili in alcun modo, quindi il tetto
+ * va detto. 36 mensilita' sono tre anni, ma una locazione 4+4 ne ha 96: senza
+ * avviso l'inquilino vede lo storico interrompersi e non sa che c'e' dell'altro.
+ */
+const TENANT_PAYMENTS_LIMIT = 36;
+const TENANT_DOCS_LIMIT     = 30;
+
+/** "Mostrati i piu' recenti N di M" — solo se i due numeri divergono. */
+function tenantTruncNote(int $shown, int $total): string
+{
+    if ($shown >= $total) return '';
+    return '<div class="list-truncated">Mostrati i piu\' recenti ' . $shown
+         . ' di ' . $total . '. Per lo storico completo contatta l\'agenzia.</div>';
+}
+
 // Tenant + property info — property/lease come from the tenant's current
 // contract (see getTenantCurrentContract in config/db.php), not a fixed
 // column on the tenant, since the same person can be re-rented over time.
@@ -38,10 +55,14 @@ if ($tenant) {
 // Payments history
 $payStmt = $db->prepare(
     "SELECT id, amount, due_date, paid_date, status, notes
-     FROM payments WHERE tenant_id = :tid ORDER BY due_date DESC LIMIT 36"
+     FROM payments WHERE tenant_id = :tid ORDER BY due_date DESC LIMIT " . TENANT_PAYMENTS_LIMIT
 );
 $payStmt->execute(['tid' => $tenantId]);
 $payments = $payStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$payTotalStmt = $db->prepare("SELECT COUNT(*) FROM payments WHERE tenant_id = :tid");
+$payTotalStmt->execute(['tid' => $tenantId]);
+$paymentsTotal = (int) $payTotalStmt->fetchColumn();
 
 // Upcoming payments
 $upcomingStmt = $db->prepare(
@@ -63,7 +84,7 @@ $docsStmt = $db->prepare(
      FROM documents
      WHERE (property_id IS NOT NULL AND property_id = :pid)
         OR (contract_id IS NOT NULL AND contract_id = :cid)
-     ORDER BY created_at DESC LIMIT 30"
+     ORDER BY created_at DESC LIMIT " . TENANT_DOCS_LIMIT
 );
 $docsStmt->execute([
     'pid' => (int) ($tenant['property_id'] ?? 0),
@@ -71,9 +92,36 @@ $docsStmt->execute([
 ]);
 $documents = $docsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Payment totals
-$paidTotal   = array_sum(array_column(array_filter($payments, fn($p) => $p['status'] === 'paid'),   'amount'));
-$lateTotal   = array_sum(array_column(array_filter($payments, fn($p) => $p['status'] === 'late'),   'amount'));
+// Stesso perimetro della query qui sopra: il totale deve contare le righe che
+// l'inquilino avrebbe diritto di vedere, non tutti i documenti del gestionale.
+$docsTotalStmt = $db->prepare(
+    "SELECT COUNT(*) FROM documents
+     WHERE (property_id IS NOT NULL AND property_id = :pid)
+        OR (contract_id IS NOT NULL AND contract_id = :cid)"
+);
+$docsTotalStmt->execute([
+    'pid' => (int) ($tenant['property_id'] ?? 0),
+    'cid' => $tenantContractId,
+]);
+$documentsTotal = (int) $docsTotalStmt->fetchColumn();
+
+// Payment totals — dal DATABASE, non dalle 36 righe caricate sopra.
+//
+// Era un array_sum() su $payments, che e' l'elenco TAGLIATO (ORDER BY due_date
+// DESC LIMIT 36). Su una locazione 4+4 lo scadenzario ha 96 rate e le 36 piu'
+// recenti sono in gran parte FUTURE, cioe' ancora da pagare: l'inquilino
+// leggeva un "totale pagato" piu' basso del vero dopo anni di affitti versati
+// puntualmente. Stesso errore gia' corretto nel portale proprietario.
+$tPayTotals = $db->prepare(
+    "SELECT
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN amount END), 0) AS paid_total,
+        COALESCE(SUM(CASE WHEN status = 'late' THEN amount END), 0) AS late_total
+     FROM payments WHERE tenant_id = :tid"
+);
+$tPayTotals->execute(['tid' => $tenantId]);
+$tTotals   = $tPayTotals->fetch(PDO::FETCH_ASSOC) ?: ['paid_total' => 0, 'late_total' => 0];
+$paidTotal = (float) $tTotals['paid_total'];
+$lateTotal = (float) $tTotals['late_total'];
 
 $PAY_STATUS = [
     'pending'   => 'In attesa',
@@ -260,6 +308,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                                 </tbody>
                             </table>
                         </div>
+                        <?= tenantTruncNote(count($payments), $paymentsTotal) ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -294,6 +343,7 @@ function tEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
                             </li>
                             <?php endforeach; ?>
                         </ul>
+                        <?= tenantTruncNote(count($documents), $documentsTotal) ?>
                         <?php endif; ?>
                     </div>
                 </div>

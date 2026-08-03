@@ -13,9 +13,23 @@
  */
 
 require_once __DIR__ . '/../config/consent.php';
+require_once __DIR__ . '/../config/env.php';
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../config/mail_html.php';
 require_once __DIR__ . '/../config/settings.php';
+
+/**
+ * L'indirizzo pubblico dell'applicazione, comunque si sia entrati.
+ *
+ * Qui la trappola della costante APP_URL assente sotto cron era gia' stata
+ * scoperta e aggirata — ma solo dentro questo file, mentre valeva per il logo
+ * delle email, per Instagram e per i link di firma. Ora la regola sta in un
+ * posto solo: appBaseUrl(), in config/env.php.
+ */
+function marketingBaseUrl(): string
+{
+    return appBaseUrl();
+}
 
 /**
  * @return array{success: bool, status: string, external_id: ?string, error: ?string}
@@ -49,7 +63,7 @@ function sendMarketingEmail(
     //    disiscriversi è essa stessa una violazione, quindi la mancanza di
     //    APP_URL non degrada l'invio: lo impedisce. Meglio nessun messaggio che
     //    un messaggio da cui non si può uscire.
-    $baseUrl = defined('APP_URL') ? rtrim((string) APP_URL, '/') : '';
+    $baseUrl = marketingBaseUrl();
     if ($baseUrl === '') {
         return $refuse(
             'failed',

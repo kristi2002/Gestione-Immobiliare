@@ -132,34 +132,26 @@
     max-width: 70ch;
 }
 
-/* Collapsible section. A <details> can't be a <fieldset>, so it borrows the
-   .form-section rule for spacing and the separator, and re-states the parts
-   a <summary> needs. */
-.entity-edit-view details.form-section--fold {
-    position: relative;
-    border: 0;
-    margin: 40px 0 0;
-    padding: 0;
-    min-width: 0;
-}
-
-.entity-edit-view details.form-section--fold::before {
-    content: "";
-    position: absolute;
-    left: 0; right: 0; top: -20px;
-    height: 1px;
-    background: var(--color-border);
-}
-
+/* Collapsible section. A <details> can't be a <fieldset>, so it carries the
+   .form-section class for spacing, and its <summary> is styled as the same
+   band as a <legend> by 12-forms.css. Only what a summary needs on top of
+   that band is stated here — do not restate padding/margin/background, or
+   the fold stops matching the sections around it. */
 .entity-edit-view details.form-section--fold > summary {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
     list-style: none;
     cursor: pointer;
-    padding: 2px 0;
-    margin-bottom: 16px;
     user-select: none;
+}
+
+/* A closed fold is a header and nothing else, so it does not need the full
+   between-sections gap: shut folds stack up as a compact list of titles,
+   and the section-sized break comes back the moment one is opened. */
+.entity-edit-view details.form-section--fold:not([open]) {
+    margin-bottom: 14px;
+}
+
+.entity-edit-view details.form-section--fold:not([open]) > summary {
+    margin-bottom: 0;
 }
 
 .entity-edit-view details.form-section--fold > summary::-webkit-details-marker { display: none; }
@@ -180,26 +172,24 @@
 
 .entity-edit-view details.form-section--fold[open] > summary::before { transform: rotate(90deg) translateX(-1px); }
 
-.entity-edit-view .ef-fold-title {
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.3;
-    letter-spacing: -0.01em;
-    color: var(--color-text);
-}
-
+/* The title inherits the band's type; only the trailing meta steps back. */
 .entity-edit-view .ef-fold-meta {
     font-size: 12px;
     font-weight: 500;
+    letter-spacing: 0;
     color: var(--color-text-muted);
 }
 
-.entity-edit-view details.form-section--fold > summary:hover .ef-fold-title { color: var(--color-primary); }
+/* Hover re-points the band's own colour tokens, so the whole strip responds
+   to the pointer — it is the click target, not just its title. */
+.entity-edit-view details.form-section--fold > summary:hover {
+    --band-from: #dbe7f7;
+    --band-to:   #e9f1fb;
+}
 
 .entity-edit-view details.form-section--fold > summary:focus-visible {
     outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
-    border-radius: 4px;
+    outline-offset: 2px;
 }
 
 /* ---------------------------------------------------------------------

@@ -50,8 +50,8 @@ Isolation between the three surfaces is the central security property of the app
 | Hosting | Hetzner VPS → Coolify → Docker → Traefik | ✅ |
 | DNS | Cloudflare (`testdemo.it` → `91.99.137.240`) | ✅ |
 | TLS | Let's Encrypt via Traefik | ✅ |
-| Email | Mailgun SMTP EU (`smtp.eu.mailgun.org:587`, STARTTLS) | ✅ |
-| WhatsApp | Twilio **sandbox** | ⚠️ demo-only |
+| Email | SMTP `smtp.gmail.com:587` STARTTLS (Mailgun blocca a livello di account) | OK — autenticazione verificata in produzione 02/08/2026 |
+| WhatsApp | Meta Cloud API | spenta (`whatsapp_enabled=false`): invii simulati |
 | Social | Meta Graph API — Facebook ✅ / Instagram ✅ (requires image) — **Development mode** | ⚠️ dev-only |
 | Payments | Stripe — code ready, **not configured** | ⚠️ |
 | Backup | Cloudflare R2 / S3-compatible | 🔄 in progress |
@@ -95,8 +95,8 @@ Sensitive paths (`config/`, `database/`, `cron/`, `backups/`, `.env`) are blocke
 ```
 ✅ App live at https://testdemo.it
 ✅ MySQL 8 (Coolify container "default")
-✅ Email via Mailgun EU (STARTTLS :587)
-✅ WhatsApp via Twilio sandbox (demo-only)
+✅ Email via Gmail SMTP (STARTTLS :587) — autenticazione verificata
+⚠️ WhatsApp via Meta Cloud API — implementata ma spenta: serve WABA, numero registrato e token permanente
 ✅ Facebook + Instagram via Meta Graph API (Development mode)
 ✅ HTTPS via Let's Encrypt (Traefik)
 ✅ Cloudflare DNS

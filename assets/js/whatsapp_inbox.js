@@ -19,6 +19,14 @@
     const els            = {};
     let threadFilter     = 'all';  // 'all' | 'unread'
     let threadSearch     = '';
+    // Quante conversazioni esistono a DB: la colonna ne carica al massimo 200 e
+    // la ricerca filtra solo quelle caricate, quindi il taglio va detto.
+    let threadsTotal     = 0;
+    // Stato della finestra di 24 ore per la chat aperta + template spedibili.
+    // Serve prima di scrivere, non dopo: fuori finestra il testo libero viene
+    // rifiutato da Meta, e una casella di testo attiva sarebbe una promessa falsa.
+    let compose          = null;
+    let tplTargetPhone   = null;
 
     function init() {
         els.alert            = document.getElementById('whatsapp-inbox-alert');
@@ -43,6 +51,14 @@
         els.linkModal        = document.getElementById('wa-link-modal');
         els.linkResults      = document.getElementById('wa-link-results');
         els.linkSearch       = document.getElementById('wa-link-search');
+        els.windowBar        = document.getElementById('wa-window-bar');
+        els.windowText       = document.getElementById('wa-window-text');
+        els.tplBtn           = document.getElementById('wa-tpl-btn');
+        els.tplModal         = document.getElementById('wa-tpl-modal');
+        els.tplSelect        = document.getElementById('wa-tpl-select');
+        els.tplFields        = document.getElementById('wa-tpl-fields');
+        els.tplPreview       = document.getElementById('wa-tpl-preview');
+        els.tplHint          = document.getElementById('wa-tpl-hint');
 
         bindEvents();
         bindTriageEvents();
@@ -85,6 +101,22 @@
         els.newModal.addEventListener('click', e => { if (e.target === els.newModal) closeNewModal(); });
         document.getElementById('wa-new-send').addEventListener('click', sendNewConversation);
 
+        document.getElementById('wa-new-template').addEventListener('click', () => {
+            const phone = document.getElementById('wa-new-phone').value.trim();
+            if (!phone) { showAlert('Inserisci prima il numero.', 'error'); return; }
+            closeNewModal();
+            openTemplateModal(phone);
+        });
+
+        els.tplBtn.addEventListener('click', () => {
+            if (activePhone) openTemplateModal(activePhone);
+        });
+        document.getElementById('wa-tpl-close').addEventListener('click', closeTemplateModal);
+        document.getElementById('wa-tpl-cancel').addEventListener('click', closeTemplateModal);
+        document.getElementById('wa-tpl-send').addEventListener('click', sendTemplate);
+        els.tplModal.addEventListener('click', e => { if (e.target === els.tplModal) closeTemplateModal(); });
+        els.tplSelect.addEventListener('change', renderTemplateFields);
+
         els.sendBtn.addEventListener('click', sendReply);
         els.replyText.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
@@ -98,9 +130,13 @@
         els.loadEarlierBtn.addEventListener('click', loadEarlierMessages);
 
         // Thread search + filter tabs
+        buildClearButton();
+
         if (els.threadSearch) {
             let t = null;
             els.threadSearch.addEventListener('input', () => {
+                // Il bottone segue il testo digitato, il filtro la pausa.
+                syncClearButton();
                 clearTimeout(t);
                 t = setTimeout(() => { threadSearch = els.threadSearch.value.trim().toLowerCase(); renderThreads(); }, 180);
             });
@@ -111,16 +147,60 @@
                 if (!tab) return;
                 threadFilter = tab.dataset.filter || 'all';
                 els.threadTabs.querySelectorAll('.wa-tab').forEach(x => x.classList.toggle('active', x === tab));
+                syncClearButton();
                 renderThreads();
             });
         }
+    }
+
+    /**
+     * "Azzera filtri" — uno solo per la colonna, in fondo alla riga delle
+     * schede, come nelle barre filtri delle altre pagine.
+     *
+     * Anche qui i filtri sono due blocchi impilati (ricerca e schede) invece
+     * che una riga sola, quindi la colonna non passa da FilterBar
+     * (assets/js/filters.js): stessa classe, stesso comportamento, costruito
+     * a mano. Compare appena uno dei due e' attivo e li azzera insieme.
+     */
+    function buildClearButton() {
+        if (!els.threadTabs) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn--ghost btn--sm btn-clear-filters wa-tabs__clear';
+        btn.setAttribute('aria-label', 'Azzera filtri');
+        btn.innerHTML = '&#10005; Azzera';
+        btn.hidden = true;
+        btn.addEventListener('click', clearAllFilters);
+        els.threadTabs.appendChild(btn);
+        els.clearBtn = btn;
+    }
+
+    function syncClearButton() {
+        if (!els.clearBtn) return;
+        const typing = !!(els.threadSearch && els.threadSearch.value.trim());
+        els.clearBtn.hidden = !(typing || threadFilter !== 'all');
+    }
+
+    function clearAllFilters() {
+        if (els.threadSearch) els.threadSearch.value = '';
+        threadSearch = '';
+        threadFilter = 'all';
+        if (els.threadTabs) {
+            els.threadTabs.querySelectorAll('.wa-tab')
+                .forEach(x => x.classList.toggle('active', (x.dataset.filter || 'all') === 'all'));
+        }
+        syncClearButton();
+        renderThreads();
     }
 
     function startPolling() {
         stopPolling();
         pollTimer = setInterval(() => {
             loadThreads(true);
-            if (activePhone) loadMessages(activePhone, true);
+            // La finestra si riapre da sola quando il cliente risponde: senza
+            // rileggerla insieme ai messaggi, la casella resterebbe disabilitata
+            // con la risposta gia' visibile sopra.
+            if (activePhone) { loadMessages(activePhone, true); loadCompose(activePhone); }
         }, POLL_MS);
     }
 
@@ -136,7 +216,12 @@
             const res  = await fetch(`${INBOX_API}?threads=1`);
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
-            threads = json.data || [];
+            // La risposta e' passata da array a {items,total}: `unwrap` regge
+            // entrambe le forme, cosi' una versione vecchia in cache non
+            // svuota la colonna.
+            const page   = window.Pagination.unwrap(json);
+            threads      = page.items;
+            threadsTotal = page.total;
             renderThreads();
             // Il contesto può cambiare sotto i piedi (un collega associa il
             // numero da un'altra postazione): l'intestazione va riallineata.
@@ -160,7 +245,12 @@
         if (!list.length) {
             const msg = !threads.length ? 'Nessuna conversazione.'
                 : (threadFilter === 'unread' ? 'Nessuna conversazione non letta.' : 'Nessun risultato.');
-            els.threadItems.innerHTML = `<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">${msg}</div>`;
+            // Anche (soprattutto) qui: "Nessun risultato" su una colonna
+            // troncata e' la bugia peggiore, perche' la conversazione cercata
+            // puo' benissimo esistere fra quelle non caricate.
+            els.threadItems.innerHTML = `<div style="padding:1.5rem;text-align:center;color:#999;font-size:0.85rem;">${msg}</div>`
+                + window.Pagination.truncationNote(threads.length, threadsTotal, 0,
+                    'La ricerca qui a lato guarda solo queste.');
             return;
         }
 
@@ -189,7 +279,9 @@
             </div>`;
         }).join('');
 
-        els.threadItems.innerHTML = items;
+        els.threadItems.innerHTML = items + window.Pagination.truncationNote(
+            threads.length, threadsTotal, 0,
+            'La ricerca qui a lato guarda solo queste.');
         els.threadItems.querySelectorAll('.wa-thread-item').forEach(item => {
             item.addEventListener('click', () => openThread(item.dataset.phone));
         });
@@ -222,7 +314,180 @@
         renderChatHeader(phone);
 
         await loadMessages(phone);
+        await loadCompose(phone);
         await markRead(phone);
+    }
+
+    // ── Finestra di 24 ore ──────────────────────────────────────────────────
+
+    /**
+     * Chiede al server cosa si puo' scrivere a questo numero adesso. Il calcolo
+     * non e' replicabile qui: dipende dall'ultimo messaggio in entrata e dallo
+     * stato di approvazione dei template su Meta.
+     */
+    async function loadCompose(phone) {
+        try {
+            const res  = await fetch(`${INBOX_API}?action=compose&phone=${encodeURIComponent(phone)}`);
+            const json = await res.json();
+            compose = json.success ? json.data : null;
+        } catch {
+            compose = null;
+        }
+        renderWindowBar();
+    }
+
+    /**
+     * La fascia sopra la barra di risposta, e lo stato della casella di testo.
+     *
+     * A finestra chiusa la casella si disabilita davvero invece di limitarsi a
+     * un avviso: lasciarla scrivibile significherebbe far battere all'agente un
+     * messaggio che al momento dell'invio viene rifiutato.
+     */
+    function renderWindowBar() {
+        if (!els.windowBar) return;
+
+        if (!compose) { els.windowBar.hidden = true; return; }
+
+        const w        = compose.window || {};
+        const canFree  = !!compose.can_send_free_text;
+        const nTpl     = (compose.templates || []).length;
+
+        els.windowBar.hidden = false;
+        els.windowBar.classList.toggle('wa-window-bar--open', !!w.open);
+
+        if (w.open) {
+            const h = Math.floor((w.minutes_left || 0) / 60);
+            const m = (w.minutes_left || 0) % 60;
+            const left = h > 0 ? `${h}h ${m}m` : `${m}m`;
+            els.windowText.innerHTML = `Finestra di 24 ore <strong>aperta</strong> — puoi scrivere liberamente ancora per ${esc(left)}.`;
+        } else if (!compose.enabled) {
+            // Invio simulato: passa comunque, ma dirlo e' l'unico modo perche'
+            // la differenza fra demo e produzione non resti una sorpresa.
+            els.windowText.innerHTML = 'Fuori dalla finestra di 24 ore. WhatsApp non è attivo, quindi l\'invio è <strong>simulato</strong>: a integrazione accesa servirebbe un template approvato.';
+        } else {
+            els.windowText.innerHTML = nTpl
+                ? 'Fuori dalla finestra di 24 ore: WhatsApp accetta solo un <strong>template approvato</strong>.'
+                : 'Fuori dalla finestra di 24 ore e <strong>nessun template approvato</strong>: non è possibile scrivere a questo numero finché non risponde.';
+        }
+
+        els.replyText.disabled    = !canFree;
+        els.sendBtn.disabled      = !canFree;
+        els.replyText.placeholder = canFree
+            ? 'Scrivi un messaggio…'
+            : 'Finestra chiusa — usa un template';
+        els.tplBtn.disabled = nTpl === 0;
+        els.tplBtn.title    = nTpl === 0
+            ? 'Nessun template approvato da Meta'
+            : 'Invia un template approvato';
+    }
+
+    // ── Invio di un template ────────────────────────────────────────────────
+
+    async function openTemplateModal(phone) {
+        tplTargetPhone = phone;
+        els.tplFields.innerHTML  = '';
+        els.tplPreview.textContent = '';
+        els.tplSelect.innerHTML  = '<option>Caricamento…</option>';
+        els.tplModal.hidden      = false;
+
+        // Il numero della nuova conversazione non e' quello della chat aperta:
+        // lo stato va richiesto per il destinatario vero, sempre.
+        await loadCompose(phone);
+
+        const list = compose?.templates || [];
+        els.tplHint.textContent = list.length
+            ? 'Fuori dalla finestra di 24 ore, questi sono gli unici messaggi che Meta accetta.'
+            : 'Nessun template approvato: vai in Impostazioni → Template WhatsApp e collega il nome registrato nel Business Manager.';
+
+        els.tplSelect.innerHTML = list.length
+            ? list.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')
+            : '<option value="">—</option>';
+        els.tplSelect.disabled = !list.length;
+        document.getElementById('wa-tpl-send').disabled = !list.length;
+
+        renderTemplateFields();
+    }
+
+    function closeTemplateModal() { els.tplModal.hidden = true; }
+
+    function currentTemplate() {
+        const id = els.tplSelect.value;
+        return (compose?.templates || []).find(t => String(t.id) === String(id)) || null;
+    }
+
+    function renderTemplateFields() {
+        const t = currentTemplate();
+        if (!t) { els.tplFields.innerHTML = ''; els.tplPreview.textContent = ''; return; }
+
+        const vars = t.variables || [];
+        els.tplFields.innerHTML = vars.map(v => `
+            <div class="form-group">
+                <label for="wa-tplvar-${esc(v)}">${esc(v)}</label>
+                <input type="text" class="form-input wa-tpl-var" id="wa-tplvar-${esc(v)}" data-var="${esc(v)}">
+            </div>`).join('');
+
+        els.tplFields.querySelectorAll('.wa-tpl-var')
+            .forEach(i => i.addEventListener('input', renderTemplatePreview));
+
+        renderTemplatePreview();
+    }
+
+    /** Anteprima con i valori digitati: i segnaposto non compilati restano visibili. */
+    function renderTemplatePreview() {
+        const t = currentTemplate();
+        if (!t) return;
+        const values = collectTemplateValues();
+        els.tplPreview.textContent = (t.body || '').replace(
+            /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
+            (m, name) => values[name] || m
+        );
+    }
+
+    function collectTemplateValues() {
+        const out = {};
+        els.tplFields.querySelectorAll('.wa-tpl-var')
+            .forEach(i => { out[i.dataset.var] = i.value.trim(); });
+        return out;
+    }
+
+    async function sendTemplate() {
+        const t = currentTemplate();
+        if (!t || !tplTargetPhone) return;
+
+        const values  = collectTemplateValues();
+        const missing = (t.variables || []).filter(v => !values[v]);
+        if (missing.length) {
+            showAlert('Compila: ' + missing.join(', '), 'error');
+            return;
+        }
+
+        const btn = document.getElementById('wa-tpl-send');
+        btn.disabled = true; btn.textContent = 'Invio…';
+
+        try {
+            const res = await fetch(SEND_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: tplTargetPhone, template_id: t.id, params: values }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            closeTemplateModal();
+            showAlert(json.data?.message || 'Template inviato.', json.data?.simulated ? 'error' : 'success');
+            await loadThreads();
+            const phone = matchThreadPhone(tplTargetPhone) || tplTargetPhone;
+            if (phone === activePhone) {
+                await loadMessages(activePhone);
+                await loadCompose(activePhone);
+            } else {
+                openThread(phone);
+            }
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Invia template';
+        }
     }
 
     /**
@@ -382,6 +647,9 @@
 
             els.replyText.value        = '';
             els.replyText.style.height = '';
+            // Un invio passato solo perche' l'integrazione e' spenta non deve
+            // sembrare un invio riuscito.
+            if (json.data?.window_closed) showAlert(json.data.message, 'error');
             await loadMessages(activePhone);
             await loadThreads(true);
         } catch (err) {
@@ -529,6 +797,10 @@
     function openNewModal() {
         document.getElementById('wa-new-phone').value   = '';
         document.getElementById('wa-new-message').value = '';
+        // Una conversazione nuova e' per definizione fuori dalla finestra di 24
+        // ore: il testo libero qui e' proprio il caso che Meta rifiuta.
+        document.getElementById('wa-new-window-note').textContent =
+            'Un primo messaggio cade sempre fuori dalla finestra di 24 ore: con WhatsApp attivo serve un template approvato.';
         els.newModal.hidden = false;
         document.getElementById('wa-new-phone').focus();
     }
@@ -553,7 +825,10 @@
             if (!json.success) throw new Error(json.error);
 
             closeNewModal();
-            showAlert('Messaggio inviato.', 'success');
+            showAlert(
+                json.data?.window_closed ? json.data.message : 'Messaggio inviato.',
+                json.data?.window_closed ? 'error' : 'success'
+            );
             await loadThreads();
             // Il backend normalizza il numero prima di salvarlo ("333 1234567"
             // → "+393331234567"): aprire il thread con la stringa digitata

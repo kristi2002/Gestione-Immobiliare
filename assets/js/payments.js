@@ -5,8 +5,6 @@
     'use strict';
 
     const API            = 'api/payments.php';
-    const TENANTS_API    = 'api/tenants.php';
-    const PROPERTIES_API = 'api/properties.php';
 
     const STATUS_LABELS = {
         pending:   'In attesa',
@@ -28,29 +26,26 @@
     }
 
     let payments   = [];
-    let tenants    = [];
-    let properties = [];
     let currentPage = 1;
     const PAGE_LIMIT = 25;
     let schedaPaymentId = null;
+    // Sapere se Stripe e' configurato PRIMA di disegnare il pulsante: altrimenti
+    // l'unico modo di scoprirlo sarebbe premerlo e ricevere un 503.
+    let stripeConfigured = false;
 
     const els = {};
 
     function init() {
         els.grid         = document.getElementById('payments-grid');
         els.alert        = document.getElementById('payments-alert');
+        els.search       = document.getElementById('payment-search');
         els.statusFilter = document.getElementById('payment-status-filter');
         els.monthFilter  = document.getElementById('payment-month-filter');
         els.yearFilter   = document.getElementById('payment-year-filter');
-        els.modal        = document.getElementById('payment-modal');
-        els.form         = document.getElementById('payment-form');
-        els.modalTitle   = document.getElementById('payment-modal-title');
-        els.tenantSelect = document.getElementById('payment-tenant');
-        els.propSelect   = document.getElementById('payment-property');
         els.pagination   = document.getElementById('payments-pagination');
 
         bindEvents();
-        Promise.all([loadTenants(), loadProperties()])
+        loadStripeStatus()
             .then(() => loadPayments())
             .catch(err => {
                 if (!els.alert?.isConnected) return;
@@ -66,10 +61,10 @@
         bindSddExport();
 
         [els.statusFilter, els.monthFilter].forEach(el => el.addEventListener('change', () => { currentPage = 1; loadPayments(); }));
-        els.yearFilter.addEventListener('input', () => {
+        [els.search, els.yearFilter].forEach(el => el.addEventListener('input', () => {
             clearTimeout(els._timer);
             els._timer = setTimeout(() => { currentPage = 1; loadPayments(); }, 400);
-        });
+        }));
 
         // Scheda quick-view
         const schedaModal = document.getElementById('payment-scheda-modal');
@@ -86,26 +81,89 @@
             closeSchedaModal();
             markPaid(id);
         });
+        document.getElementById('scheda-pay-link').addEventListener('click', () => {
+            createPaymentLink(schedaPaymentId);
+        });
     }
 
-    // -------------------------------------------------------------------------
-    // Reference data
-    // -------------------------------------------------------------------------
-
-    async function loadTenants() {
-        tenants = await Pagination.fetchList(TENANTS_API);
-        if (els.tenantSelect) els.tenantSelect.innerHTML = '<option value="">— Seleziona inquilino —</option>' +
-            tenants.map(t =>
-                `<option value="${t.id}" data-property="${t.property_id || ''}" data-contract="${t.contract_id || ''}">${escapeHtml(t.surname)} ${escapeHtml(t.name)}</option>`
-            ).join('');
+    /**
+     * L'incasso online e' lato agenzia: si genera il link e lo si manda
+     * all'inquilino. Il portale inquilino NON ha un pulsante "Paga": l'endpoint
+     * di checkout richiede una sessione admin, quindi un click dell'inquilino
+     * finirebbe in 401.
+     */
+    async function loadStripeStatus() {
+        try {
+            const res  = await fetch('api/stripe_checkout.php');
+            const json = await res.json();
+            stripeConfigured = !!(json.success && json.data && json.data.configured);
+        } catch {
+            stripeConfigured = false;   // nel dubbio non si mostra il pulsante
+        }
     }
 
-    async function loadProperties() {
-        properties = await Pagination.fetchList(PROPERTIES_API);
-        if (els.propSelect) els.propSelect.innerHTML = '<option value="">— Seleziona immobile —</option>' +
-            properties.map(p =>
-                `<option value="${p.id}">${escapeHtml(p.address)}, ${escapeHtml(p.city)}</option>`
-            ).join('');
+    async function createPaymentLink(id) {
+        const btn = document.getElementById('scheda-pay-link');
+        if (!id || !btn) return;
+
+        btn.disabled = true;
+        const original = btn.innerHTML;
+        btn.textContent = 'Generazione…';
+
+        try {
+            const base = window.location.origin + window.location.pathname;
+            const res  = await fetch('api/stripe_checkout.php', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    payment_id:  id,
+                    success_url: base + '?pagamento=ok',
+                    cancel_url:  base + '?pagamento=annullato',
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Errore Stripe.');
+            showPaymentLink(json.data.checkout_url);
+        } catch (err) {
+            showAlert('Link di pagamento non creato: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+
+    /** Il link va copiato e inviato a mano: mostrarlo per intero, non troncato. */
+    function showPaymentLink(url) {
+        const body = document.getElementById('scheda-pay-body');
+        if (!body) return;
+
+        const box = document.createElement('div');
+        box.className = 'scheda-rows';
+        box.style.marginTop = '12px';
+        box.innerHTML = `
+            <div class="scheda-row">
+                <span class="scheda-row__label"><i data-lucide="link"></i> Link di pagamento</span>
+                <span class="scheda-row__value" style="word-break:break-all">${escapeHtml(url)}</span>
+            </div>`;
+
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'btn btn--ghost btn--sm';
+        copy.textContent = 'Copia link';
+        copy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(url);
+                copy.textContent = 'Copiato';
+            } catch {
+                copy.textContent = 'Copia non riuscita';
+            }
+        });
+        box.appendChild(copy);
+
+        body.querySelector('.stripe-link-box')?.remove();
+        box.classList.add('stripe-link-box');
+        body.appendChild(box);
+        if (window.lucide) window.lucide.createIcons();
     }
 
     // -------------------------------------------------------------------------
@@ -114,6 +172,7 @@
 
     async function loadPayments() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.monthFilter.value)  params.set('month', els.monthFilter.value);
         if (els.yearFilter.value.trim()) params.set('year', els.yearFilter.value.trim());
@@ -226,6 +285,15 @@
 
         const editBtn = document.getElementById('scheda-pay-edit');
         if (editBtn) editBtn.hidden = window.canWrite === false;
+
+        // Il link si genera solo per un pagamento ancora da incassare, e solo se
+        // Stripe e' davvero configurato: su un pagamento gia' saldato sarebbe un
+        // invito a farsi pagare due volte.
+        const linkBtn = document.getElementById('scheda-pay-link');
+        if (linkBtn) {
+            linkBtn.hidden = !(stripeConfigured && window.canWrite !== false
+                               && (st === 'pending' || st === 'late'));
+        }
 
         document.getElementById('payment-scheda-modal').hidden = false;
     }

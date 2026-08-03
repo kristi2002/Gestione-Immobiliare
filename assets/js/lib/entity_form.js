@@ -41,6 +41,7 @@
  *         email | tel | url | select | checkbox | yesno | stars | picker |
  *         hidden | static
  *   required, placeholder, hint, maxlength, min, max, rows, prefix, suffix
+ *   default: valore di partenza su un record NUOVO (mai su uno esistente)
  *   options: [{value,label}] | () => [...]      (select / yesno)
  *   source:  key into lookups.SOURCES           (select / picker)
  *   filter:  (option, data) => bool             (narrow a sourced list)
@@ -462,6 +463,13 @@ export class EntityForm {
             if (!el) return;
             let v = data?.[f.name];
 
+            // Il default dello schema vale solo alla nascita della riga. Su un
+            // record esistente un campo vuoto è un dato, non un buco da
+            // riempire: sovrascriverlo qui cambierebbe la riga al primo salvataggio.
+            if (!this.isEdit && f.default !== undefined && (v === null || v === undefined || v === '')) {
+                v = f.default;
+            }
+
             if (f.type === 'file') {
                 // A file input can't be given a value; list what is already
                 // attached so the user knows re-picking is optional.
@@ -481,7 +489,20 @@ export class EntityForm {
             if (f.type === 'date' && typeof v === 'string')     v = v.slice(0, 10);
             if (f.type === 'time' && typeof v === 'string')     v = v.slice(0, 5);
 
-            el.value = (v === null || v === undefined) ? '' : String(v);
+            const wanted = (v === null || v === undefined) ? '' : String(v);
+            el.value = wanted;
+
+            // Un <select> dichiarato `emptyLabel: false` non ha l'opzione vuota
+            // su cui posarsi: assegnargli '' lo lascia a selectedIndex -1, cioè
+            // visivamente vuoto e senza stato — l'utente compila tutto, salva, e
+            // si sente dire di controllare un campo che sembra a posto.
+            // Se il valore di partenza è vuoto si prende la prima opzione, che
+            // negli schemi è già il default dell'API.
+            // Un valore NON vuoto che non trova opzione resta -1 apposta: è
+            // deriva di enum fra DB e schema, e va vista, non riscritta di nascosto.
+            if (f.type === 'select' && el.selectedIndex === -1 && wanted === '' && el.options.length) {
+                el.selectedIndex = 0;
+            }
 
             if (f.type === 'picker') {
                 const label = this._pickerLabels?.[f.name]?.get(String(v ?? ''));

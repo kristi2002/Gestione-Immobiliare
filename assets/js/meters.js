@@ -37,6 +37,7 @@
         els.alert      = document.getElementById('meters-alert');
         els.tbody      = document.getElementById('meters-tbody');
         els.pagination = document.getElementById('meters-pagination');
+        els.search     = document.getElementById('meters-search');
         els.propFilter = document.getElementById('meters-property-filter');
         els.typeFilter = document.getElementById('meters-type-filter');
         els.modal      = document.getElementById('meters-modal');
@@ -63,6 +64,7 @@
         document.getElementById('meters-delete-confirm').addEventListener('click', confirmDelete);
         els.delModal.addEventListener('click', e => { if (e.target === els.delModal) closeDeleteModal(); });
 
+        els.search.addEventListener('input', debounce(() => { currentPage = 1; loadReadings(); }, 400));
         els.propFilter.addEventListener('change', () => { currentPage = 1; loadReadings(); });
         els.typeFilter.addEventListener('change', () => { currentPage = 1; loadReadings(); });
 
@@ -144,8 +146,10 @@
 
     async function loadReadings() {
         const params = new URLSearchParams();
+        const search = els.search.value.trim();
         const prop   = els.propFilter.value;
         const type   = els.typeFilter.value;
+        if (search) params.set('search', search);
         if (prop) params.set('property_id', prop);
         if (type) params.set('meter_type', type);
         params.set('page', currentPage);

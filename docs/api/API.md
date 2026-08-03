@@ -529,16 +529,16 @@ Body: `{ is_read: true }`
 
 ### WhatsApp Send
 
-**`POST /api/whatsapp_send.php`** — send a WhatsApp message via Twilio  
+**`POST /api/whatsapp_send.php`** — send a WhatsApp message via Meta Cloud API  
 Body: `{ phone, message, tenant_id?, reminder_id? }`  
-Rate-limited: 20 messages/minute per user (Twilio cost protection).
+Rate-limited: 20 messages/minute per user (protezione sui costi a conversazione).
 
 ---
 
 ### WhatsApp Webhook 🔓
 
-**`POST /api/whatsapp_webhook.php`** — Twilio inbound message receiver  
-Validates `X-Twilio-Signature` HMAC-SHA1 header. Saves to `whatsapp_messages`, optionally logs to `communications`, creates a notification.
+**`GET|POST /api/whatsapp_webhook.php`** — webhook Meta. GET = verifica della sottoscrizione (restituisce `hub.challenge`); POST = messaggi in arrivo **e** stati di consegna  
+Verifica `X-Hub-Signature-256` (HMAC-SHA256 del corpo grezzo con `META_WA_APP_SECRET`). In produzione senza app secret risponde `503`: non potendo verificare, rifiuta. Salva in `whatsapp_messages`, eventualmente in `communications`, e crea una notifica.
 
 ---
 
@@ -708,8 +708,13 @@ Returns: `{ facebook_post_id?, instagram_media_id? }`
 
 **`GET /api/social_settings.php`** — get settings; all tokens are masked (••••••••)
 
-**`PUT /api/social_settings.php`** — update Meta credentials  
-Body: `{ meta_app_id, meta_user_token, facebook_page_id, ... }`
+**`PUT /api/social_settings.php`** — update the connected account  
+Body: `{ facebook_page_id, facebook_page_token, instagram_account_id, token_expires_at }`
+
+`meta_app_id` / `meta_app_secret` are app-level credentials and do **not** belong to
+this endpoint: they live in `app_settings` (`PUT /api/settings.php`, Impostazioni →
+Meta / Social, super admin only) and are what `meta_oauth.php` reads. The
+`social_settings.meta_app_id` column is written only by the OAuth callback.
 
 ---
 
@@ -873,7 +878,7 @@ Provider config (env): `SDI_PROVIDER` (manual\|aruba\|fatturaincloud\|custom), `
 
 | Endpoint | Limit | Window | Notes |
 |---|---|---|---|
-| `POST /api/whatsapp_send.php` | 20 requests | 60 seconds | Per user — Twilio cost protection |
+| `POST /api/whatsapp_send.php` | 20 requests | 60 seconds | Per user — protezione sui costi a conversazione |
 | `POST /api/stripe_checkout.php` | 5 requests | 60 seconds | Per user — billing abuse prevention |
 | `POST /api/esign.php?token=X&action=sign` | 10 requests | 60 seconds | Per IP — token brute-force protection |
 | `POST /login.php` | 5 attempts | 15 minutes | Per IP — brute-force lockout via `config/login_throttle.php` |

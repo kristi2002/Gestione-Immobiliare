@@ -50,6 +50,12 @@
     const originalFetch = window.fetch.bind(window);
     const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
+    /**
+     * Endpoint le cui scritture cambiano il numero sulla campanella.
+     * 'reminders.php' prende per sottostringa anche process_reminders.php.
+     */
+    const BELL_ENDPOINTS = ['reminders.php', 'appointments.php'];
+
     window.fetch = async function (url, options = {}) {
         const opts = { ...options };
         const method = (opts.method || 'GET').toUpperCase();
@@ -90,6 +96,33 @@
             window.location.href = 'login.php';
             throw new Error('Sessione scaduta');
         }
+
+        // La campanella in topbar conta i promemoria scaduti, e le pagine che
+        // ne cambiano lo stato sono otto: Promemoria, Automazioni, Calendario,
+        // la bacheca manutenzione, le schede immobile / proprietario /
+        // inquilino, e il modulo generico entity_edit. Agganciarla a ognuna
+        // significava lasciarla indietro nella nona.
+        //
+        // Il punto in cui TUTTE le scritture passano davvero e' questo — lo
+        // stesso ragionamento gia' fatto qui sopra per il blocco in sola
+        // lettura. Il filtro sull'URL prende sia reminders.php sia
+        // process_reminders.php ("Elabora scaduti"), che e' l'azione che il
+        // conteggio lo azzera del tutto.
+        //
+        // appointments.php entra nell'elenco perche' salvare un appuntamento
+        // scrive una riga `reminders` (api/appointments.php): con un promemoria
+        // "30 minuti prima" su un appuntamento imminente la scadenza nasce gia'
+        // passata, quindi la campanella cambia subito.
+        //
+        // notifications.php e' una GET: non rientra in WRITE_METHODS e non
+        // puo' richiamare se stessa.
+        if (response.ok
+            && WRITE_METHODS.includes(method)
+            && BELL_ENDPOINTS.some(name => String(url).includes(name))
+            && window.Notifications) {
+            window.Notifications.refresh();
+        }
+
         return response;
     };
 
@@ -192,6 +225,7 @@
             whatsapp_inbox:        'WhatsApp Inbox',
             property_applications: 'Richieste immobili',
             aml:                   'Antiriciclaggio',
+            aml_profile:           'Fascicolo Antiriciclaggio',
             scadenzario:           'Scadenzario Fiscale',
             portal_sync:           'Pubblicazioni Portali',
             valuation:             'Valutazioni OMI',
@@ -240,6 +274,7 @@
             tenant_profile: 'tenants',        tenant_edit: 'tenants',
             appointment_profile: 'appointments', appointment_edit: 'appointments',
             building_profile: 'buildings',
+            aml_profile: 'aml',
             agent_profile: 'agents',
             lead_edit: 'leads',
             contract_edit: 'contracts',
@@ -890,19 +925,23 @@
                     return;
                 }
                 list.innerHTML =
-                    `<li class="crumb"><button type="button" class="crumb__link" data-root="${esc(parent)}">`
+                    `<li class="crumb"><button type="button" class="crumb__link crumb__step" data-root="${esc(parent)}">`
                     + `${esc(this.viewTitles[parent] || parent)}</button></li>`
-                    + `<li class="crumb crumb--current" aria-current="page">${esc(this.crumbLabel(cur))}</li>`;
+                    + `<li class="crumb crumb--current" aria-current="page">`
+                    + `<span class="crumb__step">${esc(this.crumbLabel(cur))}</span></li>`;
                 bar.hidden = false;
                 list.scrollLeft = list.scrollWidth;
                 return;
             }
 
+            // Il passo sta sempre dentro il <li>, mai direttamente in esso: il
+            // separatore fra due passi nasce sul <li>, e finirebbe altrimenti
+            // dentro la pastiglia del passo corrente (vedi theme-orlandi.css).
             list.innerHTML = this.trail.map((e, i) => {
                 const label = esc(this.crumbLabel(e));
                 return i === this.trailIdx
-                    ? `<li class="crumb crumb--current" aria-current="page">${label}</li>`
-                    : `<li class="crumb"><button type="button" class="crumb__link" data-i="${i}">${label}</button></li>`;
+                    ? `<li class="crumb crumb--current" aria-current="page"><span class="crumb__step">${label}</span></li>`
+                    : `<li class="crumb"><button type="button" class="crumb__link crumb__step" data-i="${i}">${label}</button></li>`;
             }).join('');
             bar.hidden = false;
             // La lista scorre su una riga sola: la pagina corrente sta in fondo,

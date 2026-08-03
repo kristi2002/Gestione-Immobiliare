@@ -28,23 +28,69 @@
 
     function init() {
         els.grid         = document.getElementById('appointments-grid');
+        els.search       = document.getElementById('appt-search');
         els.typeFilter   = document.getElementById('appt-type-filter');
         els.statusFilter = document.getElementById('appt-status-filter');
+        els.agentFilter  = document.getElementById('appt-agent-filter');
         els.from         = document.getElementById('appt-from');
         els.to           = document.getElementById('appt-to');
+        els.scope        = document.getElementById('appt-scope');
         els.alert        = document.getElementById('appointments-alert');
         els.pagination   = document.getElementById('appointments-pagination');
 
         bindEvents();
+        loadAgents();
         loadAppointments();
+    }
+
+    /** Periodo selezionato: 'upcoming' (default), 'past' o '' per tutti. */
+    function currentScope() {
+        const checked = els.scope && els.scope.querySelector('input:checked');
+        return checked ? checked.value : 'upcoming';
+    }
+
+    /**
+     * Tendina agenti.
+     *
+     * NON da api/admin_users.php: quell'endpoint è requireRole('super_admin'),
+     * quindi a un `admin` o a un `agent` avrebbe risposto 403 lasciando la
+     * tendina vuota senza un errore. leads.php?action=agents è la lista agenti
+     * che l'app già usa ed è leggibile da qualunque ruolo autenticato.
+     *
+     * L'utente collegato viene marcato "(io)" e messo per primo: il filtro che
+     * serve ogni mattina è "i miei appuntamenti", e cercarsi in ordine
+     * alfabetico fra i colleghi è un passaggio in più ogni volta.
+     */
+    async function loadAgents() {
+        try {
+            const res = await fetch('api/leads.php?action=agents');
+            const json = await res.json();
+            if (!json.success) return;
+
+            const me = Number(window.userId) || 0;
+            const rows = (json.data || []).slice().sort((a, b) =>
+                (Number(b.id) === me) - (Number(a.id) === me));
+
+            els.agentFilter.insertAdjacentHTML('beforeend', rows.map(r =>
+                `<option value="${r.id}">${escapeHtml(r.username)}${Number(r.id) === me ? ' (io)' : ''}</option>`
+            ).join(''));
+        } catch (_) {
+            // Una tendina agenti che non si carica non deve impedire di vedere
+            // l'elenco: resta "Tutti gli agenti", che è il comportamento di prima.
+        }
     }
 
     function bindEvents() {
         document.getElementById('btn-new-appointment').addEventListener('click', () => {
             if (window.App) window.App.navigateTo('appointment_edit');
         });
-        [els.typeFilter, els.statusFilter, els.from, els.to].forEach(el =>
+        [els.typeFilter, els.statusFilter, els.agentFilter, els.from, els.to].forEach(el =>
             el.addEventListener('change', () => { currentPage = 1; loadAppointments(); }));
+        if (els.scope) els.scope.addEventListener('change', () => { currentPage = 1; loadAppointments(); });
+        els.search.addEventListener('input', () => {
+            clearTimeout(els._timer);
+            els._timer = setTimeout(() => { currentPage = 1; loadAppointments(); }, 400);
+        });
 
         const routeBtn = document.getElementById('btn-appt-route');
         if (routeBtn) routeBtn.addEventListener('click', planDay);
@@ -70,6 +116,9 @@
         const day = els.from.value || window.Fmt.today();
         const params = new URLSearchParams({ from: day, to: day, limit: '100' });
         if (els.typeFilter.value) params.set('type', els.typeFilter.value);
+        // Un itinerario che mescola le tappe di due agenti non è il giro di
+        // nessuno: se la lista è filtrata per agente, lo è anche la giornata.
+        if (els.agentFilter.value) params.set('agent_id', els.agentFilter.value);
 
         try {
             const res = await fetch(`${API}?${params}`);
@@ -121,10 +170,13 @@
 
     async function loadAppointments() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.typeFilter.value) params.set('type', els.typeFilter.value);
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
+        if (els.agentFilter.value) params.set('agent_id', els.agentFilter.value);
         if (els.from.value) params.set('from', els.from.value);
         if (els.to.value) params.set('to', els.to.value);
+        if (currentScope()) params.set('scope', currentScope());
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
         const url = `${API}?${params}`;
@@ -146,7 +198,14 @@
     function renderCards() {
         els.grid.classList.remove('is-loading');
         if (appointments.length === 0) {
-            els.grid.innerHTML = '<div class="entity-empty">Nessun appuntamento trovato.</div>';
+            // Il vuoto deve dire QUALE vuoto: con "Prossimi" attivo di default,
+            // un'agenda piena di visite passate mostrerebbe "nessun appuntamento"
+            // e sembrerebbe che i dati siano spariti.
+            const scope = currentScope();
+            const msg = scope === 'upcoming'
+                ? 'Nessun appuntamento in programma. Lo storico è in “Storico”.'
+                : (scope === 'past' ? 'Nessun appuntamento passato.' : 'Nessun appuntamento trovato.');
+            els.grid.innerHTML = `<div class="entity-empty">${msg}</div>`;
             return;
         }
         els.grid.innerHTML = appointments.map(a => {

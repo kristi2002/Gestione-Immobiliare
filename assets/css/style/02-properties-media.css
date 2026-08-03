@@ -254,6 +254,10 @@
     background: #eef4ff;
 }
 
+/* Righe che aprono una scheda. Il puntatore è l'unico segnale che la riga è
+   cliccabile; il percorso da tastiera resta il link dentro la prima cella. */
+.data-table tbody tr.row-clickable { cursor: pointer; }
+
 .data-table a {
     color: var(--color-primary);
     text-decoration: none;
@@ -634,19 +638,10 @@
     padding: 0 24px 20px;
 }
 
-.form-section {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 16px 18px 4px;
-    margin-bottom: 18px;
-}
-
-.form-section legend {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--color-text);
-    padding: 0 6px;
-}
+/* .form-section / its <legend> used to be declared here as a bordered box
+   with the title notched into the top border. Both now live in
+   12-forms.css, so modal fieldsets and the *_edit pages share one section
+   treatment instead of two that drifted apart. */
 
 .form-row--3 {
     grid-template-columns: 1fr 1fr 1fr;
@@ -1068,6 +1063,16 @@
     flex: 1 1 100%;
     min-width: 0;
     width: 100%;
+}
+
+/* With "Azzera filtri" on the row, a 100% basis is what forces it onto a second
+   line and grows the sidebar header by a whole row mid-search. Give the field a
+   basis it can shrink from so the button sits beside it, as it does in the
+   page toolbars. */
+.chat-sidebar__search .filter-bar__controls.fb-has-clear .form-input,
+.chat-sidebar__search .filter-bar__controls.fb-has-clear input[type="search"] {
+    flex: 1 1 120px;
+    width: auto;
 }
 
 .chat-client-list {

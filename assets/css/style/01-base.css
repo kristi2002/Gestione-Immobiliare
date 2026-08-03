@@ -739,3 +739,15 @@ details.nav-group[open] > summary .nav-group-arrow {
 .properties-layout { display: block; }
 .properties-layout__map { display: none; }
 
+
+/* Avviso di elenco tagliato (schede senza impaginatore): il conteggio onesto
+   da solo si legge come un filtro, non come "qui sotto manca roba". */
+.list-truncated {
+    padding: 10px 14px;
+    border-top: 1px dashed var(--color-border, #e0e0e0);
+    background: rgba(230, 126, 34, 0.06);
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.8rem;
+    text-align: center;
+}
+td.list-truncated { border-top: 1px dashed var(--color-border, #e0e0e0); }

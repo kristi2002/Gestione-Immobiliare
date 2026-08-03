@@ -19,6 +19,9 @@ requireRole('admin', 'super_admin');
 
 const FORECAST_MONTH_LABELS = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
+/** Righe dell'elenco insoluti. Il totale in cima resta su TUTTI gli insoluti. */
+const FORECAST_OVERDUE_LIMIT = 50;
+
 try {
     $db = getDB();
 
@@ -36,17 +39,28 @@ try {
          WHERE status IN ('pending', 'late') AND due_date < CURDATE()"
     )->fetchColumn();
 
+    // Quante sono DAVVERO. L'importo qui sopra somma tutti gli insoluti, mentre
+    // l'elenco si ferma a FORECAST_OVERDUE_LIMIT righe: senza questo numero la
+    // pagina non ha modo di sapere che sta mostrando una parte, e il totale in
+    // cima finiva accanto a una tabella che non lo giustifica.
+    $overdueCount = (int) $db->query(
+        "SELECT COUNT(*) FROM payments
+         WHERE status IN ('pending', 'late') AND due_date < CURDATE()"
+    )->fetchColumn();
+
     apiSuccess([
         'months' => $months,
         'stats'  => [
             'expected_next_6m'      => round($expectedTotal, 2),
             'avg_occupancy_rate'    => round($avgOccupancy, 1),
             'overdue_total'         => $overdueTotal,
+            'overdue_count'         => $overdueCount,
             'top_property_address'  => $topProperties[0]['address'] ?? null,
         ],
         'monthly'        => $monthly,
         'top_properties' => $topProperties,
         'overdue'        => $overdue,
+        'overdue_limit'  => FORECAST_OVERDUE_LIMIT,
     ]);
 } catch (PDOException $e) {
     apiError('Errore database.', 500);
@@ -148,7 +162,7 @@ function getOverdueList(PDO $db): array
          WHERE pay.status IN ('pending', 'late')
            AND pay.due_date < CURDATE()
          ORDER BY pay.due_date ASC
-         LIMIT 50"
+         LIMIT " . FORECAST_OVERDUE_LIMIT
     );
 
     return array_map(fn(array $r): array => [

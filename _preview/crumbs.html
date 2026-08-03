@@ -48,8 +48,8 @@ const esc = (s) => { const d = document.createElement('div'); d.textContent = s 
 
 function crumbsHtml(steps) {
   return steps.map((s, i) => i === steps.length - 1
-    ? `<li class="crumb crumb--current" aria-current="page">${esc(s)}</li>`
-    : `<li class="crumb"><button type="button" class="crumb__link" data-i="${i}">${esc(s)}</button></li>`
+    ? `<li class="crumb crumb--current" aria-current="page"><span class="crumb__step">${esc(s)}</span></li>`
+    : `<li class="crumb"><button type="button" class="crumb__link crumb__step" data-i="${i}">${esc(s)}</button></li>`
   ).join('');
 }
 

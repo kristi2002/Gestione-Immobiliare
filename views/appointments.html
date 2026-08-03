@@ -5,6 +5,24 @@
             <p>Pianifica e gestisci visite, acquisizioni, atti e chiamate.</p>
         </div>
         <div class="view-header__actions">
+            <!-- Fuori dalla .toolbar di proposito: filters.js raccoglie i campi
+                 della barra dentro il popover "Filtri", e questo non è un filtro
+                 fra i tanti — è la domanda "sto guardando avanti o indietro?",
+                 che deve restare leggibile senza aprire niente. -->
+            <div class="segmented" id="appt-scope" role="radiogroup" aria-label="Periodo">
+                <label class="segmented__option">
+                    <input type="radio" name="appt-scope" value="upcoming" checked>
+                    <span><i data-lucide="calendar-clock"></i> Prossimi</span>
+                </label>
+                <label class="segmented__option">
+                    <input type="radio" name="appt-scope" value="past">
+                    <span><i data-lucide="history"></i> Storico</span>
+                </label>
+                <label class="segmented__option">
+                    <input type="radio" name="appt-scope" value="">
+                    <span>Tutti</span>
+                </label>
+            </div>
             <button class="btn btn--ghost" id="btn-appt-route" title="Ordina gli appuntamenti di una giornata e stima gli spostamenti"><i data-lucide="route"></i> Itinerario giornata</button>
             <button class="btn btn--primary" id="btn-new-appointment">+ Nuovo Appuntamento</button>
         </div>
@@ -46,6 +64,9 @@
     </script>
 
     <div class="toolbar">
+        <div class="search-box">
+            <input type="search" id="appt-search" class="form-input" placeholder="Cerca cliente, immobile, agente o note…" autocomplete="off">
+        </div>
         <select id="appt-type-filter" class="form-select">
             <option value="">Tutti i tipi</option>
             <option value="visita">Visita</option>
@@ -59,6 +80,9 @@
             <option value="completed">Completato</option>
             <option value="cancelled">Annullato</option>
             <option value="no_show">Mancata presentazione</option>
+        </select>
+        <select id="appt-agent-filter" class="form-select" aria-label="Agente">
+            <option value="">Tutti gli agenti</option>
         </select>
         <input type="date" id="appt-from" class="form-input" title="Da">
         <input type="date" id="appt-to" class="form-input" title="A">
@@ -74,4 +98,4 @@
      (views/appointment_profile.html); cards now navigate there. -->
 
 <script src="assets/js/route_planner.js"></script>
-<script src="assets/js/appointments.js?v=3"></script>
+<script src="assets/js/appointments.js?v=4"></script>

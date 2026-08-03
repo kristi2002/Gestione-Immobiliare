@@ -6,8 +6,6 @@
 
     const API         = 'api/invoices.php';
     const PDF_API     = 'api/generate_invoice_pdf.php';
-    const CLIENTS_API = 'api/clients.php';
-    const LEADS_API   = 'api/leads.php';
 
     const STATUS_LABELS = { draft: 'Bozza', sent: 'Inviata', paid: 'Pagata', cancelled: 'Annullata' };
 
@@ -19,15 +17,14 @@
 
     function init() {
         els.grid         = document.getElementById('invoices-grid');
+        els.search       = document.getElementById('invoice-search');
         els.statusFilter = document.getElementById('invoice-status-filter');
         els.yearFilter   = document.getElementById('invoice-year-filter');
         els.alert        = document.getElementById('invoices-alert');
-        els.clientSelect = document.getElementById('invoice-client');
-        els.leadSelect   = document.getElementById('invoice-lead');
         els.pagination   = document.getElementById('invoices-pagination');
 
         bindEvents();
-        Promise.all([loadClients(), loadLeads()]).then(() => {
+        Promise.resolve().then(() => {
             loadInvoices();
             // Legacy "+ Nuova Fattura" entry now redirects to the dedicated page.
             // replace: un redirect non e' un passo del percorso — altrimenti
@@ -42,7 +39,7 @@
             if (window.App) window.App.navigateTo('invoice_edit');
         });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadInvoices(); });
-        els.yearFilter.addEventListener('input', () => { clearTimeout(els._t); els._t = setTimeout(() => { currentPage = 1; loadInvoices(); }, 300); });
+        [els.search, els.yearFilter].forEach(el => el.addEventListener('input', () => { clearTimeout(els._t); els._t = setTimeout(() => { currentPage = 1; loadInvoices(); }, 300); }));
 
         // Scheda quick-view
         const schedaModal = document.getElementById('invoice-scheda-modal');
@@ -69,23 +66,10 @@
         });
     }
 
-    async function loadClients() {
-        const items = await Pagination.fetchList(CLIENTS_API, { status: 'active' });
-        if (els.clientSelect) els.clientSelect.innerHTML = '<option value="">— Nessuno —</option>' +
-            items.map(c => `<option value="${c.id}">${escapeHtml(c.surname)} ${escapeHtml(c.name)}</option>`).join('');
-    }
-    async function loadLeads() {
-        const res = await fetch(`${LEADS_API}?limit=500&page=1`);
-        const json = await res.json();
-        if (json.success) {
-            const items = Pagination.parseResponse(json).items;
-            if (els.leadSelect) els.leadSelect.innerHTML = '<option value="">— Nessuno —</option>' +
-                items.map(l => `<option value="${l.id}">${escapeHtml(l.surname)} ${escapeHtml(l.name)}</option>`).join('');
-        }
-    }
 
     async function loadInvoices() {
         const params = new URLSearchParams();
+        if (els.search.value.trim()) params.set('search', els.search.value.trim());
         if (els.statusFilter.value) params.set('status', els.statusFilter.value);
         if (els.yearFilter.value) params.set('year', els.yearFilter.value);
         params.set('page', currentPage);
