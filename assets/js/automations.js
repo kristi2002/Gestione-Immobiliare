@@ -1183,10 +1183,12 @@
         return esc(s).replace(/"/g, '&quot;');
     }
 
+    /** "1 ora", non "1 ore": il ritardo finisce dentro una frase da leggere. */
     function formatDelay(minutes) {
-        if (minutes % 1440 === 0) return `${minutes / 1440} giorni`;
-        if (minutes % 60 === 0)   return `${minutes / 60} ore`;
-        return `${minutes} minuti`;
+        const say = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+        if (minutes % 1440 === 0) return say(minutes / 1440, 'giorno', 'giorni');
+        if (minutes % 60 === 0)   return say(minutes / 60, 'ora', 'ore');
+        return say(minutes, 'minuto', 'minuti');
     }
 
     function fmtDateTime(d) { return window.Fmt.dateTime(d); }
