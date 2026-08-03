@@ -25,9 +25,10 @@
             <button class="btn btn--primary" id="btn-2fa-start">Attiva 2FA</button>
 
             <div id="totp-setup-panel" hidden style="margin-top:16px">
-                <p>Scansiona il QR code con Google Authenticator o Authy, oppure inserisci il codice manualmente.</p>
-                <img id="totp-qr" src="" alt="QR Code 2FA" style="max-width:200px;display:block;margin:12px 0">
-                <p class="text-muted">Codice manuale (otpauth URI):</p>
+                <p>Apri Google Authenticator, Authy o 1Password, scegli «Inserisci codice manualmente» e digita la chiave qui sotto.</p>
+                <p class="text-muted">Chiave segreta:</p>
+                <pre id="totp-secret" style="font-size:18px;letter-spacing:2px;background:var(--color-bg);padding:10px;border-radius:6px"></pre>
+                <p class="text-muted">Oppure, da telefono, apri questo collegamento:</p>
                 <pre id="totp-uri" style="white-space:pre-wrap;word-break:break-all;background:var(--color-bg);padding:8px;border-radius:6px"></pre>
                 <div class="form-group">
                     <label for="totp-verify-code">Inserisci il codice a 6 cifre per confermare</label>

@@ -109,10 +109,17 @@ function buildPaymentsReport(PDO $db, int $year): array
 
 function buildExpensesReport(PDO $db, int $year): array
 {
+    // Le quote di ripartizione millesimale sono righe-figlie che ri-espongono, unita'
+    // per unita', una spesa condominiale gia' presente come riga-padre: sommarle
+    // entrambe contava due volte lo stesso esborso (una fattura da 3.000 EUR
+    // ripartita su 12 unita' diventava 6.000 EUR nel report annuale, mentre la
+    // pagina Spese ne mostrava 3.000). Ovunque nel modulo Spese le figlie sono
+    // escluse dai totali (api/expenses.php: CHILD_EXPENSE_EXCLUSION); qui non lo
+    // erano, ed era l'unico punto a dare un numero diverso.
     $stmt = $db->prepare(
         "SELECT category, SUM(amount) AS total, COUNT(*) AS count
          FROM expenses
-         WHERE YEAR(expense_date) = :year
+         WHERE YEAR(expense_date) = :year AND parent_expense_id IS NULL
          GROUP BY category ORDER BY total DESC"
     );
     $stmt->execute(['year' => $year]);

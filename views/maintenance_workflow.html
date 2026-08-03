@@ -35,9 +35,13 @@
         </select>
         <select id="mw-priority-filter" class="form-select">
             <option value="">Tutte le priorità</option>
+            <!-- Gli stessi quattro valori che scrive il modulo (schemas/maintenance.js:
+                 PRIORITIES). Qui c'era "Normale", che il modulo non scrive mai: il
+                 filtro non trovava nulla, e i ticket salvati come "Media" non erano
+                 filtrabili da nessuna voce. -->
             <option value="urgente">Urgente</option>
             <option value="alta">Alta</option>
-            <option value="normale">Normale</option>
+            <option value="media">Media</option>
             <option value="bassa">Bassa</option>
         </select>
     </div>

@@ -117,11 +117,18 @@ function renderControl(f, uid) {
                 + `</label>`;
 
         case 'stars':
+            // Il valore di partenza e' VUOTO, non "0": le stelline sono sempre
+            // facoltative, ma le API leggono "0" come un voto e lo rifiutano
+            // ("Il rating deve essere tra 1 e 5", "Condizione deve essere tra 1 e
+            // 5"), mentre trattano '' come "non indicato". Nascendo a "0", un
+            // fornitore o un bene d'inventario salvato senza toccare le stelline
+            // veniva respinto lamentando un campo che l'agente non aveva nemmeno
+            // visto. Stesso motivo per cui "azzera" torna a '' e non a 0.
             return `<div class="ef-stars" data-ef-stars="${esc(f.name)}" role="radiogroup" aria-label="${esc(f.label)}">`
                 + [1, 2, 3, 4, 5].map(v =>
                     `<button type="button" class="ef-star" data-value="${v}" aria-label="${v} su 5">☆</button>`).join('')
-                + `<button type="button" class="ef-star-clear" data-value="0" title="Azzera">×</button>`
-                + `<input type="hidden"${base} value="0">`
+                + `<button type="button" class="ef-star-clear" data-value="" title="Azzera">×</button>`
+                + `<input type="hidden"${base} value="">`
                 + `</div>`;
 
         case 'picker':
@@ -365,7 +372,7 @@ export class EntityForm {
                 const btn = e.target.closest('.ef-star, .ef-star-clear');
                 if (!btn) return;
                 hidden.value = btn.dataset.value;
-                paint(Number(btn.dataset.value));
+                paint(Number(btn.dataset.value) || 0);
                 this.dirty = true;
             });
             wrap._paint = paint;
@@ -480,7 +487,9 @@ export class EntityForm {
             if (f.type === 'checkbox') { el.checked = v === 1 || v === '1' || v === true; return; }
             if (f.type === 'yesno')    { el.value = (v === null || v === undefined || v === '') ? '' : String(Number(v) ? 1 : 0); return; }
             if (f.type === 'stars') {
-                el.value = Number(v) || 0;
+                // Un record salvato senza voto torna null: va riletto come vuoto,
+                // altrimenti riaprirlo e risalvarlo lo fa rifiutare come sopra.
+                el.value = Number(v) ? String(Number(v)) : '';
                 const wrap = el.closest('[data-ef-stars]');
                 if (wrap && wrap._paint) wrap._paint(Number(v) || 0);
                 return;

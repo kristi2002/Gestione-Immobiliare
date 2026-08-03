@@ -24,9 +24,12 @@
         completata:    '#22c55e',
         chiusa:        '#6b7280',
     };
+    // Le chiavi sono i valori che scrive davvero il modulo (schemas/maintenance.js).
+    // 'normale' resta solo come alias di righe vecchie: nessun modulo lo produce.
     const PRIORITY_COLORS = {
         urgente: 'var(--color-danger,#c0392b)',
         alta:    'var(--color-warning,#e67e22)',
+        media:   'inherit',
         normale: 'inherit',
         bassa:   '#999',
     };
@@ -191,7 +194,7 @@
             const status       = r.maintenance_status || 'aperta';
             const statusLabel  = STATUS_LABELS[status] || status;
             const statusColor  = STATUS_COLORS[status] || '#333';
-            const priority     = r.priority || 'normale';
+            const priority     = r.priority || '—';
             const priorityColor = PRIORITY_COLORS[priority] || 'inherit';
             const supplierName = r.supplier_name || r.assigned_supplier || '—';
             const tenantName   = r.tenant_name || extractTenantFromNote(r.description) || '—';
@@ -311,7 +314,7 @@
             }
 
             container.innerHTML = colItems.map(r => {
-                const priority     = r.priority || 'normale';
+                const priority     = r.priority || '—';
                 const priorityColor = PRIORITY_COLORS[priority] || 'inherit';
                 const tenantName   = r.tenant_name || extractTenantFromNote(r.description) || '—';
                 const title        = r.title || (r.description ? r.description.substring(0, 60) : '—');

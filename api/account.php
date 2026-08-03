@@ -65,10 +65,15 @@ function twoFaSetup(): void
     $issuer = getSetting('agency_name', 'Gestionale Immobiliare');
     $uri    = generateQrCodeUrl($secret, getCurrentUsername(), $issuer);
 
+    // Nessun QR generato da terzi: l'immagine veniva chiesta a api.qrserver.com
+    // passando l'otpauth URI nella query string, cioe' spedendo il SEGRETO TOTP
+    // dell'amministratore a un servizio esterno (e nei log di chiunque stia in
+    // mezzo). Un secondo fattore che un terzo conosce non e' un secondo fattore.
+    // L'inserimento manuale del segreto e' la strada standard "non riesco a
+    // scansionare" ed e' supportata da Google Authenticator, Authy e 1Password.
     apiSuccess([
-        'secret'   => $secret,
-        'otpauth'  => $uri,
-        'qr_image' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . rawurlencode($uri),
+        'secret'  => $secret,
+        'otpauth' => $uri,
     ]);
 }
 

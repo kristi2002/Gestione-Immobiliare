@@ -43,7 +43,11 @@ async function start2fa() {
         const json = await request(`${API}?action=2fa_setup`);
         if (!json.success) return showAlert(json.error, 'error');
         totpSecret = json.data.secret;
-        document.getElementById('totp-qr').src = json.data.qr_image;
+        // Il segreto si legge a gruppi di 4: va ricopiato a mano in un'app, e a
+        // caratteri attaccati si sbaglia. Il QR generato da terzi non c'e' piu'
+        // (spediva questo stesso segreto fuori — vedi api/account.php).
+        document.getElementById('totp-secret').textContent =
+            String(json.data.secret || '').replace(/(.{4})/g, '$1 ').trim();
         document.getElementById('totp-uri').textContent = json.data.otpauth;
         document.getElementById('totp-setup-panel').hidden = false;
         document.getElementById('totp-backup-panel').hidden = true;

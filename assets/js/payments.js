@@ -328,6 +328,11 @@
         const payment = payments.find(p => p.id == id);
         if (!payment) return;
 
+        // La PUT riscrive TUTTE le colonne e il validatore ripiega su 'bonifico'
+        // quando `method` non arriva (api/payments.php: $data['method'] ?? 'bonifico').
+        // Senza questa riga "Segna come pagato" — l'azione piu' usata del modulo —
+        // riscriveva come bonifico ogni rata incassata per SDD, contanti, assegno,
+        // POS o Stripe, cioe' proprio il dato con cui si riconcilia l'estratto conto.
         const data = {
             tenant_id:   payment.tenant_id,
             property_id: payment.property_id,
@@ -337,6 +342,7 @@
             paid_date:   window.Fmt.today(),
             status:      'paid',
             notes:       payment.notes || '',
+            method:      payment.method || 'bonifico',
         };
 
         try {

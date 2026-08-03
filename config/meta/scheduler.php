@@ -5,6 +5,12 @@
  */
 
 require_once __DIR__ . '/../env.php';
+// L'avviso di token scaduto lo manda il cron (cron/publish_social_posts.php),
+// che carica solo env + db + meta.php: senza queste due righe sendHtmlEmail() e
+// getSetting() non esistevano e l'avviso finiva nel solo error_log. L'agenzia
+// non veniva mai informata che i post avevano smesso di pubblicarsi.
+require_once __DIR__ . '/../settings.php';
+require_once __DIR__ . '/../mail_html.php';
 
 /**
  * Process all scheduled posts that are due.
@@ -119,24 +125,24 @@ function isMetaTokenExpiredError(string $error): bool
 
 /**
  * Email the admin once per 24 h when Meta token errors are detected.
- * Uses the settings table key `meta_token_alert_last_sent` to rate-limit.
+ * Usa la chiave `meta_token_alert_last_sent` in app_settings per limitare gli invii.
+ *
+ * La tabella si chiama app_settings (colonne setting_key/setting_value): qui si
+ * leggeva e scriveva `settings.key_name`, che non esiste. Entrambe le query
+ * fallivano dentro un catch silenzioso, quindi il limite di 24 ore non ha mai
+ * funzionato: a token scaduto l'avviso partiva a OGNI giro del cron social.
  */
 function sendMetaTokenExpiryAlert(PDO $db, string $errorDetail): void
 {
     // Rate-limit: send at most once every 24 hours
-    try {
-        $row = $db->query(
-            "SELECT value FROM settings WHERE key_name = 'meta_token_alert_last_sent' LIMIT 1"
-        )->fetch();
-
-        if ($row && !empty($row['value'])) {
-            $lastSent = strtotime($row['value']);
+    if (function_exists('getSetting')) {
+        $lastSentRaw = getSetting('meta_token_alert_last_sent');
+        if (!empty($lastSentRaw)) {
+            $lastSent = strtotime($lastSentRaw);
             if ($lastSent !== false && (time() - $lastSent) < 86400) {
                 return; // Already alerted within last 24 h
             }
         }
-    } catch (Throwable) {
-        // settings table check failed — proceed anyway
     }
 
     // Only send if mail is available
@@ -173,12 +179,11 @@ function sendMetaTokenExpiryAlert(PDO $db, string $errorDetail): void
     sendHtmlEmail($adminEmail, $subject, $body);
 
     // Record timestamp so we don't spam
-    try {
-        $db->prepare(
-            "INSERT INTO settings (key_name, value) VALUES ('meta_token_alert_last_sent', NOW())
-             ON DUPLICATE KEY UPDATE value = NOW()"
-        )->execute();
-    } catch (Throwable) {
-        // Ignore — alert was still sent
+    if (function_exists('setSetting')) {
+        try {
+            setSetting('meta_token_alert_last_sent', date('Y-m-d H:i:s'));
+        } catch (Throwable) {
+            // Ignore — alert was still sent
+        }
     }
 }

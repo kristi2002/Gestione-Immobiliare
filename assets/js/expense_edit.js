@@ -14,6 +14,13 @@
     const expenseId = vp.expenseId || null;
     const isEdit    = !!expenseId;
 
+    // L'edificio non e' un campo di questo modulo (una spesa condominiale si crea
+    // dalla scheda dell'edificio), ma la PUT di api/expenses.php riscrive TUTTE le
+    // colonne: se non lo rimandiamo indietro, correggere una virgola nella
+    // descrizione staccava la spesa dal condominio, che spariva dalla sua scheda e
+    // dalla ripartizione millesimale. Lo si trasporta invariato.
+    let loadedBuildingId = null;
+
     function $(id) { return document.getElementById(id); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
@@ -59,6 +66,7 @@
         if (!j.success) throw new Error(j.error);
         const x = j.data;
         $('exe-id').value = x.id;
+        loadedBuildingId = x.building_id || null;
         $('exe-category').value = x.category || 'altro';
         $('exe-amount').value = x.amount ?? '';
         $('exe-description').value = x.description || '';
@@ -77,6 +85,7 @@
             description:  $('exe-description').value.trim(),
             expense_date: $('exe-date').value,
             property_id:  $('exe-property').value || null,
+            building_id:  loadedBuildingId,
             client_id:    $('exe-client').value || null,
             supplier_id:  $('exe-supplier').value || null,
             receipt_url:  $('exe-receipt').value.trim(),

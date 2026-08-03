@@ -102,8 +102,12 @@ function geocodeResolve(array $property): array
 
     $best = geocodePickBestResult($cascade, $property, $parsed);
 
+    // Sigla, non nome esteso: il form scrive questo valore dritto in
+    // properties.province, dove tutto il resto è "MC"/"MO"/"RE".
+    $suggestedCode = geocodeProvinceCode((string) ($area['suggested_province'] ?? ''));
+
     return [
         'result'             => $best,
-        'suggested_province' => $area['suggested_province'] ?: null,
+        'suggested_province' => $suggestedCode ?: null,
     ];
 }
