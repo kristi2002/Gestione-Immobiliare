@@ -35,7 +35,6 @@
         if (urlParams.get('status'))      els.statusFilter.value = urlParams.get('status');
 
         bindEvents();
-        bindRowMenu();
         loadApplications();
     }
 
@@ -134,8 +133,10 @@
                 <td data-label="Tipo"><span class="badge">${esc(a.application_type || a.type || '—')}</span></td>
                 <td data-label="Data">${formatDate(a.created_at || a.submitted_at)}</td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
-                <td data-label="Azioni" class="col-actions lt-actions">
-                    ${window.RowMenu.button(a.id, 'Azioni richiesta')}
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
+                    <button class="btn btn--sm btn--ghost btn-pa-view" data-id="${a.id}" title="Visualizza"><i data-lucide="eye"></i> Dettagli</button>
+                    <button class="btn btn--sm btn--ghost btn-pa-lead" data-id="${a.id}" title="Converti in lead" style="color:var(--color-primary,#3b82f6);">→ Lead</button>
+                    <button class="btn btn--sm btn--ghost btn-pa-del" data-id="${a.id}" title="Elimina" style="color:var(--color-danger,#dc2626);"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -143,40 +144,39 @@
         // Store items for detail lookup
         els.tbody._items = items;
 
-        if (window.lucide) window.lucide.createIcons();
-    }
+        els.tbody.querySelectorAll('.btn-pa-view').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
+                if (item) openDetail(item);
+            });
+        });
 
-    // Le voci si costruiscono all'apertura, quindi vedono sempre lo stato
-    // corrente della riga; la meccanica del menu sta in assets/js/row_menu.js.
-    function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => {
-            const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
-            if (!item) return [];
-            // Una richiesta gia' convertita non si riconverte (il server
-            // risponde 409): meglio dirlo qui che farlo scoprire con un errore.
-            const converted = !!item.converted_to_lead_id;
-            return [
-                { label: 'Dettagli', icon: 'eye', onClick: () => openDetail(item) },
-                { label: converted ? 'Già convertita in Lead' : 'Converti in Lead',
-                  icon: 'user-plus',
-                  disabled: converted,
-                  title: converted ? `Già convertita (lead #${item.converted_to_lead_id})` : '',
-                  onClick: async () => { activeItem = item; await convertToLead(); } },
-                { sep: true },
-                { label: 'Elimina', icon: 'trash-2', danger: true, onClick: async () => {
-                    const who = item.applicant_name || item.name || ('#' + item.id);
-                    if (!await confirmDialog(`Eliminare la richiesta di ${who}? L'operazione è irreversibile.`, { title: 'Elimina richiesta', confirmText: 'Elimina' })) return;
-                    try {
-                        const res  = await fetch(`${API}?id=${item.id}`, { method: 'DELETE' });
-                        const json = await res.json();
-                        if (!json.success) throw new Error(json.error || 'Errore');
-                        showAlert('Richiesta eliminata.', 'success');
-                        loadApplications();
-                    } catch (err) {
-                        showAlert('Errore eliminazione: ' + err.message, 'error');
-                    }
-                } },
-            ];
+        els.tbody.querySelectorAll('.btn-pa-lead').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
+                if (!item) return;
+                activeItem = item;
+                btn.disabled = true; btn.textContent = '…';
+                await convertToLead();
+                btn.disabled = false; btn.textContent = '→ Lead';
+            });
+        });
+
+        els.tbody.querySelectorAll('.btn-pa-del').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
+                const who  = item ? (item.applicant_name || item.name || ('#' + item.id)) : ('#' + btn.dataset.id);
+                if (!await confirmDialog(`Eliminare la richiesta di ${who}? L'operazione è irreversibile.`, { title: 'Elimina richiesta', confirmText: 'Elimina' })) return;
+                try {
+                    const res  = await fetch(`${API}?id=${btn.dataset.id}`, { method: 'DELETE' });
+                    const json = await res.json();
+                    if (!json.success) throw new Error(json.error || 'Errore');
+                    showAlert('Richiesta eliminata.', 'success');
+                    loadApplications();
+                } catch (err) {
+                    showAlert('Errore eliminazione: ' + err.message, 'error');
+                }
+            });
         });
     }
 

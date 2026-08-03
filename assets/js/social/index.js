@@ -37,7 +37,6 @@ function init() {
     els.pagination     = document.getElementById('social-pagination');
 
     bindEvents();
-    bindRowMenu();
     reportOAuthOutcome();
     loadSettings();
     loadProperties()
@@ -208,23 +207,22 @@ function renderTable() {
     }
 
     els.tbody.innerHTML = posts.map(p => renderPostRow(p)).join('');
-    if (window.lucide) window.lucide.createIcons();
-}
 
-function bindRowMenu() {
-    window.RowMenu.bind(els.tbody, btn => {
-        const id = btn.dataset.id;
-        return [
-            { label: 'Pubblica ora', icon: 'rocket', onClick: () => publishNow(id) },
-            { label: 'Modifica', icon: 'pencil', onClick: () => {
-                const post = posts.find(p => p.id == id);
-                if (post) openModal(post);
-            } },
-            { sep: true },
-            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: async () => {
-                if (await confirmDialog('Vuoi eliminare questo post?', { title: 'Elimina post' })) deletePost(id);
-            } },
-        ];
+    els.tbody.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const post = posts.find(p => p.id == btn.dataset.id);
+            if (post) openModal(post);
+        });
+    });
+
+    els.tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (await confirmDialog('Vuoi eliminare questo post?', { title: 'Elimina post' })) deletePost(btn.dataset.id);
+        });
+    });
+
+    els.tbody.querySelectorAll('.btn-publish').forEach(btn => {
+        btn.addEventListener('click', () => publishNow(btn.dataset.id));
     });
 }
 

@@ -143,8 +143,6 @@
         window.App.navigateTo('entity_edit', id ? { entity: 'suppliers', id } : { entity: 'suppliers' });
     }
 
-    function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
-
     async function confirmDelete() {
         if (!deleteTargetId) return;
         const btn = document.getElementById('suppliers-delete-confirm');

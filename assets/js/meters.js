@@ -48,7 +48,6 @@
         els.newMeter   = document.getElementById('meters-new-meter');
 
         bindEvents();
-        bindRowMenu();
         loadProperties();
         loadReadings();
     }
@@ -236,17 +235,15 @@
                 <td data-label="Consumo">${deltaHtml}</td>
                 <td data-label="Data">${formatDate(r.reading_date)}</td>
                 <td data-label="Prova">${renderPhotoCell(r)}</td>
-                <td data-label="Azioni" class="col-actions lt-actions">
-                    ${window.RowMenu.button(r.id, 'Azioni lettura')}
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
+                    <button class="btn btn--sm btn--ghost btn-m-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-m-del" data-id="${r.id}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');
 
-    }
-
-    function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => [
-            { label: 'Modifica', icon: 'pencil', onClick: async () => {
+        els.tbody.querySelectorAll('.btn-m-edit').forEach(btn => {
+            btn.addEventListener('click', async () => {
                 try {
                     const res  = await fetch(`${API}?id=${btn.dataset.id}`);
                     const json = await res.json();
@@ -254,13 +251,15 @@
                     const item = Array.isArray(json.data) ? json.data[0] : json.data;
                     openModal(item);
                 } catch (e) { showAlert(e.message, 'error'); }
-            } },
-            { sep: true },
-            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
+            });
+        });
+
+        els.tbody.querySelectorAll('.btn-m-del').forEach(btn => {
+            btn.addEventListener('click', () => {
                 deleteTargetId = btn.dataset.id;
                 els.delModal.hidden = false;
-            } },
-        ]);
+            });
+        });
     }
 
     function openModal(item = null) {

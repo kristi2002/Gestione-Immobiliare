@@ -52,7 +52,6 @@
         els.assetModal     = document.getElementById('mw-asset-modal');
 
         bindEvents();
-        bindRowMenu();
         loadProperties();
         loadSuppliers();
         loadRequests();
@@ -208,33 +207,26 @@
                     ? `<a href="#" class="btn-view-supplier text-muted" style="font-size:0.85rem;" data-supplier-id="${esc(r.supplier_id || '')}">${esc(supplierName)}</a>`
                     : '<span class="text-muted">—</span>'}</td>
                 <td data-label="Data">${formatDate(r.created_at || r.due_date)}</td>
-                <td data-label="Azioni" class="col-actions lt-actions">
-                    ${window.RowMenu.button(r.id, 'Azioni intervento')}
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
+                    <button class="btn btn--sm btn--ghost btn-mw-asset" data-id="${r.id}" data-property="${esc(r.property_id || '')}" data-asset="${esc(r.inventory_item_id || '')}" title="Collega il bene coinvolto"><i data-lucide="package"></i> Bene</button>
+                    <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore"><i data-lucide="wrench"></i> Fornitore</button>
+                    <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" title="Cambia stato">↻ Stato</button>
                 </td>
             </tr>`;
         }).join('');
 
         if (window.lucide) window.lucide.createIcons();
 
-        // Le righe servono al menu: senza, il pulsante saprebbe solo l'id.
-        els.tbody._items = items;
+        els.tbody.querySelectorAll('.btn-mw-supplier').forEach(btn => {
+            btn.addEventListener('click', () => openSupplierModal(btn.dataset.id, btn.dataset.supplier));
+        });
 
-    }
+        els.tbody.querySelectorAll('.btn-mw-status').forEach(btn => {
+            btn.addEventListener('click', () => openStatusModal(btn.dataset.id, btn.dataset.status));
+        });
 
-    // Le voci si costruiscono all'apertura, quindi vedono sempre lo stato
-    // corrente della riga; la meccanica del menu sta in assets/js/row_menu.js.
-    function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => {
-            const r = (els.tbody._items || []).find(x => String(x.id) === String(btn.dataset.id));
-            if (!r) return [];
-            return [
-                { label: 'Collega bene', icon: 'package',
-                  onClick: () => openAssetModal(r.id, r.property_id || '', r.inventory_item_id || '') },
-                { label: 'Assegna fornitore', icon: 'wrench',
-                  onClick: () => openSupplierModal(r.id, r.supplier_id || '') },
-                { label: 'Cambia stato', icon: 'refresh-cw',
-                  onClick: () => openStatusModal(r.id, r.maintenance_status || 'aperta') },
-            ];
+        els.tbody.querySelectorAll('.btn-mw-asset').forEach(btn => {
+            btn.addEventListener('click', () => openAssetModal(btn.dataset.id, btn.dataset.property, btn.dataset.asset));
         });
     }
 

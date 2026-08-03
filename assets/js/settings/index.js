@@ -541,26 +541,21 @@ async function loadUsers() {
             <td data-label="Email">${esc(u.email || '—')}</td>
             <td data-label="Ruolo"><span class="badge">${esc(u.role)}</span></td>
             <td data-label="Stato">${u.is_active ? 'Attivo' : '<span class="text-muted">Disattivo</span>'}</td>
-            <td class="col-actions lt-actions" data-label="Azioni">
-                ${RowMenu.button(u.id, `Azioni utente ${u.username}`)}
+            <td class="col-actions" data-label="Azioni">
+                <button class="btn btn--sm btn--ghost" data-edit-user="${u.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                <button class="btn btn--sm btn--ghost" data-toggle-user="${u.id}" title="${u.is_active ? 'Disattiva' : 'Riattiva'}"><i data-lucide="${u.is_active ? 'user-x' : 'user-check'}"></i></button>
+                <button class="btn btn--sm btn--ghost" data-del-user="${u.id}" title="Elimina" style="color:var(--color-danger)"><i data-lucide="trash-2"></i></button>
             </td>
         </tr>`).join('');
 
-    // La pagina corrente vive sul <tbody>, non nella chiusura del menu: RowMenu
-    // si aggancia una volta sola, e una chiusura catturerebbe per sempre la
-    // prima pagina caricata.
-    tbody._items = users;
-    RowMenu.bind(tbody, btn => {
-        const u = (tbody._items || []).find(x => x.id == btn.dataset.id);
-        if (!u) return [];
-        return [
-            { label: 'Modifica', icon: 'pencil', onClick: () => openUserModal(u) },
-            { label: u.is_active ? 'Disattiva' : 'Riattiva',
-              icon: u.is_active ? 'user-x' : 'user-check',
-              onClick: () => toggleUser(u) },
-            { sep: true },
-            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => deleteUser(u) },
-        ];
+    tbody.querySelectorAll('[data-edit-user]').forEach(btn => {
+        btn.addEventListener('click', () => openUserModal(users.find(u => u.id == btn.dataset.editUser)));
+    });
+    tbody.querySelectorAll('[data-toggle-user]').forEach(btn => {
+        btn.addEventListener('click', () => toggleUser(users.find(u => u.id == btn.dataset.toggleUser)));
+    });
+    tbody.querySelectorAll('[data-del-user]').forEach(btn => {
+        btn.addEventListener('click', () => deleteUser(users.find(u => u.id == btn.dataset.delUser)));
     });
 
     Pagination.render(document.getElementById('users-pagination'), parsed, (p) => { usersPage = p; loadUsers(); });
@@ -716,35 +711,27 @@ async function loadEmailTemplates() {
                 <td data-label="Categoria"><span class="badge">${esc(CATEGORY_LABELS[t.category] || t.category)}</span></td>
                 <td data-label="Oggetto">${esc(t.subject)}</td>
                 <td data-label="Attivo">${t.is_active ? '<i data-lucide="check-circle"></i>' : '—'}</td>
-                <td class="col-actions lt-actions" data-label="Azioni">
-                    ${RowMenu.button(t.id, `Azioni template ${t.name}`)}
-                </td>
+                <td class="col-actions"><button class="btn btn--sm btn--ghost" data-edit-tpl="${t.id}"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost" data-del-tpl="${t.id}" style="color:var(--color-danger)"><i data-lucide="trash-2"></i></button></td>
             </tr>`).join('')
         : '<tr><td colspan="5" class="text-muted">Nessun template.</td></tr>';
 
-    tbody._items = items;
-    RowMenu.bind(tbody, btn => {
-        const t = (tbody._items || []).find(x => x.id == btn.dataset.id);
-        if (!t) return [];
-        return [
-            { label: 'Modifica', icon: 'pencil', onClick: () => openEmailTplModal(t) },
-            { sep: true },
-            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: async () => {
-                if (!await confirmDialog('Vuoi eliminare questo template?', { title: 'Elimina template' })) return;
-                await fetch(`${EMAIL_TPL_API}?id=${t.id}`, { method: 'DELETE' });
-                await loadEmailTemplates();
-                showAlert('Template eliminato.', 'success');
-            } },
-        ];
+    tbody.querySelectorAll('[data-edit-tpl]').forEach(btn => {
+        btn.addEventListener('click', () => openEmailTplModal(items.find(t => t.id == btn.dataset.editTpl)));
+    });
+    tbody.querySelectorAll('[data-del-tpl]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!await confirmDialog('Vuoi eliminare questo template?', { title: 'Elimina template' })) return;
+            await fetch(`${EMAIL_TPL_API}?id=${btn.dataset.delTpl}`, { method: 'DELETE' });
+            await loadEmailTemplates();
+            showAlert('Template eliminato.', 'success');
+        });
     });
     Pagination.render(
         document.getElementById('email-tpl-pagination'),
         parsed,
         (p) => { emailTplsPage = p; loadEmailTemplates(); }
     );
-    // Mancava: questa tabella disegnava <i data-lucide> senza mai idratarli,
-    // e le icone restavano caselle vuote.
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function openEmailTplModal(tpl = null) {

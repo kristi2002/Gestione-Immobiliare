@@ -77,8 +77,7 @@
 
         // Un solo ascoltatore sul corpo della tabella: le righe si ridisegnano a
         // ogni ricerca, e riagganciarle una per una lascia indietro i listener.
-        // Stessa ragione per cui RowMenu delega invece di legarsi al singolo ⋮.
-        bindRowMenu();
+        els.tbody.addEventListener('click', onRowAction);
     }
 
     async function load() {
@@ -164,11 +163,14 @@
                 <td data-label="Stato">${statusBadge(r)}</td>
                 <td data-label="Inviata">${esc(fmtDate(r.created_at))}</td>
                 <td data-label="Scadenza / Firma">${deadlineHtml(r)}</td>
-                <td class="col-actions lt-actions" data-label="Azioni">
-                    ${(pending || r.status === 'expired') && canWrite
-                        ? window.RowMenu.button(r.id, 'Azioni richiesta di firma', { name: r.signer_name, state: r.status })
-                        : ''}
+                <td class="col-actions" data-label="Azioni">
+                    ${pending && canWrite ? `
+                        <button class="btn btn--sm btn--ghost" data-act="link" data-id="${r.id}" title="Mostra il link di firma"><i data-lucide="link"></i></button>
+                        <button class="btn btn--sm btn--ghost" data-act="resend" data-id="${r.id}" data-name="${esc(r.signer_name)}" title="Sollecita via email"><i data-lucide="send"></i></button>
+                        <button class="btn btn--sm btn--ghost" data-act="revoke" data-id="${r.id}" data-name="${esc(r.signer_name)}" title="Revoca la richiesta"><i data-lucide="trash-2"></i></button>
+                    ` : ''}
                     ${r.status === 'signed' ? '<span class="text-muted" style="font-size:.8rem;">documento firmato</span>' : ''}
+                    ${r.status === 'expired' && canWrite ? `<button class="btn btn--sm btn--ghost" data-act="revoke" data-id="${r.id}" data-name="${esc(r.signer_name)}" title="Elimina la richiesta scaduta"><i data-lucide="trash-2"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');
@@ -176,29 +178,18 @@
         if (window.lucide) window.lucide.createIcons();
     }
 
-    function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => {
-            const id   = btn.dataset.id;
-            const name = btn.dataset.name || '';
-            // Una richiesta scaduta non si sollecita e non ha piu' un link
-            // valido da mostrare: resta solo da toglierla di mezzo.
-            if (btn.dataset.state === 'expired') {
-                return [{ label: 'Elimina richiesta scaduta', icon: 'trash-2', danger: true,
-                          onClick: () => openRevoke(id, name) }];
-            }
-            return [
-                { label: 'Mostra link di firma', icon: 'link',  onClick: () => showLink(id) },
-                { label: 'Sollecita via email',  icon: 'send',  onClick: () => resend(id) },
-                { sep: true },
-                { label: 'Revoca richiesta', icon: 'trash-2', danger: true,
-                  onClick: () => openRevoke(id, name) },
-            ];
-        });
+    function onRowAction(e) {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        const id   = btn.dataset.id;
+        const name = btn.dataset.name || '';
+        if (btn.dataset.act === 'resend') resend(id, btn);
+        if (btn.dataset.act === 'link')   showLink(id);
+        if (btn.dataset.act === 'revoke') openRevoke(id, name);
     }
 
-    // Niente pulsante da disabilitare durante l'invio: era una voce di menu e
-    // al click il menu si chiude. L'esito lo dice l'avviso.
-    async function resend(id) {
+    async function resend(id, btn) {
+        btn.disabled = true;
         try {
             const res  = await fetch(`${API}?action=resend&id=${encodeURIComponent(id)}`, { method: 'POST' });
             const json = await res.json();
@@ -209,6 +200,8 @@
             if (!json.data.sent && json.data.sign_link) showLinkModal(json.data.sign_link, '');
         } catch (err) {
             showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false;
         }
     }
 

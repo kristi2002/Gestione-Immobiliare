@@ -80,7 +80,6 @@
         els.pagination        = document.getElementById('reminders-pagination');
 
         bindEvents();
-        bindRowMenu();
         Promise.all([loadContacts(), loadProperties(), loadAgents()])
             .then(() => loadReminders())
             .catch(err => {
@@ -378,7 +377,12 @@
                 r.notify_client ? '<span title="Email al contatto"><i data-lucide="mail"></i></span>' : '',
             ].filter(Boolean).join(' ') || '<span class="text-muted">—</span>';
 
-            const actions = window.RowMenu.button(r.id, 'Azioni promemoria', { state: r.status });
+            const actions = r.status === 'pending'
+                ? `<button class="btn btn--sm btn--ghost btn-complete" data-id="${r.id}" title="Completa"><i data-lucide="check"></i></button>
+                   <button class="btn btn--sm btn--ghost btn-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                   <button class="btn btn--sm btn--ghost btn-cancel" data-id="${r.id}" title="Annulla"><i data-lucide="x"></i></button>`
+                : `<button class="btn btn--sm btn--ghost btn-edit" data-id="${r.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                   ${r.status === 'cancelled' ? `<button class="btn btn--sm btn--ghost btn-reopen" data-id="${r.id}" title="Riapri">↩</button>` : ''}`;
 
             return `
                 <tr class="${isOverdue ? 'row--overdue' : ''}">
@@ -396,41 +400,42 @@
                         ? escapeHtml(r.agent_username)
                         : '<span class="text-muted">—</span>'}</td>
                     <td class="reminder-notify-icons" data-label="Notifiche">${notifyIcons}</td>
-                    <td class="col-actions lt-actions" data-label="Azioni">${actions}</td>
+                    <td class="col-actions" data-label="Azioni">${actions}</td>
                 </tr>`;
         }).join('');
 
+        bindTableActions();
         if (window.lucide) window.lucide.createIcons();
     }
 
-    function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => {
-            const id = btn.dataset.id;
-            const pending = btn.dataset.state === 'pending';
-            return [
-                pending ? { label: 'Completa', icon: 'check', onClick: () => patchReminder(id, 'complete') } : null,
-                { label: 'Modifica', icon: 'pencil', onClick: () => {
-                    const r = reminders.find(x => x.id == id);
-                    if (r) openModal(r);
-                } },
-                btn.dataset.state === 'cancelled'
-                    ? { label: 'Riapri', icon: 'rotate-ccw', onClick: () => patchReminder(id, 'reopen') }
-                    : null,
-                pending ? { sep: true } : null,
-                pending ? { label: 'Annulla', icon: 'x', danger: true, onClick: async () => {
-                    // Annullare la madre di una serie porta via anche le
-                    // occorrenze future: lo si dice prima, non dopo.
-                    const r = reminders.find(x => x.id == id);
-                    const isSeries = r && !r.series_id && Number(r.occurrence_count || 0) > 0;
-                    const message = isSeries
-                        ? 'Questo è il promemoria madre di una serie: annullandolo vengono rimosse anche le occorrenze future ancora in sospeso. Procedere?'
-                        : 'Vuoi annullare questo promemoria?';
+    function bindTableActions() {
+        els.tbody.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const r = reminders.find(x => x.id == btn.dataset.id);
+                if (r) openModal(r);
+            });
+        });
 
-                    if (await confirmDialog(message, { title: 'Annulla promemoria', confirmText: 'Annulla promemoria', cancelText: 'Indietro' })) {
-                        patchReminder(id, 'cancel');
-                    }
-                } } : null,
-            ];
+        els.tbody.querySelectorAll('.btn-complete').forEach(btn => {
+            btn.addEventListener('click', () => patchReminder(btn.dataset.id, 'complete'));
+        });
+
+        els.tbody.querySelectorAll('.btn-cancel').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const r = reminders.find(x => x.id == btn.dataset.id);
+                const isSeries = r && !r.series_id && Number(r.occurrence_count || 0) > 0;
+                const message = isSeries
+                    ? 'Questo è il promemoria madre di una serie: annullandolo vengono rimosse anche le occorrenze future ancora in sospeso. Procedere?'
+                    : 'Vuoi annullare questo promemoria?';
+
+                if (await confirmDialog(message, { title: 'Annulla promemoria', confirmText: 'Annulla promemoria', cancelText: 'Indietro' })) {
+                    patchReminder(btn.dataset.id, 'cancel');
+                }
+            });
+        });
+
+        els.tbody.querySelectorAll('.btn-reopen').forEach(btn => {
+            btn.addEventListener('click', () => patchReminder(btn.dataset.id, 'reopen'));
         });
     }
 

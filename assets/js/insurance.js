@@ -31,7 +31,6 @@
         els.delModal    = document.getElementById('insurance-delete-modal');
 
         bindEvents();
-        bindRowMenu();
         loadInsurances();
     }
 
@@ -111,25 +110,25 @@
                 <td data-label="Tipo"><span class="badge">${esc(p.policy_type || '—')}</span></td>
                 <td data-label="Premio annuo">${premium}</td>
                 <td data-label="Scadenza">${isExpired ? `<span style="color:var(--color-danger);">${dateLabel}</span>` : isExpiring ? `<strong>${dateLabel}</strong>` : dateLabel}</td>
-                <td data-label="Azioni" class="col-actions lt-actions">
-                    ${window.RowMenu.button(p.id, 'Azioni polizza', { name: p.policy_number || p.insurer_name })}
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
+                    <button class="btn btn--sm btn--ghost btn-ins-edit" data-id="${p.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-ins-del" data-id="${p.id}" data-name="${esc(p.policy_number || p.insurer_name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');
 
-    }
-
-    function bindRowMenu() {
         // Niente fetch preventivo: la scheda si carica il record da sola.
-        window.RowMenu.bind(els.tbody, btn => [
-            { label: 'Modifica', icon: 'pencil', onClick: () => openForm(Number(btn.dataset.id)) },
-            { sep: true },
-            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
+        els.tbody.querySelectorAll('.btn-ins-edit').forEach(btn => {
+            btn.addEventListener('click', () => openForm(Number(btn.dataset.id)));
+        });
+
+        els.tbody.querySelectorAll('.btn-ins-del').forEach(btn => {
+            btn.addEventListener('click', () => {
                 deleteTargetId = btn.dataset.id;
                 document.getElementById('insurance-delete-name').textContent = btn.dataset.name;
                 els.delModal.hidden = false;
-            } },
-        ]);
+            });
+        });
     }
 
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }

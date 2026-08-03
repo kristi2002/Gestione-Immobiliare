@@ -45,7 +45,6 @@
         els.delModal    = document.getElementById('aml-delete-modal');
 
         bindEvents();
-        bindRowMenu();
         loadList();
     }
 
@@ -129,8 +128,9 @@
                 <td data-label="Data verifica">${fmtDate(a.verification_date)}</td>
                 <td data-label="Conservazione">${fmtDate(a.retention_until)}</td>
                 <td data-label="Stato"><span class="badge ${STATUS_BADGE[a.status] || 'badge'}">${esc(STATUS_LABEL[a.status] || a.status)}</span></td>
-                <td data-label="Azioni" class="col-actions lt-actions">
-                    ${window.RowMenu.button(a.id, 'Azioni pratica', { name: a.subject_name })}
+                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
+                    <button class="btn btn--sm btn--ghost btn-aml-edit" data-id="${a.id}" title="Modifica"><i data-lucide="pencil"></i></button>
+                    <button class="btn btn--sm btn--ghost btn-aml-del" data-id="${a.id}" data-name="${esc(a.subject_name)}" title="Elimina"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -149,28 +149,23 @@
                 openProfile(a.dataset.id);
             });
         });
-        // La riga apre il fascicolo, ma non quando si e' cliccato un comando:
-        // il filtro sta qui e non piu' come stopPropagation sulla cella Azioni,
-        // perche' quello fermava l'evento prima del <tbody> — dove ora ascolta
-        // il menu ⋮.
         els.tbody.querySelectorAll('tr[data-aml-id]').forEach(tr => {
-            tr.addEventListener('click', e => {
-                if (e.target.closest('button, a, input')) return;
-                openProfile(tr.dataset.amlId);
-            });
+            tr.addEventListener('click', () => openProfile(tr.dataset.amlId));
         });
-    }
+        els.tbody.querySelectorAll('.col-actions').forEach(td => {
+            td.addEventListener('click', e => e.stopPropagation());
+        });
 
-    function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => [
-            { label: 'Modifica', icon: 'pencil', onClick: () => openForm(btn.dataset.id) },
-            { sep: true },
-            { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
+        els.tbody.querySelectorAll('.btn-aml-edit').forEach(btn => {
+            btn.addEventListener('click', () => openForm(btn.dataset.id));
+        });
+        els.tbody.querySelectorAll('.btn-aml-del').forEach(btn => {
+            btn.addEventListener('click', () => {
                 deleteTargetId = btn.dataset.id;
                 document.getElementById('aml-delete-name').textContent = btn.dataset.name;
                 els.delModal.hidden = false;
-            } },
-        ]);
+            });
+        });
     }
 
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }

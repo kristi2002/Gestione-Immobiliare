@@ -278,8 +278,9 @@
                            <td data-label="Tipo"><span class="badge">${esc(DOC_LABEL[d.doc_type] || d.doc_type)}</span></td>
                            <td data-label="Documento">${esc(d.title || d.original_name)}</td>
                            <td data-label="Data">${esc(fmtDate(d.created_at))}</td>
-                           <td data-label="Azioni" class="col-actions lt-actions">
-                               ${window.RowMenu.button(d.id, 'Azioni documento', { url: d.download_url })}
+                           <td data-label="Azioni" class="lt-actions">
+                               <a class="btn btn--sm btn--ghost" href="${esc(d.download_url)}" target="_blank" rel="noopener">Scarica</a>
+                               <button class="btn btn--sm btn--ghost btn-amp-doc-del" data-id="${d.id}">Elimina</button>
                            </td></tr>`).join('')}</tbody>
                    </table></div>`
                 : `<p class="text-muted" style="margin-top:.75rem;">
@@ -287,14 +288,8 @@
                        acquisiti in sede di adeguata verifica: allegala qui, dove sta la pratica che la giustifica.
                    </p>`;
 
-            // `list` viene ricostruito a ogni ricarica, quindi l'aggancio va
-            // rifatto qui; RowMenu ignora un contenitore gia' agganciato.
-            window.RowMenu.bind(list.querySelector('tbody'), btn => [
-                { label: 'Scarica', icon: 'download', href: btn.dataset.url, target: '_blank' },
-                { sep: true },
-                { label: 'Elimina', icon: 'trash-2', danger: true,
-                  onClick: () => deleteDocument(btn.dataset.id) },
-            ]);
+            list.querySelectorAll('.btn-amp-doc-del').forEach(b =>
+                b.addEventListener('click', () => deleteDocument(b.dataset.id)));
             if (window.lucide) window.lucide.createIcons();
         } catch (err) {
             list.innerHTML = `<p class="text-muted">${esc(err.message)}</p>`;
