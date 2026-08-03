@@ -35,6 +35,7 @@
         if (urlParams.get('status'))      els.statusFilter.value = urlParams.get('status');
 
         bindEvents();
+        bindRowMenu();
         loadApplications();
     }
 
@@ -133,10 +134,8 @@
                 <td data-label="Tipo"><span class="badge">${esc(a.application_type || a.type || '—')}</span></td>
                 <td data-label="Data">${formatDate(a.created_at || a.submitted_at)}</td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
-                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-pa-view" data-id="${a.id}" title="Visualizza"><i data-lucide="eye"></i> Dettagli</button>
-                    <button class="btn btn--sm btn--ghost btn-pa-lead" data-id="${a.id}" title="Converti in lead" style="color:var(--color-primary,#3b82f6);">→ Lead</button>
-                    <button class="btn btn--sm btn--ghost btn-pa-del" data-id="${a.id}" title="Elimina" style="color:var(--color-danger,#dc2626);"><i data-lucide="trash-2"></i></button>
+                <td data-label="Azioni" class="col-actions lt-actions">
+                    <button class="btn btn--sm btn--ghost btn-rail" data-id="${a.id}" title="Azioni" aria-label="Azioni richiesta" aria-haspopup="menu"><i data-lucide="more-vertical"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -144,40 +143,121 @@
         // Store items for detail lookup
         els.tbody._items = items;
 
-        els.tbody.querySelectorAll('.btn-pa-view').forEach(btn => {
-            btn.addEventListener('click', () => {
+        els.tbody.querySelectorAll('.btn-rail').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
                 const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
-                if (item) openDetail(item);
+                if (item) openRowMenu(btn, item);
             });
         });
 
-        els.tbody.querySelectorAll('.btn-pa-lead').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
-                if (!item) return;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    // ── Menu di riga (Dettagli / Converti in Lead / Elimina) ──────────
+    // Stesso comportamento di Inquilini, Edifici e Proprietari: il menu vive
+    // in <body> con posizione fissa, quindi non lo taglia l'overflow della
+    // tabella; qualsiasi scroll o resize lo chiude invece di lasciarlo
+    // orfano lontano dal suo pulsante.
+
+    let rowMenuEl = null;
+
+    function bindRowMenu() {
+        const gone = () => !document.body.contains(els.tbody);
+        function cleanup() {
+            closeRowMenu();
+            document.removeEventListener('click', onDocClick);
+            document.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onAnyMove, true);
+            window.removeEventListener('resize', onAnyMove);
+        }
+        function onDocClick(e) {
+            if (gone()) { cleanup(); return; }
+            if (rowMenuEl && !rowMenuEl.contains(e.target)) closeRowMenu();
+        }
+        function onKey(e) {
+            if (gone()) { cleanup(); return; }
+            if (e.key === 'Escape') closeRowMenu();
+        }
+        function onAnyMove() {
+            if (gone()) { cleanup(); return; }
+            closeRowMenu();
+        }
+        document.addEventListener('click', onDocClick);
+        document.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onAnyMove, true);
+        window.addEventListener('resize', onAnyMove);
+    }
+
+    function closeRowMenu() {
+        if (rowMenuEl) { rowMenuEl.remove(); rowMenuEl = null; }
+    }
+
+    function openRowMenu(btn, item) {
+        if (rowMenuEl && String(rowMenuEl.dataset.id) === String(item.id)) { closeRowMenu(); return; }
+        closeRowMenu();
+
+        // Una richiesta già convertita non si riconverte (il server risponde
+        // 409): meglio dirlo qui che farlo scoprire con un errore.
+        const converted = !!item.converted_to_lead_id;
+
+        const menu = document.createElement('div');
+        menu.className = 'lt-menu';
+        menu.dataset.id = item.id;
+        menu.setAttribute('role', 'menu');
+        menu.innerHTML = `
+            <button type="button" class="lt-menu__item" data-act="view" role="menuitem">
+                <i data-lucide="eye"></i> Dettagli
+            </button>
+            <button type="button" class="lt-menu__item" data-act="lead" role="menuitem" ${converted ? `disabled title="Già convertita (lead #${esc(item.converted_to_lead_id)})"` : ''}>
+                <i data-lucide="user-plus"></i> ${converted ? 'Già convertita in Lead' : 'Converti in Lead'}
+            </button>
+            <div class="lt-menu__sep"></div>
+            <button type="button" class="lt-menu__item lt-menu__item--danger" data-act="del" role="menuitem">
+                <i data-lucide="trash-2"></i> Elimina
+            </button>`;
+        document.body.appendChild(menu);
+
+        const r  = btn.getBoundingClientRect();
+        const mw = menu.offsetWidth;
+        const mh = menu.offsetHeight;
+        const left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+        let   top  = r.bottom + 6;
+        if (top + mh > window.innerHeight - 8) top = r.top - mh - 6;
+        menu.style.left = Math.max(8, left) + 'px';
+        menu.style.top  = Math.max(8, top) + 'px';
+
+        menu.querySelector('[data-act="view"]').addEventListener('click', () => {
+            closeRowMenu();
+            openDetail(item);
+        });
+
+        const leadBtn = menu.querySelector('[data-act="lead"]');
+        if (!leadBtn.disabled) {
+            leadBtn.addEventListener('click', async () => {
+                closeRowMenu();
                 activeItem = item;
-                btn.disabled = true; btn.textContent = '…';
                 await convertToLead();
-                btn.disabled = false; btn.textContent = '→ Lead';
             });
+        }
+
+        menu.querySelector('[data-act="del"]').addEventListener('click', async () => {
+            closeRowMenu();
+            const who = item.applicant_name || item.name || ('#' + item.id);
+            if (!await confirmDialog(`Eliminare la richiesta di ${who}? L'operazione è irreversibile.`, { title: 'Elimina richiesta', confirmText: 'Elimina' })) return;
+            try {
+                const res  = await fetch(`${API}?id=${item.id}`, { method: 'DELETE' });
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error || 'Errore');
+                showAlert('Richiesta eliminata.', 'success');
+                loadApplications();
+            } catch (err) {
+                showAlert('Errore eliminazione: ' + err.message, 'error');
+            }
         });
 
-        els.tbody.querySelectorAll('.btn-pa-del').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const item = (els.tbody._items || []).find(a => String(a.id) === String(btn.dataset.id));
-                const who  = item ? (item.applicant_name || item.name || ('#' + item.id)) : ('#' + btn.dataset.id);
-                if (!await confirmDialog(`Eliminare la richiesta di ${who}? L'operazione è irreversibile.`, { title: 'Elimina richiesta', confirmText: 'Elimina' })) return;
-                try {
-                    const res  = await fetch(`${API}?id=${btn.dataset.id}`, { method: 'DELETE' });
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.error || 'Errore');
-                    showAlert('Richiesta eliminata.', 'success');
-                    loadApplications();
-                } catch (err) {
-                    showAlert('Errore eliminazione: ' + err.message, 'error');
-                }
-            });
-        });
+        if (window.lucide) window.lucide.createIcons();
+        rowMenuEl = menu;
     }
 
     function openDetail(item) {

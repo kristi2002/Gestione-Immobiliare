@@ -52,6 +52,7 @@
         els.assetModal     = document.getElementById('mw-asset-modal');
 
         bindEvents();
+        bindRowMenu();
         loadProperties();
         loadSuppliers();
         loadRequests();
@@ -207,27 +208,109 @@
                     ? `<a href="#" class="btn-view-supplier text-muted" style="font-size:0.85rem;" data-supplier-id="${esc(r.supplier_id || '')}">${esc(supplierName)}</a>`
                     : '<span class="text-muted">—</span>'}</td>
                 <td data-label="Data">${formatDate(r.created_at || r.due_date)}</td>
-                <td data-label="Azioni" class="col-actions" style="white-space:nowrap;">
-                    <button class="btn btn--sm btn--ghost btn-mw-asset" data-id="${r.id}" data-property="${esc(r.property_id || '')}" data-asset="${esc(r.inventory_item_id || '')}" title="Collega il bene coinvolto"><i data-lucide="package"></i> Bene</button>
-                    <button class="btn btn--sm btn--ghost btn-mw-supplier" data-id="${r.id}" data-supplier="${esc(r.supplier_id || '')}" title="Assegna fornitore"><i data-lucide="wrench"></i> Fornitore</button>
-                    <button class="btn btn--sm btn--ghost btn-mw-status" data-id="${r.id}" data-status="${esc(r.maintenance_status || 'aperta')}" title="Cambia stato">↻ Stato</button>
+                <td data-label="Azioni" class="col-actions lt-actions">
+                    <button class="btn btn--sm btn--ghost btn-rail" data-id="${r.id}" title="Azioni" aria-label="Azioni intervento" aria-haspopup="menu"><i data-lucide="more-vertical"></i></button>
                 </td>
             </tr>`;
         }).join('');
 
         if (window.lucide) window.lucide.createIcons();
 
-        els.tbody.querySelectorAll('.btn-mw-supplier').forEach(btn => {
-            btn.addEventListener('click', () => openSupplierModal(btn.dataset.id, btn.dataset.supplier));
+        // Le righe servono al menu: senza, il pulsante saprebbe solo l'id.
+        els.tbody._items = items;
+
+        els.tbody.querySelectorAll('.btn-rail').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const r = (els.tbody._items || []).find(x => String(x.id) === String(btn.dataset.id));
+                if (r) openRowMenu(btn, r);
+            });
+        });
+    }
+
+    // ── Menu di riga (Bene / Fornitore / Stato) ───────────────────────
+    // Stesso comportamento di Inquilini, Edifici e Proprietari: il menu vive
+    // in <body> con posizione fissa, quindi non lo taglia l'overflow della
+    // tabella; qualsiasi scroll o resize lo chiude invece di lasciarlo
+    // orfano lontano dal suo pulsante.
+
+    let rowMenuEl = null;
+
+    function bindRowMenu() {
+        const gone = () => !document.body.contains(els.tbody);
+        function cleanup() {
+            closeRowMenu();
+            document.removeEventListener('click', onDocClick);
+            document.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onAnyMove, true);
+            window.removeEventListener('resize', onAnyMove);
+        }
+        function onDocClick(e) {
+            if (gone()) { cleanup(); return; }
+            if (rowMenuEl && !rowMenuEl.contains(e.target)) closeRowMenu();
+        }
+        function onKey(e) {
+            if (gone()) { cleanup(); return; }
+            if (e.key === 'Escape') closeRowMenu();
+        }
+        function onAnyMove() {
+            if (gone()) { cleanup(); return; }
+            closeRowMenu();
+        }
+        document.addEventListener('click', onDocClick);
+        document.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onAnyMove, true);
+        window.addEventListener('resize', onAnyMove);
+    }
+
+    function closeRowMenu() {
+        if (rowMenuEl) { rowMenuEl.remove(); rowMenuEl = null; }
+    }
+
+    function openRowMenu(btn, r) {
+        if (rowMenuEl && String(rowMenuEl.dataset.id) === String(r.id)) { closeRowMenu(); return; }
+        closeRowMenu();
+
+        const menu = document.createElement('div');
+        menu.className = 'lt-menu';
+        menu.dataset.id = r.id;
+        menu.setAttribute('role', 'menu');
+        menu.innerHTML = `
+            <button type="button" class="lt-menu__item" data-act="asset" role="menuitem">
+                <i data-lucide="package"></i> Collega bene
+            </button>
+            <button type="button" class="lt-menu__item" data-act="supplier" role="menuitem">
+                <i data-lucide="wrench"></i> Assegna fornitore
+            </button>
+            <button type="button" class="lt-menu__item" data-act="status" role="menuitem">
+                <i data-lucide="refresh-cw"></i> Cambia stato
+            </button>`;
+        document.body.appendChild(menu);
+
+        const rect = btn.getBoundingClientRect();
+        const mw = menu.offsetWidth;
+        const mh = menu.offsetHeight;
+        const left = Math.min(rect.right - mw, window.innerWidth - mw - 8);
+        let   top  = rect.bottom + 6;
+        if (top + mh > window.innerHeight - 8) top = rect.top - mh - 6;
+        menu.style.left = Math.max(8, left) + 'px';
+        menu.style.top  = Math.max(8, top) + 'px';
+
+        menu.querySelector('[data-act="asset"]').addEventListener('click', () => {
+            closeRowMenu();
+            openAssetModal(r.id, r.property_id || '', r.inventory_item_id || '');
+        });
+        menu.querySelector('[data-act="supplier"]').addEventListener('click', () => {
+            closeRowMenu();
+            openSupplierModal(r.id, r.supplier_id || '');
+        });
+        menu.querySelector('[data-act="status"]').addEventListener('click', () => {
+            closeRowMenu();
+            openStatusModal(r.id, r.maintenance_status || 'aperta');
         });
 
-        els.tbody.querySelectorAll('.btn-mw-status').forEach(btn => {
-            btn.addEventListener('click', () => openStatusModal(btn.dataset.id, btn.dataset.status));
-        });
-
-        els.tbody.querySelectorAll('.btn-mw-asset').forEach(btn => {
-            btn.addEventListener('click', () => openAssetModal(btn.dataset.id, btn.dataset.property, btn.dataset.asset));
-        });
+        if (window.lucide) window.lucide.createIcons();
+        rowMenuEl = menu;
     }
 
     /**
