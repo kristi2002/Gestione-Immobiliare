@@ -1314,6 +1314,12 @@
     transition: background var(--transition), color var(--transition);
 }
 
+/* "Annota" non spedisce niente: staccarla dalla coppia di invio evita che si
+   legga come un terzo canale. */
+.chat-tab--log {
+    margin-left: auto;
+}
+
 .chat-tab--active {
     background: var(--color-primary);
     color: #fff;
