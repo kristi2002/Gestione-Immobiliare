@@ -406,7 +406,16 @@ async function generatePayments(id) {
         const res  = await fetch(`${API}?action=generate_payments&id=${id}`, { method: 'POST' });
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        showAlert(`Scadenzario creato: ${json.data.payments_created} pagamenti.`, 'success');
+        // A rate gia' tutte presenti l'API non crea nulla e spiega perche'.
+        // Buttare via quel messaggio per stampare "Scadenzario creato: 0
+        // pagamenti." faceva leggere come un fallimento un'operazione riuscita.
+        const created = Number(json.data.payments_created) || 0;
+        showAlert(
+            created > 0
+                ? `Scadenzario creato: ${created} pagamenti.`
+                : (json.data.message || 'Nessuna rata da aggiungere.'),
+            created > 0 ? 'success' : 'info',
+        );
     } catch (err) {
         showAlert(err.message, 'error');
     }

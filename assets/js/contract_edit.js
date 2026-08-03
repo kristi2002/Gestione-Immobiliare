@@ -117,7 +117,7 @@
         $('cte-id').value = c.id;
         $('cte-title-input').value = c.title || '';
         $('cte-type').value = c.contract_type || 'locazione';
-        $('cte-status').value = c.status || ''; // null/empty = Automatico
+        setStatus(c.status); // null/empty = Automatico
         $('cte-property').value = c.property_id || '';
         $('cte-tenant').value = c.tenant_id || '';
         $('cte-client').value = c.client_id || '';
@@ -142,6 +142,42 @@
     }
 
     function setVal(id, v) { const el = $(id); if (el) el.value = (v ?? '') === null ? '' : (v ?? ''); }
+
+    // Etichette degli stati che la tendina non elenca (vedi setStatus).
+    const STATUS_LABELS = {
+        draft: 'Bozza', sent: 'Inviato', signed: 'Firmato',
+        expired: 'Scaduto', cancelled: 'Annullato',
+    };
+
+    /**
+     * Scrive lo stato nella tendina PRESERVANDO i valori che non le appartengono.
+     *
+     * "Scaduto" e' uno stato derivato dalle date, percio' non e' fra le scelte
+     * offerte: un agente non deve poterlo assegnare a mano. Ma in tabella le
+     * righe con status='expired' esistono (arrivano dai dati dimostrativi e da
+     * qualsiasi import), e assegnare a un <select> un valore privo di <option>
+     * lo porta a selectedIndex -1: il campo appariva VUOTO — nemmeno
+     * "Automatico" — e al salvataggio partiva status:'' che il server riscrive
+     * a NULL. Aprire e risalvare un contratto scaduto lo faceva tornare
+     * "Attivo" senza che nessuno l'avesse chiesto.
+     *
+     * L'opzione mancante viene aggiunta al volo e solo per quel contratto: si
+     * legge quel che c'e' scritto e si risalva identico, senza per questo
+     * offrire lo stato a chi sta compilando un contratto nuovo.
+     */
+    function setStatus(value) {
+        const sel = $('cte-status');
+        if (!sel) return;
+        const v = value || '';
+        sel.value = v;
+        if (v !== '' && sel.selectedIndex === -1) {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = STATUS_LABELS[v] || v;
+            sel.appendChild(opt);
+            sel.value = v;
+        }
+    }
 
     /**
      * Mostra i campi economici che il tipo di contratto prevede davvero.

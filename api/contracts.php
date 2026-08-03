@@ -143,10 +143,20 @@ function listContracts(PDO $db): void
         $where .= ' AND ct.contract_type = :type';
         $params['type'] = $type;
     }
-    // Dedicated "Scaduti" filter: contracts past their end date (not cancelled).
+    // Dedicated "Scaduti" filter.
+    //
+    // A "Scaduto" si arriva da due strade, e il filtro deve conoscerle entrambe:
+    // la data di fine passata (contratto in stato Automatico) e lo stato
+    // 'expired' scritto in tabella. Guardando solo le date, i contratti con
+    // stato 'expired' esplicito restavano invisibili qui pur mostrando il badge
+    // "Scaduto" in elenco — effectiveStatus() lato client legge lo stato
+    // memorizzato (assets/js/contracts/helpers.js). Il risultato era un elenco
+    // con N schede "Scaduto" e il filtro "Scaduti" che rispondeva "Nessun
+    // contratto trovato".
     // (ct.status can be NULL for "Automatico" contracts, so guard the != comparison.)
     if (($_GET['expired'] ?? '') === '1') {
-        $where .= " AND ct.end_date IS NOT NULL AND ct.end_date < CURDATE()
+        $where .= " AND (ct.status = 'expired'
+                         OR (ct.end_date IS NOT NULL AND ct.end_date < CURDATE()))
                     AND (ct.status IS NULL OR ct.status <> 'cancelled')";
     }
     // "Attivi" filter: in force today — Automatico (NULL) or Firmato, within the
