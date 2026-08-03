@@ -66,6 +66,12 @@ function fetchAgentStats(PDO $db, array $agentIds): array
         'leads_total'         => 0,
         'leads_new'           => 0,
         'leads_converted'     => 0,
+        'leads_lost'          => 0,
+        // Quanti lead l'elenco di leads.php mostra davvero: quello esclude di
+        // default convertiti e persi, quindi la tessera "Lead totali" (storico
+        // intero) ne annunciava 100 sopra una tabella di 69, e i 31 mancanti
+        // si leggevano come righe perse.
+        'leads_open'          => 0,
         'appointments'        => 0,
         'properties'          => 0,
         'keys_out'            => 0,
@@ -90,6 +96,7 @@ function fetchAgentStats(PDO $db, array $agentIds): array
         $stats[$aid]['leads_total'] += (int) $r['cnt'];
         if ($r['status'] === 'new')       $stats[$aid]['leads_new']       = (int) $r['cnt'];
         if ($r['status'] === 'converted') $stats[$aid]['leads_converted'] = (int) $r['cnt'];
+        if ($r['status'] === 'lost')      $stats[$aid]['leads_lost']      = (int) $r['cnt'];
     }
 
     foreach ($rows("SELECT agent_id AS aid, COUNT(*) AS cnt
@@ -109,11 +116,15 @@ function fetchAgentStats(PDO $db, array $agentIds): array
         $stats[(int) $r['aid']]['keys_out'] = (int) $r['cnt'];
     }
 
-    foreach ($rows("SELECT a.agent_id AS aid, COUNT(DISTINCT p.id) AS cnt
-                      FROM properties p
-                      INNER JOIN appointments a ON a.property_id = p.id
-                     WHERE a.agent_id IN ($in) AND p.status != 'archived'
-                     GROUP BY a.agent_id") as $r) {
+    // Il portafoglio e' `properties.agent_id` — il campo che la scheda immobile
+    // scrive dalla tendina "Agente di riferimento". Qui prima si contavano gli
+    // immobili su cui l'agente aveva un appuntamento: su una pagina intitolata
+    // "Portafoglio agenti" quella e' un'altra domanda (quanti ne ha visitati),
+    // e gonfiava il numero con gli immobili di un collega accompagnati una volta.
+    foreach ($rows("SELECT agent_id AS aid, COUNT(*) AS cnt
+                      FROM properties
+                     WHERE agent_id IN ($in) AND status != 'archived'
+                     GROUP BY agent_id") as $r) {
         $stats[(int) $r['aid']]['properties'] = (int) $r['cnt'];
     }
 
@@ -134,6 +145,7 @@ function fetchAgentStats(PDO $db, array $agentIds): array
         $stats[$aid]['conversion_rate'] = $s['leads_total'] > 0
             ? round(100 * $s['leads_converted'] / $s['leads_total'], 1)
             : 0.0;
+        $stats[$aid]['leads_open'] = $s['leads_total'] - $s['leads_converted'] - $s['leads_lost'];
     }
 
     return $stats;

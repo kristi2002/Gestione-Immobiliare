@@ -17,12 +17,19 @@ const COMM_STATUS = { pending: 'Da incassare', paid: 'Incassata' };
 const COMM_ROLE = { unico: '—', acquisitore: 'Acquisitore', venditore: 'Venditore' };
 
 // KPI cards. `filter` makes a card filter the leads table; `tab` switches tab;
-// `money` formats the value as euro instead of a bare count.
+// `money` formats the value as euro instead of a bare count; `tip` diventa il
+// title della tessera anche quando non e' cliccabile.
 const KPI_ITEMS = [
-    { key: 'leads_total',     label: 'Lead totali',  icon: 'clipboard-list' },
-    { key: 'leads_converted', label: 'Convertiti',   icon: 'check-circle' },
+    // "Lead totali" e' lo storico e resta il denominatore del tasso di
+    // conversione, ma l'elenco qui sotto ne mostra meno: il tip dice perche',
+    // cosi' la differenza non si legge come righe mancanti.
+    { key: 'leads_total',     label: 'Lead totali',  icon: 'clipboard-list',
+      tip: 'Storico completo, convertiti e persi compresi: questi ultimi non compaiono nell\'elenco Lead assegnati.' },
+    { key: 'leads_converted', label: 'Convertiti',   icon: 'check-circle',
+      tip: 'Diventati clienti: escono dall\'elenco dei lead in gestione.' },
     { key: 'appointments',    label: 'Appuntamenti', icon: 'calendar', tab: 'appointments', tip: 'Vai agli appuntamenti' },
-    { key: 'properties',      label: 'Immobili',     icon: 'building-2' },
+    { key: 'properties',      label: 'Immobili',     icon: 'building-2',
+      tip: 'Immobili con questo agente di riferimento, archiviati esclusi.' },
     { key: 'keys_out',        label: 'Chiavi fuori', icon: 'key' },
     { key: 'leads_new',       label: 'Nuovi lead',   icon: 'badge-plus', filter: 'new', tip: 'Mostra solo questi lead' },
     // Il numero per cui un agente apre davvero questa pagina: fin qui i soldi
@@ -36,6 +43,11 @@ const KPI_ITEMS = [
 // --- module state -----------------------------------------------------------
 let leadsCache = [];
 let leadFilter = 'all'; // 'all' | a lead status (e.g. 'new')
+// Lead usciti dalla pipeline (convertiti + persi). Arriva da agent_portfolio,
+// non da leads.php, che quelli non li restituisce proprio: serve a spiegare in
+// intestazione lo scarto fra la tessera "Lead totali" e le righe in tabella.
+let leadsArchived = null;
+let leadsLoaded = false;
 // Totali provvigioni dell'agente, presi da agent_portfolio (conteggio a DB) e
 // non sommando le righe a schermo, che sono solo la prima pagina.
 let commTotals = null;
@@ -156,12 +168,17 @@ async function loadHero() {
         document.getElementById('ap-conv-rate').textContent = (Number(d.conversion_rate) || 0) + '%';
         commTotals = { pending: d.commissions_pending, paid: d.commissions_paid };
         renderCommTotals();
+        // Le due fetch partono insieme: se i lead sono gia' a schermo l'intestazione
+        // va riscritta ora che si sa quanti ne mancano all'appello.
+        leadsArchived = (Number(d.leads_converted) || 0) + (Number(d.leads_lost) || 0);
+        if (leadsLoaded) renderLeads();
         document.getElementById('ap-kpis').innerHTML = KPI_ITEMS.map(k => {
             const clickable = k.filter || k.tab;
             const attrs = [
                 k.filter ? `data-filter="${k.filter}"` : '',
                 k.tab ? `data-tab="${k.tab}"` : '',
-                clickable ? `role="button" tabindex="0" title="${esc(k.tip || '')}"` : '',
+                k.tip ? `title="${esc(k.tip)}"` : '',
+                clickable ? 'role="button" tabindex="0"' : '',
             ].join(' ');
             const value = k.money ? fmtEuro(d[k.key]) : (d[k.key] ?? 0);
             return `
@@ -202,6 +219,7 @@ async function loadLeads() {
         const { items, total } = unwrap(json.data);
         leadsCache = items;
         leadsTotal = total;
+        leadsLoaded = true;
         renderLeads();
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="7" class="entity-error">${esc(err.message)}</td></tr>`;
@@ -239,9 +257,13 @@ function renderLeads() {
 
     // Col filtro attivo il confronto col totale a DB non regge — quel totale non
     // e' filtrato — quindi si dichiara solo quanto si sta mostrando.
-    countEl.textContent = leadFilter === 'all'
-        ? countLabel(list.length, leadsTotal, 'lead')
-        : `${list.length} lead`;
+    // Senza filtro invece si nomina anche la parte che l'elenco non contiene:
+    // leads.php esclude convertiti e persi, e senza dirlo la tessera "Lead
+    // totali" sopra sembrava contare righe che qui erano sparite.
+    countEl.textContent = leadFilter !== 'all'
+        ? `${list.length} lead`
+        : countLabel(list.length, leadsTotal, 'lead in gestione')
+          + (leadsArchived ? ` · ${leadsArchived} archiviati (convertiti o persi)` : '');
     if (leadFilter !== 'all') {
         chip.hidden = false;
         chip.textContent = `Filtro: ${LEAD_STATUS[leadFilter] || leadFilter}`;
@@ -251,7 +273,14 @@ function renderLeads() {
     syncKpiActive();
 
     if (!list.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-muted">${leadFilter !== 'all' ? 'Nessun lead per questo filtro.' : 'Nessun lead assegnato.'}</td></tr>`;
+        // Zero righe con lo storico pieno non e' "nessun lead assegnato": sono
+        // tutti gia' convertiti o persi, ed e' un esito diverso da dirlo.
+        const empty = leadFilter !== 'all'
+            ? 'Nessun lead per questo filtro.'
+            : (leadsArchived
+                ? `Nessun lead in gestione: i ${leadsArchived} assegnati sono tutti convertiti o persi.`
+                : 'Nessun lead assegnato.');
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted">${empty}</td></tr>`;
         return;
     }
     tbody.innerHTML = list.map(l => `

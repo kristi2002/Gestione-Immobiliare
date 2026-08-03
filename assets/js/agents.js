@@ -12,11 +12,15 @@
         agent: 'Agente',
     };
 
+    // `tip` diventa il title della tessera: le due voci che si prestano a essere
+    // lette per un'altra cosa dicono da sole cosa contano.
     const STAT_ITEMS = [
-        { key: 'leads_total',     label: 'Lead totali', icon: '<i data-lucide="clipboard-list"></i>' },
+        { key: 'leads_total',     label: 'Lead totali', icon: '<i data-lucide="clipboard-list"></i>',
+          tip: 'Storico completo, convertiti e persi compresi.' },
         { key: 'leads_converted', label: 'Convertiti',  icon: '<i data-lucide="check-circle"></i>' },
         { key: 'appointments',    label: 'Appuntamenti', icon: '<i data-lucide="calendar"></i>' },
-        { key: 'properties',      label: 'Immobili',    icon: '<i data-lucide="building-2"></i>' },
+        { key: 'properties',      label: 'Immobili',    icon: '<i data-lucide="building-2"></i>',
+          tip: 'Immobili con questo agente di riferimento, archiviati esclusi.' },
         { key: 'keys_out',        label: 'Chiavi fuori', icon: '<i data-lucide="key"></i>' },
         { key: 'leads_new',       label: 'Nuovi lead',  icon: '<i data-lucide="badge-plus"></i>' },
     ];
@@ -65,7 +69,7 @@
         const rateWidth = Math.max(rate > 0 ? 6 : 0, Math.min(100, rate));
 
         const stats = STAT_ITEMS.map(item => `
-            <div class="agent-stat">
+            <div class="agent-stat"${item.tip ? ` title="${escapeHtml(item.tip)}"` : ''}>
                 <span class="agent-stat__icon" aria-hidden="true">${item.icon}</span>
                 <span class="agent-stat__value">${a[item.key] ?? 0}</span>
                 <span class="agent-stat__label">${item.label}</span>
