@@ -756,8 +756,23 @@ function patchReminder(PDO $db, int $id): void
             apiError('Promemoria non trovato.', 404);
         }
 
-        $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms WHERE id = :id");
-        $stmt->execute(['ms' => $newStatus, 'id' => $id]);
+        // `maintenance_status` e `status` erano due verita' separate sulla
+        // stessa riga. Chiudere il ticket dalla bacheca aggiornava solo la
+        // prima: la riga restava 'pending' e, con la data ormai passata,
+        // continuava a contare fra le scadenze in ritardo della campanella —
+        // per sempre, perche' sulla bacheca il pulsante "Completa" non c'e' e
+        // da li' non si puo' evadere. Restava anche in pasto al motore, che
+        // ogni notte rispediva il promemoria di un lavoro gia' finito.
+        //
+        // Il confine e' lo stesso che questo handler usa poche righe sotto per
+        // far partire il questionario di gradimento: se l'intervento e' finito
+        // abbastanza da chiedere un riscontro, e' finito anche come promemoria.
+        // Tornare indietro lo riapre, altrimenti un ticket riaperto resterebbe
+        // fuori dal motore, che lavora solo sui 'pending'.
+        $rowStatus = in_array($newStatus, ['completata', 'chiusa'], true) ? 'completed' : 'pending';
+
+        $stmt = $db->prepare("UPDATE reminders SET maintenance_status = :ms, status = :st WHERE id = :id");
+        $stmt->execute(['ms' => $newStatus, 'st' => $rowStatus, 'id' => $id]);
 
         if ($newStatus !== ($ticket['maintenance_status'] ?? '') && in_array($newStatus, ['completata', 'chiusa'], true)) {
             // Nel payload NON va il proprietario: 'event_contact' sceglie il primo
