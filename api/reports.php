@@ -145,25 +145,25 @@ function streamCsv(string $type, int $year, array $report): void
     fwrite($out, "\xEF\xBB\xBF");
 
     if ($type === 'properties') {
-        fputcsv($out, ['Sezione', 'Voce', 'Valore']);
+        csvRow($out, ['Sezione', 'Voce', 'Valore']);
         foreach ($report['by_status'] as $r) {
-            fputcsv($out, ['Stato', $r['status'], $r['total']]);
+            csvRow($out, ['Stato', $r['status'], $r['total']]);
         }
         foreach ($report['by_type'] as $r) {
-            fputcsv($out, ['Tipo', $r['property_type'], $r['total']]);
+            csvRow($out, ['Tipo', $r['property_type'], $r['total']]);
         }
         foreach ($report['avg_price'] as $r) {
-            fputcsv($out, ['Prezzo medio', $r['price_type'], round((float) $r['avg_price'], 2)]);
+            csvRow($out, ['Prezzo medio', $r['price_type'], round((float) $r['avg_price'], 2)]);
         }
     } elseif ($type === 'payments') {
-        fputcsv($out, ['Mese', 'Atteso', 'Incassato']);
+        csvRow($out, ['Mese', 'Atteso', 'Incassato']);
         foreach ($report['months'] as $m) {
-            fputcsv($out, [$m['month'], round($m['expected'], 2), round($m['collected'], 2)]);
+            csvRow($out, [$m['month'], round($m['expected'], 2), round($m['collected'], 2)]);
         }
     } elseif ($type === 'expenses') {
-        fputcsv($out, ['Categoria', 'Totale', 'Numero']);
+        csvRow($out, ['Categoria', 'Totale', 'Numero']);
         foreach ($report['by_category'] as $r) {
-            fputcsv($out, [$r['category'], round((float) $r['total'], 2), $r['count']]);
+            csvRow($out, [$r['category'], round((float) $r['total'], 2), $r['count']]);
         }
     }
 

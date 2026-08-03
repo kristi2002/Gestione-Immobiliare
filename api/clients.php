@@ -683,9 +683,9 @@ function exportClientsCsv(PDO $db): void
 
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-    fputcsv($out, ['nome', 'cognome', 'telefono', 'email', 'stato']);
+    csvRow($out, ['nome', 'cognome', 'telefono', 'email', 'stato']);
     foreach ($rows as $r) {
-        fputcsv($out, [$r['name'], $r['surname'], $r['phone'], $r['email'], $r['status']]);
+        csvRow($out, [$r['name'], $r['surname'], $r['phone'], $r['email'], $r['status']]);
     }
     fclose($out);
     exit;

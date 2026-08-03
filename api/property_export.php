@@ -16,6 +16,7 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/rate_limit.php';
+require_once __DIR__ . '/../config/settings.php';
 apiHandleOptions();
 apiRequireMethod('GET');
 
@@ -44,6 +45,30 @@ try {
     apiError('Errore database.', 500);
 }
 
+/**
+ * Il contatto che si pubblica su un annuncio: l'agenzia, mai il proprietario.
+ *
+ * Questi file si consegnano al portale in onboarding (lo dice l'intestazione
+ * qui sopra, e il pulsante "Esporta per portali" lo ripete all'agente).
+ * Fino a ieri portavano fuori nome, telefono ed email del mandante: al
+ * portale non servono, e cederli e' un trattamento di dati personali verso
+ * terzi senza base giuridica. Stessa scelta gia' presa in
+ * lib/portal_feed.php, che documentava questa differenza come voluta —
+ * "export interno dietro sessione" — mentre l'artefatto e' proprio quello
+ * che finisce al portale.
+ *
+ * @return array{name:string, phone:string, email:string, address:string}
+ */
+function exportAgencyContact(): array
+{
+    return [
+        'name'    => (string) getSetting('agency_name', ''),
+        'phone'   => (string) getSetting('agency_phone', ''),
+        'email'   => (string) getSetting('agency_email', ''),
+        'address' => (string) getSetting('agency_address', ''),
+    ];
+}
+
 // ---------------------------------------------------------------------------
 // Fetchers
 // ---------------------------------------------------------------------------
@@ -51,10 +76,9 @@ try {
 function fetchProperty(PDO $db, int $id): ?array
 {
     $stmt = $db->prepare(
-        "SELECT p.*, c.name AS client_name, c.surname AS client_surname, c.phone AS client_phone, c.email AS client_email
-         FROM properties p
-         LEFT JOIN clients c ON c.id = p.client_id
-         WHERE p.id = :id"
+        // Nessun dato del proprietario: quello che non si legge non puo'
+        // finire per sbaglio in un file destinato a un terzo.
+        "SELECT p.* FROM properties p WHERE p.id = :id"
     );
     $stmt->execute(['id' => $id]);
     return $stmt->fetch() ?: null;
@@ -63,9 +87,7 @@ function fetchProperty(PDO $db, int $id): ?array
 function fetchActiveProperties(PDO $db): array
 {
     $stmt = $db->query(
-        "SELECT p.*, c.name AS client_name, c.surname AS client_surname, c.phone AS client_phone, c.email AS client_email
-         FROM properties p
-         LEFT JOIN clients c ON c.id = p.client_id
+        "SELECT p.* FROM properties p
          WHERE p.status IN ('available', 'rented')
          ORDER BY p.city ASC, p.address ASC"
     );
@@ -256,11 +278,11 @@ function buildImmobiliareJson(array $p, array $descriptions = [], array $surface
             'collaboration' => $p['collaboration'] ?? null,
             'mandate_type'  => $p['mandate_type'] ?? null,
         ],
-        'owner'          => [
-            'name'  => trim(($p['client_name'] ?? '') . ' ' . ($p['client_surname'] ?? '')),
-            'phone' => $p['client_phone'] ?? null,
-            'email' => $p['client_email'] ?? null,
-        ],
+        // Il contatto dell'annuncio e' l'AGENZIA, mai il proprietario: questo
+        // file lo si consegna al portale, e nome/telefono/email del mandante
+        // sarebbero una cessione di dati personali a terzi senza alcuna base.
+        // Stessa regola di lib/portal_feed.php (portalFeedAgencyNode).
+        'agency'         => exportAgencyContact(),
         'published_at'   => $p['created_at'] ?? null,
     ];
 }
@@ -275,6 +297,7 @@ function exportXml(PDO $db): void
     $ids = array_map(static fn($p) => (int) $p['id'], $properties);
     $descMap = fetchDescriptionsMap($db, $ids);
     $surfMap = fetchSurfacesMap($db, $ids);
+    $agencyContact = exportAgencyContact();
 
     // Public listing images (photos/floor plans), grouped by property. Portals
     // require absolute, publicly reachable image URLs.
@@ -384,8 +407,10 @@ function exportXml(PDO $db): void
             'Description'   => $p['description'] ?? '',
             'Collaboration' => $p['collaboration'] ?? '',
             'MandateType'   => $p['mandate_type'] ?? '',
-            'OwnerName'     => trim(($p['client_name'] ?? '') . ' ' . ($p['client_surname'] ?? '')),
-            'OwnerPhone'    => $p['client_phone'] ?? '',
+            // Contatto = agenzia, mai il proprietario (vedi exportAgencyContact).
+            'AgencyName'    => (string) ($agencyContact['name'] ?? ''),
+            'AgencyPhone'   => (string) ($agencyContact['phone'] ?? ''),
+            'AgencyEmail'   => (string) ($agencyContact['email'] ?? ''),
             'PublishedAt'   => $p['created_at'] ?? '',
         ];
 
@@ -475,14 +500,15 @@ function exportCsv(PDO $db): void
     // UTF-8 BOM for Excel compatibility
     fwrite($out, "\xEF\xBB\xBF");
 
-    fputcsv($out, [
+    csvRow($out, [
         'id', 'indirizzo', 'citta', 'cap', 'provincia', 'mq', 'stanze', 'bagni',
         'piano', 'prezzo', 'tipo_prezzo', 'stato', 'tipo_contratto', 'latitudine', 'longitudine',
-        'proprietario', 'telefono_proprietario', 'email_proprietario', 'descrizione',
+        'agenzia', 'telefono_agenzia', 'email_agenzia', 'descrizione',
     ]);
+    $agencyContact = exportAgencyContact();
 
     foreach ($properties as $p) {
-        fputcsv($out, [
+        csvRow($out, [
             $p['id'],
             $p['address'],
             $p['city'],
@@ -498,9 +524,9 @@ function exportCsv(PDO $db): void
             $p['price_type'] === 'affitto' ? 'locazione' : 'vendita',
             $p['latitude'] ?? '',
             $p['longitude'] ?? '',
-            trim(($p['client_name'] ?? '') . ' ' . ($p['client_surname'] ?? '')),
-            $p['client_phone'] ?? '',
-            $p['client_email'] ?? '',
+            $agencyContact['name'] ?? '',
+            $agencyContact['phone'] ?? '',
+            $agencyContact['email'] ?? '',
             $p['description'] ?? '',
         ]);
     }

@@ -984,10 +984,10 @@ function exportPropertiesCsv(PDO $db): void
 
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['indirizzo', 'citta', 'cap', 'mq', 'stanze', 'bagni', 'prezzo', 'tipo_prezzo', 'stato',
+    csvRow($out, ['indirizzo', 'citta', 'cap', 'mq', 'stanze', 'bagni', 'prezzo', 'tipo_prezzo', 'stato',
                    'riferimento', 'titolo_annuncio', 'tipologia', 'locali', 'classe_energetica', 'proprietario']);
     foreach ($rows as $r) {
-        fputcsv($out, [
+        csvRow($out, [
             $r['address'], $r['city'], $r['cap'], $r['sqm'], $r['rooms'], $r['bathrooms'],
             $r['price'], $r['price_type'], $r['status'],
             $r['reference_code'], $r['listing_title'], $r['typology'], $r['locali'], $r['energy_class'],
