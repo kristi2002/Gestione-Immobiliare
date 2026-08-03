@@ -365,10 +365,22 @@ function signDocument(PDO $db, string $token): void
 
     logActivity('update', 'esign', (int) $request['id'], 'Documento firmato da ' . $request['signer_name'] . ' IP: ' . ($ip ?? 'unknown'));
 
+    // La firma raccolta deve muovere il contratto: senza questo il cliente
+    // aveva firmato ma nel gestionale restava "Inviato", senza scadenzario,
+    // con l'immobile ancora disponibile e l'annuncio ancora pubblicato.
+    require_once __DIR__ . '/../lib/contract_lifecycle.php';
+    $advance = contractAdvanceAfterSignature($db, (int) ($request['contract_id'] ?? 0));
+
     apiSuccess([
         'message'     => 'Documento firmato con successo.',
         'signer_name' => $request['signer_name'],
         'signed_at'   => date('Y-m-d H:i:s'),
+        'contract'    => [
+            'advanced'         => $advance['advanced'],
+            'reason'           => $advance['reason'],
+            'payments_created' => $advance['payments_created'],
+            'property_rented'  => (bool) ($advance['occupancy']['changed'] ?? false),
+        ],
     ]);
 }
 

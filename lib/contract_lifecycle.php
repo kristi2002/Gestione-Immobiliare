@@ -423,6 +423,80 @@ function contractCreateLease(PDO $db, array $lease): array
 }
 
 /**
+ * Porta avanti il contratto quando la firma elettronica e' stata raccolta.
+ *
+ * Prima la firma toccava solo esign_requests: il cliente aveva firmato ma nel
+ * gestionale il contratto restava "Inviato", non generava lo scadenzario, non
+ * portava l'immobile ad affittato e non ritirava l'annuncio dai portali.
+ * Qualcuno doveva ricordarsene a mano, e nessuna schermata lo diceva.
+ *
+ * Un contratto puo' avere PIU' firmatari (locatore e conduttore): finche' ne
+ * resta uno in attesa non e' firmato, quindi non si avanza. Una richiesta
+ * scaduta e mai firmata conta come mancante — perche' e' esattamente quello
+ * che e' — e sblocca solo dopo che l'agente l'ha revocata o rispedita.
+ *
+ * @return array{advanced:bool, reason:string, payments_created:int, occupancy:array}
+ */
+function contractAdvanceAfterSignature(PDO $db, int $contractId): array
+{
+    $out = ['advanced' => false, 'reason' => '', 'payments_created' => 0,
+            'occupancy' => ['changed' => false, 'old_status' => null, 'retired' => 0]];
+    if ($contractId <= 0) {
+        $out['reason'] = 'nessun contratto collegato';
+        return $out;
+    }
+
+    try {
+        $stmt = $db->prepare('SELECT id, status FROM contracts WHERE id = :id');
+        $stmt->execute(['id' => $contractId]);
+        $contract = $stmt->fetch();
+        if (!$contract) {
+            $out['reason'] = 'contratto inesistente';
+            return $out;
+        }
+
+        // 'signed' e' gia' a posto; 'cancelled' e' una decisione presa altrove
+        // e una firma non la ribalta.
+        if (!in_array((string) $contract['status'], ['draft', 'sent', 'expired'], true)) {
+            $out['reason'] = 'stato non avanzabile: ' . $contract['status'];
+            return $out;
+        }
+
+        $pend = $db->prepare(
+            "SELECT COUNT(*) FROM esign_requests WHERE contract_id = :cid AND status = 'pending'"
+        );
+        $pend->execute(['cid' => $contractId]);
+        if ((int) $pend->fetchColumn() > 0) {
+            $out['reason'] = 'altri firmatari ancora in attesa';
+            return $out;
+        }
+
+        $db->prepare("UPDATE contracts SET status = 'signed' WHERE id = :id")
+           ->execute(['id' => $contractId]);
+        $out['advanced'] = true;
+        $out['reason']   = 'contratto portato a firmato';
+
+        // Le stesse due conseguenze del salvataggio dal modulo Contratti.
+        $out['payments_created'] = autoGeneratePaymentSchedule($db, $contractId);
+        $out['occupancy']        = contractSyncOccupancyForContract($db, $contractId);
+
+        logActivity(
+            'update', 'contract', $contractId,
+            'Contratto #' . $contractId . ' portato a firmato dalla firma elettronica'
+            . ($out['payments_created'] > 0 ? ' — ' . $out['payments_created'] . ' rate generate' : '')
+            . ($out['occupancy']['changed'] ? ' — immobile affittato' : '')
+        );
+    } catch (Throwable $e) {
+        // La firma e' gia' registrata e vale: non deve fallire per colpa di
+        // cio' che viene dopo. Resta la traccia nel log del server.
+        error_log('[firma] avanzamento contratto #' . $contractId . ' fallito: ' . $e->getMessage());
+        $out['reason'] = 'errore: ' . $e->getMessage();
+    }
+
+    return $out;
+}
+
+/**
  * Come contractSyncPropertyOccupancy, ma partendo dal contratto: rilegge la
  * riga scritta e agisce solo se quel contratto occupa davvero l'immobile
  * (firmato/automatico, decorrenza raggiunta, non ancora scaduto).
