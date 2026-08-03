@@ -320,6 +320,22 @@ function listInbox(PDO $db): void
     apiPaginatedSuccess($items, $total, $pagination);
 }
 
+/**
+ * I messaggi di una conversazione, la pagina 1 sui PIU' RECENTI.
+ *
+ * L'ordinamento era ASC: la pagina 1 conteneva percio' i 50 messaggi piu'
+ * VECCHI, e "Carica messaggi precedenti" — che nell'interfaccia li aggiunge in
+ * cima — ne portava di piu' nuovi. Su ogni conversazione oltre i 50 messaggi,
+ * cioe' proprio i clienti abituali, l'agente apriva la chat e leggeva lo
+ * scambio di mesi prima, mentre il messaggio a cui doveva rispondere non era
+ * in pagina.
+ *
+ * Si ordina quindi DESC per impaginare dal piu' recente, e si ribalta la
+ * pagina prima di restituirla: dentro il blocco la lettura resta dal piu'
+ * vecchio al piu' nuovo, che e' cio' che serve a chi lo antepone in cima.
+ * L'id fa da spareggio: due messaggi con lo stesso received_at, altrimenti,
+ * cambierebbero posto fra un caricamento e l'altro.
+ */
 function getThread(PDO $db, string $number): void
 {
     $pagination = apiGetPagination(50, 200);
@@ -333,12 +349,12 @@ function getThread(PDO $db, string $number): void
                  LEFT JOIN clients c ON c.id = wm.client_id
                  LEFT JOIN tenants t ON t.id = wm.tenant_id
                  WHERE wm.from_number = :num1 OR wm.to_number = :num2
-                 ORDER BY wm.received_at ASC";
+                 ORDER BY wm.received_at DESC, wm.id DESC";
 
     $params = ['num1' => $number, 'num2' => $number];
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-    apiPaginatedSuccess($items, $total, $pagination);
+    apiPaginatedSuccess(array_reverse($items), $total, $pagination);
 }
 
 /**
