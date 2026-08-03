@@ -601,17 +601,11 @@ function validateContractInput(array $data): array
     if ($endDate !== null && !DateTime::createFromFormat('Y-m-d', $endDate)) {
         apiError('Data fine non valida.');
     }
-    // Ordine delle date. Senza questo controllo un periodo rovesciato si salvava
-    // senza un fiato, e il danno arrivava dopo e altrove: `effectiveStatus()`
-    // mostrava il contratto gia' "Scaduto" il giorno della firma, e soprattutto
-    // "Genera scadenzario" rispondeva «0 pagamenti creati» con l'aria di essere
-    // andato a buon fine — il ciclo esce alla prima iterazione perche' la prima
-    // scadenza cade gia' oltre `end`. Un canone che non viene mai richiesto e'
-    // il tipo di errore che si scopre a fine anno guardando i conti.
-    // Confronto tra stringhe: il formato Y-m-d e' gia' validato sopra ed e'
-    // ordinabile lessicograficamente, quindi non serve costruire due DateTime.
-    if ($startDate !== null && $endDate !== null && $endDate < $startDate) {
-        apiError('La data di fine non può precedere la data di inizio.');
+    // Ordine delle date. La regola e il suo perche' vivono in
+    // lib/contract_lifecycle.php: qui si decide solo che da questa porta e' un
+    // 400 e non un'eccezione.
+    if (leaseDatesOutOfOrder($startDate, $endDate)) {
+        apiError(leaseDateOrderMessage());
     }
 
     // Campo economico coerente col tipo. Si azzera in silenzio invece di dare

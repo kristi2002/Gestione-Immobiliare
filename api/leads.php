@@ -449,6 +449,9 @@ function convertLeadToTenant(PDO $db, int $id): void
 
         $db->prepare("UPDATE leads SET status = 'converted' WHERE id = :id")->execute(['id' => $id]);
         $db->commit();
+    } catch (LeaseDateOrderException $e) {
+        $db->rollBack();
+        apiError($e->getMessage());
     } catch (LeaseOverlapException $e) {
         $db->rollBack();
         apiError($e->getMessage(), 409);

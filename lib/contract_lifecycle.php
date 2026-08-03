@@ -346,6 +346,51 @@ function leaseOverlapConflict(PDO $db, array $v, ?int $excludeId = null): ?array
 }
 
 /**
+ * Un periodo rovesciato — la fine prima dell'inizio — non e' un contratto.
+ *
+ * Il modulo Contratti lo rifiutava gia'; il modulo Inquilino no, e da li' la
+ * locazione entrava in tabella senza un fiato. Il danno non si vedeva dove era
+ * stato fatto: "Genera scadenzario" rispondeva «0 pagamenti creati» con l'aria
+ * di essere andato a buon fine — il ciclo esce alla prima iterazione, perche'
+ * la prima scadenza cade gia' oltre la fine — e in elenco il contratto nasceva
+ * "Scaduto" il giorno stesso della firma. Un canone che non viene mai richiesto
+ * e' il tipo di errore che si scopre a fine anno guardando i conti.
+ *
+ * Confronto tra stringhe: il formato e' Y-m-d, ordinabile lessicograficamente,
+ * quindi non serve costruire due DateTime. Il periodo aperto (fine assente) e'
+ * legittimo e non e' affar suo, come non lo e' la forma delle date: chi chiama
+ * le ha gia' validate.
+ */
+function leaseDatesOutOfOrder(?string $startDate, ?string $endDate): bool
+{
+    if (($startDate ?? '') === '' || ($endDate ?? '') === '') {
+        return false;
+    }
+
+    return substr($endDate, 0, 10) < substr($startDate, 0, 10);
+}
+
+/**
+ * Il testo del rifiuto, uno solo: l'agente legge la stessa frase da qualunque
+ * porta sia entrato — modulo Contratti, modulo Inquilino o conversione lead.
+ */
+function leaseDateOrderMessage(): string
+{
+    return 'La data di fine non può precedere la data di inizio.';
+}
+
+/**
+ * Periodo rovesciato rilevato mentre si creava una locazione.
+ */
+class LeaseDateOrderException extends RuntimeException
+{
+    public function __construct()
+    {
+        parent::__construct(leaseDateOrderMessage());
+    }
+}
+
+/**
  * Doppia prenotazione rilevata mentre si creava una locazione.
  *
  * Porta lo stesso testo che il modulo Contratti mostra da sempre: l'agente
@@ -371,13 +416,15 @@ class LeaseOverlapException extends RuntimeException
  * Crea una locazione facendole attraversare le stesse guardie e le stesse
  * conseguenze del salvataggio dal modulo Contratti:
  *
- *   1. rifiuta la doppia locazione sullo stesso immobile (LeaseOverlapException)
- *   2. genera lo scadenzario dei canoni
- *   3. porta l'immobile ad "affittato" e ritira le pubblicazioni dai portali
+ *   1. rifiuta il periodo rovesciato (LeaseDateOrderException)
+ *   2. rifiuta la doppia locazione sullo stesso immobile (LeaseOverlapException)
+ *   3. genera lo scadenzario dei canoni
+ *   4. porta l'immobile ad "affittato" e ritira le pubblicazioni dai portali
  *
  * @param array $lease property_id, tenant_id, client_id, title, start_date,
  *                     end_date, monthly_rent, created_by, status (default 'signed')
  * @return array{id:int, payments_created:int, occupancy:array}
+ * @throws LeaseDateOrderException
  * @throws LeaseOverlapException
  */
 function contractCreateLease(PDO $db, array $lease): array
@@ -386,6 +433,12 @@ function contractCreateLease(PDO $db, array $lease): array
     $status     = array_key_exists('status', $lease) ? $lease['status'] : 'signed';
     $startDate  = ($lease['start_date'] ?? null) ?: null;
     $endDate    = ($lease['end_date'] ?? null) ?: null;
+
+    // Prima della doppia prenotazione: con le date rovesciate anche il controllo
+    // di sovrapposizione ragionerebbe su un intervallo che non esiste.
+    if (leaseDatesOutOfOrder($startDate, $endDate)) {
+        throw new LeaseDateOrderException();
+    }
 
     $conflict = leaseOverlapConflict($db, [
         'contract_type' => 'locazione',

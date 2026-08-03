@@ -6,11 +6,19 @@
 /**
  * Insert an activity log row. Pulls the current admin user from the session.
  *
+ * Dichiarazione condizionata: tests/bootstrap.php installa una versione a vuoto
+ * di logActivity() per non trascinare il database dentro i test di unita', e
+ * senza questa guardia il primo file di test che carica lib/contract_lifecycle.php
+ * moriva con «Cannot redeclare logActivity()» — non un test rosso, un errore
+ * fatale del loader, che portava con se' l'INTERA suite. In esercizio nessun
+ * altro dichiara questo nome, quindi qui non cambia nulla.
+ *
  * @param string   $action      One of: create, update, delete, login, logout.
  * @param string|null $entityType e.g. 'client', 'property', 'tenant', 'payment'.
  * @param int|null   $entityId   Affected entity id.
  * @param string|null $description Free-text description.
  */
+if (!function_exists('logActivity')) {
 function logActivity(string $action, ?string $entityType = null, ?int $entityId = null, ?string $description = null): void
 {
     static $allowed = ['create', 'update', 'delete', 'login', 'logout'];
@@ -44,4 +52,5 @@ function logActivity(string $action, ?string $entityType = null, ?int $entityId 
     } catch (Throwable $e) {
         // Logging must never break the main request.
     }
+}
 }

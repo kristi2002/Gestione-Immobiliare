@@ -284,6 +284,13 @@ function createOrUpdateLeaseContract(PDO $db, int $tenantId, int $propertyId, in
     $terms   = leaseTermsFromInput($data);
     $current = getTenantCurrentContract($db, $tenantId);
 
+    // Stessa guardia del modulo Contratti, qui davanti a ENTRAMBE le vie: la
+    // correzione dei termini in place non passa da contractCreateLease() e senza
+    // questa riga il periodo rovesciato rientrava dalla porta di servizio.
+    if (leaseDatesOutOfOrder($terms['start_date'], $terms['end_date'])) {
+        apiError(leaseDateOrderMessage());
+    }
+
     if ($current && (int) $current['property_id'] === $propertyId) {
         // Stesso immobile: si stanno correggendo i termini di una locazione che
         // esiste gia'. Il controllo di sovrapposizione esclude il contratto
