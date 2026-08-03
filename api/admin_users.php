@@ -201,6 +201,21 @@ function deleteUser(PDO $db, int $id): void
         apiError('Deve restare almeno un super admin attivo: nessuno potrebbe più accedere a Impostazioni e Utenti.');
     }
 
+    // Le provvigioni sono dati contabili e non seguono chi le ha guadagnate
+    // (phase96: la FK e' RESTRICT). Lo diciamo prima, con il numero e la via
+    // d'uscita, invece di lasciare che sia MySQL a rispondere con un errore di
+    // vincolo che l'agente non sa interpretare.
+    $comm = $db->prepare('SELECT COUNT(*) FROM agent_commissions WHERE admin_user_id = :id');
+    $comm->execute(['id' => $id]);
+    $commCount = (int) $comm->fetchColumn();
+    if ($commCount > 0) {
+        apiError(
+            "Questo collaboratore ha {$commCount} provvigioni a registro e non puo' essere eliminato: "
+            . 'sono dati contabili. Disattivalo per toglierlo dall\'operativita\' mantenendo lo storico.',
+            409
+        );
+    }
+
     $db->prepare('DELETE FROM admin_users WHERE id = :id')->execute(['id' => $id]);
     logActivity('delete', 'admin_user', $id, "Utente {$target['username']} eliminato");
     apiSuccess(['deleted' => true]);

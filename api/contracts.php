@@ -334,8 +334,10 @@ function setContractStatus(PDO $db, int $id): void
  * Senza questo, cambiare il canone non arrivava mai allo scadenzario gia'
  * generato, e non c'era modo di rimediare:
  *
- *   - insertPaymentSchedule() esce con -1 appena esiste una riga in `payments`
- *     per quel contratto, quindi "Genera scadenzario" non rigenera nulla;
+ *   - insertPaymentSchedule() aggiunge solo le mensilita' fuori dal tratto gia'
+ *     coperto, quindi "Genera scadenzario" non riscrive gli importi delle rate
+ *     che esistono gia' (prima usciva addirittura con -1 al primo pagamento
+ *     trovato, e non aggiungeva nemmeno le proroghe);
  *   - in tutto il codice non esiste una DELETE FROM payments: le rate si
  *     annullano (status='cancelled'), non si cancellano.
  *
@@ -843,12 +845,29 @@ function insertPaymentSchedule(PDO $db, array $contract): int
         $lock = $db->prepare("SELECT id FROM contracts WHERE id = :id FOR UPDATE");
         $lock->execute(['id' => $id]);
 
-        $existStmt = $db->prepare("SELECT COUNT(*) FROM payments WHERE contract_id = :cid");
-        $existStmt->execute(['cid' => $id]);
-        if ((int) $existStmt->fetchColumn() > 0) {
-            $db->rollBack();
-            return -1;
-        }
+        // Uno scadenzario gia' presente non e' piu' un rifiuto secco: prorogare
+        // un contratto (spostare end_date, il caso piu' comune nella vita di una
+        // locazione) non produceva NESSUNA rata nuova e non c'era modo di
+        // rigenerarlo — il canone dei mesi aggiunti non veniva mai richiesto e il
+        // buco si scopriva a fine anno guardando i conti.
+        //
+        // Si aggiungono percio' solo le mensilita' FUORI dall'intervallo gia'
+        // coperto: prima della prima rata o dopo l'ultima. Le eventuali lacune
+        // interne restano intatte, perche' una rata cancellata a mano nel mezzo
+        // (un mese di comodato, un canone azzerato) e' una decisione dell'agenzia
+        // e non un buco da ricucire. Cosi' la seconda esecuzione su un contratto
+        // invariato continua a non creare nulla.
+        $rangeStmt = $db->prepare(
+            "SELECT MIN(due_date) AS first_due, MAX(due_date) AS last_due, COUNT(*) AS n
+               FROM payments WHERE contract_id = :cid"
+        );
+        $rangeStmt->execute(['cid' => $id]);
+        $existing = $rangeStmt->fetch();
+
+        $coveredFrom = ($existing && $existing['n'] > 0 && $existing['first_due'])
+            ? DateTime::createFromFormat('!Y-m-d', $existing['first_due']) : null;
+        $coveredTo   = ($existing && $existing['n'] > 0 && $existing['last_due'])
+            ? DateTime::createFromFormat('!Y-m-d', $existing['last_due']) : null;
 
         $start = new DateTime($contract['start_date']);
         $end   = new DateTime($contract['end_date']);
@@ -878,6 +897,11 @@ function insertPaymentSchedule(PDO $db, array $contract): int
                 // Before the lease start (only possible at i=0 if start day was clamped
                 // upward, which cannot happen) or past the end — stop.
                 if ($due > $end) break;
+                continue;
+            }
+
+            // Gia' dentro il tratto coperto: non si tocca (vedi sopra).
+            if ($coveredFrom && $coveredTo && $due >= $coveredFrom && $due <= $coveredTo) {
                 continue;
             }
 
@@ -916,12 +940,24 @@ function generatePayments(PDO $db, int $id): void
     if ($blockers) apiError($blockers[0]);
 
     $count = insertPaymentSchedule($db, $contract);
-    if ($count === -1) {
-        apiError('Esiste già uno scadenzario per questo contratto. Elimina i pagamenti esistenti prima di rigenerarlo.');
+
+    // Zero righe nuove non e' un errore: vuol dire che lo scadenzario copre gia'
+    // tutta la durata del contratto. Va detto cosi', invece di chiedere
+    // all'agente di cancellare i pagamenti esistenti per poterlo rifare.
+    if ($count === 0) {
+        apiSuccess([
+            'contract_id'      => $id,
+            'payments_created' => 0,
+            'message'          => 'Lo scadenzario copre già tutta la durata del contratto: nessuna rata da aggiungere.',
+        ]);
     }
 
     logActivity('create', 'contract', $id, "Scadenzario generato: $count pagamenti per contratto #$id");
-    apiSuccess(['contract_id' => $id, 'payments_created' => $count, 'message' => "$count pagamenti creati."]);
+    apiSuccess([
+        'contract_id'      => $id,
+        'payments_created' => $count,
+        'message'          => $count === 1 ? '1 rata aggiunta.' : "$count rate create.",
+    ]);
 }
 
 /**
