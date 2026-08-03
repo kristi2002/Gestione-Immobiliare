@@ -17,6 +17,10 @@ require_once __DIR__ . '/../config/automation_events.php';
 apiHandleOptions();
 
 const PROPERTY_STATUSES = ['available', 'rented', 'sold', 'archived'];
+// Allineata all'enum di properties.property_type. Sta qui una volta sola:
+// una seconda copia e' il modo in cui una colonna allargata dalla migrazione
+// resta rifiutata dalla validazione (o viceversa).
+const PROPERTY_TYPE_VALUES = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
 
 /** Runaway guard for ?view=map — see listPropertiesForMap(). Not a product limit. */
 const MAP_HARD_CEILING = 5000;
@@ -876,8 +880,7 @@ function validatePropertyInput(PDO $db, array $data): array
     if (!in_array($priceType, ['affitto', 'vendita'], true)) {
         apiError('Tipo prezzo non valido.');
     }
-    $validTypes = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
-    if (!in_array($propertyType, $validTypes, true)) {
+    if (!in_array($propertyType, PROPERTY_TYPE_VALUES, true)) {
         $propertyType = 'appartamento';
     }
     if ($yearBuilt !== null && ($yearBuilt < 1800 || $yearBuilt > (int) date('Y'))) {
@@ -1078,9 +1081,9 @@ function importProperties(PDO $db): void
     $errors   = [];
     $stmt = $db->prepare(
         "INSERT INTO properties
-            (client_id, address, city, cap, sqm, rooms, bathrooms, status, price, price_type)
+            (client_id, address, city, cap, sqm, rooms, bathrooms, status, price, price_type, property_type)
          VALUES
-            (:client_id, :address, :city, :cap, :sqm, :rooms, :bathrooms, :status, :price, :price_type)"
+            (:client_id, :address, :city, :cap, :sqm, :rooms, :bathrooms, :status, :price, :price_type, :property_type)"
     );
 
     foreach ($rows as $i => $row) {
@@ -1095,6 +1098,24 @@ function importProperties(PDO $db): void
         if (!in_array($status, PROPERTY_STATUSES, true))    $status = 'available';
         if (!in_array($priceType, ['affitto', 'vendita'], true)) $priceType = 'affitto';
 
+        // La colonna "tipo" e' fra quelle che la finestra di import dichiara
+        // attese, ma non veniva letta: chi importava 150 immobili preparando il
+        // file come richiesto se li ritrovava tutti "appartamento" (il DEFAULT
+        // della colonna), ville, negozi e box compresi, senza un messaggio.
+        $rawType      = mb_strtolower(trim((string) ($row['tipo'] ?? '')));
+        $propertyType = 'appartamento';
+        if ($rawType !== '') {
+            if (in_array($rawType, PROPERTY_TYPE_VALUES, true)) {
+                $propertyType = $rawType;
+            } else {
+                // Un valore scritto e non riconosciuto va detto: e' la
+                // differenza fra "non l'ho messo" e "l'ho messo e l'hai perso".
+                $errors[] = 'Riga ' . ($i + 1) . ': tipo "' . $rawType
+                    . '" non riconosciuto, importato come appartamento. Valori ammessi: '
+                    . implode(', ', PROPERTY_TYPE_VALUES) . '.';
+            }
+        }
+
         $stmt->execute([
             'client_id'  => $clientId,
             'address'    => $address,
@@ -1106,6 +1127,7 @@ function importProperties(PDO $db): void
             'status'     => $status,
             'price'      => ($row['prezzo'] ?? '') !== '' ? (float) $row['prezzo'] : null,
             'price_type' => $priceType,
+            'property_type' => $propertyType,
         ]);
         $imported++;
     }
