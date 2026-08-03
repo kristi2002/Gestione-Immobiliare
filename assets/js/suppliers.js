@@ -30,6 +30,7 @@
         els.search         = document.getElementById('suppliers-search');
         els.categoryFilter = document.getElementById('suppliers-category-filter');
         els.delModal       = document.getElementById('suppliers-delete-modal');
+        els.showInactive   = document.getElementById('suppliers-show-inactive');
 
         bindEvents();
         loadSuppliers();
@@ -45,6 +46,7 @@
 
         els.search.addEventListener('input', debounce(() => { currentPage = 1; loadSuppliers(); }, 300));
         els.categoryFilter.addEventListener('change', () => { currentPage = 1; loadSuppliers(); });
+        els.showInactive?.addEventListener('change', () => { currentPage = 1; loadSuppliers(); });
     }
 
     async function loadSuppliers() {
@@ -53,6 +55,10 @@
         const cat    = els.categoryFilter.value;
         if (search) params.set('search', search);
         if (cat)    params.set('category', cat);
+        // L'API espone gia' include_inactive: senza chiederlo, un fornitore
+        // disattivato spariva da ogni schermata e non c'era modo di rivederlo
+        // ne' di riattivarlo. Il dato c'era, mancava la domanda.
+        if (els.showInactive?.checked) params.set('include_inactive', '1');
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
@@ -91,7 +97,7 @@
                 <div class="entity-card__header">
                     <div class="entity-card__avatar"><i data-lucide="truck"></i></div>
                     <div class="entity-card__title-group">
-                        <div class="entity-card__name">${esc(s.name)}</div>
+                        <div class="entity-card__name">${esc(s.name)}${Number(s.is_active) === 0 ? ' <span class="badge">Disattivato</span>' : ''}</div>
                         <div class="supplier-card__sub">
                             ${s.category ? `<span class="badge">${esc(s.category)}</span>` : ''}
                             ${s.rating ? `<span class="supplier-card__rating">${starsHtml(s.rating)}</span>` : ''}
@@ -107,7 +113,7 @@
                 </div>
                 <div class="entity-card__footer">
                     <div class="entity-card__actions" style="margin-left:auto;">
-                        ${window.RowMenu.button(s.id, 'Azioni fornitore', { name: s.name, phone: s.phone || '' })}
+                        ${window.RowMenu.button(s.id, 'Azioni fornitore', { name: s.name, phone: s.phone || '', active: Number(s.is_active) === 0 ? '0' : '1' })}
                     </div>
                 </div>
             </div>
@@ -123,11 +129,16 @@
                 waUrl ? { label: 'Scrivi su WhatsApp', html: window.WA.icon, href: waUrl, target: '_blank' } : null,
                 { label: 'Modifica', icon: 'pencil', onClick: () => openForm(btn.dataset.id) },
                 { sep: true },
-                { label: 'Elimina', icon: 'trash-2', danger: true, onClick: () => {
-                    deleteTargetId = btn.dataset.id;
-                    document.getElementById('suppliers-delete-name').textContent = btn.dataset.name;
-                    els.delModal.hidden = false;
-                } },
+                // Un fornitore disattivato si riattiva: prima non c'era nessuna
+                // via di ritorno, e "Elimina" prometteva una cancellazione che
+                // l'API non fa (imposta is_active = 0).
+                btn.dataset.active === '0'
+                    ? { label: 'Riattiva', icon: 'rotate-ccw', onClick: () => setActive(btn.dataset.id, true) }
+                    : { label: 'Disattiva', icon: 'ban', danger: true, onClick: () => {
+                        deleteTargetId = btn.dataset.id;
+                        document.getElementById('suppliers-delete-name').textContent = btn.dataset.name;
+                        els.delModal.hidden = false;
+                    } },
             ];
         });
     }
@@ -145,6 +156,35 @@
 
     function closeDeleteModal() { els.delModal.hidden = true; deleteTargetId = null; }
 
+    /**
+     * Riattiva un fornitore disattivato.
+     *
+     * La PUT riscrive tutte le colonne, quindi si rilegge la riga e la si
+     * rimanda intera: mandare il solo is_active azzererebbe recapiti,
+     * valutazione e note.
+     */
+    async function setActive(id, active) {
+        try {
+            const cur = await fetch(`${API}?id=${encodeURIComponent(id)}`).then(r => r.json());
+            if (!cur.success) throw new Error(cur.error);
+            const s = Array.isArray(cur.data) ? cur.data[0] : cur.data;
+
+            const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, {
+                method:  'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    name: s.name, category: s.category, phone: s.phone, email: s.email,
+                    address: s.address, notes: s.notes, rating: s.rating,
+                    is_active: active ? 1 : 0,
+                }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert(active ? 'Fornitore riattivato.' : 'Fornitore disattivato.', 'success');
+            loadSuppliers();
+        } catch (err) { showAlert(err.message, 'error'); }
+    }
+
     async function confirmDelete() {
         if (!deleteTargetId) return;
         const btn = document.getElementById('suppliers-delete-confirm');
@@ -154,7 +194,7 @@
             const json = await res.json();
             if (!json.success) throw new Error(json.error);
             closeDeleteModal();
-            showAlert('Fornitore eliminato.', 'success');
+            showAlert('Fornitore disattivato: puoi riattivarlo da «Mostra anche i disattivati».', 'success');
             loadSuppliers();
         } catch (err) {
             showAlert(err.message, 'error');

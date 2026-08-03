@@ -15,6 +15,9 @@
         <div class="search-box">
             <input type="search" id="suppliers-search" class="form-input" placeholder="Cerca per nome…" autocomplete="off">
         </div>
+        <label class="form-check" style="margin:0;white-space:nowrap;">
+            <input type="checkbox" id="suppliers-show-inactive"> Mostra anche i disattivati
+        </label>
         <select id="suppliers-category-filter" class="form-select">
             <option value="">Tutte le categorie</option>
             <option value="idraulico">Idraulico</option>
@@ -43,15 +46,26 @@
 <div class="modal-overlay" id="suppliers-delete-modal" hidden>
     <div class="modal modal--sm" role="dialog">
         <div class="modal-header">
-            <h3>Elimina fornitore</h3>
+            <h3>Disattiva fornitore</h3>
             <button class="modal-close" id="suppliers-delete-close" aria-label="Chiudi">&times;</button>
         </div>
         <div class="modal-body">
-            <p>Sei sicuro di voler eliminare <strong id="suppliers-delete-name"></strong>?</p>
+            <!--
+                Si chiamava "Elimina" ma l'API fa una disattivazione
+                (is_active = 0). Chiamare le cose col loro nome: l'agente
+                decideva se cancellare per sempre un artigiano credendo di
+                perdere lo storico degli interventi, che invece resta.
+            -->
+            <p>Vuoi disattivare <strong id="suppliers-delete-name"></strong>?</p>
+            <p class="text-muted" style="font-size:13px;">
+                Sparisce dagli elenchi e dalle tendine, ma non si perde niente:
+                gli interventi che gli hai affidato restano, e puoi riattivarlo
+                quando vuoi da «Mostra anche i disattivati».
+            </p>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="suppliers-delete-cancel">Annulla</button>
-            <button type="button" class="btn btn--danger" id="suppliers-delete-confirm">Elimina</button>
+            <button type="button" class="btn btn--danger" id="suppliers-delete-confirm">Disattiva</button>
         </div>
     </div>
 </div>
