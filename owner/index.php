@@ -167,8 +167,19 @@ function oEsc($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UT
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portale Proprietario — <?= oEsc($branding['agency_name']) ?></title>
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <?php $__distCss = __DIR__ . '/../assets/dist/app.min.css'; ?>
+    <?php if (is_file($__distCss)): ?>
+    <link rel="stylesheet" href="../assets/dist/app.min.css?v=<?= filemtime($__distCss) ?>">
+    <?php else: ?>
+    <link rel="stylesheet" href="../assets/css/style.css?v=<?= @filemtime(__DIR__ . '/../assets/css/style.css') ?: time() ?>">
+    <?php endif; ?>
     <link rel="stylesheet" href="../branding.css.php">
+    <!-- Ultimo di proposito: il tema sovrascrive il bundle. Mancava, percio'
+         questo portale rendeva il layer base non tematizzato. -->
+    <link rel="stylesheet" href="../assets/css/theme-orlandi.css?v=<?= @filemtime(__DIR__ . '/../assets/css/theme-orlandi.css') ?: time() ?>">
     <style>
         .portal-tabs { display:flex; gap:4px; border-bottom:2px solid var(--color-border); margin-bottom:20px; overflow-x:auto; }
         .portal-tab  { background:none; border:none; padding:10px 18px; font-size:14px; font-weight:600; color:var(--color-text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:color var(--transition); }
