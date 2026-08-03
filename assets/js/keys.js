@@ -46,6 +46,7 @@
         els.scanHint = document.getElementById('key-scan-hint');
 
         bindEvents();
+        bindCardClick();
         bindRowMenu();
         setupScanner();
         loadKeys();
@@ -68,6 +69,27 @@
     /** Il modulo è una pagina, non una modale: immobili e detentori li carica lo schema. */
     function openForm(id) {
         window.App.navigateTo('entity_edit', id ? { entity: 'keys', id } : { entity: 'keys' });
+    }
+
+    function openProfile(id) {
+        window.App.navigateTo('key_profile', { keyId: Number(id) });
+    }
+
+    /**
+     * La card apre la scheda. Delegato sulla griglia perché il contenuto si
+     * ridisegna a ogni filtro.
+     *
+     * Il ⋮ va escluso a mano: lo stopPropagation() di RowMenu ferma la risalita
+     * verso i genitori, ma qui i due ascoltatori stanno sullo STESSO nodo (la
+     * griglia), e fra pari serve stopImmediatePropagation — che dipenderebbe
+     * dall'ordine di registrazione. Con questa guardia l'ordine non conta.
+     */
+    function bindCardClick() {
+        els.grid.addEventListener('click', e => {
+            if (e.target.closest('.btn-rail')) return;
+            const card = e.target.closest('.key-card[data-open]');
+            if (card) openProfile(card.dataset.open);
+        });
     }
 
     async function loadKeys() {
@@ -110,7 +132,7 @@
             const holder    = k.holder_display || 'Nessun detentore';
             const holderTag = k.holder_type ? HOLDER_TYPE_LABELS[k.holder_type] || k.holder_type : '';
             return `
-            <div class="entity-card key-card${overdue ? ' is-overdue' : ''}">
+            <div class="entity-card key-card${overdue ? ' is-overdue' : ''}" data-open="${k.id}" style="cursor:pointer;">
                 <div class="entity-card__header">
                     <strong><i data-lucide="${typeIcon}"></i> ${escapeHtml(k.address)}, ${escapeHtml(k.city)}</strong>
                     <span class="badge badge--key-${overdue ? 'overdue' : k.status}">${overdue ? 'In ritardo' : (STATUS_LABELS[k.status] || k.status)}</span>
@@ -143,9 +165,12 @@
         window.RowMenu.bind(els.grid, btn => {
             const id = btn.dataset.id;
             return [
+                { label: 'Apri scheda', icon: 'arrow-right', onClick: () => openProfile(id) },
                 // Il rientro si registra solo su chiavi che sono fuori.
                 btn.dataset.state === 'out'
                     ? { label: 'Registra rientro', icon: 'undo-2', onClick: () => returnKey(id) } : null,
+                // La modale resta per l'occhiata al volo dall'elenco; lo stesso
+                // registro, per intero, sta nella scheda.
                 { label: 'Storico custodia', icon: 'history', onClick: () => openHistory(id) },
                 { label: 'Modifica', icon: 'pencil', onClick: () => openForm(id) },
                 { sep: true },

@@ -1,0 +1,90 @@
+<div class="key-profile-view">
+
+    <div class="view-header">
+        <div class="view-header__text">
+            <h2>Scheda chiavi</h2>
+            <p>Dove sono queste chiavi, chi le ha in mano e ogni passaggio registrato.</p>
+        </div>
+    </div>
+
+    <div id="kp-alert" class="alert" style="display:none;"></div>
+
+    <!-- Hero: il mazzo, il suo stato, l'immobile -->
+    <div class="appt-hero card" id="kp-hero">
+        <div class="kp-tile" id="kp-tile">
+            <i data-lucide="key-round"></i>
+            <span class="kp-tile__qty" id="kp-tile-qty"></span>
+        </div>
+        <div class="appt-hero__info">
+            <div class="appt-hero__badges" id="kp-badges"></div>
+            <h2 id="kp-title">Caricamento…</h2>
+            <div class="appt-hero__meta" id="kp-meta"></div>
+        </div>
+        <div class="appt-hero__actions">
+            <button class="btn btn--primary btn--sm" id="kp-return" hidden><i data-lucide="undo-2"></i> Registra rientro</button>
+            <button class="btn btn--ghost btn--sm" id="kp-edit"><i data-lucide="pencil"></i> Modifica</button>
+            <button class="btn btn--ghost btn--sm btn--danger" id="kp-delete"><i data-lucide="trash-2"></i> Elimina</button>
+        </div>
+    </div>
+
+    <!-- Cosa non torna nella custodia: sta sopra la scheda perché è il motivo
+         per cui qualcuno la apre. Stessa forma del riquadro del fascicolo AML. -->
+    <div id="kp-flags"></div>
+
+    <div class="appt-scheda-grid">
+
+        <!-- Detentore -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="user-round"></i><h3>Detentore attuale</h3></div>
+            <div id="kp-holder"></div>
+        </div>
+
+        <!-- Immobile -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="home"></i><h3>Immobile</h3></div>
+            <div id="kp-property"></div>
+        </div>
+
+        <!-- Il mazzo -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="key-round"></i><h3>Il mazzo</h3></div>
+            <div class="scheda-rows" id="kp-keydata"></div>
+        </div>
+
+        <!-- Date di custodia -->
+        <div class="card appt-card">
+            <div class="appt-card__header"><i data-lucide="calendar-clock"></i><h3>Consegna e rientro</h3></div>
+            <div class="scheda-rows" id="kp-custody"></div>
+        </div>
+
+        <!-- Note -->
+        <div class="card appt-card appt-card--wide">
+            <div class="appt-card__header"><i data-lucide="file-pen"></i><h3>Note interne</h3></div>
+            <div id="kp-notes"></div>
+        </div>
+
+        <!-- Registro append-only: è la ragione per cui questa pagina esiste,
+             nella modale dell'elenco ci stava stretto. -->
+        <div class="card appt-card appt-card--wide">
+            <div class="appt-card__header">
+                <i data-lucide="history"></i><h3>Storico custodia</h3>
+                <span class="kp-count" id="kp-history-count"></span>
+            </div>
+            <div id="kp-history"><div class="entity-loading">Caricamento…</div></div>
+        </div>
+
+        <!-- Gli altri mazzi dello stesso immobile: "chi altro può entrare qui" -->
+        <div class="card appt-card appt-card--wide">
+            <div class="appt-card__header">
+                <i data-lucide="layers"></i><h3>Altre chiavi dello stesso immobile</h3>
+                <span class="kp-count" id="kp-siblings-count"></span>
+            </div>
+            <div id="kp-siblings"><div class="entity-loading">Caricamento…</div></div>
+        </div>
+
+    </div>
+
+    <p class="appt-footnote" id="kp-footnote"></p>
+</div>
+
+<script src="assets/js/key_profile.js"></script>

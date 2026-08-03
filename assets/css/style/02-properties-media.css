@@ -267,6 +267,36 @@
     text-decoration: underline;
 }
 
+/* Cella vuota che si puo' riempire.
+   Un "—" in una colonna che nessuno ha ancora compilato si legge come un dato
+   che non c'e' e non ci sara': l'anagrafica contatori nasce dallo storico delle
+   letture (POD, fornitore e ubicazione arrivano vuoti), e quelle celle sono
+   esattamente il lavoro da fare. Il tratteggio dice "qui manca qualcosa" e il
+   pulsante porta dritto alla scheda, senza passare dal menu della riga. */
+.cell-fill {
+    background: none;
+    border: 1px dashed var(--color-border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.cell-fill:hover,
+.cell-fill:focus-visible {
+    border-style: solid;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* Riga disattivata: il badge in coda da solo non si vede scorrendo l'elenco. */
+.data-table tbody tr.is-muted td {
+    opacity: .55;
+}
+
 .col-actions {
     white-space: nowrap;
     text-align: right;
@@ -479,6 +509,89 @@
     font-size: 12.5px;
     color: var(--color-text-muted);
     margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Scheda chiavi (views/key_profile.html)
+
+   La pagina è costruita col telaio della scheda appuntamento — .appt-hero,
+   .appt-scheda-grid, .appt-card, .scheda-rows, .appt-person (10-appointments.css)
+   — e con la timeline qui sopra. Qui c'è solo quello che quel telaio non ha:
+   il riquadro del mazzo al posto del riquadro della data, e le due liste.
+   -------------------------------------------------------------------------- */
+
+/* Sostituisce .appt-hero__date: stessa geometria, contenuto diverso. Il colore
+   È lo stato — la domanda che porta su questa pagina è "dove sono?", e la
+   risposta deve arrivare prima che si legga il badge. Le tinte sono quelle dei
+   badge di stato qui sopra, non una seconda tavolozza. */
+.kp-tile {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 78px;
+    padding: 12px 0;
+    border-radius: 12px;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    line-height: 1.1;
+}
+.kp-tile svg { width: 26px; height: 26px; }
+.kp-tile__qty {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+.kp-tile--in_office { background: #16a34a; }
+.kp-tile--out       { background: #d97706; }
+.kp-tile--lost,
+.kp-tile--overdue   { background: #dc2626; }
+
+/* Il codice del portachiavi nella riga meta dell'hero: .key-card__code è
+   pensato per la card in elenco, dove sta su fondo chiaro senza vicini. */
+.appt-hero__meta .key-card__code { line-height: 1.5; }
+
+/* Riquadro "Da sistemare": stesso impianto del fascicolo antiriciclaggio. */
+.kp-flags {
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+.kp-flags .appt-card__header { margin-bottom: 10px; }
+.kp-flags__item { margin: 8px 0 0; }
+.kp-flags__item:first-of-type { margin-top: 0; }
+.kp-flags__ok { margin-bottom: 16px; }
+
+/* Conteggio a fine intestazione di card ("12 movimenti"). */
+.kp-count {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #94a3b8);
+    font-weight: 500;
+}
+
+/* Detentore: la freccia dice che la riga porta da qualche parte — e quando il
+   detentore è un fornitore (che non ha una scheda propria) non c'è. */
+.kp-chevron {
+    margin-left: auto;
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-muted, #94a3b8);
+    flex: none;
+}
+.kp-holder-dates { margin-top: 10px; }
+
+/* Gli altri mazzi dello stesso immobile. */
+.kp-sibling__icon { color: var(--color-text-muted, #64748b); }
+.kp-sibling__icon svg { width: 18px; height: 18px; }
+.kp-sibling__badge { margin-left: auto; flex: none; }
+
+@media (max-width: 720px) {
+    .kp-tile { width: 62px; padding: 10px 0; }
+    .kp-tile svg { width: 22px; height: 22px; }
 }
 
 /* --------------------------------------------------------------------------
