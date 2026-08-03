@@ -10,6 +10,7 @@ $csrfToken = getCsrfToken();
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../config/portal_documents.php';
 
 $tenantId = getCurrentTenantId();
 $db = getDB();
@@ -79,10 +80,14 @@ $upcoming = $upcomingStmt->fetchAll(PDO::FETCH_ASSOC);
 // `client_id = owner` exposed the landlord's personal/ID documents and every other
 // property's paperwork to any tenant. Property/contract scope is the right boundary.
 $tenantContractId = (int) ($contract['contract_id'] ?? 0);
+// Il ramo "immobile" è ristretto per tipo (config/portal_documents.php): senza
+// quel filtro l'inquilino attuale scaricava la carta d'identità e i verbali del
+// precedente, agganciati allo stesso immobile. Dal proprio contratto continua a
+// vedere tutto, perché quelli sono i suoi documenti.
 $docsStmt = $db->prepare(
     "SELECT id, title, original_name, mime_type AS file_type, file_size, created_at
      FROM documents
-     WHERE (property_id IS NOT NULL AND property_id = :pid)
+     WHERE (property_id IS NOT NULL AND property_id = :pid AND " . tenantPropertyDocTypesSql() . ")
         OR (contract_id IS NOT NULL AND contract_id = :cid)
      ORDER BY created_at DESC LIMIT " . TENANT_DOCS_LIMIT
 );
@@ -96,7 +101,7 @@ $documents = $docsStmt->fetchAll(PDO::FETCH_ASSOC);
 // l'inquilino avrebbe diritto di vedere, non tutti i documenti del gestionale.
 $docsTotalStmt = $db->prepare(
     "SELECT COUNT(*) FROM documents
-     WHERE (property_id IS NOT NULL AND property_id = :pid)
+     WHERE (property_id IS NOT NULL AND property_id = :pid AND " . tenantPropertyDocTypesSql() . ")
         OR (contract_id IS NOT NULL AND contract_id = :cid)"
 );
 $docsTotalStmt->execute([

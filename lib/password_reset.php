@@ -204,8 +204,24 @@ function passwordResetConsume(PDO $db, array $reset, string $newPassword, ?strin
                  ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)'
             )->execute(['tenant_id' => $reset['subject_id'], 'hash' => $hash]);
         } else {
-            $db->prepare('UPDATE clients SET portal_password_hash = :hash WHERE id = :id')
-               ->execute(['hash' => $hash, 'id' => $reset['subject_id']]);
+            // Anche portal_email, non solo l'hash: owner/auth.php autentica con
+            // "WHERE portal_email = :email", e su un proprietario nuovo quella
+            // colonna e' NULL. Il link partiva verso clients.email (api/password_reset.php:66),
+            // il proprietario sceglieva la password, e poi non riusciva a entrare
+            // con nessun indirizzo: l'accesso al portale non si apriva mai.
+            // L'indirizzo giusto e' quello a cui il link e' stato spedito, che la
+            // riga password_resets conserva. COALESCE per non sovrascrivere un
+            // portal_email gia' deciso dall'agenzia.
+            $db->prepare(
+                'UPDATE clients
+                    SET portal_password_hash = :hash,
+                        portal_email = COALESCE(portal_email, :email)
+                  WHERE id = :id'
+            )->execute([
+                'hash'  => $hash,
+                'email' => $reset['email'],
+                'id'    => $reset['subject_id'],
+            ]);
         }
 
         $db->commit();

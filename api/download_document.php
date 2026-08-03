@@ -57,6 +57,7 @@ if (isLoggedIn()) {
 }
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/portal_documents.php';
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id <= 0) {
@@ -89,11 +90,15 @@ try {
         $tenantPropId     = (int) ($contract['property_id'] ?? 0);
         $tenantContractId = (int) ($contract['contract_id'] ?? 0);
 
+        // Stesso perimetro di tenant/index.php, e per lo stesso motivo: se qui
+        // fosse piu' largo, il documento non comparirebbe in elenco ma sarebbe
+        // comunque scaricabile indovinando l'id. Un solo punto di verita':
+        // config/portal_documents.php.
         $stmt = $db->prepare(
             "SELECT original_name, file_path, mime_type
                FROM documents
               WHERE id = :id
-                AND ( (property_id IS NOT NULL AND property_id = :pid)
+                AND ( (property_id IS NOT NULL AND property_id = :pid AND " . tenantPropertyDocTypesSql() . ")
                    OR (contract_id IS NOT NULL AND contract_id = :cid) )"
         );
         $stmt->execute(['id' => $id, 'pid' => $tenantPropId, 'cid' => $tenantContractId]);

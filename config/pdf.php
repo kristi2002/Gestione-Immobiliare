@@ -39,28 +39,124 @@ function pdfDocOpts(string $title, array $extra = []): array
     return array_merge($opts, $extra);
 }
 
+/**
+ * Come si chiama e come si legge un contratto, per tipo.
+ *
+ * Prima esisteva un solo esito possibile — «Contratto di locazione» con la voce
+ * «Canone mensile» — qualunque cosa fosse il contratto: da una compravendita
+ * usciva un documento intestato alla locazione, con il canone vuoto e nessun
+ * prezzo. Era il PDF che l'agente consegna al cliente.
+ */
+const CONTRACT_PDF_SHAPES = [
+    'locazione' => [
+        'title'       => 'Contratto di locazione',
+        'amount_from' => 'monthly_rent',
+        'amount_label' => 'Canone mensile',
+        'amount_note' => 'Locazione',
+        'deposit_label' => 'Deposito cauzionale',
+        'parties'     => ['Locatore / Proprietario', 'Conduttore / Inquilino'],
+        'signatures'  => ['Firma del locatore', 'Firma del conduttore'],
+    ],
+    'compravendita' => [
+        'title'       => 'Contratto di compravendita',
+        'amount_from' => 'sale_price',
+        'amount_label' => 'Prezzo di vendita',
+        'amount_note' => 'Compravendita',
+        'deposit_label' => 'Caparra confirmatoria',
+        'parties'     => ['Parte venditrice', 'Parte acquirente'],
+        'signatures'  => ['Firma del venditore', 'Firma dell\'acquirente'],
+    ],
+    'preliminare' => [
+        'title'       => 'Contratto preliminare di compravendita',
+        'amount_from' => 'sale_price',
+        'amount_label' => 'Prezzo pattuito',
+        'amount_note' => 'Preliminare',
+        'deposit_label' => 'Caparra confirmatoria',
+        'parties'     => ['Promittente venditore', 'Promissario acquirente'],
+        'signatures'  => ['Firma del promittente venditore', 'Firma del promissario acquirente'],
+    ],
+    'altro' => [
+        'title'       => 'Contratto',
+        'amount_from' => 'monthly_rent',
+        'amount_label' => 'Importo',
+        'amount_note' => '',
+        'deposit_label' => 'Deposito',
+        'parties'     => ['Prima parte', 'Seconda parte'],
+        'signatures'  => ['Firma della prima parte', 'Firma della seconda parte'],
+    ],
+];
+
+function pdfMoneyText($value): string
+{
+    return ($value !== null && $value !== '' && (float) $value != 0.0)
+        ? '€ ' . number_format((float) $value, 2, ',', '.')
+        : '—';
+}
+
 function generateContractPdf(PDO $db, array $params, int $adminId): array
 {
-    $clientId   = (int) ($params['client_id'] ?? 0);
-    $propertyId = (int) ($params['property_id'] ?? 0);
-    $tenantId   = (int) ($params['tenant_id'] ?? 0);
-    $rent       = $params['monthly_rent'] ?? null;
-    $startDate  = $params['lease_start'] ?? date('Y-m-d');
-    $endDate    = $params['lease_end'] ?? '';
+    // Il contratto e' la fonte di verita', non i campi sciolti del chiamante:
+    // senza rileggerlo non si puo' sapere nemmeno di che tipo di contratto si
+    // tratta. `contract_id` resta facoltativo per non rompere i vecchi
+    // chiamanti, che continuano a ottenere il comportamento di prima.
+    $contractId = (int) ($params['contract_id'] ?? 0);
+    $contract   = $contractId ? fetchRow($db, 'contracts', $contractId) : null;
 
-    $client = $clientId ? fetchRow($db, 'clients', $clientId) : null;
+    if ($contract && $contract['contract_type'] === 'mandato') {
+        // Il mandato ha gia' il suo generatore, con le clausole di incarico.
+        return generateMandatoPdf($db, [
+            'client_id'   => $contract['client_id'],
+            'property_id' => $contract['property_id'],
+        ] + $params, $adminId);
+    }
+
+    $clientId   = (int) ($contract['client_id']   ?? $params['client_id']   ?? 0);
+    $propertyId = (int) ($contract['property_id'] ?? $params['property_id'] ?? 0);
+    $tenantId   = (int) ($contract['tenant_id']   ?? $params['tenant_id']   ?? 0);
+    $startDate  = $contract['start_date'] ?? $params['lease_start'] ?? date('Y-m-d');
+    $endDate    = $contract['end_date']   ?? $params['lease_end']   ?? '';
+
+    $client   = $clientId ? fetchRow($db, 'clients', $clientId) : null;
     $property = $propertyId ? fetchRow($db, 'properties', $propertyId) : null;
-    $tenant = $tenantId ? fetchTenant($db, $tenantId) : null;
+    $tenant   = $tenantId ? fetchTenant($db, $tenantId) : null;
 
-    $title = 'Contratto di locazione';
+    $type  = $contract['contract_type'] ?? 'locazione';
+    $shape = CONTRACT_PDF_SHAPES[$type] ?? CONTRACT_PDF_SHAPES['locazione'];
 
-    $rentValue = $rent ?? ($tenant['monthly_rent'] ?? null);
-    $rentText  = ($rentValue !== null && $rentValue !== '')
-        ? '€ ' . number_format((float) $rentValue, 2, ',', '.')
-        : '—';
+    $title = $shape['title'];
+    // Un sottotipo dichiarato (transitorio, concordato, studenti...) va nel
+    // titolo: e' cio' che distingue un 4+4 da un contratto per studenti.
+    if (!empty($contract['contract_subtype'])) {
+        $title .= ' (' . $contract['contract_subtype'] . ')';
+    }
+
+    $amount = $contract
+        ? ($contract[$shape['amount_from']] ?? null)
+        : ($params['monthly_rent'] ?? $tenant['monthly_rent'] ?? null);
+
+    $economics = [
+        ['type' => 'price', 'label' => $shape['amount_label'], 'value' => pdfMoneyText($amount), 'note' => $shape['amount_note']],
+    ];
+
+    $terms = [
+        ['Decorrenza', formatDateIt($startDate)],
+        ['Scadenza',   $endDate ? formatDateIt($endDate) : 'Da definire'],
+    ];
+    if ($contract && $contract['deposit'] !== null && (float) $contract['deposit'] != 0.0) {
+        $terms[] = [$shape['deposit_label'], pdfMoneyText($contract['deposit'])];
+    }
+    if ($contract && !empty($contract['registration_number'])) {
+        $terms[] = ['Registrazione', trim($contract['registration_number']
+            . ($contract['registration_date'] ? ' del ' . formatDateIt($contract['registration_date']) : '')
+            . ($contract['registration_office'] ? ' — ' . $contract['registration_office'] : ''))];
+    }
+    if ($contract && !empty($contract['cedolare_secca'])) {
+        $terms[] = ['Regime fiscale', 'Cedolare secca'];
+    }
+    $economics[] = ['type' => 'kv', 'pairs' => $terms];
 
     $blocks = [
-        ['type' => 'h2', 'text' => 'Locatore / Proprietario'],
+        ['type' => 'h2', 'text' => $shape['parties'][0]],
         ['type' => 'kv', 'pairs' => $client ? mandantePairs($client) : [['Nominativo', '—']]],
         ['type' => 'h2', 'text' => 'Immobile'],
         ['type' => 'kv', 'pairs' => [
@@ -69,21 +165,22 @@ function generateContractPdf(PDO $db, array $params, int $adminId): array
             // Legally required in the contract (D.Lgs 192/2005 art. 6).
             ['Classe energetica', $property && !empty($property['energy_class']) ? $property['energy_class'] : 'n.d.'],
         ]],
-        ['type' => 'h2', 'text' => 'Conduttore / Inquilino'],
+        ['type' => 'h2', 'text' => $shape['parties'][1]],
         ['type' => 'kv', 'pairs' => $tenant ? mandantePairs($tenant) : [
             ['Nominativo', $params['tenant_name'] ?? '—'],
             ['Email',      $params['tenant_email'] ?? '—'],
         ]],
         ['type' => 'h2', 'text' => 'Condizioni economiche'],
-        ['type' => 'price', 'label' => 'Canone mensile', 'value' => $rentText, 'note' => 'Locazione'],
-        ['type' => 'kv', 'pairs' => [
-            ['Decorrenza', formatDateIt($startDate)],
-            ['Scadenza',   $endDate ? formatDateIt($endDate) : 'Da definire'],
-        ]],
-        ['type' => 'spacer', 'height' => 6],
-        ['type' => 'paragraph', 'text' => 'Il presente documento è generato automaticamente dal gestionale immobiliare e ha valore di bozza fino alla sottoscrizione delle parti.'],
-        ['type' => 'signatures', 'items' => ['Firma del locatore', 'Firma del conduttore']],
     ];
+    array_push($blocks, ...$economics);
+
+    if ($type === 'locazione' && $contract && !empty($contract['istat_update_enabled'])) {
+        $blocks[] = ['type' => 'paragraph', 'text' => 'Il canone è soggetto ad aggiornamento annuale secondo la variazione dell\'indice ISTAT FOI, nella misura di legge.'];
+    }
+
+    $blocks[] = ['type' => 'spacer', 'height' => 6];
+    $blocks[] = ['type' => 'paragraph', 'text' => 'Il presente documento è generato automaticamente dal gestionale immobiliare e ha valore di bozza fino alla sottoscrizione delle parti.'];
+    $blocks[] = ['type' => 'signatures', 'items' => $shape['signatures']];
 
     $pdf = SimplePdf::fromBlocks($title, $blocks, pdfDocOpts($title));
 
@@ -408,7 +505,9 @@ function persistPdf(PDO $db, string $type, string $title, SimplePdf $pdf, ?int $
 
 function fetchRow(PDO $db, string $table, int $id): ?array
 {
-    $allowed = ['clients', 'properties'];
+    // 'contracts' serve a generateContractPdf per sapere che tipo di contratto
+    // sta stampando. La lista resta chiusa: il nome tabella finisce in SQL.
+    $allowed = ['clients', 'properties', 'contracts'];
     if (!in_array($table, $allowed, true)) {
         return null;
     }

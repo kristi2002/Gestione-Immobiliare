@@ -498,15 +498,21 @@ function generateReminderOccurrences(PDO $db, array $parent, string $fromDate): 
         }
     }
 
+    // `is_marketing` DEVE essere copiato dalla riga madre. Non essendo nella
+    // lista, ogni occorrenza nasceva con il default 0: e siccome a spedire sono
+    // le occorrenze e non la madre, l'unico invio che passava dal registro
+    // consensi era quello dell'automazione mai materializzata, cioe' nessuno.
+    // Una campagna commerciale raggiungeva chi aveva revocato il consenso, senza
+    // link di disiscrizione e senza lasciare traccia nello storico.
     $insert = $db->prepare(
         "INSERT INTO reminders
             (title, description, reminder_date, frequency, status,
              client_id, lead_id, tenant_id, property_id, assigned_agent_id,
-             notify_admin, notify_client, email_subject, email_body, series_id)
+             notify_admin, notify_client, email_subject, email_body, series_id, is_marketing)
          VALUES
             (:title, :description, :reminder_date, 'once', 'pending',
              :client_id, :lead_id, :tenant_id, :property_id, :assigned_agent_id,
-             :notify_admin, :notify_client, :email_subject, :email_body, :series_id)"
+             :notify_admin, :notify_client, :email_subject, :email_body, :series_id, :is_marketing)"
     );
 
     $dayRule = effectiveReminderDayRule($parent);
@@ -546,6 +552,7 @@ function generateReminderOccurrences(PDO $db, array $parent, string $fromDate): 
             'email_subject'     => $parent['email_subject'],
             'email_body'        => $parent['email_body'],
             'series_id'         => $parent['id'],
+            'is_marketing'      => (int) !empty($parent['is_marketing']),
         ]);
         $written++;
     }

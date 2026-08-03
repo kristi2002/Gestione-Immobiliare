@@ -306,15 +306,18 @@ function materializeEventOccurrences(PDO $db, array $rule, array $event, array $
     $subject  = renderAutomationTemplate($rule['email_subject'] ?: $rule['title'], $eventCtx, true);
     $body     = renderAutomationTemplate($rule['email_body'] ?: $rule['description'], $eventCtx, true);
 
+    // Come in config/reminders.php: senza `is_marketing` l'occorrenza nasce a 0
+    // e l'invio salta il registro consensi. Vale anche qui, dove le regole a
+    // evento sono proprio quelle piu' spesso commerciali (nuovo lead, ricontatto).
     $insert = $db->prepare(
         "INSERT INTO reminders
             (title, description, reminder_date, frequency, status, trigger_type,
              client_id, lead_id, tenant_id, property_id, assigned_agent_id,
-             notify_admin, notify_client, email_subject, email_body, series_id)
+             notify_admin, notify_client, email_subject, email_body, series_id, is_marketing)
          VALUES
             (:title, :description, :reminder_date, 'once', 'pending', 'scheduled',
              :client_id, :lead_id, :tenant_id, :property_id, :assigned_agent_id,
-             :notify_admin, :notify_client, :email_subject, :email_body, :series_id)"
+             :notify_admin, :notify_client, :email_subject, :email_body, :series_id, :is_marketing)"
     );
 
     $written = 0;
@@ -333,6 +336,7 @@ function materializeEventOccurrences(PDO $db, array $rule, array $event, array $
             'email_subject'     => $subject,
             'email_body'        => $body,
             'series_id'         => $rule['id'],
+            'is_marketing'      => (int) !empty($rule['is_marketing']),
         ]);
         $written++;
     }
