@@ -21,6 +21,10 @@
     const RENTAL_TYPES = ['locazione'];
     const SALE_TYPES   = ['compravendita', 'preliminare', 'mandato'];
 
+    // Immobili indicizzati per id: serve a ricavare proprietario e listino
+    // dall'immobile scelto (vedi applyPropertyDefaults).
+    let propsById = new Map();
+
     function $(id) { return document.getElementById(id); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
@@ -58,10 +62,52 @@
         ]);
         $('cte-property').innerHTML = '<option value="">— Seleziona immobile —</option>' +
             props.map(p => `<option value="${p.id}">${esc(p.address)}, ${esc(p.city)}</option>`).join('');
+        // L'immobile sa gia' di chi e' e a quanto e' a listino: senza questa
+        // mappa l'agente doveva ricordarselo a memoria, e un proprietario
+        // sbagliato qui sbaglia il contratto, il PDF, la scheda del
+        // proprietario e il rendiconto.
+        propsById = new Map(props.map(p => [String(p.id), p]));
         $('cte-tenant').innerHTML = '<option value="">— Nessuno —</option>' +
             tenants.map(t => `<option value="${t.id}">${esc(t.surname)} ${esc(t.name)}</option>`).join('');
         $('cte-client').innerHTML = '<option value="">— Nessuno —</option>' +
             clients.map(c => `<option value="${c.id}">${esc(c.surname)} ${esc(c.name)}</option>`).join('');
+    }
+
+    /**
+     * Riempie dall'immobile scelto cio' che l'immobile gia' sa: proprietario,
+     * importo a listino e un titolo di partenza.
+     *
+     * Tocca SOLO i campi vuoti. Un valore che l'agente ha scritto — o che
+     * arriva da un contratto esistente — non si sovrascrive mai: cambiare
+     * l'immobile su un contratto gia' compilato non deve azzerargli il canone
+     * concordato, che quasi mai coincide con il prezzo a listino.
+     */
+    function applyPropertyDefaults() {
+        const prop = propsById.get(String($('cte-property').value || ''));
+        if (!prop) return;
+
+        if (!$('cte-client').value && prop.client_id) {
+            $('cte-client').value = String(prop.client_id);
+        }
+
+        const isRental = RENTAL_TYPES.includes($('cte-type').value);
+        const amount   = prop.price !== null && prop.price !== undefined && prop.price !== ''
+            ? Number(prop.price) : null;
+        // Il listino vale solo se e' dello stesso verso del contratto: il
+        // prezzo di vendita di un immobile non e' il canone di una locazione.
+        if (amount !== null && amount > 0) {
+            if (isRental && prop.price_type === 'affitto' && !$('cte-rent').value) {
+                $('cte-rent').value = amount;
+            } else if (!isRental && prop.price_type === 'vendita' && !$('cte-price').value) {
+                $('cte-price').value = amount;
+            }
+        }
+
+        if (!$('cte-title-input').value) {
+            const label = [prop.address, prop.city].filter(Boolean).join(', ');
+            const verb  = isRental ? 'Locazione' : 'Compravendita';
+            if (label) $('cte-title-input').value = `${verb} ${label}`;
+        }
     }
 
     async function loadContract() {
@@ -252,6 +298,10 @@
         $('cte-start').addEventListener('change', syncDateBounds);
         $('cte-end').addEventListener('change', syncDateBounds);
         $('cte-type').addEventListener('change', applyTypeVisibility);
+        // Solo sull'interazione dell'utente: impostare .value da codice non
+        // emette 'change', quindi caricare un contratto esistente non innesca
+        // nessun precompilamento.
+        $('cte-property').addEventListener('change', applyPropertyDefaults);
 
         try { await loadDropdowns(); }
         catch (err) { showAlert('Errore caricamento elenchi: ' + err.message, 'error'); }
@@ -268,6 +318,9 @@
             if (vp.propertyId) $('cte-property').value = String(vp.propertyId);
             if (vp.clientId) $('cte-client').value = String(vp.clientId);
             if (vp.tenantId) $('cte-tenant').value = String(vp.tenantId);
+            // Arrivando dalla scheda immobile ("Nuovo contratto" da li') vale
+            // la stessa cascata: l'immobile e' gia' scelto.
+            if (vp.propertyId) applyPropertyDefaults();
             $('cte-title-input').focus();
         }
     }
