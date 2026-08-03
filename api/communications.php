@@ -381,6 +381,16 @@ function createMessage(PDO $db): void
             'id'          => $newId,
         ]);
 
+        // La Inbox WhatsApp legge `whatsapp_messages`, questa schermata legge
+        // `communications`: un WhatsApp scritto da qui finiva solo nella
+        // seconda. Nell'Inbox quella conversazione restava quindi senza
+        // risposta — l'agente rischiava di riscrivere, o di dire al
+        // proprietario che non gli aveva risposto nessuno. whatsapp_send.php
+        // scrive gia' in entrambe: questo e' lo stesso specchio, al contrario.
+        if ($channel === 'whatsapp' && $status !== 'failed') {
+            mirrorWhatsAppOutbound($db, (string) $client['phone'], $clientId, $body, $status, $externalId);
+        }
+
         // L'errore arriva comunque all'agente — ma ora con l'id della riga
         // salvata, cosi' la schermata puo' ricaricare il thread e mostrargli
         // il messaggio in archivio invece di lasciarlo credere che sia sparito.
@@ -390,6 +400,40 @@ function createMessage(PDO $db): void
     }
 
     getMessage($db, $newId);
+}
+
+/**
+ * Copia il messaggio in uscita nel thread per numero letto dalla Inbox
+ * WhatsApp. Il numero va normalizzato nella stessa forma che arriva dal
+ * webhook, altrimenti "333 1234567" e "+393331234567" diventano due
+ * conversazioni distinte.
+ *
+ * `status` e' quello gia' scritto in `communications` (quindi 'simulated'
+ * quando l'integrazione e' spenta): con l'external_id di Meta il callback di
+ * stato aggiorna poi entrambe le tabelle da solo.
+ */
+function mirrorWhatsAppOutbound(PDO $db, string $phone, int $clientId, string $body, string $status, ?string $externalId): void
+{
+    require_once __DIR__ . '/../config/whatsapp.php';
+
+    try {
+        $db->prepare(
+            "INSERT INTO whatsapp_messages
+                (direction, from_number, to_number, body, external_id, client_id, status, is_read, received_at)
+             VALUES
+                ('outbound', :from_number, :to_number, :body, :sid, :client_id, :status, 1, NOW())"
+        )->execute([
+            'from_number' => preg_replace('/^whatsapp:/', '', (string) (getWhatsAppConfig()['from'] ?? '')),
+            'to_number'   => normalizeWhatsAppNumber($phone),
+            'body'        => $body,
+            'sid'         => $externalId,
+            'client_id'   => $clientId,
+            'status'      => $status,
+        ]);
+    } catch (PDOException) {
+        // Non fatale: il messaggio e' gia' partito e l'archivio principale ha
+        // gia' la sua riga. Qui si perde solo l'eco nell'Inbox.
+    }
 }
 
 /**
