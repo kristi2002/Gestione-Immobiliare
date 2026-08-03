@@ -164,7 +164,7 @@ function resendEsignRequest(PDO $db, int $id): void
         apiError('Il link è scaduto. Crea una nuova richiesta di firma.');
     }
 
-    $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+    $baseUrl = appBaseUrl();
     $link    = $baseUrl . '/sign.php?token=' . $request['token'];
 
     $agencyName = getSetting('agency_name', 'Gestionale Immobiliare');
@@ -224,7 +224,7 @@ function getEsignLink(PDO $db, int $id): void
         apiError('Il link è utilizzabile solo per una richiesta ancora in attesa di firma.');
     }
 
-    $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+    $baseUrl = appBaseUrl();
     apiSuccess([
         'id'          => (int) $request['id'],
         'signer_name' => $request['signer_name'],
@@ -292,7 +292,7 @@ function createEsignRequest(PDO $db): void
     $newId = (int) $db->lastInsertId();
     logActivity('create', 'esign', $newId, 'Richiesta firma creata per ' . $signerEmail);
 
-    $baseUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
+    $baseUrl = appBaseUrl();
     $link    = $baseUrl . '/sign.php?token=' . $token;
 
     // Send signing invitation email to the signer

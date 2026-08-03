@@ -278,7 +278,7 @@ function exportXml(PDO $db): void
 
     // Public listing images (photos/floor plans), grouped by property. Portals
     // require absolute, publicly reachable image URLs.
-    $base = defined('APP_URL') && APP_URL !== '' ? rtrim(APP_URL, '/') : '';
+    $base = appBaseUrl();
     $mediaMap = [];
     try {
         $mrows = $db->query(

@@ -301,45 +301,6 @@
 .wa-send-btn:hover { background: #20c25a; transform: scale(1.05); }
 .wa-send-btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; transform: none; }
 
-/* ── Finestra di 24 ore ──
-   Fascia sopra la barra di risposta: dice se si puo' ancora scrivere in testo
-   libero. Chiusa la finestra, la casella si disabilita e resta il template. */
-.wa-window-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    padding: 0.55rem 1rem;
-    background: #fff8e1;
-    border-top: 1px solid #f0e0a8;
-    font-size: 0.82rem;
-    color: #6b5400;
-    flex-shrink: 0;
-}
-.wa-window-bar--open { background: #eaf7ee; border-top-color: #c9e7d3; color: #24603c; }
-.wa-window-bar__text { flex: 1; min-width: 200px; }
-.wa-tpl-btn {
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    width: 42px; height: 42px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    color: #54656f;
-    transition: background 0.15s, border-color 0.15s;
-}
-.wa-tpl-btn:hover { background: #f4f4f4; border-color: #999; }
-.wa-tpl-preview {
-    background: #f6f6f6;
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 0.7rem 0.9rem;
-    font-size: 0.88rem;
-    white-space: pre-wrap;
-    min-height: 3rem;
-}
-
 .wa-empty-state {
     flex: 1;
     display: flex;
@@ -450,11 +411,7 @@
                     <button id="wa-load-earlier-btn" class="btn btn--ghost btn--sm" style="font-size:0.8rem;"><i data-lucide="upload"></i> Carica messaggi precedenti</button>
                 </div>
                 <div class="wa-chat-messages" id="wa-chat-messages"></div>
-                <div class="wa-window-bar" id="wa-window-bar" hidden>
-                    <span class="wa-window-bar__text" id="wa-window-text"></span>
-                </div>
                 <div class="wa-reply-bar">
-                    <button class="wa-tpl-btn" id="wa-tpl-btn" title="Invia un template approvato" type="button"><i data-lucide="file-text"></i></button>
                     <textarea id="wa-reply-text" placeholder="Scrivi un messaggio…" rows="1"></textarea>
                     <button class="wa-send-btn" id="wa-send-btn" title="Invia">&#10148;</button>
                 </div>
@@ -479,38 +436,10 @@
                 <label for="wa-new-message">Messaggio <span class="required">*</span></label>
                 <textarea id="wa-new-message" class="form-textarea" rows="4" placeholder="Scrivi il primo messaggio…" required></textarea>
             </div>
-            <p class="text-muted" id="wa-new-window-note" style="font-size:0.82rem;margin:0;"></p>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn--ghost" id="wa-new-cancel">Annulla</button>
-            <button type="button" class="btn btn--ghost" id="wa-new-template">Usa un template</button>
             <button type="button" class="btn btn--primary" id="wa-new-send">Invia</button>
-        </div>
-    </div>
-</div>
-
-<!-- Invio di un template approvato da Meta -->
-<div class="modal-overlay" id="wa-tpl-modal" hidden>
-    <div class="modal modal--md" role="dialog" aria-labelledby="wa-tpl-title">
-        <div class="modal-header">
-            <h3 id="wa-tpl-title">Invia un template</h3>
-            <button class="modal-close" id="wa-tpl-close" aria-label="Chiudi">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p class="text-muted" id="wa-tpl-hint" style="font-size:0.85rem;"></p>
-            <div class="form-group">
-                <label for="wa-tpl-select">Template approvato <span class="required">*</span></label>
-                <select id="wa-tpl-select" class="form-select"></select>
-            </div>
-            <div id="wa-tpl-fields"></div>
-            <div class="form-group">
-                <label>Anteprima</label>
-                <div class="wa-tpl-preview" id="wa-tpl-preview"></div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn--ghost" id="wa-tpl-cancel">Annulla</button>
-            <button type="button" class="btn btn--primary" id="wa-tpl-send">Invia template</button>
         </div>
     </div>
 </div>
