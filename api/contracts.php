@@ -56,6 +56,15 @@ try {
             if ($action === 'generate_payments') {
                 if (!$id) apiError('ID contratto mancante.');
                 generatePayments($db, $id);
+            } elseif ($action === 'renew') {
+                if (!$id) apiError('ID contratto mancante.');
+                renewContract($db, $id);
+            } elseif ($action === 'terminate') {
+                if (!$id) apiError('ID contratto mancante.');
+                terminateContract($db, $id);
+            } elseif ($action === 'cancel_termination') {
+                if (!$id) apiError('ID contratto mancante.');
+                cancelContractTermination($db, $id);
             } else {
                 createContract($db);
             }
@@ -183,7 +192,27 @@ function listContracts(PDO $db): void
             ORDER BY ct.created_at DESC";
 
     [$items, $total] = apiFetchPaginated($db, $countSql, $dataSql, $params, $pagination);
-    apiPaginatedSuccess($items, $total, $pagination);
+    apiPaginatedSuccess(array_map('decorateContractTerms', $items), $total, $pagination);
+}
+
+/**
+ * Aggiunge alla riga i termini calcolati: preavviso effettivo e data entro cui
+ * va mandata la disdetta.
+ *
+ * Si calcola QUI e non nel browser perche' la sottrazione di mesi da una
+ * scadenza di fine mese e' il punto in cui una reimplementazione sbaglia
+ * (31 agosto meno 6 mesi non fa 3 marzo), e perche' un solo numero deve
+ * girare fra elenco, scheda e cron.
+ */
+function decorateContractTerms(array $row): array
+{
+    $terms = leaseTermsFor($row);
+
+    $row['notice_months_effective'] = $terms['notice'];
+    $row['renewal_months_effective'] = $terms['renewal'] ?? contractDurationMonths($row);
+    $row['notice_deadline'] = contractNoticeDeadline($row);
+
+    return $row;
 }
 
 function getContract(PDO $db, int $id): void
@@ -205,6 +234,8 @@ function getContract(PDO $db, int $id): void
         apiError('Contratto non trovato.', 404);
     }
 
+    $row = decorateContractTerms($row);
+
     apiSuccess($row);
 }
 
@@ -218,12 +249,14 @@ function createContract(PDO $db): void
     $stmt = $db->prepare(
         "INSERT INTO contracts
             (property_id, tenant_id, client_id, title, contract_type, contract_subtype, status,
+             notice_months, renewal_months, auto_renew,
              start_date, end_date, monthly_rent, sale_price, deposit, notes,
              registration_number, registration_date, registration_office, cedolare_secca,
              registration_tax_annual, stamp_duty, imposta_registro_due_date,
              istat_update_enabled, istat_baseline_index, istat_baseline_month, last_istat_update, created_by)
          VALUES
             (:property_id, :tenant_id, :client_id, :title, :contract_type, :contract_subtype, :status,
+             :notice_months, :renewal_months, :auto_renew,
              :start_date, :end_date, :monthly_rent, :sale_price, :deposit, :notes,
              :registration_number, :registration_date, :registration_office, :cedolare_secca,
              :registration_tax_annual, :stamp_duty, :imposta_registro_due_date,
@@ -264,6 +297,7 @@ function updateContract(PDO $db, int $id): void
          SET property_id = :property_id, tenant_id = :tenant_id, client_id = :client_id,
              title = :title, contract_type = :contract_type, contract_subtype = :contract_subtype,
              status = :status,
+             notice_months = :notice_months, renewal_months = :renewal_months, auto_renew = :auto_renew,
              start_date = :start_date, end_date = :end_date, monthly_rent = :monthly_rent,
              sale_price = :sale_price, deposit = :deposit, notes = :notes,
              registration_number = :registration_number, registration_date = :registration_date,
@@ -581,6 +615,16 @@ function validateContractInput(array $data): array
     };
     $strOrNull  = static fn($v) => isset($v) && trim((string) $v) !== '' ? trim((string) $v) : null;
     $contractSubtype     = $strOrNull($data['contract_subtype'] ?? null);
+    // Preavviso e rinnovo (phase99). Nullo = "usa il valore consueto del tipo",
+    // che e' diverso da zero: zero vuol dire "nessun preavviso dovuto".
+    $intOrNull = static function ($v, int $max) {
+        if (!isset($v) || $v === '' || $v === null) return null;
+        $n = (int) $v;
+        return ($n >= 0 && $n <= $max) ? $n : null;
+    };
+    $noticeMonths        = $intOrNull($data['notice_months'] ?? null, 36);
+    $renewalMonths       = $intOrNull($data['renewal_months'] ?? null, 240);
+    $autoRenew           = !empty($data['auto_renew']) ? 1 : 0;
     $registrationNumber  = $strOrNull($data['registration_number'] ?? null);
     $registrationDate    = $dateOrNull($data['registration_date'] ?? null);
     $registrationOffice  = $strOrNull($data['registration_office'] ?? null);
@@ -647,6 +691,9 @@ function validateContractInput(array $data): array
         'deposit'       => $deposit,
         'notes'         => $notes,
         'contract_subtype'          => $contractSubtype,
+        'notice_months'             => $noticeMonths,
+        'renewal_months'            => $renewalMonths,
+        'auto_renew'                => $autoRenew,
         'registration_number'       => $registrationNumber,
         'registration_date'         => $registrationDate,
         'registration_office'       => $registrationOffice,
@@ -797,6 +844,91 @@ function generatePayments(PDO $db, int $id): void
         'payments_created' => $count,
         'message'          => $count === 1 ? '1 rata aggiunta.' : "$count rate create.",
     ]);
+}
+
+/**
+ * Rinnova: sposta la scadenza e riempie lo scadenzario dei mesi aggiunti.
+ * La regola sta in lib/contract_lifecycle.php, come ogni cosa che tocca il
+ * ciclo di vita di una locazione.
+ */
+function renewContract(PDO $db, int $id): void
+{
+    $contract = fetchContractRow($db, $id);
+    $data     = apiGetJsonBody();
+    $months   = isset($data['months']) && $data['months'] !== '' ? (int) $data['months'] : null;
+
+    if ($months !== null && ($months < 1 || $months > 240)) {
+        apiError('Durata del rinnovo non valida: indica un numero di mesi fra 1 e 240.');
+    }
+
+    $res = contractRenew($db, $contract, $months);
+    if (!$res['ok']) apiError($res['error']);
+
+    apiSuccess([
+        'contract_id' => $id,
+        'old_end'     => $res['old_end'],
+        'new_end'     => $res['new_end'],
+        'months'      => $res['months'],
+        'payments'    => $res['payments'],
+        'message'     => 'Contratto rinnovato fino al ' . date('d/m/Y', strtotime($res['new_end']))
+            . ($res['payments']
+                ? ' — ' . $res['payments'] . ($res['payments'] === 1 ? ' rata aggiunta' : ' rate aggiunte') . '.'
+                : ' — nessuna rata da aggiungere.'),
+    ]);
+}
+
+/** Registra la disdetta. */
+function terminateContract(PDO $db, int $id): void
+{
+    $contract = fetchContractRow($db, $id);
+    $res      = contractTerminate($db, $contract, apiGetJsonBody());
+
+    if (!$res['ok']) apiError($res['error']);
+
+    $msg = 'Disdetta registrata.';
+    if ($res['end_moved']) {
+        $msg .= ' La locazione termina il ' . date('d/m/Y', strtotime($res['new_end'])) . '.';
+    }
+    if ($res['cancelled_payments']) {
+        $msg .= ' ' . $res['cancelled_payments']
+            . ($res['cancelled_payments'] === 1 ? ' rata successiva annullata.' : ' rate successive annullate.');
+    }
+
+    apiSuccess([
+        'contract_id'        => $id,
+        'end_moved'          => $res['end_moved'],
+        'new_end'            => $res['new_end'],
+        'cancelled_payments' => $res['cancelled_payments'],
+        'message'            => $msg,
+    ]);
+}
+
+/** Disdetta registrata per errore: si toglie e la scadenza torna dov'era. */
+function cancelContractTermination(PDO $db, int $id): void
+{
+    $contract = fetchContractRow($db, $id);
+    $res      = contractCancelTermination($db, $contract);
+
+    if (!$res['ok']) apiError($res['error']);
+
+    apiSuccess([
+        'contract_id'  => $id,
+        'restored_end' => $res['restored_end'] ?? null,
+        'message'      => 'Disdetta annullata.'
+            . (!empty($res['restored_end'])
+                ? ' Scadenza ripristinata al ' . date('d/m/Y', strtotime((string) $res['restored_end']))
+                  . '. Rigenera lo scadenzario per rimettere le rate.'
+                : ''),
+    ]);
+}
+
+function fetchContractRow(PDO $db, int $id): array
+{
+    $stmt = $db->prepare('SELECT * FROM contracts WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) apiError('Contratto non trovato.', 404);
+    return $row;
 }
 
 function contractExists(PDO $db, int $id): bool

@@ -76,6 +76,73 @@
     </div>
 </div>
 
+<!-- Rinnovo.
+     Spostare la scadenza senza generare le rate dei mesi aggiunti significa un
+     canone che non viene mai richiesto: le due cose stanno insieme, e la
+     finestra lo dice prima di farlo. -->
+<div class="modal-overlay" id="renew-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="renew-modal-title">
+        <div class="modal-header">
+            <h3 id="renew-modal-title">Rinnova contratto</h3>
+            <button class="modal-close" id="renew-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="renew-form" class="modal-body">
+            <input type="hidden" id="renew-contract-id">
+            <p class="text-muted" id="renew-current" style="margin-bottom:12px"></p>
+            <div class="form-group">
+                <label for="renew-months">Durata del rinnovo (mesi)</label>
+                <input type="number" id="renew-months" class="form-input" min="1" max="240" step="1">
+                <small class="form-hint" id="renew-hint"></small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="renew-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="renew-modal-submit">Rinnova</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Disdetta.
+     Quattro fatti che in una contestazione servono tutti: chi, quando l'ha
+     comunicata, perche', e da quando la locazione non e' piu' in vigore. -->
+<div class="modal-overlay" id="terminate-modal" hidden>
+    <div class="modal modal--sm" role="dialog" aria-labelledby="terminate-modal-title">
+        <div class="modal-header">
+            <h3 id="terminate-modal-title">Registra disdetta</h3>
+            <button class="modal-close" id="terminate-modal-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <form id="terminate-form" class="modal-body">
+            <input type="hidden" id="terminate-contract-id">
+            <div class="form-group">
+                <label for="terminate-by">Chi ha disdetto <span class="required">*</span></label>
+                <select id="terminate-by" class="form-select" required>
+                    <option value="locatore">Il locatore (proprietario)</option>
+                    <option value="conduttore">Il conduttore (inquilino)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="terminate-notice">Data della comunicazione <span class="required">*</span></label>
+                <input type="date" id="terminate-notice" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="terminate-effective">Fine della locazione <span class="required">*</span></label>
+                <input type="date" id="terminate-effective" class="form-input" required>
+                <small class="form-hint" id="terminate-effective-hint"></small>
+            </div>
+            <div class="form-group">
+                <label for="terminate-reason">Motivo</label>
+                <input type="text" id="terminate-reason" class="form-input" maxlength="255"
+                       placeholder="Es. necessità del locatore, trasferimento per lavoro…">
+            </div>
+            <div class="alert alert--warning" id="terminate-warning" hidden></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" id="terminate-modal-cancel">Annulla</button>
+                <button type="submit" class="btn btn--primary" id="terminate-modal-submit">Registra disdetta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Scheda Contratto quick-view -->
 <div class="modal-overlay" id="contract-scheda-modal" hidden>
     <div class="modal" role="dialog">

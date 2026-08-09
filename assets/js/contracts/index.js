@@ -107,6 +107,15 @@ function bindEvents() {
     document.getElementById('esign-modal-close').addEventListener('click', closeEsignModal);
     document.getElementById('esign-modal-cancel').addEventListener('click', closeEsignModal);
     document.getElementById('esign-form').addEventListener('submit', generateEsignLink);
+
+    // Rinnovo e disdetta
+    document.getElementById('renew-modal-close')?.addEventListener('click', closeRenewModal);
+    document.getElementById('renew-modal-cancel')?.addEventListener('click', closeRenewModal);
+    document.getElementById('renew-form')?.addEventListener('submit', submitRenew);
+    document.getElementById('terminate-modal-close')?.addEventListener('click', closeTerminateModal);
+    document.getElementById('terminate-modal-cancel')?.addEventListener('click', closeTerminateModal);
+    document.getElementById('terminate-form')?.addEventListener('submit', submitTerminate);
+    document.getElementById('terminate-effective')?.addEventListener('change', describeTerminationImpact);
     document.getElementById('btn-copy-esign').addEventListener('click', () => {
         const url = document.getElementById('esign-link-url').value;
         navigator.clipboard.writeText(url).then(() => showAlert('Link copiato!', 'success'));
@@ -289,8 +298,21 @@ function renderCards() {
             ];
         }
         const next = btn.dataset.next;
+        const c    = contractById(id);
+        // Rinnovo e disdetta hanno senso su una locazione e su nient'altro:
+        // una compravendita non si rinnova, e l'API le rifiuterebbe comunque.
+        const isLease   = c && c.contract_type === 'locazione';
+        const terminated = !!(c && c.termination_notice_date);
+        const canWrite  = window.canWrite !== false;
+
         return [
             { label: 'Scarica contratto', icon: 'file-down', onClick: () => downloadContractPdf(id) },
+            (canWrite && isLease && !terminated)
+                ? { label: 'Rinnova contratto', icon: 'refresh-cw', onClick: () => openRenewModal(id) } : null,
+            (canWrite && isLease && !terminated)
+                ? { label: 'Registra disdetta', icon: 'file-x', onClick: () => openTerminateModal(id) } : null,
+            (canWrite && isLease && terminated)
+                ? { label: 'Annulla disdetta', icon: 'undo-2', onClick: () => cancelTermination(id) } : null,
             (window.canWrite !== false && next)
                 ? { label: `Avanza a “${STATUS_LABELS[next] || next}”`, icon: 'arrow-right',
                     onClick: () => advanceStatus(id) }
@@ -583,6 +605,162 @@ async function deleteContractDoc(id) {
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
         showAlert('File eliminato.', 'success');
+        loadContracts();
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
+
+// -------------------------------------------------------------------------
+// Rinnovo e disdetta
+//
+// Le due decisioni che chiudono una locazione. Fino a ieri il gestionale
+// sapeva soltanto QUANDO un contratto scade — cosa succede a quella data era
+// un fatto che viveva fuori dall'applicazione.
+// -------------------------------------------------------------------------
+
+function contractById(id) {
+    return contracts.find(x => String(x.id) === String(id)) || null;
+}
+
+function openRenewModal(id) {
+    const c = contractById(id);
+    if (!c) return;
+
+    document.getElementById('renew-contract-id').value = id;
+
+    // La durata proposta e' quella del tipo di locazione; se il tipo non la
+    // fissa (studenti: "per un periodo uguale al primo") arriva dal server
+    // gia' calcolata sulla durata effettiva.
+    const months = c.renewal_months_effective || '';
+    document.getElementById('renew-months').value = months;
+
+    document.getElementById('renew-current').textContent =
+        `Scadenza attuale: ${formatDate(c.end_date)}.`
+        + (Number(c.renewal_count) ? ` Già rinnovato ${c.renewal_count} volta/e.` : '');
+    document.getElementById('renew-hint').textContent = months
+        ? `Proposta dal tipo di contratto. Le rate dei mesi aggiunti vengono generate subito.`
+        : 'Indica di quanti mesi prorogare.';
+
+    document.getElementById('renew-modal').hidden = false;
+}
+
+function closeRenewModal() { document.getElementById('renew-modal').hidden = true; }
+
+async function submitRenew(e) {
+    e.preventDefault();
+    const id  = document.getElementById('renew-contract-id').value;
+    const raw = document.getElementById('renew-months').value;
+    const btn = document.getElementById('renew-modal-submit');
+
+    btn.disabled = true; btn.textContent = 'Rinnovo…';
+    try {
+        const res = await fetch(`${API}?id=${encodeURIComponent(id)}&action=renew`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ months: raw === '' ? null : Number(raw) }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        closeRenewModal();
+        showAlert(json.data.message, 'success');
+        loadContracts();
+    } catch (err) {
+        showAlert(err.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Rinnova';
+    }
+}
+
+function openTerminateModal(id) {
+    const c = contractById(id);
+    if (!c) return;
+
+    document.getElementById('terminate-contract-id').value = id;
+    document.getElementById('terminate-by').value = 'locatore';
+    document.getElementById('terminate-notice').value = new Date().toISOString().substring(0, 10);
+    // Il caso normale e' la disdetta ALLA scadenza: si propone quella, e chi
+    // registra un recesso anticipato la sposta indietro.
+    document.getElementById('terminate-effective').value = c.end_date
+        ? String(c.end_date).substring(0, 10) : '';
+    document.getElementById('terminate-reason').value = '';
+    document.getElementById('terminate-modal').hidden = false;
+    describeTerminationImpact();
+}
+
+function closeTerminateModal() { document.getElementById('terminate-modal').hidden = true; }
+
+/**
+ * Dice PRIMA quante rate verranno annullate.
+ *
+ * Anticipare la fine di una locazione cancella i canoni successivi: e' la
+ * conseguenza piu' pesante di questa finestra, e scoprirla dopo aver premuto
+ * "Registra" sarebbe una sorpresa sul dato con cui si riconcilia la cassa.
+ */
+function describeTerminationImpact() {
+    const box = document.getElementById('terminate-warning');
+    const hint = document.getElementById('terminate-effective-hint');
+    const c = contractById(document.getElementById('terminate-contract-id').value);
+    const eff = document.getElementById('terminate-effective').value;
+
+    if (!c || !eff) { box.hidden = true; return; }
+
+    const naturalEnd = c.end_date ? String(c.end_date).substring(0, 10) : null;
+    hint.textContent = naturalEnd
+        ? `Scadenza contrattuale: ${formatDate(naturalEnd)}.`
+        : '';
+
+    if (naturalEnd && eff < naturalEnd) {
+        box.textContent = `La locazione finirà il ${formatDate(eff)}, prima della scadenza `
+            + `contrattuale del ${formatDate(naturalEnd)}: le rate successive verranno annullate `
+            + `(quelle già incassate restano).`;
+        box.hidden = false;
+    } else {
+        box.hidden = true;
+    }
+}
+
+async function submitTerminate(e) {
+    e.preventDefault();
+    const id  = document.getElementById('terminate-contract-id').value;
+    const btn = document.getElementById('terminate-modal-submit');
+
+    btn.disabled = true; btn.textContent = 'Registrazione…';
+    try {
+        const res = await fetch(`${API}?id=${encodeURIComponent(id)}&action=terminate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                terminated_by:              document.getElementById('terminate-by').value,
+                termination_notice_date:    document.getElementById('terminate-notice').value,
+                termination_effective_date: document.getElementById('terminate-effective').value,
+                termination_reason:         document.getElementById('terminate-reason').value.trim(),
+            }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        closeTerminateModal();
+        showAlert(json.data.message, 'success');
+        loadContracts();
+    } catch (err) {
+        showAlert(err.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Registra disdetta';
+    }
+}
+
+async function cancelTermination(id) {
+    if (!await confirmDialog(
+        'Annullare la disdetta registrata? La scadenza torna a quella contrattuale. '
+        + 'Le rate annullate non si riattivano da sole: vanno rigenerate.',
+        { title: 'Annulla disdetta' }
+    )) return;
+
+    try {
+        const res  = await fetch(`${API}?id=${encodeURIComponent(id)}&action=cancel_termination`, { method: 'POST' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        showAlert(json.data.message, 'success');
         loadContracts();
     } catch (err) {
         showAlert(err.message, 'error');

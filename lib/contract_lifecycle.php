@@ -111,6 +111,368 @@ function contractSyncPropertyOccupancy(PDO $db, int $propertyId): array
 }
 
 /* ==================================================================
+ * Rinnovo, disdetta e preavviso (phase99).
+ *
+ * In una locazione italiana la scadenza non e' un evento: e' l'esito di
+ * una decisione che va presa mesi prima. Se nessuno manda la disdetta
+ * entro il preavviso, il contratto si rinnova da solo — e quel silenzio
+ * vale quanto una firma.
+ * ================================================================== */
+
+/**
+ * Preavviso e rinnovo tipici per tipo di locazione.
+ *
+ * Sono valori PROPOSTI, non verita': il contratto firmato comanda su questa
+ * tabella, e ogni riga puo' sovrascriverli (colonne `notice_months`,
+ * `renewal_months`, `auto_renew`). Servono a non far partire un contratto con
+ * il preavviso vuoto, che e' il modo in cui la scadenza arriva addosso.
+ *
+ * `renewal_months` nullo con `auto_renew` vero = "per un periodo uguale al
+ * primo": e' il caso degli studenti, e scriverci un numero significherebbe
+ * indovinare una durata che dipende dal contratto.
+ *
+ * Non e' consulenza legale: la durata di legge la verifica chi redige il
+ * contratto. Qui si evita solo il valore mancante.
+ */
+const LEASE_TERMS = [
+    '4+4'         => ['notice' => 6,  'renewal' => 48,   'auto' => 1],
+    '3+2'         => ['notice' => 6,  'renewal' => 24,   'auto' => 1],
+    'commerciale' => ['notice' => 12, 'renewal' => 72,   'auto' => 1],
+    'studenti'    => ['notice' => 3,  'renewal' => null, 'auto' => 1],
+    'transitorio' => ['notice' => 0,  'renewal' => 0,    'auto' => 0],
+    'comodato'    => ['notice' => 0,  'renewal' => 0,    'auto' => 0],
+];
+
+/**
+ * I termini che valgono per un contratto: quelli scritti sulla riga se ci sono,
+ * altrimenti i predefiniti del tipo, altrimenti niente.
+ *
+ * @return array{notice:?int, renewal:?int, auto:bool}
+ */
+function leaseTermsFor(array $contract): array
+{
+    $preset = LEASE_TERMS[(string) ($contract['contract_subtype'] ?? '')] ?? null;
+
+    $notice = $contract['notice_months'] ?? null;
+    if ($notice === null || $notice === '') {
+        $notice = $preset['notice'] ?? null;
+    }
+
+    $renewal = $contract['renewal_months'] ?? null;
+    if ($renewal === null || $renewal === '') {
+        $renewal = $preset['renewal'] ?? null;
+    }
+
+    // `auto_renew` e' NOT NULL con DEFAULT 0, quindi una riga salvata dice
+    // sempre la sua: il preset entra solo quando la colonna non c'e' proprio
+    // (contratto costruito a mano in un test, o letto da una query parziale).
+    $auto = array_key_exists('auto_renew', $contract)
+        ? (bool) $contract['auto_renew']
+        : (bool) ($preset['auto'] ?? 0);
+
+    return [
+        'notice'  => $notice === null ? null : (int) $notice,
+        'renewal' => $renewal === null ? null : (int) $renewal,
+        'auto'    => $auto,
+    ];
+}
+
+/**
+ * Entro quando va mandata la disdetta perche' il contratto non si rinnovi.
+ *
+ * Restituisce null quando la domanda non ha senso: nessuna scadenza, nessun
+ * preavviso, o disdetta gia' registrata (la decisione e' presa).
+ *
+ * Il calcolo usa `-N months` su una data ISO. Attenzione al trabocco di fine
+ * mese di PHP — 31 marzo meno 1 mese fa 3 marzo, non 28 febbraio: qui si
+ * sottraggono mesi da una scadenza che nella pratica cade a fine mese, quindi
+ * si normalizza all'ultimo giorno del mese di arrivo quando la data trabocca.
+ */
+function contractNoticeDeadline(array $contract): ?string
+{
+    $end = $contract['end_date'] ?? null;
+    if (!$end) return null;
+    if (!empty($contract['termination_notice_date'])) return null;
+
+    $terms = leaseTermsFor($contract);
+    if (empty($terms['notice'])) return null;
+
+    return contractShiftMonths(substr((string) $end, 0, 10), -(int) $terms["notice"]);
+}
+
+/**
+ * Sposta una data ISO di N mesi (negativo = indietro) restando dentro il mese
+ * di arrivo.
+ *
+ * `strtotime('-1 month')` sul 31 marzo produce il 3 marzo, perche' il 31
+ * febbraio non esiste e PHP trabocca in avanti. Su una data di preavviso quel
+ * traboccamento sposta il termine dalla parte sbagliata, e le scadenze delle
+ * locazioni cadono quasi sempre a fine mese: e' il caso normale, non il caso
+ * limite.
+ *
+ * Esiste un gemello in `config/reminders.php` (`addMonthsClamped`) che fa la
+ * stessa aritmetica su oggetti DateTime, per le ricorrenze dei promemoria.
+ * Sono due firme diverse per due strati diversi; se un giorno se ne unifica
+ * una sola, e' questo il commento da cui partire.
+ */
+function contractShiftMonths(string $isoDate, int $months): ?string
+{
+    $d = DateTime::createFromFormat('!Y-m-d', $isoDate);
+    if (!$d) return null;
+    if ($months === 0) return $d->format('Y-m-d');
+
+    $day = (int) $d->format('d');
+    // Ci si sposta dal primo del mese, dove il trabocco non puo' avvenire, e
+    // solo dopo si rimette il giorno — tagliato alla lunghezza del mese.
+    $sign   = $months > 0 ? '+' : '-';
+    $anchor = (clone $d)->modify('first day of this month')
+                        ->modify($sign . abs($months) . ' months');
+
+    return $anchor->setDate(
+        (int) $anchor->format('Y'),
+        (int) $anchor->format('m'),
+        min($day, (int) $anchor->format('t'))
+    )->format('Y-m-d');
+}
+
+/**
+ * Durata del contratto in mesi interi, dalla decorrenza alla scadenza.
+ * Serve al rinnovo "per un periodo uguale al primo".
+ */
+function contractDurationMonths(array $contract): ?int
+{
+    $start = $contract['start_date'] ?? null;
+    $end   = $contract['end_date'] ?? null;
+    if (!$start || !$end) return null;
+
+    $a = DateTime::createFromFormat('!Y-m-d', substr((string) $start, 0, 10));
+    $b = DateTime::createFromFormat('!Y-m-d', substr((string) $end, 0, 10));
+    if (!$a || !$b || $b <= $a) return null;
+
+    $diff = $a->diff($b);
+    $months = $diff->y * 12 + $diff->m;
+    // Una locazione 1/1/2026 → 31/12/2029 misura 3 anni, 11 mesi e 30 giorni:
+    // sono 48 mesi meno un giorno, e arrotondare per difetto darebbe 47.
+    if ($diff->d >= 28) $months++;
+
+    return $months > 0 ? $months : null;
+}
+
+/**
+ * Rinnova una locazione: sposta la scadenza in avanti e riempie lo scadenzario.
+ *
+ * Le due cose vanno insieme, e non e' un dettaglio: prorogare senza generare le
+ * rate dei mesi aggiunti significa un canone che non viene mai richiesto: il
+ * contratto e' in vigore, l'inquilino ci abita, e nello scadenzario quei mesi
+ * non esistono. `insertPaymentSchedule()` riempie solo i buchi, quindi qui si
+ * puo' chiamare senza toccare le rate gia' presenti.
+ *
+ * @param int|null $months Durata del rinnovo. Null = quella prevista dal tipo,
+ *                         e se il tipo non la fissa (studenti) la stessa durata
+ *                         del primo periodo.
+ * @return array{ok:bool, error:?string, old_end:?string, new_end:?string, payments:int, months:int}
+ */
+function contractRenew(PDO $db, array $contract, ?int $months = null): array
+{
+    $fail = fn(string $msg) => ['ok' => false, 'error' => $msg, 'old_end' => null,
+                                'new_end' => null, 'payments' => 0, 'months' => 0];
+
+    if (($contract['contract_type'] ?? '') !== 'locazione') {
+        return $fail('Il rinnovo è previsto solo per i contratti di locazione.');
+    }
+    if (($contract['status'] ?? null) === 'cancelled') {
+        return $fail('Un contratto annullato non si rinnova.');
+    }
+    if (!empty($contract['termination_notice_date'])) {
+        return $fail('Su questo contratto è registrata una disdetta: annullala prima di rinnovare.');
+    }
+    $end = $contract['end_date'] ?? null;
+    if (!$end) {
+        return $fail('Il contratto non ha una data di fine: non c\'è una scadenza da spostare.');
+    }
+
+    $terms = leaseTermsFor($contract);
+    $months = $months ?? $terms['renewal'] ?? contractDurationMonths($contract);
+
+    if (!$months || $months <= 0) {
+        return $fail('Durata del rinnovo non determinabile: indicala a mano.');
+    }
+
+    $oldEnd = substr((string) $end, 0, 10);
+    $newEnd = contractShiftMonths($oldEnd, (int) $months);
+    if (!$newEnd) {
+        return $fail('Data di fine non valida.');
+    }
+
+    $id = (int) $contract['id'];
+    $db->prepare(
+        "UPDATE contracts
+            SET end_date = :end, renewal_count = renewal_count + 1
+          WHERE id = :id"
+    )->execute(['end' => $newEnd, 'id' => $id]);
+
+    // Le rate si generano sulla riga AGGIORNATA, non su quella che il chiamante
+    // aveva in mano: e' la nuova scadenza a dire fin dove arrivare.
+    $fresh = $db->prepare('SELECT * FROM contracts WHERE id = :id');
+    $fresh->execute(['id' => $id]);
+    $updated = $fresh->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    $payments = 0;
+    if (!paymentScheduleBlockers($updated) && contractIsInForce($updated)) {
+        $created = insertPaymentSchedule($db, $updated);
+        $payments = $created > 0 ? $created : 0;
+    }
+
+    logActivity('update', 'contract', $id,
+        'Contratto rinnovato di ' . $months . ' mesi: scadenza ' . $oldEnd . ' → ' . $newEnd
+        . ($payments ? " (+$payments rate)" : ''));
+
+    return ['ok' => true, 'error' => null, 'old_end' => $oldEnd, 'new_end' => $newEnd,
+            'payments' => $payments, 'months' => (int) $months];
+}
+
+/**
+ * Registra la disdetta di una locazione.
+ *
+ * Quattro fatti, tutti dell'agente: chi ha disdetto, quando ha mandato la
+ * comunicazione, perche', e da quando il contratto non e' piu' in vigore.
+ * L'ultima non si deduce dalle altre — una disdetta alla scadenza lascia la
+ * fine dov'era, un recesso del conduttore la anticipa di mesi.
+ *
+ * Quando la fine si anticipa, `end_date` viene spostata li'. E' `end_date` che
+ * tutto il resto legge per sapere se un contratto e' in vigore (filtro Attivi,
+ * occupazione dell'immobile, scadenzario): lasciarla al valore contrattuale
+ * avrebbe significato un immobile occupato da una locazione gia' chiusa e rate
+ * che continuano a scadere. La data originale finisce in `original_end_date`.
+ *
+ * Le rate successive alla fine si ANNULLANO, non si cancellano: una rata
+ * emessa e' un fatto, e quelle gia' incassate non si toccano mai.
+ *
+ * @return array{ok:bool, error:?string, cancelled_payments:int, end_moved:bool, new_end:?string}
+ */
+function contractTerminate(PDO $db, array $contract, array $input): array
+{
+    $fail = fn(string $msg) => ['ok' => false, 'error' => $msg, 'cancelled_payments' => 0,
+                                'end_moved' => false, 'new_end' => null];
+
+    if (($contract['contract_type'] ?? '') !== 'locazione') {
+        return $fail('La disdetta è prevista solo per i contratti di locazione.');
+    }
+    if (($contract['status'] ?? null) === 'cancelled') {
+        return $fail('Il contratto è annullato: non c\'è nulla da disdire.');
+    }
+
+    $by = trim((string) ($input['terminated_by'] ?? ''));
+    if (!in_array($by, ['locatore', 'conduttore'], true)) {
+        return $fail('Indica chi ha mandato la disdetta: locatore o conduttore.');
+    }
+
+    $noticeDate = trim((string) ($input['termination_notice_date'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $noticeDate)) {
+        return $fail('Data della comunicazione mancante o non valida.');
+    }
+
+    $effective = trim((string) ($input['termination_effective_date'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $effective)) {
+        return $fail('Data di fine locazione mancante o non valida.');
+    }
+
+    // Una locazione non finisce prima che la disdetta sia stata mandata.
+    if ($effective < $noticeDate) {
+        return $fail('La fine della locazione non può precedere la comunicazione della disdetta.');
+    }
+
+    $start = substr((string) ($contract['start_date'] ?? ''), 0, 10);
+    if ($start && $effective < $start) {
+        return $fail('La fine della locazione non può precedere la sua decorrenza.');
+    }
+
+    $id     = (int) $contract['id'];
+    $oldEnd = $contract['end_date'] ? substr((string) $contract['end_date'], 0, 10) : null;
+    $moves  = $oldEnd !== null && $effective < $oldEnd;
+
+    $sql = "UPDATE contracts
+               SET termination_notice_date = :notice,
+                   terminated_by = :by,
+                   termination_reason = :reason,
+                   termination_effective_date = :eff,
+                   auto_renew = 0";
+    $args = [
+        'notice' => $noticeDate,
+        'by'     => $by,
+        'reason' => trim((string) ($input['termination_reason'] ?? '')) ?: null,
+        'eff'    => $effective,
+        'id'     => $id,
+    ];
+
+    if ($moves) {
+        // `original_end_date` si scrive solo la prima volta: una seconda
+        // disdetta non deve sovrascrivere la scadenza contrattuale vera con
+        // quella gia' anticipata da quella precedente.
+        $sql .= ", original_end_date = COALESCE(original_end_date, end_date), end_date = :eff2";
+        $args['eff2'] = $effective;
+    }
+
+    $db->prepare($sql . ' WHERE id = :id')->execute($args);
+
+    // Le rate oltre la fine non sono piu' dovute. Solo quelle in attesa o in
+    // ritardo: una rata gia' pagata resta com'e', e annullarla creerebbe un
+    // buco in cassa che non corrisponde a niente.
+    $cancel = $db->prepare(
+        "UPDATE payments
+            SET status = 'cancelled',
+                notes = TRIM(CONCAT(COALESCE(notes,''), ' [annullata: disdetta del ', :notice, ']'))
+          WHERE contract_id = :id
+            AND due_date > :eff
+            AND status IN ('pending','late')"
+    );
+    $cancel->execute(['id' => $id, 'eff' => $effective, 'notice' => $noticeDate]);
+    $cancelled = $cancel->rowCount();
+
+    logActivity('update', 'contract', $id,
+        'Disdetta registrata (' . $by . ', comunicata il ' . $noticeDate . '): fine locazione '
+        . $effective . ($moves ? " (era $oldEnd)" : '')
+        . ($cancelled ? " — $cancelled rate annullate" : ''));
+
+    return ['ok' => true, 'error' => null, 'cancelled_payments' => $cancelled,
+            'end_moved' => $moves, 'new_end' => $moves ? $effective : $oldEnd];
+}
+
+/**
+ * Cancella una disdetta registrata per errore e rimette la scadenza dov'era.
+ *
+ * Le rate annullate NON si riattivano da sole: rigenerare lo scadenzario le
+ * ricrea dove servono, e riaprire d'ufficio delle rate che qualcuno potrebbe
+ * aver gia' sistemato a mano sarebbe peggio del rifarle apposta.
+ */
+function contractCancelTermination(PDO $db, array $contract): array
+{
+    if (empty($contract['termination_notice_date'])) {
+        return ['ok' => false, 'error' => 'Su questo contratto non c\'è nessuna disdetta registrata.'];
+    }
+
+    $id      = (int) $contract['id'];
+    $restore = $contract['original_end_date'] ?? null;
+
+    $sql = "UPDATE contracts
+               SET termination_notice_date = NULL, terminated_by = NULL,
+                   termination_reason = NULL, termination_effective_date = NULL";
+    $args = ['id' => $id];
+
+    if ($restore) {
+        $sql .= ", end_date = :restore, original_end_date = NULL";
+        $args['restore'] = substr((string) $restore, 0, 10);
+    }
+
+    $db->prepare($sql . ' WHERE id = :id')->execute($args);
+
+    logActivity('update', 'contract', $id, 'Disdetta annullata sul contratto #' . $id
+        . ($restore ? ' — scadenza ripristinata al ' . substr((string) $restore, 0, 10) : ''));
+
+    return ['ok' => true, 'error' => null, 'restored_end' => $restore];
+}
+
+/* ==================================================================
  * Scadenzario dei canoni e nascita di una locazione.
  *
  * Queste funzioni stavano dentro api/contracts.php, cioe' valevano solo

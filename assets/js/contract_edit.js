@@ -129,7 +129,11 @@
         $('cte-notes').value = c.notes || '';
         // Fiscal / registration
         setVal('cte-subtype', c.contract_subtype);
+        setVal('cte-notice', c.notice_months);
+        setVal('cte-renewal', c.renewal_months);
+        $('cte-autorenew').checked = !!Number(c.auto_renew);
         $('cte-cedolare').checked = !!Number(c.cedolare_secca);
+        describeNotice();
         setVal('cte-reg-number', c.registration_number);
         setVal('cte-reg-date', c.registration_date ? String(c.registration_date).substring(0, 10) : '');
         setVal('cte-reg-office', c.registration_office);
@@ -256,6 +260,9 @@
             deposit:       $('cte-deposit').value,
             notes:         $('cte-notes').value.trim(),
             contract_subtype:          $('cte-subtype').value || null,
+            notice_months:             $('cte-notice').value === '' ? null : Number($('cte-notice').value),
+            renewal_months:            $('cte-renewal').value === '' ? null : Number($('cte-renewal').value),
+            auto_renew:                $('cte-autorenew').checked ? 1 : 0,
             cedolare_secca:            $('cte-cedolare').checked ? 1 : 0,
             registration_number:       $('cte-reg-number').value.trim(),
             registration_date:         $('cte-reg-date').value || null,
@@ -338,6 +345,12 @@
         // emette 'change', quindi caricare un contratto esistente non innesca
         // nessun precompilamento.
         $('cte-property').addEventListener('change', applyPropertyDefaults);
+        $('cte-subtype').addEventListener('change', applyLeaseTermDefaults);
+        // Una volta che l'agente ha deciso sul rinnovo tacito, cambiare tipo di
+        // locazione non deve ribaltargli la spunta sotto gli occhi.
+        $('cte-autorenew').addEventListener('change', e => { e.target.dataset.touched = '1'; });
+        $('cte-notice').addEventListener('input', describeNotice);
+        $('cte-end').addEventListener('change', describeNotice);
 
         try { await loadDropdowns(); }
         catch (err) { showAlert('Errore caricamento elenchi: ' + err.message, 'error'); }
@@ -359,6 +372,69 @@
             if (vp.propertyId) applyPropertyDefaults();
             $('cte-title-input').focus();
         }
+    }
+
+    /**
+     * Preavviso e rinnovo consueti per tipo di locazione.
+     * Rispecchia LEASE_TERMS di lib/contract_lifecycle.php, che resta la fonte:
+     * qui servono solo a proporre, e l'API non si fida comunque di questi numeri.
+     * `renewal: null` = "per un periodo uguale al primo".
+     */
+    const LEASE_TERMS = {
+        '4+4':         { notice: 6,  renewal: 48,   auto: true },
+        '3+2':         { notice: 6,  renewal: 24,   auto: true },
+        'commerciale': { notice: 12, renewal: 72,   auto: true },
+        'studenti':    { notice: 3,  renewal: null, auto: true },
+        'transitorio': { notice: 0,  renewal: 0,    auto: false },
+        'comodato':    { notice: 0,  renewal: 0,    auto: false },
+    };
+
+    /**
+     * Proposta, non imposizione: si compilano i campi solo se l'agente non li ha
+     * gia' toccati. Sovrascrivere un preavviso scritto a mano perche' qualcuno
+     * ha corretto il tipo di locazione significherebbe cambiare in silenzio la
+     * data entro cui va mandata la disdetta.
+     */
+    function applyLeaseTermDefaults() {
+        const t = LEASE_TERMS[$('cte-subtype').value];
+        if (!t) { describeNotice(); return; }
+
+        if ($('cte-notice').value === '')  $('cte-notice').value = String(t.notice);
+        if ($('cte-renewal').value === '' && t.renewal !== null) $('cte-renewal').value = String(t.renewal);
+        if (!$('cte-autorenew').dataset.touched) $('cte-autorenew').checked = t.auto;
+
+        describeNotice();
+    }
+
+    /**
+     * Dice a che data corrisponde il preavviso, invece di lasciare un numero di
+     * mesi da contare a mente. È la riga che rende utile il campo: "6" non
+     * significa niente, "entro il 28/02/2030" sì.
+     */
+    function describeNotice() {
+        const hint = $('cte-notice-hint');
+        if (!hint) return;
+
+        const months = Number($('cte-notice').value);
+        const end    = $('cte-end').value;
+
+        if (!months || !end) {
+            hint.textContent = 'Scegli il tipo di locazione per proporre il valore consueto.';
+            return;
+        }
+
+        // Stessa aritmetica del server (subtractMonthsClamped): ci si sposta dal
+        // primo del mese e si rimette il giorno tagliato alla lunghezza del mese
+        // di arrivo, o il 31 agosto meno 6 mesi diventerebbe il 3 marzo.
+        const d = new Date(end + 'T00:00:00');
+        if (isNaN(d)) { hint.textContent = ''; return; }
+        const day = d.getDate();
+        const anchor = new Date(d.getFullYear(), d.getMonth() - months, 1);
+        const lastDay = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate();
+        anchor.setDate(Math.min(day, lastDay));
+
+        hint.textContent = 'Per non rinnovare, la disdetta va mandata entro il '
+            + anchor.toLocaleDateString('it-IT') + '.';
     }
 
     init();
