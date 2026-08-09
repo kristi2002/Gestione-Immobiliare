@@ -179,6 +179,43 @@
     </div>
 </div>
 
+<!-- Risposta all'inquilino.
+     phase98 aveva creato la colonna e il portale la mostrava gia': mancava solo
+     il posto da cui scriverla. Qui dentro c'e' anche cio' che l'inquilino ha
+     mandato — testo e foto — perche' si risponde guardando la segnalazione, non
+     ricordandosela. -->
+<div class="modal-overlay" id="mw-reply-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="mw-reply-title">
+        <div class="modal-header">
+            <h3 id="mw-reply-title">Rispondi all'inquilino</h3>
+            <button class="modal-close" id="mw-reply-close" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="mw-reply-request-id">
+
+            <div class="mw-reply__from">
+                <div class="mw-reply__who" id="mw-reply-who"></div>
+                <p class="mw-reply__msg" id="mw-reply-message"></p>
+                <div class="mw-reply__photos" id="mw-reply-photos"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="mw-reply-text">La tua risposta</label>
+                <textarea id="mw-reply-text" class="form-input" rows="5"
+                          placeholder="Es. Abbiamo avvisato l'idraulico: passa domani tra le 9 e le 11."></textarea>
+                <small class="text-muted">
+                    L'inquilino la legge nel portale, sotto la propria richiesta.
+                    Riscrivendola sostituisci quella precedente.
+                </small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--ghost" id="mw-reply-cancel">Annulla</button>
+            <button type="button" class="btn btn--primary" id="mw-reply-confirm">Invia risposta</button>
+        </div>
+    </div>
+</div>
+
 <!-- Delete modal -->
 <div class="modal-overlay" id="mw-delete-modal" hidden>
     <div class="modal modal--sm" role="dialog" aria-labelledby="mw-delete-title">

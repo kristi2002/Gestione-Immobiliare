@@ -82,6 +82,7 @@ function listAppointments(PDO $db): void
                LEFT JOIN leads l ON l.id = a.lead_id
                LEFT JOIN clients c ON c.id = a.client_id
                LEFT JOIN clients po ON po.id = p.client_id
+               LEFT JOIN tenants tn ON tn.id = a.tenant_id
                LEFT JOIN admin_users u ON u.id = a.agent_id';
 
     if ($propertyId) { $where .= ' AND a.property_id = :pid'; $params['pid'] = $propertyId; }
@@ -123,7 +124,7 @@ function listAppointments(PDO $db): void
         $frag = apiWordSearch($search, [
             'a.notes', 'a.location_detail', 'p.address', 'p.city',
             'l.name', 'l.surname', 'c.name', 'c.surname',
-            'po.name', 'po.surname', 'u.username',
+            'po.name', 'po.surname', 'tn.name', 'tn.surname', 'u.username',
         ], $params, 'appts');
         if ($frag !== '') $where .= " AND ($frag)";
     }
@@ -135,6 +136,7 @@ function listAppointments(PDO $db): void
                    l.name AS lead_name, l.surname AS lead_surname,
                    c.name AS client_name, c.surname AS client_surname,
                    po.id AS owner_id, po.name AS owner_name, po.surname AS owner_surname,
+                   tn.name AS tenant_first_name, tn.surname AS tenant_surname,
                    u.username AS agent_name
             FROM appointments a
             $joins
@@ -157,6 +159,8 @@ function getAppointment(PDO $db, int $id): void
                 c.email AS client_email, c.phone AS client_phone,
                 po.id AS owner_id, po.name AS owner_name, po.surname AS owner_surname,
                 po.email AS owner_email, po.phone AS owner_phone,
+                tn.name AS tenant_first_name, tn.surname AS tenant_surname,
+                tn.email AS tenant_email, tn.phone AS tenant_phone,
                 u.username AS agent_name,
                 r.reminder_date AS reminder_date, r.status AS reminder_status
          FROM appointments a
@@ -164,6 +168,7 @@ function getAppointment(PDO $db, int $id): void
          LEFT JOIN leads l ON l.id = a.lead_id
          LEFT JOIN clients c ON c.id = a.client_id
          LEFT JOIN clients po ON po.id = p.client_id
+         LEFT JOIN tenants tn ON tn.id = a.tenant_id
          LEFT JOIN admin_users u ON u.id = a.agent_id
          LEFT JOIN reminders r ON r.id = a.reminder_id
          WHERE a.id = :id"
@@ -182,10 +187,10 @@ function createAppointment(PDO $db): void
 
     $stmt = $db->prepare(
         "INSERT INTO appointments
-            (property_id, lead_id, client_id, agent_id, appointment_type, appointment_date,
+            (property_id, lead_id, client_id, tenant_id, agent_id, appointment_type, appointment_date,
              duration_minutes, location_type, location_detail, notify_client, status, notes)
          VALUES
-            (:property_id, :lead_id, :client_id, :agent_id, :appointment_type, :appointment_date,
+            (:property_id, :lead_id, :client_id, :tenant_id, :agent_id, :appointment_type, :appointment_date,
              :duration_minutes, :location_type, :location_detail, :notify_client, :status, :notes)"
     );
     $stmt->execute($validated);
@@ -214,6 +219,7 @@ function updateAppointment(PDO $db, int $id): void
     $stmt = $db->prepare(
         "UPDATE appointments SET
             property_id = :property_id, lead_id = :lead_id, client_id = :client_id,
+            tenant_id = :tenant_id,
             agent_id = :agent_id, appointment_type = :appointment_type,
             appointment_date = :appointment_date, duration_minutes = :duration_minutes,
             location_type = :location_type, location_detail = :location_detail,
@@ -310,13 +316,18 @@ function assertAgentIsFree(PDO $db, array $v, ?int $excludeId = null): void
  * cliente" toggle.
  *
  * The reminder is only kept alive while it can still be useful: the toggle is
- * on, the appointment is still scheduled, and there is a counterpart (lead or
- * client) to write to. Anything else removes it, so a cancelled appointment
- * never emails the client.
+ * on, the appointment is still scheduled, and there is a counterpart (lead,
+ * client or tenant) to write to. Anything else removes it, so a cancelled
+ * appointment never emails the client.
+ *
+ * L'inquilino entra nel conteggio da phase98: senza, spuntare «invia
+ * promemoria» su un sopralluogo con il solo inquilino agganciato non spediva
+ * niente e non lo diceva. Il motore sa gia' risolvere un destinatario
+ * inquilino (REMINDER_CONTACT_TYPES in config/reminders.php).
  */
 function syncAppointmentReminder(PDO $db, int $appointmentId, array $appt, bool $notify): void
 {
-    $hasCounterpart = !empty($appt['lead_id']) || !empty($appt['client_id']);
+    $hasCounterpart = !empty($appt['lead_id']) || !empty($appt['client_id']) || !empty($appt['tenant_id']);
     $keep = $notify && $appt['status'] === 'scheduled' && $hasCounterpart;
 
     if (!$keep) {
@@ -342,7 +353,8 @@ function syncAppointmentReminder(PDO $db, int $appointmentId, array $appt, bool 
         $db->prepare(
             "UPDATE reminders SET
                 title = :title, description = :description, reminder_date = :reminder_date,
-                client_id = :client_id, lead_id = :lead_id, property_id = :property_id,
+                client_id = :client_id, lead_id = :lead_id, tenant_id = :tenant_id,
+                property_id = :property_id,
                 email_subject = :title2, email_body = :description2,
                 status = 'pending', notify_client = 1, notify_admin = 0
              WHERE id = :id"
@@ -354,6 +366,7 @@ function syncAppointmentReminder(PDO $db, int $appointmentId, array $appt, bool 
             'reminder_date' => $when->format('Y-m-d H:i:s'),
             'client_id'     => $appt['client_id'],
             'lead_id'       => $appt['lead_id'],
+            'tenant_id'     => $appt['tenant_id'] ?? null,
             'property_id'   => $appt['property_id'],
             'id'            => $existingId,
         ]);
@@ -363,11 +376,11 @@ function syncAppointmentReminder(PDO $db, int $appointmentId, array $appt, bool 
     $db->prepare(
         "INSERT INTO reminders
             (title, description, reminder_date, frequency, status,
-             client_id, lead_id, property_id, notify_admin, notify_client,
+             client_id, lead_id, tenant_id, property_id, notify_admin, notify_client,
              email_subject, email_body)
          VALUES
             (:title, :description, :reminder_date, 'once', 'pending',
-             :client_id, :lead_id, :property_id, 0, 1,
+             :client_id, :lead_id, :tenant_id, :property_id, 0, 1,
              :title2, :description2)"
     )->execute([
         'title'         => $title,
@@ -377,6 +390,7 @@ function syncAppointmentReminder(PDO $db, int $appointmentId, array $appt, bool 
         'reminder_date' => $when->format('Y-m-d H:i:s'),
         'client_id'     => $appt['client_id'],
         'lead_id'       => $appt['lead_id'],
+        'tenant_id'     => $appt['tenant_id'] ?? null,
         'property_id'   => $appt['property_id'],
     ]);
 
@@ -427,6 +441,8 @@ function validateAppointmentInput(PDO $db, array $data): array
     $propertyId = (int) ($data['property_id'] ?? 0);
     $leadId     = !empty($data['lead_id']) ? (int) $data['lead_id'] : null;
     $clientId   = !empty($data['client_id']) ? (int) $data['client_id'] : null;
+    // phase98: un sopralluogo o una riconsegna chiavi riguardano l'inquilino.
+    $tenantId   = !empty($data['tenant_id']) ? (int) $data['tenant_id'] : null;
     $agentId    = !empty($data['agent_id']) ? (int) $data['agent_id'] : null;
     $date       = trim($data['appointment_date'] ?? '');
     $duration   = isset($data['duration_minutes']) && $data['duration_minutes'] !== '' ? (int) $data['duration_minutes'] : 60;
@@ -458,10 +474,20 @@ function validateAppointmentInput(PDO $db, array $data): array
     $check->execute(['id' => $propertyId]);
     if (!$check->fetch()) apiError('Immobile non trovato.');
 
+    // Un id inesistente farebbe fallire la FK con un 500 muto; peggio, un id
+    // valido ma di un altro inquilino aggancerebbe l'appuntamento alla persona
+    // sbagliata — e quella persona lo vedrebbe nel proprio portale.
+    if ($tenantId !== null) {
+        $chk = $db->prepare("SELECT id FROM tenants WHERE id = :id");
+        $chk->execute(['id' => $tenantId]);
+        if (!$chk->fetch()) apiError('Inquilino non trovato.');
+    }
+
     return [
         'property_id'      => $propertyId,
         'lead_id'          => $leadId,
         'client_id'        => $clientId,
+        'tenant_id'        => $tenantId,
         'agent_id'         => $agentId,
         'appointment_type' => $type,
         'appointment_date' => $parsed->format('Y-m-d H:i:s'),

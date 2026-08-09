@@ -10,6 +10,10 @@
  * POST   /api/reminders.php              — create
  * PUT    /api/reminders.php?id={id}      — update
  * PATCH  /api/reminders.php?id={id}      — quick status update (?action=complete|cancel)
+ * PATCH  /api/reminders.php?id={id}&action=reply — risposta dell'agenzia a una
+ *                                          richiesta del portale inquilino
+ *                                          { reply_text }. Ammessa solo sulle
+ *                                          righe che l'inquilino puo' leggere.
  * DELETE /api/reminders.php?id={id}      — elimina (le occorrenze della serie e
  *                                          il registro invii vanno in cascata).
  *                                          Per sospendere senza perdere:
@@ -20,6 +24,7 @@ require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/reminders.php';
 require_once __DIR__ . '/../config/automation_events.php';
 require_once __DIR__ . '/../config/automation_presets.php';
+require_once __DIR__ . '/../config/tenant_requests.php';
 
 apiHandleOptions();
 
@@ -268,6 +273,10 @@ function listReminders(PDO $db): void
                    pi.item_name AS asset_name, pi.brand AS asset_brand, pi.model AS asset_model,
                    pi.serial_number AS asset_serial, pi.condition_rating AS asset_condition,
                    pi.warranty_until AS asset_warranty_until,
+                   -- Quante foto ha allegato l'inquilino: la bacheca deve poter
+                   -- segnalare l'allegato senza una query per riga, altrimenti
+                   -- la foto resta invisibile finche' non si apre il ticket.
+                   (SELECT COUNT(*) FROM documents d WHERE d.reminder_id = r.id) AS photo_count,
                    -- La condizione che conta in una contestazione non è quella di
                    -- oggi: è quella con cui il bene fu consegnato, congelata nel
                    -- verbale di check-in.
@@ -302,12 +311,14 @@ function getReminder(PDO $db, int $id): void
                    JOIN inventory_snapshots s ON s.id = si.snapshot_id AND s.phase = 'check_in'
                   WHERE si.inventory_item_id = r.inventory_item_id
                ORDER BY s.snapshot_date DESC LIMIT 1) AS asset_checkin_condition,
-                (SELECT COUNT(*) FROM reminders o WHERE o.series_id = r.id) AS occurrence_count
+                (SELECT COUNT(*) FROM reminders o WHERE o.series_id = r.id) AS occurrence_count,
+                rb.username AS replied_by_username
          FROM reminders r
          LEFT JOIN clients c ON c.id = r.client_id
          LEFT JOIN leads ld ON ld.id = r.lead_id
          LEFT JOIN tenants tn ON tn.id = r.tenant_id
          LEFT JOIN admin_users au ON au.id = r.assigned_agent_id
+         LEFT JOIN admin_users rb ON rb.id = r.replied_by
          LEFT JOIN properties p ON p.id = r.property_id
          LEFT JOIN property_inventory pi ON pi.id = r.inventory_item_id
          WHERE r.id = :id"
@@ -318,6 +329,18 @@ function getReminder(PDO $db, int $id): void
     if (!$row) {
         apiError('Promemoria non trovato.', 404);
     }
+
+    // Le foto che l'inquilino ha allegato alla segnalazione (phase98).
+    // Vivono in `documents` come ogni altro file, quindi finora comparivano
+    // solo nell'albero documenti dell'IMMOBILE: l'agente che apriva il ticket
+    // "perde acqua dal soffitto" non aveva modo di sapere che la foto della
+    // macchia esisteva. La riga la porta con se'.
+    $photos = $db->prepare(
+        "SELECT id, title, original_name, mime_type, file_size, created_at
+           FROM documents WHERE reminder_id = :id ORDER BY created_at ASC"
+    );
+    $photos->execute(['id' => $id]);
+    $row['photos'] = $photos->fetchAll(PDO::FETCH_ASSOC);
 
     apiSuccess($row);
 }
@@ -745,6 +768,50 @@ function patchReminder(PDO $db, int $id): void
         return;
     }
 
+    // Risposta dell'agenzia a una richiesta arrivata dal portale inquilino.
+    //
+    // phase98 ha creato `reply_text` e il portale la mostra da allora
+    // (tenant/views/assistenza.php) — ma nessuna schermata dell'agenzia la
+    // scriveva: l'inquilino vedeva avanzare lo stato della propria richiesta
+    // senza poter mai leggere una parola. Questo e' il lato mancante.
+    if ($action === 'reply') {
+        $data = apiGetJsonBody();
+        $text = trim($data['reply_text'] ?? '');
+
+        if ($text === '') {
+            apiError('La risposta non puo\' essere vuota.');
+        }
+
+        // Il perimetro di lettura del portale, ripetuto qui di proposito: una
+        // risposta scritta su un promemoria interno (senza inquilino, o senza
+        // request_type) non e' un messaggio andato perso, e' un messaggio senza
+        // destinatario. Meglio rifiutarlo dicendo perche', che salvarlo dove
+        // nessuno lo aprira' mai.
+        $target = $db->prepare(
+            "SELECT tenant_id, request_type, title FROM reminders WHERE id = :id"
+        );
+        $target->execute(['id' => $id]);
+        $row = $target->fetch();
+
+        if (empty($row['tenant_id'])
+            || !in_array((string) $row['request_type'], TENANT_REQUEST_TYPES, true)) {
+            apiError('Questo promemoria non e\' una richiesta di un inquilino: '
+                . 'una risposta scritta qui non comparirebbe in nessun portale.');
+        }
+
+        $db->prepare(
+            "UPDATE reminders
+                SET reply_text = :txt, replied_at = NOW(), replied_by = :by
+              WHERE id = :id"
+        )->execute(['txt' => $text, 'by' => getCurrentAdminId() ?: null, 'id' => $id]);
+
+        logActivity('update', 'reminder', $id,
+            'Risposta all\'inquilino sulla richiesta #' . $id . ': ' . ($row['title'] ?: ''));
+
+        getReminder($db, $id);
+        return;
+    }
+
     // Maintenance status (aperta / in_lavorazione / completata / chiusa)
     if ($action === 'maintenance_status') {
         $data      = apiGetJsonBody();
@@ -800,7 +867,7 @@ function patchReminder(PDO $db, int $id): void
     }
 
     if (!isset($map[$action])) {
-        apiError('Azione non valida. Usa: complete, cancel, reopen, assign_supplier, maintenance_status, link_asset.');
+        apiError('Azione non valida. Usa: complete, cancel, reopen, assign_supplier, maintenance_status, link_asset, reply.');
     }
 
     $stmt = $db->prepare("UPDATE reminders SET status = :status WHERE id = :id");

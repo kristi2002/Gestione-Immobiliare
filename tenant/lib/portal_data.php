@@ -14,6 +14,10 @@
  */
 
 require_once __DIR__ . '/../../config/portal_documents.php';
+// TENANT_REQUEST_TYPES / TENANT_REQUEST_LABELS vivono in config/ perche' le
+// legge anche l'API dell'agenzia (api/reminders.php, per sapere su quali righe
+// ha senso scrivere una risposta all'inquilino). Vedi il file per il perche'.
+require_once __DIR__ . '/../../config/tenant_requests.php';
 
 /**
  * Quante righe per pagina. Non sono piu' tetti: da qui in avanti c'e'
@@ -57,26 +61,8 @@ const TENANT_PAY_STATUS = [
     'cancelled' => 'Annullato',
 ];
 
-/**
- * I tipi di richiesta che il portale sa creare (vedi api_maintenance.php).
- * Serve anche a rileggerle: le righe `reminders` SENZA `request_type` sono
- * promemoria interni dell'agenzia e non devono comparire all'inquilino.
- *
- * `appointment` si aggiunge in coda (phase98): chiedere un appuntamento passa
- * dalla stessa tubatura di ogni altra richiesta — finisce in `reminders`, la
- * bacheca dell'agenzia la vede insieme alle altre, e l'inquilino la ritrova
- * nello storico con il suo avanzamento. Nessuna superficie nuova.
- */
-const TENANT_REQUEST_TYPES = ['maintenance', 'document', 'info', 'appointment', 'other'];
-
-/** Etichette delle richieste, per tipo. */
-const TENANT_REQUEST_LABELS = [
-    'maintenance' => 'Manutenzione',
-    'document'    => 'Documento',
-    'info'        => 'Informazioni',
-    'appointment' => 'Appuntamento',
-    'other'       => 'Altro',
-];
+// TENANT_REQUEST_TYPES e TENANT_REQUEST_LABELS: vedi config/tenant_requests.php,
+// incluso in cima. Stavano qui, ma le legge anche l'agenzia.
 
 /**
  * Avanzamento di una richiesta. La bacheca dell'agenzia lavora su
@@ -485,8 +471,7 @@ function tenantDocuments(PDO $db, int $propertyId, int $contractId, int $page): 
  */
 function tenantRequests(PDO $db, int $tenantId, int $page): array
 {
-    $in    = "'" . implode("','", TENANT_REQUEST_TYPES) . "'";
-    $where = "tenant_id = :tid AND request_type IN ($in)";
+    $where = "tenant_id = :tid AND request_type IN (" . tenantRequestTypesSqlList() . ")";
 
     $totalStmt = $db->prepare("SELECT COUNT(*) FROM reminders WHERE $where");
     $totalStmt->execute(['tid' => $tenantId]);

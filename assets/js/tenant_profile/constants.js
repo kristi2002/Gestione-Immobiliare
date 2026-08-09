@@ -8,6 +8,7 @@ export const DOCS_API   = 'api/documents.php';
 export const REM_API    = 'api/reminders.php';
 export const CONT_API   = 'api/contracts.php';
 export const PAY_API    = 'api/payments.php';
+export const COMM_API   = 'api/communications.php';
 
 export const STATUS_LABELS = { active: 'Attivo', inactive: 'Inattivo', archived: 'Archiviato' };
 export const FREQ_LABELS   = { once: 'Una volta', weekly: 'Settimanale', biweekly: 'Quindicinale', monthly: 'Mensile', quarterly: 'Trimestrale', yearly: 'Annuale' };

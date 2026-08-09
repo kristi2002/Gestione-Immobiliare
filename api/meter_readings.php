@@ -6,7 +6,11 @@
  * GET  /api/meter_readings.php?property_id=X&summary=1 — latest per type + consumption
  * POST /api/meter_readings.php                         — create
  * PUT  /api/meter_readings.php?id={id}                 — update
+ * PATCH /api/meter_readings.php?id={id}&action=verify   — conferma un'autolettura
+ * PATCH /api/meter_readings.php?id={id}&action=unverify — la rimette in attesa
  * DELETE /api/meter_readings.php?id={id}               — delete
+ *
+ * Filtro: ?pending=1 — solo le autoletture dell'inquilino ancora da confermare.
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
@@ -51,6 +55,10 @@ try {
             if (!$id) apiError('ID lettura mancante.');
             updateMeterReading($db, $id);
             break;
+        case 'PATCH':
+            if (!$id) apiError('ID lettura mancante.');
+            setReadingVerification($db, $id, trim($_GET['action'] ?? ''));
+            break;
         case 'DELETE':
             if (!$id) apiError('ID lettura mancante.');
             deleteMeterReading($db, $id);
@@ -79,9 +87,12 @@ function listMeterReadings(PDO $db): void
 
     // Stesse join per conteggio e dati: si cerca per immobile e per contatore
     // (POD/PDR, matricola, ubicazione), che stanno tutti fuori da meter_readings.
+    // `tn` serve a dire CHI ha dichiarato il numero: "autolettura" senza un nome
+    // e' un'informazione a meta' quando su quel numero si conguaglia.
     $joins = ' LEFT JOIN properties p ON p.id = mr.property_id
                LEFT JOIN meters m ON m.id = mr.meter_id
-               LEFT JOIN suppliers s ON s.id = m.supplier_id';
+               LEFT JOIN suppliers s ON s.id = m.supplier_id
+               LEFT JOIN tenants tn ON tn.id = mr.submitted_by_tenant_id';
 
     if ($meterId) {
         $where .= ' AND mr.meter_id = :meter_id';
@@ -101,6 +112,13 @@ function listMeterReadings(PDO $db): void
             'm.supplier_name', 's.name', 'mr.notes',
         ], $params, 'mrs');
         if ($frag !== '') $where .= " AND ($frag)";
+    }
+    // Le autoletture in attesa. Senza questo filtro l'unico modo di trovarle
+    // sarebbe scorrere tutto lo storico sperando di riconoscerle: una
+    // dichiarazione che nessuno conferma resta fuori da ogni conguaglio, e
+    // l'inquilino intanto legge "in attesa di verifica" a tempo indeterminato.
+    if (!empty($_GET['pending'])) {
+        $where .= " AND mr.source = 'tenant' AND mr.verified_at IS NULL";
     }
 
     $countSql = "SELECT COUNT(*) FROM meter_readings mr $joins $where";
@@ -122,6 +140,7 @@ function listMeterReadings(PDO $db): void
                    p.address AS property_address, p.city AS property_city,
                    m.code AS meter_code, m.location AS meter_location,
                    m.supplier_name AS meter_supplier_name, s.name AS meter_supplier_directory,
+                   CONCAT_WS(' ', tn.name, tn.surname) AS submitted_by_name,
                    ROUND(mr.reading_value - (
                        SELECT prev.reading_value FROM meter_readings prev
                        WHERE prev.meter_id = mr.meter_id
@@ -144,11 +163,15 @@ function getMeterReading(PDO $db, int $id): void
     $stmt = $db->prepare(
         "SELECT mr.*, p.address AS property_address, p.city AS property_city,
                 m.code AS meter_code, m.location AS meter_location,
-                m.supplier_name AS meter_supplier_name, s.name AS meter_supplier_directory
+                m.supplier_name AS meter_supplier_name, s.name AS meter_supplier_directory,
+                CONCAT_WS(' ', tn.name, tn.surname) AS submitted_by_name,
+                au.username AS verified_by_username
          FROM meter_readings mr
          LEFT JOIN properties p ON p.id = mr.property_id
          LEFT JOIN meters m ON m.id = mr.meter_id
          LEFT JOIN suppliers s ON s.id = m.supplier_id
+         LEFT JOIN tenants tn ON tn.id = mr.submitted_by_tenant_id
+         LEFT JOIN admin_users au ON au.id = mr.verified_by
          WHERE mr.id = :id"
     );
     $stmt->execute(['id' => $id]);
@@ -264,6 +287,58 @@ function updateMeterReading(PDO $db, int $id): void
     $stmt->execute(array_merge($validated, ['id' => $id]));
 
     logActivity('update', 'meter_reading', $id, 'Lettura aggiornata #' . $id);
+    getMeterReading($db, $id);
+}
+
+/**
+ * Conferma (o rimette in attesa) un'autolettura mandata dall'inquilino.
+ *
+ * phase98 ha distinto due cose che prima erano la stessa: un numero letto
+ * dall'agenzia e un numero DICHIARATO da chi ci abita. La distinzione conta
+ * solo se qualcuno puo' chiudere il secondo caso — altrimenti `verified_at`
+ * resta nullo per sempre, l'inquilino legge "in attesa di verifica" a tempo
+ * indeterminato e su quel numero non si conguaglia niente.
+ *
+ * Confermare NON cambia il valore: se il numero e' sbagliato si corregge con
+ * la PUT e poi si conferma, cosi' resta scritto che qualcuno l'ha guardato.
+ */
+function setReadingVerification(PDO $db, int $id, string $action): void
+{
+    if ($action !== 'verify' && $action !== 'unverify') {
+        apiError('Azione non valida. Usa: verify, unverify.');
+    }
+
+    $stmt = $db->prepare(
+        "SELECT id, source, verified_at, reading_value, meter_type FROM meter_readings WHERE id = :id"
+    );
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        apiError('Lettura non trovata.', 404);
+    }
+
+    // Una lettura dell'agenzia nasce gia' verificata (la migrazione ha
+    // riempito `verified_at` sullo storico): non c'e' niente da confermare, e
+    // "rimettere in attesa" una propria lettura significherebbe aspettare una
+    // conferma da nessuno.
+    if ($row['source'] !== 'tenant') {
+        apiError('Questa lettura non e\' un\'autolettura dell\'inquilino: non ha una conferma da dare.');
+    }
+
+    $verify = $action === 'verify';
+
+    $db->prepare(
+        "UPDATE meter_readings
+            SET verified_at = " . ($verify ? 'NOW()' : 'NULL') . ",
+                verified_by = :by
+          WHERE id = :id"
+    )->execute(['by' => $verify ? (getCurrentAdminId() ?: null) : null, 'id' => $id]);
+
+    logActivity('update', 'meter_reading', $id,
+        ($verify ? 'Autolettura confermata' : 'Autolettura rimessa in attesa')
+        . ' #' . $id . ' (' . $row['meter_type'] . ' = ' . $row['reading_value'] . ')');
+
     getMeterReading($db, $id);
 }
 

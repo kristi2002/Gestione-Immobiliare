@@ -2,7 +2,7 @@
  * Scheda Inquilino — dedicated tenant profile view
  */
 import {
-    API, PROPS_API, DOCS_API, REM_API, CONT_API, PAY_API,
+    API, PROPS_API, DOCS_API, REM_API, CONT_API, PAY_API, COMM_API,
     STATUS_LABELS, FREQ_LABELS, PROP_STATUS, PROP_COLOR, PAY_STATUS, PAY_COLOR, DOC_ICONS, REM_ICONS,
 } from './constants.js';
 import { esc, fmtDate } from './helpers.js';
@@ -41,6 +41,7 @@ function bindEvents() {
         if (window.App) window.App.navigateTo('payment_edit', { tenantId });
     });
     document.getElementById('btn-profile-new-reminder').addEventListener('click', () => openReminderModal());
+    document.getElementById('profile-messaggi-form')?.addEventListener('submit', sendMessaggio);
 
     // Tab switching
     document.querySelectorAll('.profile-tab').forEach(tab => {
@@ -122,6 +123,77 @@ function loadTab(tab) {
     else if (tab === 'pagamenti')   loadPagamenti();
     else if (tab === 'documents')   loadDocuments();
     else if (tab === 'reminders')   loadReminders();
+    else if (tab === 'messaggi')    loadMessaggi();
+}
+
+// ── Messaggi — il filo diretto con il portale inquilino ──────────
+//
+// Il canale 'portale' non spedisce niente: si legge dentro il portale. Per
+// questo la scheda lo tiene separato da Comunicazioni, che e' il posto delle
+// email e dei WhatsApp verso il PROPRIETARIO.
+
+async function loadMessaggi() {
+    const list    = document.getElementById('profile-messaggi-list');
+    const countEl = document.getElementById('profile-messaggi-count');
+
+    try {
+        const j = await fetch(`${COMM_API}?tenant_id=${encodeURIComponent(tenantId)}`).then(r => r.json());
+        if (!j.success) throw new Error(j.error);
+
+        const msgs = j.data.messages || [];
+        countEl.textContent = msgs.length
+            ? `${msgs.length} messagg${msgs.length === 1 ? 'io' : 'i'}`
+            : '';
+
+        if (!msgs.length) {
+            list.innerHTML = '<div class="entity-empty">Nessun messaggio. '
+                + 'Puoi scrivere tu per primo: l\'inquilino lo legge nel portale.</div>';
+            return;
+        }
+
+        // 'received' = arrivato dall'inquilino. Il verso e' sempre raccontato
+        // dal punto di vista del gestionale, come nel resto della tabella.
+        list.innerHTML = msgs.map(m => `
+            <div class="tpm-msg tpm-msg--${m.direction === 'received' ? 'in' : 'out'}">
+                <div class="tpm-msg__who">
+                    ${m.direction === 'received'
+                        ? esc(`${tenant?.name || ''} ${tenant?.surname || ''}`.trim() || 'Inquilino')
+                        : 'Agenzia'}
+                    <span class="tpm-msg__when">${fmtDate(m.created_at)}</span>
+                </div>
+                <div class="tpm-msg__body">${esc(m.body || '')}</div>
+            </div>`).join('');
+
+        list.scrollTop = list.scrollHeight;
+    } catch (e) {
+        list.innerHTML = `<div class="entity-empty">Impossibile caricare i messaggi: ${esc(e.message)}</div>`;
+    }
+}
+
+async function sendMessaggio(ev) {
+    ev.preventDefault();
+    const textEl = document.getElementById('profile-messaggi-text');
+    const btn    = document.getElementById('profile-messaggi-send');
+    const body   = textEl.value.trim();
+
+    if (!body) return;
+
+    btn.disabled = true;
+    try {
+        const res = await fetch(`${COMM_API}?action=tenant_reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: tenantId, body }),
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        textEl.value = '';
+        loadMessaggi();
+    } catch (e) {
+        showAlert(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 // ── Locazione (current lease + property card) ────────────────────

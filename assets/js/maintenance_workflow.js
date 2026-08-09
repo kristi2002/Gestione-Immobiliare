@@ -53,6 +53,7 @@
         els.supplierModal  = document.getElementById('mw-supplier-modal');
         els.statusModal    = document.getElementById('mw-status-modal');
         els.assetModal     = document.getElementById('mw-asset-modal');
+        els.replyModal     = document.getElementById('mw-reply-modal');
 
         bindEvents();
         bindRowMenu();
@@ -112,6 +113,22 @@
         document.getElementById('mw-delete-cancel')?.addEventListener('click', closeDeleteModal);
         document.getElementById('mw-delete-confirm')?.addEventListener('click', confirmDelete);
         document.getElementById('mw-asset-select').addEventListener('change', renderAssetDetail);
+
+        // Risposta all'inquilino
+        document.getElementById('mw-reply-close')?.addEventListener('click', closeReplyModal);
+        document.getElementById('mw-reply-cancel')?.addEventListener('click', closeReplyModal);
+        els.replyModal?.addEventListener('click', e => { if (e.target === els.replyModal) closeReplyModal(); });
+        document.getElementById('mw-reply-confirm')?.addEventListener('click', confirmReply);
+
+        // La graffetta sulla riga apre la stessa finestra. Delegato sul tbody,
+        // che viene riscritto a ogni caricamento; `stopPropagation` perche' il
+        // menu di riga ascolta sullo stesso nodo.
+        els.tbody.addEventListener('click', e => {
+            const tag = e.target.closest('[data-reply-open]');
+            if (!tag) return;
+            e.stopPropagation();
+            openReplyModal(tag.dataset.replyOpen);
+        });
     }
 
     async function loadProperties() {
@@ -206,7 +223,10 @@
             return `<tr>
                 <td data-label="Inquilino">${esc(tenantName)}</td>
                 <td data-label="Immobile">${esc(r.property_address || `#${r.property_id}` || '—')}</td>
-                <td data-label="Descrizione" title="${esc(r.note || '')}">${esc(r.title || (r.note ? r.note.substring(0, 50) : '—'))}</td>
+                <td data-label="Descrizione" title="${esc(r.note || '')}">
+                    ${esc(r.title || (r.note ? r.note.substring(0, 50) : '—'))}
+                    ${requestBadgesHtml(r)}
+                </td>
                 <td data-label="Bene">${assetCellHtml(r)}</td>
                 <td data-label="Priorità"><span style="color:${priorityColor};font-weight:600;">${esc(priority)}</span></td>
                 <td data-label="Stato"><span style="color:${statusColor};font-weight:600;">${esc(statusLabel)}</span></td>
@@ -234,6 +254,13 @@
             const r = (els.tbody._items || []).find(x => String(x.id) === String(btn.dataset.id));
             if (!r) return [];
             return [
+                // Solo sulle segnalazioni arrivate DAL portale: su un intervento
+                // aperto al telefono non c'e' nessuno dall'altra parte che possa
+                // leggere la risposta, e l'API la rifiuterebbe comunque.
+                isTenantRequest(r)
+                    ? { label: r.reply_text ? 'Modifica risposta' : 'Rispondi all\'inquilino',
+                        icon: 'corner-down-right', onClick: () => openReplyModal(r.id) }
+                    : null,
                 { label: 'Collega bene', icon: 'package',
                   onClick: () => openAssetModal(r.id, r.property_id || '', r.inventory_item_id || '') },
                 { label: 'Assegna fornitore', icon: 'wrench',
@@ -250,6 +277,36 @@
                   onClick: () => askDelete(r.id, r.title || ('#' + r.id)) },
             ];
         });
+    }
+
+    /**
+     * Due cose che la riga taceva e che cambiano cosa fa l'agente:
+     * la foto allegata dall'inquilino (finora visibile solo nell'albero
+     * documenti dell'immobile) e se a quella segnalazione e' gia' stato
+     * risposto. Senza la seconda, l'unico modo di saperlo era aprire il
+     * portale dalla parte dell'inquilino.
+     */
+    function requestBadgesHtml(r) {
+        const bits = [];
+        const photos = Number(r.photo_count || 0);
+
+        if (photos > 0) {
+            // Cliccabile: la foto e' il motivo per cui molte segnalazioni si
+            // capiscono in due secondi invece che con una telefonata. Aprire il
+            // menu per arrivarci sarebbe un passaggio di troppo.
+            bits.push(`<button type="button" class="mw-tag mw-tag--btn" data-reply-open="${r.id}"
+                title="${photos} allegat${photos === 1 ? 'o' : 'i'} dall'inquilino — apri">`
+                + `<i data-lucide="paperclip"></i>${photos > 1 ? ' ' + photos : ''}</button>`);
+        }
+        if (isTenantRequest(r)) {
+            bits.push(r.reply_text
+                ? '<span class="mw-tag mw-tag--ok" title="Risposta inviata all\'inquilino">'
+                  + '<i data-lucide="corner-down-right"></i> Risposto</span>'
+                : '<span class="mw-tag mw-tag--todo" title="Richiesta dal portale, ancora senza risposta">'
+                  + '<i data-lucide="message-circle"></i> Da rispondere</span>');
+        }
+
+        return bits.length ? `<div class="mw-tags">${bits.join('')}</div>` : '';
     }
 
     /**
@@ -514,6 +571,93 @@
     }
 
     function closeAssetModal() { els.assetModal.hidden = true; }
+
+    // ---- Risposta all'inquilino --------------------------------------------
+
+    /**
+     * Il perimetro che il portale usa per RILEGGERE le richieste: inquilino
+     * agganciato piu' un `request_type` fra quelli che il portale sa creare.
+     * La stessa condizione la riapplica l'API (config/tenant_requests.php) —
+     * qui serve solo a non offrire un pulsante che verrebbe rifiutato.
+     */
+    const TENANT_REQUEST_TYPES = ['maintenance', 'document', 'info', 'appointment', 'other'];
+
+    function isTenantRequest(r) {
+        return !!r.tenant_id && TENANT_REQUEST_TYPES.includes(String(r.request_type || ''));
+    }
+
+    async function openReplyModal(requestId) {
+        document.getElementById('mw-reply-request-id').value = requestId;
+        const whoEl    = document.getElementById('mw-reply-who');
+        const msgEl    = document.getElementById('mw-reply-message');
+        const photosEl = document.getElementById('mw-reply-photos');
+        const textEl   = document.getElementById('mw-reply-text');
+
+        whoEl.textContent    = 'Caricamento…';
+        msgEl.textContent    = '';
+        photosEl.innerHTML   = '';
+        textEl.value         = '';
+        els.replyModal.hidden = false;
+
+        try {
+            // La riga completa: la lista non porta le foto (una query per riga),
+            // e per rispondere bisogna vedere cosa e' stato mandato.
+            const res  = await fetch(`${API}?id=${encodeURIComponent(requestId)}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            const r = json.data;
+
+            const who = [r.tenant_contact_name, r.tenant_contact_surname].filter(Boolean).join(' ')
+                        || r.tenant_name || 'Inquilino';
+            whoEl.textContent = `${who} — ${r.title || ''}`;
+            // La firma "— Inviato da: …" la aggiunge il portale in coda al testo:
+            // a chi legge da qui non dice nulla che non sia gia' nell'intestazione.
+            msgEl.textContent = String(r.description || '').replace(/\r?\n+—\s*Inviato da:[\s\S]*$/, '').trim();
+
+            photosEl.innerHTML = (r.photos || []).map(p =>
+                `<a class="mw-reply__photo" href="api/download_document.php?id=${encodeURIComponent(p.id)}"
+                    target="_blank" rel="noopener">
+                    <i data-lucide="paperclip"></i> ${esc(p.original_name || p.title || 'foto')}
+                 </a>`).join('');
+
+            textEl.value = r.reply_text || '';
+            if (window.lucide) window.lucide.createIcons();
+        } catch (err) {
+            whoEl.textContent = '';
+            msgEl.textContent = 'Impossibile caricare la richiesta: ' + err.message;
+        }
+    }
+
+    function closeReplyModal() { els.replyModal.hidden = true; }
+
+    async function confirmReply() {
+        const requestId = document.getElementById('mw-reply-request-id').value;
+        const text      = document.getElementById('mw-reply-text').value.trim();
+        const btn       = document.getElementById('mw-reply-confirm');
+
+        if (!text) {
+            showAlert('Scrivi una risposta prima di inviarla.', 'error');
+            return;
+        }
+
+        btn.disabled = true; btn.textContent = 'Invio…';
+        try {
+            const res  = await fetch(`${API}?id=${encodeURIComponent(requestId)}&action=reply`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reply_text: text }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            closeReplyModal();
+            showAlert('Risposta inviata: l\'inquilino la vede nel portale.', 'success');
+            loadRequests();
+        } catch (err) {
+            showAlert(err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Invia risposta';
+        }
+    }
 
     async function confirmLinkAsset() {
         const requestId = document.getElementById('mw-asset-request-id').value;

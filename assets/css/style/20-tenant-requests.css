@@ -1,0 +1,213 @@
+/* ============================================================================
+   Le richieste che arrivano DAL portale inquilino, viste dall'agenzia.
+
+   phase98 ha aperto un canale a due sensi (segnalazione + foto in entrata,
+   risposta in uscita) ma lato agenzia esisteva solo la meta' in entrata, e
+   nemmeno tutta: la foto finiva nell'albero documenti dell'immobile e la
+   risposta non aveva un posto da cui scriverla. Qui c'e' l'anatomia delle due
+   cose che la bacheca ora mostra.
+
+   Nota sulle icone: `lucide.createIcons()` SOSTITUISCE `<i data-lucide>` con un
+   `<svg>`. Un selettore su `i` smette di applicarsi appena la pagina si idrata
+   — si prende `svg`.
+   ============================================================================ */
+
+/* ── Pastiglie di riga ───────────────────────────────────────────────────── */
+
+.mw-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.mw-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border: 1px solid var(--color-border, #dfe3e8);
+    border-radius: 999px;
+    background: var(--color-surface-alt, #f5f7fa);
+    color: var(--color-text-muted, #6b7280);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.7;
+    white-space: nowrap;
+}
+
+.mw-tag svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* La graffetta e' un pulsante vero (si raggiunge da tastiera), ma non deve
+   sembrare un pulsante: resta una pastiglia come le altre. */
+.mw-tag--btn {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.mw-tag--btn:hover {
+    border-color: var(--color-primary, #3186d5);
+    color: var(--color-primary, #3186d5);
+}
+
+/* "Da rispondere" e' un richiamo, non una decorazione: e' l'unico posto in cui
+   l'agenzia scopre che qualcuno sta aspettando. */
+.mw-tag--todo {
+    border-color: color-mix(in srgb, var(--color-warning, #e67e22) 45%, transparent);
+    background: color-mix(in srgb, var(--color-warning, #e67e22) 12%, transparent);
+    color: var(--color-warning, #b45309);
+}
+
+.mw-tag--ok {
+    border-color: color-mix(in srgb, var(--color-success, #22c55e) 45%, transparent);
+    background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent);
+    color: var(--color-success-dark, #15803d);
+}
+
+/* ── Filo diretto con l'inquilino (scheda inquilino → Messaggi) ──────────── */
+
+.tpm-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    padding: 4px;
+    overflow-y: auto;
+}
+
+.tpm-msg {
+    max-width: 78%;
+    padding: 8px 12px;
+    border-radius: var(--radius, 14px);
+    background: var(--color-surface-alt, #f5f7fa);
+}
+
+/* In arrivo a sinistra, in uscita a destra: la posizione dice il verso prima
+   che si legga l'intestazione. */
+.tpm-msg--in  { align-self: flex-start; border-bottom-left-radius: 4px; }
+.tpm-msg--out {
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    background: color-mix(in srgb, var(--color-primary, #3186d5) 12%, transparent);
+}
+
+.tpm-msg__who {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    margin-bottom: 3px;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tpm-msg__when { font-weight: 400; }
+
+.tpm-msg__body {
+    /* Gli a-capo che l'inquilino ha battuto fanno parte del messaggio. */
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.tpm-compose {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 12px;
+}
+
+.tpm-compose textarea { flex: 1; resize: vertical; }
+
+@media (max-width: 600px) {
+    .tpm-msg { max-width: 92%; }
+}
+
+/* ── Provenienza di una lettura contatore ────────────────────────────────── */
+
+/* Un'autolettura e' una DICHIARAZIONE finche' l'agenzia non la conferma. Senza
+   questa riga in elenco le due si leggono identiche, e si conguaglia su un
+   numero che nessuno e' andato a controllare credendo sia stato letto. */
+.mtr-origin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.mtr-origin svg {
+    width: 12px;
+    height: 12px;
+}
+
+.mtr-origin--todo { color: var(--color-warning, #b45309); }
+.mtr-origin--ok   { color: var(--color-text-muted, #6b7280); }
+
+/* ── La segnalazione, dentro la finestra di risposta ─────────────────────── */
+
+/* Si risponde guardando cosa e' stato scritto: il testo dell'inquilino sta
+   sopra la casella, non in un'altra schermata da ricordare a memoria. */
+.mw-reply__from {
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.9rem;
+    border-left: 3px solid var(--color-primary, #3186d5);
+    border-radius: 0 var(--radius-sm, 8px) var(--radius-sm, 8px) 0;
+    background: var(--color-surface-alt, #f5f7fa);
+}
+
+.mw-reply__who {
+    margin-bottom: 4px;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mw-reply__msg {
+    margin: 0;
+    /* Il testo arriva da una textarea: gli a-capo che l'inquilino ha battuto
+       fanno parte di come ha spiegato il problema. */
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.mw-reply__photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.mw-reply__photo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 9px;
+    overflow: hidden;
+    border: 1px solid var(--color-border, #dfe3e8);
+    border-radius: 999px;
+    background: var(--color-surface, #fff);
+    color: var(--color-text, #1f2937);
+    font-size: 12px;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mw-reply__photo:hover {
+    border-color: var(--color-primary, #3186d5);
+    color: var(--color-primary, #3186d5);
+}
+
+.mw-reply__photo svg {
+    flex: 0 0 auto;
+    width: 13px;
+    height: 13px;
+}

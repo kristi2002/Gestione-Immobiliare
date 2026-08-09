@@ -48,7 +48,16 @@
     </script>
 
     <div class="db-card list-card">
-        <div class="db-card__head"><h3>Letture registrate</h3></div>
+        <div class="db-card__head">
+            <h3>Letture registrate</h3>
+            <!-- Fuori dalla toolbar di proposito: la barra filtri sposta i
+                 controlli dentro il suo popover, e questo e' l'unico modo che
+                 l'agenzia ha di trovare le autoletture che aspettano una
+                 conferma. Nascosto dietro un pulsante, non lo guarda nessuno. -->
+            <label class="form-check mtr-head-check">
+                <input type="checkbox" id="meters-pending-only"> Solo autoletture da confermare
+            </label>
+        </div>
 
         <div class="toolbar">
             <div class="search-box">

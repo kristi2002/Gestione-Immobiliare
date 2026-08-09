@@ -4,8 +4,12 @@
  *
  * GET  /api/communications.php?summary=1       — client list with last message preview
  * GET  /api/communications.php?client_id={id} — full thread for a client
+ * GET  /api/communications.php?tenant_id={id} — filo diretto con un INQUILINO
+ *                                               (canale 'portale', phase98)
  * GET  /api/communications.php?id={id}        — single message
  * POST /api/communications.php                — send or log a message
+ * POST /api/communications.php?action=tenant_reply — risposta sul filo diretto
+ *                                               { tenant_id, body }
  */
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
@@ -41,11 +45,17 @@ try {
             listSummary($db);
         } elseif (isset($_GET['client_id'])) {
             listThread($db, (int) $_GET['client_id']);
+        } elseif (isset($_GET['tenant_id'])) {
+            listTenantThread($db, (int) $_GET['tenant_id']);
         } else {
-            apiError('Parametro mancante: summary, client_id o id.');
+            apiError('Parametro mancante: summary, client_id, tenant_id o id.');
         }
     } elseif ($method === 'POST') {
-        createMessage($db);
+        if (($_GET['action'] ?? '') === 'tenant_reply') {
+            createTenantReply($db);
+        } else {
+            createMessage($db);
+        }
     } else {
         apiError('Metodo non consentito.', 405);
     }
@@ -166,6 +176,99 @@ function getMessage(PDO $db, int $id): void
     }
 
     apiSuccess($msg);
+}
+
+/**
+ * Il filo diretto con un inquilino, lato agenzia.
+ *
+ * Vive accanto al thread del proprietario ma NON dentro: `listThread()` fa una
+ * INNER JOIN su `clients` perche' li' il thread E' il proprietario. Qui la
+ * chiave e' `tenant_id`, e un messaggio del portale puo' non avere nessun
+ * proprietario collegato (immobile senza contratto in corso) — passando da
+ * quella join sparirebbe senza dirlo a nessuno.
+ *
+ * Il canale resta 'portale': non e' un'email e non e' una nota interna. Chi
+ * scrive qui sta scrivendo DENTRO il portale dell'inquilino, che e' l'unico
+ * posto dove il messaggio verra' letto.
+ */
+function listTenantThread(PDO $db, int $tenantId): void
+{
+    $tenant = $db->prepare("SELECT id, name, surname, email FROM tenants WHERE id = :id");
+    $tenant->execute(['id' => $tenantId]);
+    $row = $tenant->fetch();
+
+    if (!$row) {
+        apiError('Inquilino non trovato.', 404);
+    }
+
+    $stmt = $db->prepare(
+        "SELECT id, tenant_id, client_id, property_id, direction, channel,
+                subject, body, status, status_detail, created_at
+           FROM communications
+          WHERE tenant_id = :tid AND channel = 'portale'
+       ORDER BY created_at ASC, id ASC"
+    );
+    $stmt->execute(['tid' => $tenantId]);
+
+    apiSuccess([
+        'tenant'   => $row,
+        'messages' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+    ]);
+}
+
+/**
+ * La risposta dell'agenzia sul filo diretto.
+ *
+ * Non spedisce niente e non deve: il messaggio si legge nel portale, come
+ * quello in arrivo. Per questo non passa da `createMessage()`, che e' costruita
+ * intorno alla spedizione (mailer, allegati, stati di consegna) — un canale che
+ * non spedisce non ha bisogno di quella macchina, e infilarcelo avrebbe
+ * significato aggiungere rami "tranne quando" dentro il percorso dei soldi.
+ */
+function createTenantReply(PDO $db): void
+{
+    $data     = apiGetJsonBody();
+    $tenantId = (int) ($data['tenant_id'] ?? 0);
+    $body     = trim($data['body'] ?? '');
+
+    if ($tenantId <= 0)          apiError('tenant_id obbligatorio.');
+    if ($body === '')            apiError('Il messaggio non puo\' essere vuoto.');
+    // Stesso tetto che il portale impone all'inquilino: due limiti diversi
+    // sullo stesso filo sarebbero una sorpresa a meta' conversazione.
+    if (mb_strlen($body) > 4000) apiError('Messaggio troppo lungo (massimo 4000 caratteri).');
+
+    $tenant = $db->prepare("SELECT id, name, surname FROM tenants WHERE id = :id AND status = 'active'");
+    $tenant->execute(['id' => $tenantId]);
+    $row = $tenant->fetch();
+
+    if (!$row) {
+        apiError('Inquilino non trovato o non piu\' attivo.', 404);
+    }
+
+    // Il proprietario e l'immobile si portano dietro come contesto, presi dal
+    // contratto in corso — le stesse colonne che riempie il portale quando e'
+    // l'inquilino a scrivere, cosi' il filo resta omogeneo in entrambi i versi.
+    $contract   = getTenantCurrentContract($db, $tenantId);
+    $propertyId = $contract['property_id'] ?? null;
+    $clientId   = $contract['property_client_id'] ?? null;
+
+    $db->prepare(
+        "INSERT INTO communications
+            (tenant_id, client_id, property_id, direction, channel, subject, body, status, created_at)
+         VALUES (:tid, :cid, :pid, 'sent', 'portale', :subj, :body, 'sent', NOW())"
+    )->execute([
+        'tid'  => $tenantId,
+        'cid'  => $clientId,
+        'pid'  => $propertyId,
+        'subj' => 'Risposta dell\'agenzia',
+        'body' => $body,
+    ]);
+
+    $newId = (int) $db->lastInsertId();
+    logActivity('create', 'communication', $newId,
+        'Messaggio nel portale a ' . trim($row['name'] . ' ' . $row['surname']));
+
+    listTenantThread($db, $tenantId);
 }
 
 function createMessage(PDO $db): void

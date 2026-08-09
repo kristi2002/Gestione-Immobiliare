@@ -36,6 +36,7 @@
         <button class="profile-tab" role="tab" data-tab="pagamenti"><i data-lucide="euro"></i>Pagamenti</button>
         <button class="profile-tab" role="tab" data-tab="documents"><i data-lucide="file-text"></i>Documenti</button>
         <button class="profile-tab" role="tab" data-tab="reminders"><i data-lucide="bell"></i>Promemoria</button>
+        <button class="profile-tab" role="tab" data-tab="messaggi"><i data-lucide="message-square"></i>Messaggi</button>
     </div>
 
     <!-- Panel: Locazione (current lease + property card) -->
@@ -94,6 +95,27 @@
         <div id="profile-reminders-list" class="reminders-list">
             <div class="entity-loading">Caricamento…</div>
         </div>
+    </div>
+
+    <!-- Panel: Messaggi — il filo diretto con il portale inquilino.
+         L'inquilino poteva scrivere da mesi; l'agenzia leggeva quei messaggi
+         solo guardando la tabella, e non aveva alcun modo di rispondere. -->
+    <div class="profile-panel" id="profile-panel-messaggi" hidden>
+        <div class="profile-panel__header">
+            <span class="text-muted" id="profile-messaggi-count"></span>
+        </div>
+        <p class="text-muted" style="margin:-8px 0 12px;font-size:12.5px;">
+            Questo filo si legge dentro il portale dell'inquilino: non parte nessuna
+            email. Per scrivergli via email o WhatsApp usa Comunicazioni.
+        </p>
+        <div id="profile-messaggi-list" class="tpm-thread">
+            <div class="entity-loading">Caricamento…</div>
+        </div>
+        <form id="profile-messaggi-form" class="tpm-compose">
+            <textarea id="profile-messaggi-text" class="form-input" rows="3" maxlength="4000"
+                      placeholder="Scrivi all'inquilino…"></textarea>
+            <button type="submit" class="btn btn--primary" id="profile-messaggi-send">Invia</button>
+        </form>
     </div>
 
 </div>

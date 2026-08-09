@@ -64,6 +64,16 @@
                         <small class="form-hint">Da compilare solo se l'interlocutore è già un cliente e non un lead.</small>
                     </div>
                 </div>
+                <!-- Un sopralluogo per una perdita, o la riconsegna delle chiavi,
+                     riguardano l'INQUILINO: non è un lead e non è il proprietario.
+                     La colonna esiste da phase98 e il portale mostra all'inquilino
+                     i propri appuntamenti — finché nessuno la compila, quella
+                     scheda resta vuota per sempre. -->
+                <div class="form-group" style="max-width:420px">
+                    <label for="ape-tenant">Inquilino</label>
+                    <select id="ape-tenant" class="form-select"><option value="">— Nessuno —</option></select>
+                    <small class="form-hint">Se lo colleghi, l'appuntamento compare nel suo portale.</small>
+                </div>
                 <div class="form-group" style="max-width:420px">
                     <label for="ape-agent">Agente</label>
                     <select id="ape-agent" class="form-select"><option value="">— Nessuno —</option></select>

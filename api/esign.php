@@ -259,6 +259,56 @@ function getEsignByToken(PDO $db, string $token): void
     apiSuccess($row);
 }
 
+/**
+ * A quale inquilino appartiene una richiesta di firma — se appartiene a uno.
+ *
+ * Non e' una comodita': `tenantSignatures()` (tenant/lib/portal_data.php) mostra
+ * il TOKEN di firma a chi apre il portale. Agganciare la richiesta all'inquilino
+ * sbagliato non gli mostrerebbe una riga di troppo: gli consegnerebbe la facolta'
+ * di firmare al posto di un altro. Quindi si aggancia solo quando l'identita' e'
+ * CORROBORATA, e nel dubbio si lascia nullo — la firma via email funziona
+ * comunque, e' solo il portale a non elencarla.
+ *
+ * Due prove, ne basta una:
+ *   1. il contratto ha un inquilino e l'email del firmatario e' la sua;
+ *   2. l'email individua UN SOLO inquilino attivo (stessa regola con cui
+ *      phase98 aggancio' lo storico).
+ *
+ * Un `tenant_id` passato dal chiamante NON viene accettato al buio: sarebbe
+ * l'unico modo di consegnare il token a un portale che non c'entra.
+ */
+function resolveEsignTenant(PDO $db, string $signerEmail, ?int $contractId): ?int
+{
+    $email = strtolower(trim($signerEmail));
+    if ($email === '') return null;
+
+    if ($contractId !== null) {
+        $stmt = $db->prepare(
+            "SELECT t.id
+               FROM contracts c
+               JOIN tenants t ON t.id = c.tenant_id
+              WHERE c.id = :cid AND LOWER(t.email) = :em
+              LIMIT 1"
+        );
+        $stmt->execute(['cid' => $contractId, 'em' => $email]);
+        $id = $stmt->fetchColumn();
+        if ($id) return (int) $id;
+    }
+
+    // `HAVING COUNT(*) = 1`: due inquilini che condividono una casella (una
+    // coppia, spesso) non sono identificabili dall'email, e li' si smette.
+    $stmt = $db->prepare(
+        "SELECT MIN(id) AS tid
+           FROM tenants
+          WHERE status = 'active' AND LOWER(email) = :em
+         HAVING COUNT(*) = 1"
+    );
+    $stmt->execute(['em' => $email]);
+    $id = $stmt->fetchColumn();
+
+    return $id ? (int) $id : null;
+}
+
 function createEsignRequest(PDO $db): void
 {
     $data        = apiGetJsonBody();
@@ -274,15 +324,22 @@ function createEsignRequest(PDO $db): void
 
     $token = bin2hex(random_bytes(32)); // 64-char hex token
 
+    // Se il firmatario e' un inquilino, la richiesta va agganciata a lui: e'
+    // cosi' che compare nel suo portale. phase98 ha creato la colonna e ha
+    // agganciato lo storico una volta sola, ma nessuno la valorizzava sulle
+    // richieste NUOVE — cioe' su tutte quelle che contano.
+    $tenantId = resolveEsignTenant($db, $signerEmail, $contractId);
+
     $stmt = $db->prepare(
         "INSERT INTO esign_requests
-            (document_id, contract_id, signer_name, signer_email, token, status, expires_at)
+            (document_id, contract_id, tenant_id, signer_name, signer_email, token, status, expires_at)
          VALUES
-            (:document_id, :contract_id, :signer_name, :signer_email, :token, 'pending', :expires_at)"
+            (:document_id, :contract_id, :tenant_id, :signer_name, :signer_email, :token, 'pending', :expires_at)"
     );
     $stmt->execute([
         'document_id'  => $documentId,
         'contract_id'  => $contractId,
+        'tenant_id'    => $tenantId,
         'signer_name'  => $signerName,
         'signer_email' => $signerEmail,
         'token'        => $token,

@@ -10,6 +10,7 @@
     const PROPS_API   = 'api/properties.php';
     const LEADS_API   = 'api/leads.php';
     const CLIENTS_API = 'api/clients.php';
+    const TENANTS_API = 'api/tenants.php';
 
     const vp            = window.App?.viewParams || {};
     const appointmentId = vp.appointmentId || null;
@@ -73,10 +74,11 @@
     }
 
     async function loadDropdowns() {
-        const [props, leads, clients, agentsJson] = await Promise.all([
+        const [props, leads, clients, tenants, agentsJson] = await Promise.all([
             fetchList(PROPS_API, {}).catch(() => []),
             fetchList(LEADS_API, {}).catch(() => []),
             fetchList(CLIENTS_API, { status: 'active' }).catch(() => []),
+            fetchList(TENANTS_API, { status: 'active' }).catch(() => []),
             fetch(`${LEADS_API}?action=agents`).then(r => r.json()).catch(() => ({})),
         ]);
 
@@ -93,6 +95,8 @@
             leads.map(l => `<option value="${l.id}">${esc(l.surname)} ${esc(l.name)}</option>`).join('');
         $('ape-client').innerHTML = '<option value="">— Nessuno —</option>' +
             clients.map(c => `<option value="${c.id}">${esc(c.surname)} ${esc(c.name)}</option>`).join('');
+        $('ape-tenant').innerHTML = '<option value="">— Nessuno —</option>' +
+            tenants.map(t => `<option value="${t.id}">${esc(t.surname)} ${esc(t.name)}</option>`).join('');
         $('ape-agent').innerHTML = '<option value="">— Nessuno —</option>' +
             (agentsJson.data || []).map(a => `<option value="${a.id}">${esc(a.username)}</option>`).join('');
     }
@@ -177,11 +181,13 @@
         const box = $('ape-notify-warning');
         if (!$('ape-notify').checked) { box.hidden = true; return; }
 
-        const hasCounterpart = $('ape-lead').value || $('ape-client').value;
+        // L'inquilino conta come destinatario da phase98: senza, l'avviso
+        // diceva "non parte niente" su un promemoria che invece parte.
+        const hasCounterpart = $('ape-lead').value || $('ape-client').value || $('ape-tenant').value;
         const status = $('ape-status').value;
 
         if (!hasCounterpart) {
-            box.textContent = 'Nessun promemoria verrà inviato: seleziona un lead o un cliente a cui scrivere.';
+            box.textContent = 'Nessun promemoria verrà inviato: seleziona un lead, un cliente o un inquilino a cui scrivere.';
             box.hidden = false;
         } else if (status !== 'scheduled') {
             box.textContent = 'Nessun promemoria verrà inviato: l\'appuntamento non è in stato "Programmato".';
@@ -199,6 +205,7 @@
         $('ape-property').value = a.property_id || '';
         $('ape-lead').value = a.lead_id || '';
         $('ape-client').value = a.client_id || '';
+        $('ape-tenant').value = a.tenant_id || '';
         $('ape-agent').value = a.agent_id || '';
         $('ape-date').value = toLocal(a.appointment_date);
         $('ape-duration').value = a.duration_minutes ?? 60;
@@ -219,6 +226,7 @@
             property_id:      $('ape-property').value,
             lead_id:          $('ape-lead').value || null,
             client_id:        $('ape-client').value || null,
+            tenant_id:        $('ape-tenant').value || null,
             agent_id:         $('ape-agent').value || null,
             appointment_type: $('ape-type').value,
             appointment_date: $('ape-date').value,
@@ -271,7 +279,7 @@
             b.addEventListener('click', () => setLocation(b.dataset.loc));
         });
 
-        ['ape-notify', 'ape-lead', 'ape-client', 'ape-status'].forEach(id => {
+        ['ape-notify', 'ape-lead', 'ape-client', 'ape-tenant', 'ape-status'].forEach(id => {
             $(id).addEventListener('change', refreshNotifyWarning);
         });
 

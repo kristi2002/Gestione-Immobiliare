@@ -51,6 +51,7 @@
         els.registryBody       = document.getElementById('meters-registry-tbody');
         els.registryPagination = document.getElementById('meters-registry-pagination');
         els.showInactive       = document.getElementById('meters-show-inactive');
+        els.pendingOnly        = document.getElementById('meters-pending-only');
         els.registryTodo       = document.getElementById('meters-registry-todo');
 
         bindEvents();
@@ -256,6 +257,9 @@
         els.search.addEventListener('input', debounce(applyFilters, 400));
         els.propFilter.addEventListener('change', applyFilters);
         els.typeFilter.addEventListener('change', applyFilters);
+        // Ricarica le sole letture: il censimento qui sotto non ha autoletture
+        // da confermare, e svuotarlo direbbe una cosa falsa sui contatori.
+        els.pendingOnly?.addEventListener('change', () => { currentPage = 1; loadReadings(); });
 
         els.propSelect.addEventListener('change', () => loadMetersFor(els.propSelect.value));
         els.meterSel.addEventListener('change', syncNewMeterFields);
@@ -346,6 +350,7 @@
         if (search) params.set('search', search);
         if (prop) params.set('property_id', prop);
         if (type) params.set('meter_type', type);
+        if (els.pendingOnly?.checked) params.set('pending', '1');
         params.set('page', currentPage);
         params.set('limit', PAGE_LIMIT);
 
@@ -405,10 +410,34 @@
                 </a>`;
     }
 
+    /**
+     * Da dove viene il numero.
+     *
+     * phase98 ha separato la lettura fatta dall'agenzia dall'AUTOLETTURA
+     * dichiarata dall'inquilino, e la seconda nasce non verificata. Finche' non
+     * lo si vede in elenco, le due si leggono identiche: si conguaglia su un
+     * numero che nessuno e' andato a controllare, credendo sia stato letto.
+     */
+    function renderOriginHtml(r) {
+        if (r.source !== 'tenant') return '';
+
+        const who = r.submitted_by_name ? ` da ${r.submitted_by_name}` : '';
+        return r.verified_at
+            ? `<div class="mtr-origin mtr-origin--ok" title="Autolettura${esc(who)}, confermata dall'agenzia">`
+              + `<i data-lucide="check"></i> autolettura confermata</div>`
+            : `<div class="mtr-origin mtr-origin--todo" title="Dichiarata dall'inquilino${esc(who)}: da confermare prima di usarla per un conguaglio">`
+              + `<i data-lucide="clock"></i> autolettura da confermare</div>`;
+    }
+
     function renderRows(items) {
         els.tbody.classList.remove('is-loading');
         if (!items.length) {
-            els.tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">Nessuna lettura trovata.</td></tr>';
+            // Con il filtro attivo "nessuna lettura trovata" si legge come un
+            // guasto: qui zero e' la risposta giusta, e va detto cosi'.
+            const msg = els.pendingOnly?.checked
+                ? 'Nessuna autolettura in attesa: sono state confermate tutte.'
+                : 'Nessuna lettura trovata.';
+            els.tbody.innerHTML = `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:2rem;">${msg}</td></tr>`;
             return;
         }
 
@@ -425,7 +454,7 @@
                     <span class="badge">${esc(typeLabel)}</span>
                     ${meterBits ? `<div class="text-muted"><small>${esc(meterBits)}</small></div>` : ''}
                 </td>
-                <td data-label="Lettura">${esc(reading)}</td>
+                <td data-label="Lettura">${esc(reading)}${renderOriginHtml(r)}</td>
                 <td data-label="Consumo">${deltaHtml}</td>
                 <td data-label="Data">${formatDate(r.reading_date)}</td>
                 <td data-label="Prova">${renderPhotoCell(r)}</td>
@@ -435,10 +464,33 @@
             </tr>`;
         }).join('');
 
+        // Le righe servono al menu, che deve sapere se questa lettura e' una
+        // autolettura da confermare: `RowMenu.bind` aggancia una volta sola e
+        // legge questa proprieta' all'apertura, non alla prima pagina.
+        els.tbody._items = items;
+
+        // Senza questa riga i `<i data-lucide>` disegnati adesso restano lettere
+        // vuote: l'idratazione globale avviene al caricamento della vista, non a
+        // ogni ridisegno della tabella.
+        if (window.lucide) window.lucide.createIcons();
     }
 
     function bindRowMenu() {
-        window.RowMenu.bind(els.tbody, btn => [
+        window.RowMenu.bind(els.tbody, btn => {
+        const row = (els.tbody._items || []).find(x => String(x.id) === String(btn.dataset.id)) || {};
+        const isTenantReading = row.source === 'tenant';
+
+        return [
+            // Solo sulle autoletture: una lettura dell'agenzia nasce gia' buona,
+            // e l'API rifiuterebbe comunque di "confermarla".
+            isTenantReading
+                ? (row.verified_at
+                    ? { label: 'Rimetti in attesa', icon: 'rotate-ccw',
+                        onClick: () => setVerification(btn.dataset.id, 'unverify') }
+                    : { label: 'Conferma autolettura', icon: 'check-circle',
+                        onClick: () => setVerification(btn.dataset.id, 'verify') })
+                : null,
+            isTenantReading ? { sep: true } : null,
             { label: 'Modifica', icon: 'pencil', onClick: async () => {
                 try {
                     const res  = await fetch(`${API}?id=${btn.dataset.id}`);
@@ -453,7 +505,28 @@
                 deleteTargetId = btn.dataset.id;
                 els.delModal.hidden = false;
             } },
-        ]);
+        ];
+        });
+    }
+
+    /**
+     * Conferma o rimette in attesa un'autolettura.
+     *
+     * Non tocca il valore: se il numero e' sbagliato si corregge con «Modifica»
+     * e poi si conferma, cosi' resta scritto che qualcuno l'ha guardato.
+     */
+    async function setVerification(id, action) {
+        try {
+            const res  = await fetch(`${API}?id=${encodeURIComponent(id)}&action=${action}`, { method: 'PATCH' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            showAlert(action === 'verify'
+                ? 'Autolettura confermata: da adesso vale come una lettura dell\'agenzia.'
+                : 'Autolettura rimessa in attesa di conferma.', 'success');
+            loadReadings();
+        } catch (e) {
+            showAlert(e.message, 'error');
+        }
     }
 
     function openModal(item = null) {
