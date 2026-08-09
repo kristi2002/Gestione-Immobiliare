@@ -88,10 +88,23 @@ export default {
         },
     ],
 
-    beforeSave(payload) {
+    beforeSave(payload, form) {
         // È questo campo, e solo questo, a far comparire la riga nella bacheca
-        // Manutenzione (api/reminders.php:182).
-        payload.request_type = 'maintenance';
+        // (api/reminders.php). In CREAZIONE è 'maintenance': un ticket aperto
+        // dall'agenzia è un intervento.
+        //
+        // In MODIFICA non si tocca. La bacheca oggi mostra tutte e cinque le
+        // richieste del portale: fissarlo qui avrebbe riclassificato come
+        // «manutenzione» il «mi serve copia del contratto» di un inquilino,
+        // alla prima correzione di un refuso — e lui avrebbe visto cambiare
+        // sotto gli occhi il tipo che aveva scelto.
+        if (!form?.isEdit) {
+            payload.request_type = 'maintenance';
+        } else {
+            // La PUT conserva le chiavi che non arrivano (updateReminder legge
+            // la riga esistente): non mandarla è il modo di lasciarla com'è.
+            delete payload.request_type;
+        }
         // Un intervento è una cosa singola, non una ricorrenza, e non è una
         // regola a evento: senza questi due l'API applicherebbe i suoi valori di
         // ripiego e la riga finirebbe fra le automazioni.

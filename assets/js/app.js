@@ -222,7 +222,7 @@
             commissions:           'Provvigioni',
             surveys:               'Sondaggi',
             forecast:              'Previsioni',
-            maintenance_workflow:  'Manutenzione',
+            maintenance_workflow:  'Manutenzione e richieste',
             whatsapp_inbox:        'WhatsApp Inbox',
             property_applications: 'Richieste immobili',
             aml:                   'Antiriciclaggio',

@@ -195,7 +195,7 @@ if ($brandEyebrow === '') { $brandEyebrow = mb_strtoupper($tagline, 'UTF-8'); }
                     <summary><span class="nav-group-label">Gestione</span><span class="nav-group-arrow">▾</span></summary>
                     <ul>
                         <?php if (canAccessView('maintenance_workflow')): ?>
-                        <li><a href="view.php?name=maintenance_workflow" class="nav-link" data-view="maintenance_workflow"><i class="nav-icon" data-lucide="wrench"></i><span class="nav-label">Manutenzione</span></a></li>
+                        <li><a href="view.php?name=maintenance_workflow" class="nav-link" data-view="maintenance_workflow"><i class="nav-icon" data-lucide="wrench"></i><span class="nav-label">Manutenzione e richieste</span></a></li>
                         <?php endif; ?>
                         <?php if (canAccessView('insurance')): ?>
                         <li><a href="view.php?name=insurance" class="nav-link" data-view="insurance"><i class="nav-icon" data-lucide="shield-check"></i><span class="nav-label">Assicurazioni</span></a></li>

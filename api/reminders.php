@@ -31,11 +31,21 @@ apiHandleOptions();
 const REMINDER_STATUSES = ['pending', 'completed', 'cancelled'];
 
 /**
- * Valori ammessi per `request_type`. La colonna e' un varchar libero (phase
- * originaria) ma la bacheca cerca esattamente 'maintenance': una stringa
- * qualunque creerebbe un intervento che nessuna schermata mostra.
+ * Valori ammessi per `request_type`.
+ *
+ * Era `['maintenance']` e basta, mentre il portale inquilino ne scrive cinque
+ * (config/tenant_requests.php). Le conseguenze non erano teoriche: una
+ * richiesta di tipo `info`, `document`, `appointment` o `other` non compariva
+ * nella bacheca — e, peggio, non si poteva nemmeno SALVARE. Il PUT rilegge la
+ * riga esistente per le chiavi omesse, si ritrovava il tipo vero fra le mani e
+ * lo rifiutava: «Tipo di richiesta non valido» su una riga scritta
+ * dall'applicazione stessa. Quattro richieste su cinque erano di sola lettura
+ * per l'agenzia.
+ *
+ * La lista e' quindi una sola, condivisa, e sta dove la leggono entrambi i
+ * lati. Vedi config/tenant_requests.php per il perche' non e' una copia.
  */
-const REMINDER_REQUEST_TYPES = ['maintenance'];
+const REMINDER_REQUEST_TYPES = TENANT_REQUEST_TYPES;
 
 /** enum reminders.maintenance_status. */
 const REMINDER_MAINTENANCE_STATUSES = ['aperta', 'in_lavorazione', 'completata', 'chiusa'];
@@ -122,7 +132,11 @@ function listReminders(PDO $db): void
     $filterLeadId    = isset($_GET['lead_id'])     ? (int) $_GET['lead_id']     : null;
     $filterAgentId   = isset($_GET['assigned_agent_id']) ? (int) $_GET['assigned_agent_id'] : null;
     $notifyClient    = isset($_GET['notify_client']) ? (int) $_GET['notify_client'] : null;
-    $maintenanceOnly = !empty($_GET['type']) && $_GET['type'] === 'maintenance';
+    // `type=maintenance` = solo interventi (comportamento storico, lasciato
+    // intatto per chi lo chiama gia'). `type=requests` = tutte le richieste
+    // dell'inquilino, che e' cio' che la bacheca chiede da oggi.
+    $typeScope       = trim($_GET['type'] ?? '');
+    $filterReqType   = trim($_GET['request_type'] ?? '');
     $filterPriority  = trim($_GET['priority'] ?? '');
     $filterMStatus   = trim($_GET['maintenance_status'] ?? '');
     // series=parents → solo le righe "madre": una serie ricorrente conta come
@@ -221,13 +235,25 @@ function listReminders(PDO $db): void
         $where .= ' AND r.notify_client = :notify_client';
         $params['notify_client'] = $notifyClient;
     }
-    // Maintenance board: show only genuine maintenance work-orders, not every
-    // reminder. New tenant requests are tagged request_type='maintenance';
-    // older untagged rows are matched by their "[Richiesta maintenance]" title.
-    if ($maintenanceOnly) {
+    // Perimetro della bacheca. In tutti i casi restano fuori i promemoria
+    // interni dell'agenzia, che non sono richieste di nessuno.
+    //
+    // Le righe vecchie non hanno `request_type` (la colonna e' arrivata dopo) e
+    // si riconoscono solo dal titolo "[Richiesta <tipo>]" che il portale
+    // scriveva gia' allora: senza quel ramo lo storico sparirebbe dalla pagina.
+    if ($filterReqType !== '' && in_array($filterReqType, REMINDER_REQUEST_TYPES, true)) {
+        $where .= " AND (r.request_type = :req_type
+                      OR (r.request_type IS NULL AND r.title LIKE :req_marker))";
+        $params['req_type']   = $filterReqType;
+        $params['req_marker'] = '[Richiesta ' . $filterReqType . ']%';
+    } elseif ($typeScope === 'maintenance') {
         $where .= " AND (r.request_type = 'maintenance'
                       OR (r.request_type IS NULL AND r.title LIKE :maint_marker))";
         $params['maint_marker'] = '[Richiesta maintenance]%';
+    } elseif ($typeScope === 'requests') {
+        $where .= " AND (r.request_type IN (" . tenantRequestTypesSqlList() . ")
+                      OR (r.request_type IS NULL AND r.title LIKE :any_marker))";
+        $params['any_marker'] = '[Richiesta %';
     }
     if ($filterPriority !== '') {
         $where .= ' AND r.priority = :priority';

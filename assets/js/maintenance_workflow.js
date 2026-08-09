@@ -12,6 +12,24 @@
     function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
+    /**
+     * I tipi di richiesta che il portale inquilino sa creare, con la loro
+     * etichetta. Rispecchia TENANT_REQUEST_LABELS di config/tenant_requests.php:
+     * la lista autorevole e' li', questa e' la sua faccia in pagina.
+     *
+     * Finche' la bacheca ha filtrato solo 'maintenance', le altre quattro
+     * finivano nell'elenco Promemoria mescolate alle scadenze interne — cioe'
+     * un inquilino chiedeva un documento e nessuno se ne accorgeva.
+     */
+    const REQUEST_TYPE_LABELS = {
+        maintenance: 'Manutenzione',
+        document:    'Documento',
+        info:        'Informazioni',
+        appointment: 'Appuntamento',
+        other:       'Altro',
+    };
+    const REQUEST_TYPES = Object.keys(REQUEST_TYPE_LABELS);
+
     const STATUS_LABELS = {
         aperta:        'Aperta',
         in_lavorazione: 'In lavorazione',
@@ -48,6 +66,7 @@
         els.propFilter     = document.getElementById('mw-property-filter');
         els.statusFilter   = document.getElementById('mw-status-filter');
         els.priorityFilter = document.getElementById('mw-priority-filter');
+        els.typeFilter     = document.getElementById('mw-type-filter');
         els.tableView      = document.getElementById('mw-table-view');
         els.kanbanView     = document.getElementById('mw-kanban-view');
         els.supplierModal  = document.getElementById('mw-supplier-modal');
@@ -90,6 +109,7 @@
         els.propFilter.addEventListener('change', () => { currentPage = 1; loadRequests(); });
         els.statusFilter.addEventListener('change', () => { currentPage = 1; loadRequests(); });
         els.priorityFilter.addEventListener('change', () => { currentPage = 1; loadRequests(); });
+        els.typeFilter?.addEventListener('change', () => { currentPage = 1; loadRequests(); });
 
         // Supplier modal
         document.getElementById('mw-supplier-close').addEventListener('click', closeSupplierModal);
@@ -158,17 +178,21 @@
 
     async function loadRequests() {
         const params = new URLSearchParams();
-        params.set('type', 'maintenance');
+        // 'requests' e non 'maintenance': la pagina raccoglie tutto quello che
+        // un inquilino puo' mandare, non solo i guasti.
+        params.set('type', 'requests');
 
         const search   = els.search.value.trim();
         const prop     = els.propFilter.value;
         const status   = els.statusFilter.value;
         const priority = els.priorityFilter.value;
+        const reqType  = els.typeFilter?.value || '';
 
         if (search)   params.set('search', search);
         if (prop)     params.set('property_id', prop);
         if (status)   params.set('maintenance_status', status);
         if (priority) params.set('priority', priority);
+        if (reqType)  params.set('request_type', reqType);
         params.set('page', currentPage);
         // La bacheca non ha un impaginatore — il suo `#mw-pagination` vive
         // dentro `#mw-table-view`, che in vista kanban e' nascosto. Chiedendo
@@ -290,6 +314,14 @@
         const bits = [];
         const photos = Number(r.photo_count || 0);
 
+        // Il tipo scelto dall'inquilino. Con cinque tipi nella stessa pagina,
+        // senza questo un «mi serve il contratto» e una perdita d'acqua si
+        // leggono uguali finche' non si apre la riga.
+        const type = String(r.request_type || '');
+        if (type && type !== 'maintenance' && REQUEST_TYPE_LABELS[type]) {
+            bits.push(`<span class="mw-tag mw-tag--type">${esc(REQUEST_TYPE_LABELS[type])}</span>`);
+        }
+
         if (photos > 0) {
             // Cliccabile: la foto e' il motivo per cui molte segnalazioni si
             // capiscono in due secondi invece che con una telefonata. Aprire il
@@ -387,7 +419,12 @@
                 const tenantName   = r.tenant_name || extractTenantFromNote(r.description) || '—';
                 const title        = r.title || (r.description ? r.description.substring(0, 60) : '—');
 
+                const typeLabel = REQUEST_TYPE_LABELS[String(r.request_type || '')];
+                const typeTag = (r.request_type && r.request_type !== 'maintenance' && typeLabel)
+                    ? `<span class="mw-tag mw-tag--type">${esc(typeLabel)}</span>` : '';
+
                 return `<div class="card" style="padding:0.75rem;font-size:0.85rem;cursor:default;" data-id="${r.id}">
+                    ${typeTag ? `<div class="mw-tags" style="margin:0 0 4px;">${typeTag}</div>` : ''}
                     <div style="font-weight:600;margin-bottom:4px;">${esc(title)}</div>
                     ${r.asset_name ? `<div class="text-muted" style="margin-bottom:6px;"><i data-lucide="package"></i> ${esc([r.asset_name, r.asset_brand, r.asset_model].filter(Boolean).join(' '))}</div>` : ''}
                     <div class="text-muted" style="margin-bottom:6px;"><i data-lucide="user"></i> ${esc(tenantName)}</div>
@@ -574,16 +611,8 @@
 
     // ---- Risposta all'inquilino --------------------------------------------
 
-    /**
-     * Il perimetro che il portale usa per RILEGGERE le richieste: inquilino
-     * agganciato piu' un `request_type` fra quelli che il portale sa creare.
-     * La stessa condizione la riapplica l'API (config/tenant_requests.php) —
-     * qui serve solo a non offrire un pulsante che verrebbe rifiutato.
-     */
-    const TENANT_REQUEST_TYPES = ['maintenance', 'document', 'info', 'appointment', 'other'];
-
     function isTenantRequest(r) {
-        return !!r.tenant_id && TENANT_REQUEST_TYPES.includes(String(r.request_type || ''));
+        return !!r.tenant_id && REQUEST_TYPES.includes(String(r.request_type || ''));
     }
 
     async function openReplyModal(requestId) {

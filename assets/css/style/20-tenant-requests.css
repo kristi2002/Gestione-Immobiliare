@@ -67,6 +67,15 @@
     color: var(--color-success-dark, #15803d);
 }
 
+/* Il tipo di richiesta. Neutro di proposito: dice di cosa si tratta, non
+   reclama attenzione come "Da rispondere". Compare solo sui tipi diversi da
+   'manutenzione', che su questa pagina e' il caso ovvio. */
+.mw-tag--type {
+    border-color: color-mix(in srgb, var(--color-primary, #3186d5) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary, #3186d5) 10%, transparent);
+    color: var(--color-primary-dark, #1e5f9e);
+}
+
 /* ── Filo diretto con l'inquilino (scheda inquilino → Messaggi) ──────────── */
 
 .tpm-thread {

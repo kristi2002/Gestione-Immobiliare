@@ -1,8 +1,12 @@
 <div class="maintenance-workflow-view">
     <div class="view-header">
         <div class="view-header__text">
-            <h2>Gestione Manutenzione</h2>
-            <p>Traccia e gestisci le richieste di manutenzione degli inquilini.</p>
+            <h2>Manutenzione e richieste</h2>
+            <!-- Il titolo diceva "Manutenzione" mentre l'inquilino puo' mandare
+                 cinque tipi di richiesta: gli altri quattro finivano fra i
+                 promemoria interni e nessuno li evadeva. Ora arrivano tutti
+                 qui, e il nome della pagina lo dice. -->
+            <p>Tutte le richieste che arrivano dagli inquilini — guasti, documenti, informazioni — e gli interventi aperti dall'agenzia.</p>
         </div>
         <div class="view-header__actions">
             <!-- Finora la bacheca si poteva solo leggere: l'unico punto del
@@ -25,6 +29,16 @@
         </div>
         <select id="mw-property-filter" class="form-select" style="max-width:240px;">
             <option value="">Tutti gli immobili</option>
+        </select>
+        <select id="mw-type-filter" class="form-select">
+            <option value="">Tutti i tipi</option>
+            <!-- Gli stessi cinque valori che il portale sa scrivere
+                 (config/tenant_requests.php). -->
+            <option value="maintenance">Manutenzione</option>
+            <option value="document">Documento</option>
+            <option value="info">Informazioni</option>
+            <option value="appointment">Appuntamento</option>
+            <option value="other">Altro</option>
         </select>
         <select id="mw-status-filter" class="form-select">
             <option value="">Tutti gli stati</option>
