@@ -1,0 +1,182 @@
+name: CI
+
+# Il cancello che non c'era.
+#
+# Fino a oggi l'unico workflow del repository era `deploy.yml`, che notifica
+# Coolify — cioe' nessuno verificava niente prima che una modifica finisse in
+# produzione. Un `php -l` mancato, un modulo ES rotto, una migrazione che non si
+# riesegue: si scoprivano dall'applicazione che rispondeva 500.
+#
+# ATTENZIONE, e va detto invece di lasciarlo credere: Coolify deploya al push
+# con un webhook suo, quindi questo workflow **non blocca** il deploy. Dice che
+# e' rotto, non lo impedisce. Per bloccarlo davvero servono i branch protection
+# di GitHub (merge solo con CI verde) piu' il deploy da tag invece che da push —
+# due decisioni di configurazione, non di codice.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  php:
+    name: PHP — sintassi e test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepara PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # La stessa minima dichiarata in composer.json. Le estensioni sono
+          # quelle che l'applicazione usa davvero: `gd` per le miniature (era
+          # assente in produzione contro quanto diceva DEPLOY.md), `intl` per
+          # la formattazione italiana degli importi.
+          php-version: '8.2'
+          extensions: mbstring, pdo_mysql, gd, intl, curl, zip
+          coverage: none
+
+      - name: Controllo di sintassi su tutto il PHP
+        run: |
+          # -print0/xargs -0: i percorsi con spazi non devono spezzare il ciclo.
+          # `|| exit 1` dentro sh -c perche' php -l non ferma xargs da solo.
+          find . -name '*.php' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Installa le dipendenze
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: PHPUnit
+        run: ./vendor/bin/phpunit --no-coverage
+
+  js:
+    name: JS — moduli e build degli asset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installa le dipendenze
+        run: npm ci --no-audit --no-fund
+
+      - name: Controllo di sintassi sui moduli ES
+        run: |
+          # `node --check` su un .js tratta il file come CommonJS e PASSA su un
+          # modulo ES rotto: va copiato in .mjs perche' il controllo sia vero.
+          # (In browser un modulo rotto non da' errore: semplicemente non parte.)
+          fail=0
+          tmp=$(mktemp -d)
+          while IFS= read -r f; do
+            cp "$f" "$tmp/check.mjs"
+            if ! node --check "$tmp/check.mjs" 2> "$tmp/err"; then
+              echo "::error file=$f::$(head -n2 "$tmp/err" | tr '\n' ' ')"
+              fail=1
+            fi
+          done < <(find assets/js -name '*.js' -not -path '*/dist/*')
+          exit $fail
+
+      - name: Build degli asset
+        run: npm run build:assets
+
+      - name: Il bundle copre tutti i layer CSS
+        run: |
+          # `index.php` serve assets/dist/app.min.css e SALTA style.css: un layer
+          # nuovo aggiunto a style.css ma non a bundle.css non arriva in
+          # produzione, e in locale sembra funzionare perche' si guarda il file
+          # sorgente. Le due catene devono elencare gli stessi file.
+          diff <(grep -oE 'style/[0-9a-z._-]+\.css' assets/css/style.css) \
+               <(grep -oE 'style/[0-9a-z._-]+\.css' assets/css/bundle.css) \
+            || { echo "::error::style.css e bundle.css elencano layer diversi"; exit 1; }
+
+  migrations:
+    name: Migrazioni — applicabili e rieseguibili
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: gestionale_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -pci"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_mysql, gd, intl, curl
+          coverage: none
+
+      - name: Configura l'ambiente
+        # Si SCRIVE un .env invece di esportare delle variabili: `loadEnv()`
+        # sovrascrive `$_ENV`/`putenv()` senza guardare cosa c'era prima, quindi
+        # un .env presente vince sulle variabili d'ambiente. In produzione non
+        # e' un problema (.dockerignore tiene .env fuori dall'immagine, e li'
+        # comandano le variabili di Coolify), ma in CI un `DB_NAME=x php ...`
+        # verrebbe ignorato in silenzio — e i comandi girerebbero sul database
+        # sbagliato senza dirlo.
+        run: |
+          cat > .env <<'ENV'
+          APP_ENV=local
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8099
+          SESSION_NAME=gestionale_session
+          DB_HOST=127.0.0.1
+          DB_NAME=gestionale_ci
+          DB_USER=root
+          DB_PASS=ci
+          DB_CHARSET=utf8mb4
+          ENV
+
+      - name: Importa lo schema di base
+        # Le migrazioni NON creano il database da zero: partono da un baseline.
+        # `migrate.php` lo dice a modo suo (BASELINE_CUTOFF = 28, "gia' incluse
+        # in schema_production.sql") e su un database davvero vuoto muore alla
+        # prima FK verso `properties`, che nessuna migrazione crea.
+        run: mysql -h127.0.0.1 -uroot -pci gestionale_ci < database/schema_production.sql
+
+      - name: Applica le migrazioni pendenti
+        run: php database/migrate.php
+
+      - name: Riavviare il container non deve rompere nulla
+        run: |
+          # L'entrypoint esegue migrate.php a OGNI avvio, quindi la seconda
+          # corsa e' il caso NORMALE, non un caso limite: deve essere un no-op.
+          #
+          # Volutamente NON si azzera `schema_migrations` per riapplicare tutto:
+          # sarebbe una prova diversa e piu' severa di quella che il sistema
+          # promette, e infatti fallisce — phase35 rifa' un ALTER senza guardia
+          # e muore su "Duplicate column". A proteggerla e' il registro, che in
+          # produzione non viene mai svuotato. Le migrazioni recenti sono
+          # idempotente per conto proprio (CALL migration_add_column), le
+          # storiche no, e riscriverle a posteriori sarebbe rischio senza
+          # beneficio.
+          out=$(php database/migrate.php)
+          echo "$out"
+          echo "$out" | grep -q 'Nothing to migrate' \
+            || { echo "::error::la seconda esecuzione non e' un no-op"; exit 1; }
+
+      - name: Le costanti PHP non sono rimaste indietro sugli enum
+        run: php scripts/check_enum_drift.php
+
+      - name: Isolamento fra portali (IDOR)
+        run: |
+          # La verifica Tier 1 di CLAUDE.md, contro un server vero. Provisiona
+          # i propri account, prova a leggere i dati dell'altro, ripulisce.
+          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8099 -t . > /tmp/server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:8099/health.php && break
+            sleep 1
+          done
+          php scripts/verify_portal_isolation.php http://127.0.0.1:8099
