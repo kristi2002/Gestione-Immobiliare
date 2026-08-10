@@ -15,6 +15,7 @@
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../lib/schema_drift.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -62,16 +63,14 @@ try {
 }
 
 // ── Pending migrations ──────────────────────────────────────────────────────
+//
+// Il rilevamento sta in lib/schema_drift.php e non piu' qui: lo stesso conto
+// serve al cron, che e' cio' che ha reso questo controllo utile davvero. Per
+// cinque giorni ha detto correttamente `fail` nominando phase97/98/99 e non l'ha
+// letto nessuno — una sonda che si consulta non e' un allarme.
 try {
-    $applied = array_flip($db->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN));
-    $files   = glob(dirname(__DIR__) . '/database/migrations/*.sql') ?: [];
-    $pending = [];
-    foreach ($files as $f) {
-        $v = basename($f, '.sql');
-        if ($v === '000_helpers' || $v === 'README') continue;
-        if (preg_match('/^phase(\d+)/', $v, $m) && (int) $m[1] <= 28) continue; // baseline in schema_production.sql
-        if (!isset($applied[$v])) $pending[] = $v;
-    }
+    $applied = $db->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
+    $pending = pendingMigrations($db);
     if ($pending) {
         $add('migrations', 'fail', 'Migrazioni non applicate: ' . implode(', ', $pending) . '. Esegui php database/migrate.php.');
     } else {
