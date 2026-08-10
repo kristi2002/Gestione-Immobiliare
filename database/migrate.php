@@ -131,15 +131,124 @@ function migrationOrder(string $filename): int
     return PHP_INT_MAX;
 }
 
-/** Ensure 000_helpers.sql is executed (idempotent) even when baseline-seeded. */
+/**
+ * Assicura che le procedure helper esistano, senza pretendere di poterle
+ * distruggere.
+ *
+ * Prima si rieseguiva `000_helpers.sql` per intero a ogni avvio, e il file
+ * comincia con `DROP PROCEDURE IF EXISTS`. Funzionava finche' l'applicazione si
+ * collegava come root. Poi il DB_USER e' passato all'utente a privilegio minimo
+ * (`gestionale_app`) — cosa giusta, e una delle tre liabilita' storiche del
+ * progetto — e da quel momento:
+ *
+ *   1227 Access denied; you need (at least one of) the SYSTEM_USER privilege(s)
+ *
+ * Le procedure hanno definer `root@%`: da MySQL 8.0.22 un account normale non
+ * puo' toccare oggetti di un account di sistema, e nessun `IF EXISTS` lo evita
+ * (il controllo sui privilegi viene prima). Risultato: `migrate.php` moriva
+ * sulla PRIMA istruzione a ogni avvio del container, l'entrypoint riprovava
+ * venti volte e poi partiva comunque — con lo schema fermo e il codice avanti.
+ * Tre migrazioni non applicate, e l'unica traccia una riga nei log del
+ * container.
+ *
+ * Quindi: si crea cio' che MANCA e non si tocca cio' che c'e'. Un DROP non
+ * serve — una procedura presente e' gia' quella che serve.
+ *
+ * ⚠ Conseguenza da conoscere: cambiare il CORPO di un helper esistente non ha
+ * piu' effetto da qui, perche' il CREATE viene saltato. Non e' una svista, e'
+ * il prezzo di non poter fare DROP: se un helper va corretto, gli si da' un
+ * nome nuovo, oppure lo si ricrea in una migrazione dedicata eseguita da un
+ * utente che possa fare DROP. Il messaggio a video lo ricorda.
+ */
 function ensureHelpers(PDO $db, array $files): void
 {
+    $helperFile = null;
     foreach ($files as $file) {
         if (str_starts_with(basename($file), '000')) {
-            runSqlFile($db, $file);
-            return;
+            $helperFile = $file;
+            break;
         }
     }
+    if ($helperFile === null) {
+        return;
+    }
+
+    $existing = existingProcedures($db);
+    $created  = [];
+    $skipped  = [];
+
+    foreach (splitSqlStatements((string) file_get_contents($helperFile)) as $statement) {
+        $statement = trim($statement);
+        if ($statement === '') {
+            continue;
+        }
+
+        // `USE <db>`: si salta, esattamente come fa runSqlFile(). Il file ne
+        // porta uno con il nome del database di sviluppo scritto a mano
+        // (`USE gestione_immobiliare`), e in produzione lo schema si chiama
+        // `default`: eseguirlo qui sposterebbe la connessione su un altro
+        // database — o su nessuno. Saltandolo si resta dove il runner si e'
+        // collegato, che e' l'unico posto giusto.
+        //
+        // Questa riga e' costata: la prima versione di questa funzione non
+        // aveva il filtro, e su un database nuovo la connessione finiva su
+        // `gestione_immobiliare`, dove le procedure esistono gia' —
+        // "PROCEDURE migration_add_column already exists" su un DB vuoto.
+        if (preg_match('/^USE\s+[`\w]+\s*$/i', $statement)) {
+            continue;
+        }
+
+        // `DROP PROCEDURE IF EXISTS x`: se x c'e' non si tocca (non si puo' e non
+        // serve); se non c'e' e' un no-op che non vale una query.
+        if (preg_match('/^DROP\s+PROCEDURE\s+(?:IF\s+EXISTS\s+)?`?(\w+)`?/i', $statement)) {
+            continue;
+        }
+
+        if (preg_match('/^CREATE\s+(?:DEFINER\s*=\s*\S+\s+)?PROCEDURE\s+`?(\w+)`?/i', $statement, $m)) {
+            $name = $m[1];
+            if (isset($existing[strtolower($name)])) {
+                $skipped[] = $name;
+                continue;
+            }
+            $db->exec($statement);
+            $created[] = $name;
+            continue;
+        }
+
+        // Tutto il resto del file (eventuali SET, commenti già filtrati…).
+        $stmt = $db->query($statement);
+        if ($stmt instanceof PDOStatement) {
+            $stmt->closeCursor();
+        }
+    }
+
+    if ($created) {
+        echo 'Helper creati: ' . implode(', ', $created) . "\n";
+    }
+    if ($skipped) {
+        echo 'Helper già presenti (non ricreati — per cambiarne il corpo serve un nome nuovo): '
+            . implode(', ', $skipped) . "\n";
+    }
+}
+
+/**
+ * I nomi delle stored procedure presenti nello schema corrente, in minuscolo.
+ *
+ * @return array<string, true>
+ */
+function existingProcedures(PDO $db): array
+{
+    $stmt = $db->query(
+        "SELECT ROUTINE_NAME FROM information_schema.ROUTINES
+          WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_TYPE = 'PROCEDURE'"
+    );
+
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
+        $out[strtolower((string) $name)] = true;
+    }
+
+    return $out;
 }
 
 /**
