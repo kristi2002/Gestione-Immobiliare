@@ -28,6 +28,12 @@ A numbered 10-part set meant to be read in order; the best entry point for someo
 | [09 — Deployment & Operations](./guides/09-DEPLOYMENT-OPERATIONS.md) | Infra, env vars, Docker, migrations, cron, troubleshooting |
 | [10 — Roadmap, Gaps & Verification](./guides/10-ROADMAP-GAPS-VERIFICATION.md) | Gap register, roadmap, verification protocol, discrepancies |
 
+> **Due decisioni sono aperte e aspettano una risposta dall'agenzia** —
+> trattativa di vendita e affitti stagionali: vedi
+> **[SCOPE_APERTO.md](./planning/SCOPE_APERTO.md)**, che contiene anche le due
+> domande già scritte per Orlandi. Non sono difetti: sono funzioni che ha senso
+> costruire solo se l'agenzia fa quel tipo di lavoro.
+
 ---
 
 ## Architecture (`docs/architecture/`)
@@ -74,6 +80,7 @@ A numbered 10-part set meant to be read in order; the best entry point for someo
 
 | Doc | Description |
 |-----|-------------|
+| [SCOPE_APERTO.md](./planning/SCOPE_APERTO.md) | **Le due decisioni aperte** (trattativa di vendita, affitti stagionali) + le domande per l'agenzia |
 | [GAPS.md](./planning/GAPS.md) | Known bugs, security gaps, missing features — with severity ratings and fixes |
 | [ROADMAP_KILLER_FEATURES.md](./planning/ROADMAP_KILLER_FEATURES.md) | Roadmap of high-impact ("killer") features |
 | [FEATURE_IMPLEMENTATION_PLAN.md](./planning/FEATURE_IMPLEMENTATION_PLAN.md) | Implementation plan for planned features |
