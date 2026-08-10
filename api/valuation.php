@@ -17,6 +17,7 @@
 
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/omi.php';
+require_once __DIR__ . '/../lib/numbers.php';
 apiHandleOptions();
 
 const OMI_TYPES = ['appartamento', 'villa', 'ufficio', 'negozio', 'box', 'terreno', 'altro'];
@@ -692,23 +693,12 @@ function parseOmiCsv(string $csv): array
     // punto come separatore decimale trasforma 1.600 €/m² in 1,6 €/m² — un
     // errore di mille volte su ogni valore di vendita, che a valle diventa una
     // stima da 200 € per un appartamento e nessuno se ne accorge dal CSV.
-    $num = static function (?string $v): ?float {
-        $v = trim((string) $v, " \t\"'");
-        if ($v === '' || $v === '-') return null;
-
-        if (str_contains($v, ',')) {
-            // Virgola presente ⇒ italiano: i punti sono migliaia.
-            $v = str_replace(['.', ','], ['', '.'], $v);
-        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $v)) {
-            // Solo punti, ognuno seguito da esattamente tre cifre ⇒ migliaia.
-            $v = str_replace('.', '', $v);
-        }
-        // Ogni altro caso ("450", "1600.50", "1.6") è già un numero valido.
-
-        if (!is_numeric($v)) return null;
-        $f = (float) $v;
-        return $f > 0 ? $f : null;
-    };
+    //
+    // La regola viveva qui, dentro una closure, quindi era irraggiungibile: e
+    // l'import degli immobili — scritto dopo, altrove — l'ha rifatta col
+    // `(float)` ingenuo, ereditando esattamente il difetto che questo commento
+    // descrive. Ora sta in lib/numbers.php, dove chi importa la trova.
+    $num = static fn(?string $v): ?float => parseItalianAmount($v);
 
     $rows            = [];
     $best            = [];   // stato conservativo della riga già accettata

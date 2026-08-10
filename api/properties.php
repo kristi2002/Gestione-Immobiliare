@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../config/api_bootstrap.php';
 require_once __DIR__ . '/../config/matching.php';
 require_once __DIR__ . '/../config/automation_events.php';
+require_once __DIR__ . '/../lib/numbers.php';
 
 apiHandleOptions();
 
@@ -740,7 +741,11 @@ function validatePropertyInput(PDO $db, array $data): array
     $address   = trim($data['address'] ?? '');
     $city      = trim($data['city'] ?? '');
     $cap       = trim($data['cap'] ?? '') ?: null;
-    $province  = trim($data['province'] ?? '') ?: null;
+    // Maiuscolo come fa gia' api/clients.php:316. La colonna porta la SIGLA
+    // ("MC"), e su questa il resto dell'applicazione la mostra e la esporta:
+    // scritta a mano in minuscolo restava tale, e due immobili nella stessa
+    // provincia comparivano come due province diverse negli export.
+    $province  = strtoupper(trim($data['province'] ?? '')) ?: null;
     $sqm       = isset($data['sqm']) && $data['sqm'] !== '' ? (float) $data['sqm'] : null;
     $rooms     = isset($data['rooms']) && $data['rooms'] !== '' ? (int) $data['rooms'] : null;
     $bathrooms = isset($data['bathrooms']) && $data['bathrooms'] !== '' ? (int) $data['bathrooms'] : null;
@@ -1121,11 +1126,16 @@ function importProperties(PDO $db): void
             'address'    => $address,
             'city'       => $city,
             'cap'        => trim((string) ($row['cap'] ?? '')) ?: null,
-            'sqm'        => ($row['mq'] ?? '') !== '' ? (float) $row['mq'] : null,
+            // parseItalianNumber e non `(float)`: un CSV uscito da Excel in
+            // italiano scrive "250.000,00", e `(float)` di quella stringa fa
+            // DUECENTOCINQUANTA. Su un import da 150 righe non se ne accorge
+            // nessuno — ogni prezzo, preso da solo, sembra plausibile.
+            // Vedi lib/numbers.php per la regola.
+            'sqm'        => parseItalianNumber($row['mq'] ?? null),
             'rooms'      => ($row['stanze'] ?? '') !== '' ? (int) $row['stanze'] : null,
             'bathrooms'  => ($row['bagni'] ?? '') !== '' ? (int) $row['bagni'] : null,
             'status'     => $status,
-            'price'      => ($row['prezzo'] ?? '') !== '' ? (float) $row['prezzo'] : null,
+            'price'      => parseItalianNumber($row['prezzo'] ?? null),
             'price_type' => $priceType,
             'property_type' => $propertyType,
         ]);
