@@ -114,6 +114,90 @@ function istatFormatPeriod(int $year, int $month): string
 }
 
 /**
+ * Il periodo di riferimento di un contratto, o il motivo per cui non c'e'.
+ *
+ * Qui vive una distinzione che costa soldi confondere:
+ *
+ *   - base MAI impostata  → si ricade sulla decorrenza del contratto. E' il caso
+ *     di un contratto appena creato, ed e' giusto: la prima variazione si misura
+ *     dall'inizio della locazione.
+ *   - base impostata ma ILLEGGIBILE → si RIFIUTA di calcolare. Non si ricade su
+ *     niente.
+ *
+ * Il secondo ramo e' il punto. Prima si ricadeva sulla decorrenza in entrambi i
+ * casi, e su un contratto gia' adeguato una volta quel silenzio riapplicava la
+ * variazione dall'origine: base "2026" storpiata in "26-01" faceva riproporre il
+ * 7,37% del 2022→2026 sopra un canone che l'aveva gia' preso — 644,20 diventava
+ * 691,65, cioe' 47,45 al mese di troppo chiesti a una persona vera, senza che
+ * nessuna schermata segnalasse niente.
+ *
+ * Un dato che non si sa leggere non e' un dato mancante: e' un dato rotto, e la
+ * risposta giusta e' fermarsi.
+ *
+ * @return array{ok:bool, error:?string, year:?int, month:?int, index:?float}
+ */
+function istatContractBaseline(array $contract): array
+{
+    $raw   = trim((string) ($contract['istat_baseline_month'] ?? ''));
+    $index = ($contract['istat_baseline_index'] ?? null) !== null && $contract['istat_baseline_index'] !== ''
+        ? (float) $contract['istat_baseline_index']
+        : null;
+
+    if ($raw !== '') {
+        $p = istatParsePeriod($raw);
+        if ($p === null) {
+            return [
+                'ok'    => false,
+                'error' => 'Il «Mese indice base» del contratto («' . $raw . '») non è un periodo '
+                    . 'riconoscibile: correggilo in AAAA-MM (es. 2026-03) oppure con il solo anno '
+                    . '(es. 2026). Il calcolo si fermerebbe su una base sbagliata.',
+                'year' => null, 'month' => null, 'index' => null,
+            ];
+        }
+        return ['ok' => true, 'error' => null, 'year' => $p['year'], 'month' => $p['month'], 'index' => $index];
+    }
+
+    // Base vuota su un contratto GIA' adeguato: e' il terzo modo di rompersi, e
+    // l'unico che non passa da un valore sbagliato — passa da un valore
+    // cancellato. `last_istat_update` dice che l'applicazione ha gia' adeguato
+    // questo canone almeno una volta, quindi una base esisteva; se ora non c'e'
+    // piu' (campo svuotato nel form), ricadere sulla decorrenza rifarebbe il
+    // conto dall'origine su un canone che ha gia' preso quell'aumento.
+    if (!empty($contract['last_istat_update'])) {
+        return [
+            'ok'    => false,
+            'error' => 'Questo contratto è già stato adeguato il '
+                . date('d/m/Y', strtotime((string) $contract['last_istat_update']))
+                . ', ma il «Mese indice base» è vuoto: senza quel riferimento '
+                . 'l\'adeguamento ripartirebbe dall\'inizio della locazione e '
+                . 'verrebbe applicato due volte. Reinserisci il periodo dell\'ultimo '
+                . 'adeguamento.',
+            'year' => null, 'month' => null, 'index' => null,
+        ];
+    }
+
+    // Nessuna base scritta e nessun adeguamento fatto: vale la decorrenza. Il
+    // MESE conta — una locazione che parte a marzo si adegua sull'indice di
+    // marzo, non sulla media annua.
+    $start = (string) ($contract['start_date'] ?? '');
+    if ($start === '') {
+        return [
+            'ok'    => false,
+            'error' => 'Manca il periodo di riferimento: compila «Mese indice base» oppure la data di inizio.',
+            'year' => null, 'month' => null, 'index' => null,
+        ];
+    }
+
+    return [
+        'ok'    => true,
+        'error' => null,
+        'year'  => (int) substr($start, 0, 4),
+        'month' => (int) substr($start, 5, 2),
+        'index' => $index,
+    ];
+}
+
+/**
  * Lo stesso periodo, nella forma da SCRIVERE in `contracts.istat_baseline_month`.
  *
  * Non e' un doppione di `istatFormatPeriod()`: quella produce un'etichetta per

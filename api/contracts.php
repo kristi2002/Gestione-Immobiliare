@@ -637,7 +637,28 @@ function validateContractInput(array $data): array
     $registroDueDate     = $dateOrNull($data['imposta_registro_due_date'] ?? null);
     $istatEnabled        = !empty($data['istat_update_enabled']) ? 1 : 0;
     $istatBaselineIndex  = isset($data['istat_baseline_index']) && $data['istat_baseline_index'] !== '' ? (float) $data['istat_baseline_index'] : null;
-    $istatBaselineMonth  = $strOrNull($data['istat_baseline_month'] ?? null);
+    // «Mese indice base» arrivava dal form come testo libero e finiva in tabella
+    // senza un controllo. Due modi di rompersi, entrambi visti:
+    //
+    //   - più di 7 caratteri → la colonna è varchar(7), la scrittura FALLISCE e
+    //     il salvataggio del contratto muore con un errore database generico;
+    //   - 7 caratteri o meno ma illeggibile («26-01», «gen 26», «2026-13») →
+    //     si salva in silenzio, e da quel momento l'adeguamento ISTAT parte da
+    //     una base sbagliata.
+    //
+    // Si normalizza attraverso il parser: quello che entra viene riscritto nella
+    // forma che il parser sa rileggere, e quello che il parser non riconosce
+    // viene rifiutato dicendo come si scrive.
+    $istatBaselineMonth = $strOrNull($data['istat_baseline_month'] ?? null);
+    if ($istatBaselineMonth !== null) {
+        require_once __DIR__ . '/../lib/istat.php';
+        $parsed = istatParsePeriod($istatBaselineMonth);
+        if ($parsed === null) {
+            apiError('«Mese indice base» non valido: usa AAAA-MM (es. 2026-03) '
+                . 'oppure il solo anno per la media annua (es. 2026).');
+        }
+        $istatBaselineMonth = istatStorablePeriod($parsed['year'], $parsed['month']);
+    }
     $lastIstatUpdate     = $dateOrNull($data['last_istat_update'] ?? null);
 
     if ($propertyId <= 0) {
@@ -744,21 +765,14 @@ function istatAdjustment(PDO $db, int $id): void
     $rent = isset($c['monthly_rent']) ? (float) $c['monthly_rent'] : 0.0;
     if ($rent <= 0) apiError('Il contratto non ha un canone mensile impostato.');
 
-    $baselineIndex = ($c['istat_baseline_index'] ?? null) !== null && $c['istat_baseline_index'] !== ''
-        ? (float) $c['istat_baseline_index'] : null;
+    // Periodo base: il campo «Mese indice base» se c'e', altrimenti la
+    // decorrenza. La distinzione fra "assente" e "illeggibile" sta in
+    // istatContractBaseline(): la seconda non ricade su niente, si ferma.
+    $base = istatContractBaseline($c);
+    if (!$base['ok']) apiError($base['error']);
 
-    // Periodo base: prima il campo «Mese indice base» del contratto — che fino a
-    // phase80 veniva salvato e mai letto — poi, se vuoto, il mese di decorrenza.
-    // Il MESE conta: una locazione che parte a marzo si adegua sull'indice di
-    // marzo, non sulla media annua, e per anni qui e' stato usato il solo anno.
-    $baselinePeriod = istatParsePeriod($c['istat_baseline_month'] ?? null);
-    if ($baselinePeriod === null && !empty($c['start_date'])) {
-        $start = (string) $c['start_date'];
-        $baselinePeriod = ['year' => (int) substr($start, 0, 4), 'month' => (int) substr($start, 5, 2)];
-    }
-    if ($baselinePeriod === null) {
-        apiError('Manca il periodo di riferimento: compila «Mese indice base» oppure la data di inizio del contratto.');
-    }
+    $baselineIndex  = $base['index'];
+    $baselinePeriod = ['year' => $base['year'], 'month' => $base['month']];
 
     // Bersaglio: quello chiesto, altrimenti l'ultimo indice pubblicato che
     // abbiamo in tabella. Puntare a `date('Y')` come prima significava chiedere
@@ -824,17 +838,13 @@ function applyIstatAdjustment(PDO $db, int $id): void
     $rent = (float) ($c['monthly_rent'] ?? 0);
     if ($rent <= 0) apiError('Il contratto non ha un canone mensile impostato.');
 
-    $baselineIndex = ($c['istat_baseline_index'] ?? null) !== null && $c['istat_baseline_index'] !== ''
-        ? (float) $c['istat_baseline_index'] : null;
+    // Stessa regola del calcolo: una base illeggibile ferma tutto. Qui conta
+    // ancora di piu', perche' questa funzione SCRIVE il canone.
+    $base = istatContractBaseline($c);
+    if (!$base['ok']) apiError($base['error']);
 
-    $baselinePeriod = istatParsePeriod($c['istat_baseline_month'] ?? null);
-    if ($baselinePeriod === null && !empty($c['start_date'])) {
-        $s = (string) $c['start_date'];
-        $baselinePeriod = ['year' => (int) substr($s, 0, 4), 'month' => (int) substr($s, 5, 2)];
-    }
-    if ($baselinePeriod === null) {
-        apiError('Manca il periodo di riferimento: compila «Mese indice base» oppure la data di inizio.');
-    }
+    $baselineIndex  = $base['index'];
+    $baselinePeriod = ['year' => $base['year'], 'month' => $base['month']];
 
     $target = istatParsePeriod($data['target_period'] ?? '') ?? istatLatestPeriod($db);
     if ($target === null) {

@@ -79,20 +79,20 @@ function processIstatAdjustments(PDO $db): array
     $target = istatLatestPeriod($db);
 
     foreach ($contracts as $c) {
-        $baseline = istatParsePeriod($c['istat_baseline_month'] ?? null);
-        if ($baseline === null) {
-            $s = (string) $c['start_date'];
-            $baseline = ['year' => (int) substr($s, 0, 4), 'month' => (int) substr($s, 5, 2)];
+        // Base illeggibile = si salta, non si indovina. Un promemoria costruito
+        // su una base sbagliata proporrebbe all'agenzia una cifra sbagliata, e
+        // l'agenzia la applicherebbe fidandosi — e' il modo peggiore in cui
+        // questo difetto potrebbe arrivare all'inquilino: automatizzato.
+        $base = istatContractBaseline($c);
+        if (!$base['ok']) {
+            $out['skipped']++;
+            continue;
         }
 
         $res = istatComputeAdjustment(
             $db,
             (float) $c['monthly_rent'],
-            [
-                'year'  => $baseline['year'],
-                'month' => $baseline['month'],
-                'index' => ($c['istat_baseline_index'] ?? null) > 0 ? (float) $c['istat_baseline_index'] : null,
-            ],
+            ['year' => $base['year'], 'month' => $base['month'], 'index' => $base['index']],
             $target
         );
 

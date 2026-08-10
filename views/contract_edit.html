@@ -158,7 +158,17 @@
                     </div>
                     <div class="form-group">
                         <label for="cte-istat-month">Mese indice base (AAAA-MM)</label>
-                        <input type="text" id="cte-istat-month" class="form-input" maxlength="7" placeholder="2024-01">
+                        <!-- `pattern` non e' decorazione: da questo campo dipende
+                             da quale indice parte l'adeguamento. Un valore che
+                             sta nei 7 caratteri ma non si sa rileggere («26-01»)
+                             veniva salvato in silenzio e faceva riapplicare la
+                             variazione dall'inizio, cioe' due volte. Il solo
+                             anno e' ammesso: significa media annua. -->
+                        <input type="text" id="cte-istat-month" class="form-input" maxlength="7"
+                               pattern="(19|20)[0-9]{2}([-/.](0?[1-9]|1[0-2]))?"
+                               placeholder="2024-01"
+                               title="AAAA-MM (es. 2024-01) oppure solo l'anno per la media annua (es. 2024)">
+                        <small class="form-hint">Solo l'anno = media annua.</small>
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>

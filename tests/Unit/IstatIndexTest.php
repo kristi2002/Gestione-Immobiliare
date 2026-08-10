@@ -1,5 +1,6 @@
 <?php
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../../lib/istat.php';
@@ -243,6 +244,82 @@ class IstatIndexTest extends TestCase
         foreach ([[2026, 0], [2026, 12], [1999, 1]] as [$y, $m]) {
             $this->assertLessThanOrEqual(7, strlen(istatStorablePeriod($y, $m)));
         }
+    }
+
+    // ── La base di un contratto: assente ≠ illeggibile ───────────────────
+    //
+    // La distinzione che costa soldi confondere. Ricadere sulla decorrenza e'
+    // giusto su un contratto mai adeguato, ed e' un doppio adeguamento su uno
+    // che lo e' gia' stato.
+
+    public function testBaseValidaSiUsaCosiComEE(): void
+    {
+        $b = istatContractBaseline([
+            'istat_baseline_month' => '2026-03',
+            'istat_baseline_index' => 123.4,
+            'start_date'           => '2022-01-01',
+        ]);
+
+        $this->assertTrue($b['ok']);
+        $this->assertSame(2026, $b['year']);
+        $this->assertSame(3, $b['month']);
+        $this->assertSame(123.4, $b['index']);
+    }
+
+    public function testBaseAssenteRicadeSullaDecorrenza(): void
+    {
+        // Contratto mai adeguato: la prima variazione si misura dall'inizio
+        // della locazione, e il MESE conta.
+        $b = istatContractBaseline([
+            'istat_baseline_month' => null,
+            'start_date'           => '2022-03-01',
+            'last_istat_update'    => null,
+        ]);
+
+        $this->assertTrue($b['ok']);
+        $this->assertSame(2022, $b['year']);
+        $this->assertSame(3, $b['month']);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function baseIlleggibileProvider(): array
+    {
+        // Tutti stanno in varchar(7), quindi si salvavano senza errore.
+        return [
+            'anno a due cifre'    => ['26-01'],
+            'mese inesistente'    => ['2026-13'],
+            'mese a parole corto' => ['gen 26'],
+            'testo qualunque'     => ['abc'],
+        ];
+    }
+
+    #[DataProvider('baseIlleggibileProvider')]
+    public function testBaseIlleggibileNonRicadeSuNiente(string $raw): void
+    {
+        // NON deve tornare la decorrenza: un dato che non si sa leggere e' rotto,
+        // non mancante, e proseguire vorrebbe dire adeguare due volte.
+        $b = istatContractBaseline([
+            'istat_baseline_month' => $raw,
+            'start_date'           => '2022-01-01',
+        ]);
+
+        $this->assertFalse($b['ok'], "«{$raw}» non deve passare");
+        $this->assertStringContainsString($raw, (string) $b['error'], 'l\'errore deve dire quale valore');
+        $this->assertNull($b['year']);
+    }
+
+    public function testBaseSvuotataSuContrattoGiaAdeguatoSiFerma(): void
+    {
+        // Il terzo modo di rompersi: non un valore sbagliato, un valore
+        // cancellato. `last_istat_update` prova che una base esisteva.
+        $b = istatContractBaseline([
+            'istat_baseline_month' => null,
+            'start_date'           => '2022-01-01',
+            'last_istat_update'    => '2026-08-10',
+        ]);
+
+        $this->assertFalse($b['ok']);
+        $this->assertStringContainsString('due volte', (string) $b['error']);
     }
 
     public function testIlCalcoloEsponeLaFormaMemorizzabile(): void
