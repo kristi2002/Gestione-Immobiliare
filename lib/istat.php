@@ -114,6 +114,28 @@ function istatFormatPeriod(int $year, int $month): string
 }
 
 /**
+ * Lo stesso periodo, nella forma da SCRIVERE in `contracts.istat_baseline_month`.
+ *
+ * Non e' un doppione di `istatFormatPeriod()`: quella produce un'etichetta per
+ * chi legge, e per la media annua scrive "2026 (media annua)" — diciotto
+ * caratteri che in una `varchar(7)` non entrano, e che `istatParsePeriod()`
+ * NON sa rileggere (torna null). Salvarla avrebbe rotto l'adeguamento
+ * dell'anno successivo in due modi insieme: la scrittura falliva, e se anche
+ * fosse passata la base non si sarebbe piu' potuta interpretare — si tornava
+ * alla data di inizio e si riapplicava la variazione dal principio, cioe' due
+ * volte sullo stesso canone.
+ *
+ * Qui si scrive la forma macchina, che `istatParsePeriod()` rilegge esatta:
+ * `2026-03` per un indice mensile, `2026` per la media annua.
+ */
+function istatStorablePeriod(int $year, int $month): string
+{
+    return $month > 0
+        ? sprintf('%04d-%02d', $year, $month)
+        : sprintf('%04d', $year);
+}
+
+/**
  * Numero decimale scritto all'italiana o all'inglese.
  *
  * L'indice FOI sta fra 90 e 140, quindi qui non esiste l'ambiguita' del
@@ -359,6 +381,9 @@ function istatComputeAdjustment(
         'baseline_period'  => $baselinePeriod,
         'target_index'     => round($targetIndex, 3),
         'target_period'    => istatFormatPeriod($targetFound['year'], $targetFound['month']),
+        // La stessa cosa in forma memorizzabile: chi applica l'adeguamento deve
+        // salvare la nuova base, e l'etichetta qui sopra non si rilegge.
+        'target_period_key' => istatStorablePeriod($targetFound['year'], $targetFound['month']),
         'target_year'      => $targetFound['year'],
         'variation_pct'    => round($variationPct, 3),
         'applied_pct'      => round($appliedPct, 3),

@@ -313,6 +313,8 @@ function renderCards() {
                 ? { label: 'Registra disdetta', icon: 'file-x', onClick: () => openTerminateModal(id) } : null,
             (canWrite && isLease && terminated)
                 ? { label: 'Annulla disdetta', icon: 'undo-2', onClick: () => cancelTermination(id) } : null,
+            (canWrite && isLease && !terminated && Number(c.istat_update_enabled))
+                ? { label: 'Adegua ISTAT', icon: 'trending-up', onClick: () => applyIstat(id) } : null,
             (window.canWrite !== false && next)
                 ? { label: `Avanza a “${STATUS_LABELS[next] || next}”`, icon: 'arrow-right',
                     onClick: () => advanceStatus(id) }
@@ -760,6 +762,50 @@ async function cancelTermination(id) {
         const res  = await fetch(`${API}?id=${encodeURIComponent(id)}&action=cancel_termination`, { method: 'POST' });
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
+        showAlert(json.data.message, 'success');
+        loadContracts();
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
+
+/**
+ * Adeguamento ISTAT: si mostra il conto, poi si applica.
+ *
+ * Due passaggi e non uno perche' qui si cambia il canone di due persone: prima
+ * si legge quanto diventa e da quando, poi si conferma. Il calcolo non tocca
+ * niente, quindi mostrarlo e' gratis.
+ */
+async function applyIstat(id) {
+    try {
+        const preview = await fetch(`${API}?id=${encodeURIComponent(id)}&action=istat_adjustment`)
+            .then(r => r.json());
+        if (!preview.success) throw new Error(preview.error);
+
+        const d = preview.data;
+        if (Number(d.new_rent) === Number(d.current_rent)) {
+            showAlert('La variazione ISTAT non cambia il canone: nessun adeguamento da applicare.', 'info');
+            return;
+        }
+
+        const money = v => '€ ' + Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const ok = await confirmDialog(
+            `Il canone passa da ${money(d.current_rent)} a ${money(d.new_rent)} `
+            + `(+${money(d.monthly_increase)} al mese, +${money(d.annual_increase)} l'anno).\n\n`
+            + `Variazione FOI ${d.baseline_period} → ${d.target_period}, applicata al ${Math.round(d.share * 100)}%.\n\n`
+            + `Le rate non incassate da oggi in avanti verranno allineate; quelle già pagate restano.`,
+            { title: 'Adegua ISTAT', confirmText: 'Applica' }
+        );
+        if (!ok) return;
+
+        const res = await fetch(`${API}?id=${encodeURIComponent(id)}&action=apply_istat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),   // decorrenza = oggi, deciso lato server
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
         showAlert(json.data.message, 'success');
         loadContracts();
     } catch (err) {

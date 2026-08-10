@@ -208,4 +208,56 @@ class IstatIndexTest extends TestCase
         $this->assertCount(2, $out['rows']);
         $this->assertSame(118.3, $out['rows']['2023-2']['index_value']);
     }
+
+    // ── Periodo da SCRIVERE in contracts.istat_baseline_month ────────────
+    //
+    // Applicare un adeguamento sposta la base al periodo appena usato: senza
+    // spostarla, l'anno dopo si ricalcola la variazione dall'inizio e si
+    // applica due volte sullo stesso canone. Perche' funzioni, il valore
+    // salvato deve tornare indietro dal parser — ed e' esattamente cio' che
+    // l'etichetta leggibile non fa.
+
+    public function testEtichettaLeggibileNonSiRilegge(): void
+    {
+        // La dimostrazione del difetto, tenuta come test: se un giorno qualcuno
+        // salvasse questa forma, la base diventerebbe illeggibile in silenzio.
+        $this->assertNull(istatParsePeriod(istatFormatPeriod(2026, 0)));
+    }
+
+    public function testFormaMemorizzabileTornaIndietroEsatta(): void
+    {
+        foreach ([[2026, 0], [2026, 3], [2030, 12], [2022, 1]] as [$y, $m]) {
+            $stored = istatStorablePeriod($y, $m);
+            $back   = istatParsePeriod($stored);
+
+            $this->assertNotNull($back, "«{$stored}» non si rilegge");
+            $this->assertSame($y, $back['year'], "anno perso in «{$stored}»");
+            $this->assertSame($m, $back['month'], "mese perso in «{$stored}»");
+        }
+    }
+
+    public function testFormaMemorizzabileStaInVarchar7(): void
+    {
+        // La colonna e' varchar(7): un valore piu' lungo non viene troncato, la
+        // scrittura FALLISCE (strict mode) e l'adeguamento si annulla tutto.
+        foreach ([[2026, 0], [2026, 12], [1999, 1]] as [$y, $m]) {
+            $this->assertLessThanOrEqual(7, strlen(istatStorablePeriod($y, $m)));
+        }
+    }
+
+    public function testIlCalcoloEsponeLaFormaMemorizzabile(): void
+    {
+        // Chi applica l'adeguamento deve trovarla nel risultato, senza doverla
+        // ricostruire (e sbagliare) per conto proprio.
+        $res = istatComputeAdjustment(
+            null,
+            600.0,
+            ['year' => 2022, 'month' => 0, 'index' => 110.0],
+            ['year' => 2026, 'month' => 0, 'index' => 123.0]
+        );
+
+        $this->assertTrue($res['ok']);
+        $this->assertArrayHasKey('target_period_key', $res);
+        $this->assertNotNull(istatParsePeriod($res['target_period_key']));
+    }
 }

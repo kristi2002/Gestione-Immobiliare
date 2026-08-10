@@ -15,16 +15,21 @@ require_once __DIR__ . '/../config/cron_guard.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/contract_expirations.php';
 require_once __DIR__ . '/../config/inventory_snapshots.php';
+require_once __DIR__ . '/../config/istat_adjustments.php';
 
 $db = getDB();
 
-// Due passaggi sullo stesso insieme di contratti: l'avviso PRIMA della scadenza
-// (promemoria a -30 giorni) e il verbale di riconsegna DOPO. Il secondo sta qui
-// e non in un cron proprio perche' la domanda e' la stessa — "quali locazioni
-// stanno finendo?" — e una risposta sola basta a entrambe.
+// Tre passaggi sullo stesso insieme di contratti: l'avviso PRIMA della scadenza
+// (ora sul termine di preavviso, non a -30 giorni), il verbale di riconsegna
+// DOPO, e l'adeguamento ISTAT durante. Stanno insieme perche' la domanda e' la
+// stessa — "quali locazioni chiedono attenzione oggi?" — e perche' aggiungere
+// una riga al crontab di produzione e' un'operazione a rischio: un filtro
+// sbagliato li' ha già tenuto fermi tutti i job per mesi. Un job che gira e'
+// meglio di un job perfetto che nessuno installa.
 $result = [
     'expirations' => processContractExpirations($db),
     'checkouts'   => processInventoryCheckouts($db),
+    'istat'       => processIstatAdjustments($db),
 ];
 
 require_once __DIR__ . '/../config/heartbeat.php';

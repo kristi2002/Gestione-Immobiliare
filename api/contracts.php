@@ -65,6 +65,9 @@ try {
             } elseif ($action === 'cancel_termination') {
                 if (!$id) apiError('ID contratto mancante.');
                 cancelContractTermination($db, $id);
+            } elseif ($action === 'apply_istat') {
+                if (!$id) apiError('ID contratto mancante.');
+                applyIstatAdjustment($db, $id);
             } else {
                 createContract($db);
             }
@@ -780,6 +783,138 @@ function istatAdjustment(PDO $db, int $id): void
     $result['note'] = 'Adeguamento pari al ' . (int) round($result['share'] * 100) . '% della variazione FOI '
         . $result['baseline_period'] . ' → ' . $result['target_period'] . '.';
     apiSuccess($result);
+}
+
+/**
+ * Applica l'adeguamento ISTAT: scrive il canone nuovo e allinea le rate future.
+ *
+ * `istat_adjustment` (GET) sapeva CALCOLARE da mesi, e si fermava li': tornava
+ * il numero e nessuno lo scriveva. In pratica l'adeguamento non si faceva —
+ * bisognava leggere la cifra, aprire il contratto, correggere il canone a mano
+ * e poi ricordarsi delle rate gia' generate. Ogni anno saltato e' un canone che
+ * resta indietro per il resto della locazione.
+ *
+ * Le rate: si aggiornano SOLO quelle non incassate e con scadenza dal mese di
+ * decorrenza in avanti. Una rata pagata e' un fatto, e riscriverne l'importo
+ * significherebbe far comparire una differenza contabile che non esiste.
+ */
+function applyIstatAdjustment(PDO $db, int $id): void
+{
+    require_once __DIR__ . '/../lib/istat.php';
+
+    $c = fetchContractRow($db, $id);
+
+    if (($c['contract_type'] ?? '') !== 'locazione') {
+        apiError('L\'adeguamento ISTAT riguarda solo i contratti di locazione.');
+    }
+    if (!empty($c['termination_notice_date'])) {
+        apiError('Su questo contratto è registrata una disdetta: non si adegua un canone che sta finendo.');
+    }
+
+    $data = apiGetJsonBody();
+
+    // La decorrenza: da quando vale il canone nuovo. Predefinita a oggi, ma
+    // l'adeguamento si applica dall'anniversario, che spesso e' passato da
+    // qualche giorno quando l'agente ci arriva.
+    $effective = trim((string) ($data['effective_from'] ?? '')) ?: date('Y-m-d');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $effective)) {
+        apiError('Data di decorrenza non valida.');
+    }
+
+    $rent = (float) ($c['monthly_rent'] ?? 0);
+    if ($rent <= 0) apiError('Il contratto non ha un canone mensile impostato.');
+
+    $baselineIndex = ($c['istat_baseline_index'] ?? null) !== null && $c['istat_baseline_index'] !== ''
+        ? (float) $c['istat_baseline_index'] : null;
+
+    $baselinePeriod = istatParsePeriod($c['istat_baseline_month'] ?? null);
+    if ($baselinePeriod === null && !empty($c['start_date'])) {
+        $s = (string) $c['start_date'];
+        $baselinePeriod = ['year' => (int) substr($s, 0, 4), 'month' => (int) substr($s, 5, 2)];
+    }
+    if ($baselinePeriod === null) {
+        apiError('Manca il periodo di riferimento: compila «Mese indice base» oppure la data di inizio.');
+    }
+
+    $target = istatParsePeriod($data['target_period'] ?? '') ?? istatLatestPeriod($db);
+    if ($target === null) {
+        apiError('Nessun indice ISTAT disponibile. Importa gli indici da Impostazioni → Indici ISTAT.');
+    }
+
+    $res = istatComputeAdjustment(
+        $db,
+        $rent,
+        ['year' => $baselinePeriod['year'], 'month' => $baselinePeriod['month'], 'index' => $baselineIndex],
+        $target
+    );
+    if (empty($res['ok'])) apiError($res['message'] ?? 'Calcolo ISTAT non riuscito.');
+
+    $newRent = (float) $res['new_rent'];
+    if (abs($newRent - $rent) < 0.01) {
+        apiSuccess([
+            'contract_id' => $id,
+            'applied'     => false,
+            'message'     => 'La variazione ISTAT non cambia il canone: nessuna modifica.',
+        ] + $res);
+    }
+
+    $db->beginTransaction();
+    try {
+        // Il canone nuovo, e il periodo appena usato diventa la nuova base:
+        // senza spostare la base, l'adeguamento dell'anno prossimo
+        // ricalcolerebbe la variazione dall'inizio e la applicherebbe due volte.
+        $db->prepare(
+            "UPDATE contracts
+                SET monthly_rent = :rent,
+                    istat_baseline_index = :bidx,
+                    istat_baseline_month = :bmonth,
+                    last_istat_update = :applied
+              WHERE id = :id"
+        )->execute([
+            'rent'    => $newRent,
+            'bidx'    => $res['target_index'],
+            // Forma macchina, non l'etichetta: vedi istatStorablePeriod().
+            'bmonth'  => $res['target_period_key'],
+            'applied' => $effective,
+            'id'      => $id,
+        ]);
+
+        $upd = $db->prepare(
+            "UPDATE payments
+                SET amount = :amount
+              WHERE contract_id = :id
+                AND due_date >= :eff
+                AND status IN ('pending','late')"
+        );
+        $upd->execute(['amount' => $newRent, 'id' => $id, 'eff' => $effective]);
+        $touched = $upd->rowCount();
+
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log('applyIstatAdjustment: ' . $e->getMessage());
+        apiError('Adeguamento non applicato: errore durante il salvataggio.', 500);
+    }
+
+    logActivity('update', 'contract', $id, sprintf(
+        'Adeguamento ISTAT applicato: canone %s → %s (%s%% di variazione %s → %s), %d rate allineate',
+        number_format($rent, 2, ',', ''), number_format($newRent, 2, ',', ''),
+        $res['applied_pct'], $res['baseline_period'], $res['target_period'], $touched
+    ));
+
+    apiSuccess($res + [
+        'contract_id'      => $id,
+        'applied'          => true,
+        'effective_from'   => $effective,
+        'payments_updated' => $touched,
+        'message'          => sprintf(
+            'Canone aggiornato da € %s a € %s dal %s.%s',
+            number_format($rent, 2, ',', '.'),
+            number_format($newRent, 2, ',', '.'),
+            date('d/m/Y', strtotime($effective)),
+            $touched ? " $touched rate future allineate." : ' Nessuna rata futura da allineare.'
+        ),
+    ]);
 }
 
 /**
