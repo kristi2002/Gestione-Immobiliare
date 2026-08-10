@@ -132,10 +132,15 @@
 
       <div>
         <div class="appt-photo">
-          <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=900&q=80"
-               alt="Consulente immobiliare Orlandi durante un colloquio con un cliente" loading="lazy" />
+          <!-- Era una foto stock caricata da images.unsplash.com: una chiamata a
+               un terzo (che riceve l'IP di chi apre la pagina) per mostrare
+               persone che non sono i consulenti dell'agenzia, sotto una didascalia
+               che dice "i NOSTRI consulenti". Ora e' un'immagine locale del
+               portafoglio: nessuna chiamata esterna e nessuna promessa falsa. -->
+          <img src="img/attico-mare.jpg"
+               alt="Un immobile del portafoglio Orlandi a Civitanova Marche" loading="lazy" />
           <div class="appt-photo__caption">
-            <strong>I nostri consulenti ti ascoltano</strong>
+            <strong>Ti aspettiamo in agenzia</strong>
             <span>Oltre 35 anni di esperienza sul mercato di Civitanova Marche</span>
           </div>
         </div>
@@ -274,7 +279,7 @@
   <div class="footer__bottom">
     <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
     <span>
-      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php">Cookie Policy</a> · <a href="#">Note legali</a>
+      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php#cookie">Cookie Policy</a> · <a href="../note-legali.php">Note legali</a>
     </span>
   </div>
 </footer>
@@ -400,5 +405,10 @@
     }
   });
 </script>
+
+<!-- Avviso cookie: il testo e' diverso da quello del gestionale perche' qui, a
+     differenza dell'area riservata, la pagina chiama dei terzi. Vedi
+     assets/js/cookie_consent.js. -->
+<script src="../assets/js/cookie_consent.js" data-message="Questo sito non usa cookie di profilazione. Alcune pagine richiamano risorse di terzi (caratteri Google, libreria della mappa), che ricevono il tuo indirizzo IP."></script>
 </body>
 </html>

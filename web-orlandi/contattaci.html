@@ -199,7 +199,7 @@
   <div class="footer__bottom">
     <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
     <span>
-      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php">Cookie Policy</a> · <a href="#">Note legali</a>
+      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php#cookie">Cookie Policy</a> · <a href="../note-legali.php">Note legali</a>
     </span>
   </div>
 </footer>
@@ -235,5 +235,10 @@
   sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setSidebar(false)));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') setSidebar(false); });
 </script>
+
+<!-- Avviso cookie: il testo e' diverso da quello del gestionale perche' qui, a
+     differenza dell'area riservata, la pagina chiama dei terzi. Vedi
+     assets/js/cookie_consent.js. -->
+<script src="../assets/js/cookie_consent.js" data-message="Questo sito non usa cookie di profilazione. Alcune pagine richiamano risorse di terzi (caratteri Google, libreria della mappa), che ricevono il tuo indirizzo IP."></script>
 </body>
 </html>

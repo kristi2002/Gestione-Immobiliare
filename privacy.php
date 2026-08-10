@@ -64,9 +64,27 @@ $updated      = date('d/m/Y');
        dei dati personali. Le richieste vanno inviate a
        <a href="mailto:<?= htmlspecialchars($agencyEmail) ?>"><?= htmlspecialchars($agencyEmail) ?></a>.</p>
 
-    <h2>7. Cookie</h2>
-    <p>La piattaforma utilizza esclusivamente cookie tecnici necessari al funzionamento (gestione della sessione).
-       Non vengono utilizzati cookie di profilazione senza consenso.</p>
+    <h2 id="cookie">7. Cookie e servizi di terze parti</h2>
+    <p><strong>Gestionale (area riservata).</strong> Utilizza esclusivamente cookie tecnici necessari al
+       funzionamento (gestione della sessione e protezione CSRF). Non vengono utilizzati cookie di
+       profilazione né strumenti di analisi.</p>
+
+    <p><strong>Sito pubblico.</strong> Non imposta cookie di profilazione, ma alcune pagine richiamano
+       risorse ospitate da terzi: aprendo la pagina, il browser contatta quei server, che ricevono
+       l'indirizzo IP e i dati tecnici della richiesta. È corretto saperlo, perché avviene prima di
+       qualunque clic:</p>
+    <ul>
+        <li><strong>Google Fonts</strong> (fonts.googleapis.com, fonts.gstatic.com) — caratteri tipografici.</li>
+        <li><strong>unpkg.com</strong> — la libreria della mappa (Leaflet).</li>
+        <li><strong>OpenStreetMap</strong> (tile.openstreetmap.org) — le mattonelle della mappa, solo
+            nella pagina Mappa e <em>solo dopo</em> che l'utente ha scelto di caricarla.</li>
+    </ul>
+    <p>Nessuno di questi servizi è usato per profilare i visitatori. Le mattonelle della mappa sono
+       l'unica risorsa subordinata a una scelta esplicita, perché è l'unica che può essere caricata
+       dopo l'apertura della pagina: per le altre la richiesta parte con la pagina stessa, e un
+       banner che chiedesse il consenso dopo sarebbe una formalità priva di effetto.</p>
+    <p class="muted">I cookie tecnici si possono cancellare dalle impostazioni del browser;
+       farlo comporta la disconnessione dall'area riservata.</p>
 
     <p class="muted" style="margin-top:40px"><a href="javascript:history.back()">← Torna indietro</a></p>
 </div>

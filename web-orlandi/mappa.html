@@ -40,6 +40,41 @@
     #listingsMap {
       height: 620px; border-radius: var(--radius); border: 1px solid var(--border);
       box-shadow: var(--shadow-md); z-index: 1;
+      position: relative; /* aggancio del velo del consenso */
+    }
+
+    /* Il velo che copre la mappa finche' l'utente non chiede di caricarla.
+       z-index sopra i pannelli di Leaflet (400) ma sotto i popup (700). */
+    .osm-veil {
+      position: absolute; inset: 0; z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px; border-radius: var(--radius);
+      background: linear-gradient(180deg, #eef2f7, #e3e9f1);
+    }
+    .osm-veil__box {
+      max-width: 420px; text-align: center; background: #fff;
+      padding: 22px 24px; border-radius: var(--radius);
+      border: 1px solid var(--border); box-shadow: var(--shadow-md);
+    }
+    .osm-veil__box strong { display: block; margin-bottom: 6px; font-size: 16px; }
+    .osm-veil__box p { margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #556; }
+    .osm-veil__remember {
+      display: flex; gap: 6px; align-items: center; justify-content: center;
+      margin-top: 12px; font-size: 13px; color: #556;
+    }
+    .osm-veil__link { display: inline-block; margin-top: 8px; font-size: 13px; }
+    /* Quando la ricerca luoghi ha bisogno del consenso, il velo si fa notare. */
+    .osm-veil--ask .osm-veil__box {
+      animation: osmNudge .4s ease-in-out 2;
+      border-color: #b45309;
+    }
+    @keyframes osmNudge {
+      0%, 100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .osm-veil--ask .osm-veil__box { animation: none; }
     }
     .map-list {
       height: 620px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
@@ -273,7 +308,7 @@
   <div class="footer__bottom">
     <span>© 2025 Immobiliare Orlandi · P.IVA 00000000000 · REA MC-000000</span>
     <span>
-      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php">Cookie Policy</a> · <a href="#">Note legali</a>
+      <a href="../privacy.php">Privacy Policy</a> · <a href="../privacy.php#cookie">Cookie Policy</a> · <a href="../note-legali.php">Note legali</a>
     </span>
   </div>
 </footer>
@@ -313,10 +348,76 @@
   const statusEl = document.getElementById('mapStatus');
 
   const map = L.map(mapEl).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }).addTo(map);
+
+  // ── Le mattonelle si caricano su richiesta ──────────────────────────────
+  //
+  // `L.tileLayer` verso tile.openstreetmap.org e la ricerca su Nominatim sono
+  // chiamate a un terzo che riceve l'indirizzo IP del visitatore. Prima
+  // partivano all'apertura della pagina: un banner che avesse chiesto il
+  // consenso dopo sarebbe stato una formalita' senza effetto.
+  //
+  // Qui c'e' l'unico caso in cui la scelta e' possibile per davvero, perche' la
+  // risorsa puo' arrivare dopo: la mappa si carica quando l'utente lo chiede, e
+  // la scelta resta memorizzata. Gli annunci sotto vengono dalla NOSTRA API e
+  // restano visibili comunque — la pagina serve anche senza mappa.
+  const OSM_KEY = 'orlandi_osm_consent_v1';
+  let tiles = null;
+
+  function osmAllowed() {
+    try { return localStorage.getItem(OSM_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function loadTiles() {
+    if (tiles) return;
+    tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    // Leaflet misura il contenitore alla creazione: se era coperto dal velo,
+    // senza questo disegna le mattonelle su una dimensione sbagliata.
+    setTimeout(() => map.invalidateSize(), 50);
+  }
+
+  function enableOsm(remember) {
+    if (remember) { try { localStorage.setItem(OSM_KEY, '1'); } catch (e) {} }
+    loadTiles();
+    const veil = document.getElementById('osmVeil');
+    if (veil) veil.remove();
+  }
+
+  /** Per la ricerca luoghi: se il consenso manca, lo chiede invece di partire. */
+  function ensureOsm() {
+    if (osmAllowed() || tiles) return true;
+    const veil = document.getElementById('osmVeil');
+    if (veil) veil.classList.add('osm-veil--ask');
+    setStatus('Per cercare un luogo serve caricare la mappa: usa il pulsante qui sopra.', true);
+    return false;
+  }
+
+  function buildVeil() {
+    const veil = document.createElement('div');
+    veil.id = 'osmVeil';
+    veil.className = 'osm-veil';
+    veil.innerHTML =
+      '<div class="osm-veil__box">'
+      + '<strong>Mappa fornita da OpenStreetMap</strong>'
+      + '<p>Caricandola, il tuo indirizzo IP viene comunicato a openstreetmap.org. '
+      + 'Gli annunci qui sotto sono visibili anche senza mappa.</p>'
+      + '<button type="button" class="btn-primary" id="osmLoad">Carica la mappa</button>'
+      + '<label class="osm-veil__remember"><input type="checkbox" id="osmRemember" checked> Ricorda la scelta</label>'
+      + '<a href="../privacy.php#cookie" class="osm-veil__link">Dettagli nell\'informativa</a>'
+      + '</div>';
+    mapEl.appendChild(veil);
+    veil.querySelector('#osmLoad').addEventListener('click', () => {
+      enableOsm(veil.querySelector('#osmRemember').checked);
+    });
+  }
+
+  if (osmAllowed()) {
+    loadTiles();
+  } else {
+    buildVeil();
+  }
 
   const markersLayer = L.layerGroup().addTo(map);
   let allListings   = [];
@@ -436,6 +537,9 @@
     e.preventDefault();
     const q = document.getElementById('mapSearchInput').value.trim();
     if (!q) return;
+    // Nominatim e' lo stesso terzo delle mattonelle: non si interroga prima
+    // che l'utente abbia scelto di caricare la mappa.
+    if (!ensureOsm()) return;
     setStatus('Ricerca in corso…');
     try {
       const url = `${NOMINATIM_URL}?format=json&limit=1&countrycodes=it&q=${encodeURIComponent(q)}`;
@@ -506,5 +610,10 @@
 
   loadListings();
 </script>
+
+<!-- Avviso cookie: il testo e' diverso da quello del gestionale perche' qui, a
+     differenza dell'area riservata, la pagina chiama dei terzi. Vedi
+     assets/js/cookie_consent.js. -->
+<script src="../assets/js/cookie_consent.js" data-message="Questo sito non usa cookie di profilazione. Alcune pagine richiamano risorse di terzi (caratteri Google, libreria della mappa), che ricevono il tuo indirizzo IP."></script>
 </body>
 </html>
