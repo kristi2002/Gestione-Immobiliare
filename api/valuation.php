@@ -902,7 +902,16 @@ function validateOmiInput(array $data): array
     $comune = trim($data['comune'] ?? '');
     if ($comune === '') apiError('Il comune è obbligatorio.');
     $type = trim($data['property_type'] ?? 'appartamento');
-    if (!in_array($type, OMI_TYPES, true)) $type = 'appartamento';
+    // Si RIFIUTA, non si ripiega su 'appartamento'. `property_type` non e' una
+    // etichetta: e' la CHIAVE con cui si cerca la quotazione
+    // (`WHERE comune = :comune AND property_type = :type AND cadastral_zone = :zone`).
+    // Ripiegare significa archiviare fra gli appartamenti la quotazione di un
+    // capannone: quella del capannone non si trova piu', e i €/m² degli
+    // appartamenti vengono inquinati da valori che appartengono a un altro
+    // mercato. Da li' escono stime sbagliate, con l'aria di essere giuste.
+    if (!in_array($type, OMI_TYPES, true)) {
+        apiError('Tipo immobile non valido per una quotazione OMI: ' . implode(', ', OMI_TYPES) . '.');
+    }
 
     $numOrNull = static fn($v) => isset($v) && $v !== '' ? (float) $v : null;
 

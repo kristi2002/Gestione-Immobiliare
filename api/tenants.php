@@ -42,7 +42,7 @@ try {
         apiError('Metodo non consentito.', 405);
     }
 } catch (PDOException $e) {
-    apiError('Errore database.', 500);
+    apiDbError($e, 'Impossibile salvare l’inquilino');
 }
 
 // ---------------------------------------------------------------------------

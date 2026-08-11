@@ -74,7 +74,7 @@ try {
     if ($e->getCode() === '23000') {
         apiError('Operazione non consentita: esistono record collegati a questo elemento. Rimuoverli prima di procedere.', 409);
     }
-    apiError('Errore database.', 500);
+    apiDbError($e, 'Impossibile salvare l’immobile');
 }
 
 // ---------------------------------------------------------------------------

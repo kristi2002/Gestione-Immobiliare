@@ -68,7 +68,9 @@ try {
         }
         apiError('Operazione non consentita: esistono record collegati a questo proprietario. Rimuoverli prima di procedere.', 409);
     }
-    apiError('Errore database.', 500);
+    // Il resto lo traduce apiDbError(): un CF di 17 caratteri deve dire «troppo
+    // lungo, campo codice_fiscale», non «Errore database».
+    apiDbError($e, 'Impossibile salvare il proprietario');
 }
 
 // ---------------------------------------------------------------------------

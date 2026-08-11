@@ -292,8 +292,11 @@ Returns: normalised field set with values per property for each field.
 
 ### Geocoding
 
-**`GET /api/geocode.php`** — proxy to Nominatim `/search`  
-Passes query params through; caches results locally.
+> `api/geocode.php` (proxy generico a Nominatim) è stato **rimosso**: nessuna
+> schermata lo chiamava, inoltrava a un servizio terzo qualunque parametro
+> ricevuto senza whitelist né rate limit, e non aveva nemmeno una guardia sul
+> parametro mancante (una richiesta vuota bruciava una chiamata verso Nominatim
+> per poi rispondere 502). Le due porte vive sono quelle qui sotto.
 
 **`GET /api/geocode_resolve.php?address=...&city=...&cap=...&province=MO`** — resolve a full Italian address to lat/lng and store on the property record  
 Query params: `address`, `city`, `cap`, `province`, `property_id`

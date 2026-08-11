@@ -101,7 +101,7 @@ try {
     if ($e->getCode() === '23000') {
         apiError('Operazione non consentita: esistono immobili collegati a questo edificio. Rimuoverli prima di procedere.', 409);
     }
-    apiError('Errore database.', 500);
+    apiDbError($e, 'Impossibile salvare l’edificio');
 }
 
 // ---------------------------------------------------------------------------

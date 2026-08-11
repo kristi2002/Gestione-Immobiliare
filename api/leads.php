@@ -80,7 +80,7 @@ try {
     if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'uq_clients_cf')) {
         apiError('Esiste già un proprietario con questo codice fiscale.');
     }
-    apiError('Errore database.', 500);
+    apiDbError($e, 'Impossibile salvare il lead');
 }
 
 // ---------------------------------------------------------------------------
