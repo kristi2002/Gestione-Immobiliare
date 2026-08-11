@@ -20,9 +20,26 @@ apiHandleOptions();
 
 // Canali. I primi due vengono realmente spediti; sms/chiamata/nota sono
 // registrazioni manuali di qualcosa avvenuto fuori dal gestionale.
+//
 // ATTENZIONE: questa lista deve restare allineata all'enum communications.channel
 // (migrazione phase67) — un canale presente qui ma non nell'enum viene rifiutato
 // dal DB, uno presente nell'enum ma non qui viene rifiutato dall'API.
+//
+// CON UNA ECCEZIONE VOLUTA: `portale` sta nell'enum (phase98) e NON sta qui, ed
+// e' giusto che non ci stia. Quel canale e' il filo diretto con l'inquilino, e
+// il suo perimetro e' `tenant_id`: lo scrivono soltanto il portale
+// (tenant/api_portal_actions.php) e `createTenantReply()` qui sotto, che sanno a
+// quale inquilino appartiene il messaggio.
+//
+// Aggiungerlo a questa lista sembrerebbe "sistemare un disallineamento" e
+// sarebbe invece un difetto nuovo: `createMessage()` accetterebbe
+// `channel=portale` con un `client_id`, cioe' scriverebbe un messaggio "da
+// portale" sul thread del PROPRIETARIO — dove l'inquilino non lo leggera' mai,
+// perche' lui vede solo le righe col suo `tenant_id`. Un messaggio scritto,
+// salvato, e invisibile al destinatario.
+//
+// Quindi: se un giorno un controllo automatico segnala questa deriva, la
+// risposta e' questo commento, non una riga in piu' nell'array.
 const COMM_CHANNELS   = ['email', 'whatsapp', 'sms', 'chiamata', 'nota'];
 const COMM_DISPATCHED = ['email', 'whatsapp'];
 const COMM_DIRECTIONS = ['sent', 'received'];
