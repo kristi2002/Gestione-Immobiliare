@@ -30,9 +30,9 @@ A **mature, largely complete** single-agency real-estate management platform. PH
 - ~45 feature views, PWA manifest + service worker, admin-configurable branding (colors + logo, live-swapped).
 
 **Canonical facts resolved:**
-- Admin session cookie = **`gestionale_session`** (code default; `.env`, `.env.docker`, `render.yaml` all agree). Only `docs/DEPLOY.md` says `gi_session` — that doc is wrong unless the live Coolify env overrides `SESSION_NAME`. **Action: make one canonical value and confirm against a live login.**
-- Authoritative schema = `database/schema_production.sql` (39 tables). `database/schema.sql` is legacy Phase-1 (8 tables) — to be quarantined.
-- Tenant/renter ("tenant") ≠ SaaS tenant. There is **no** `agency_id` anywhere today.
+- Admin session cookie = **`gestionale_session`**. ✅ **Chiuso il 19/08/2026**: confermato da un login vero (`Set-Cookie: gestionale_session=…; HttpOnly; SameSite=Lax`), e `docs/deployment/DEPLOY.md` e' stato corretto — non dice piu' `gi_session`. Codice, `.env`, `.env.docker`, `render.yaml`, `ARCHITECTURE.md` e `CODEMAP.md` concordano.
+- Authoritative schema = `database/schema_production.sql` (39 tables). `database/schema.sql` is legacy Phase-1 (8 tables) — ✅ quarantined: its header now says OBSOLETE / DO NOT USE FOR INSTALLS.
+- Tenant/renter ("tenant") ≠ SaaS tenant. ⚠️ **Non piu' vero**: da `phase31_multi_tenant_scaffold` esiste `agency_id NOT NULL DEFAULT 1` su tredici tabelle, con FK RESTRICT verso `agencies` (nove tabelle radice dalla phase31, le quattro GDPR dalla phase101). Le query NON sono ancora filtrate per agenzia — `scopeToAgency()` in `config/agency.php` esiste ed e' deliberatamente non chiamata. L'impianto c'e', il comportamento resta a singola agenzia.
 
 ---
 

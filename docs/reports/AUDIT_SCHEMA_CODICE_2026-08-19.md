@@ -1,5 +1,25 @@
 # Audit deriva schema ↔ codice — 19 agosto 2026
 
+> **Stato: tutte le segnalazioni sono state lavorate lo stesso giorno.** Due si
+> sono ridimensionate quando sono andato a guardare il codice invece di fidarmi
+> della mia stessa scansione — §2.2 era un pericolo latente e non un difetto
+> attivo, §2.4 conteneva un errore vero e proprio su `'pdf'`. Le correzioni sono
+> scritte dentro le rispettive sezioni, non nascoste in coda.
+>
+> | # | Segnalazione | Esito |
+> |---|---|---|
+> | 2.1 | `check_enum_drift` da' un verde falso | corretta — i salti fanno fallire; controlli 10 → 59 (`2481c6f`) |
+> | 2.2 | `contracts.client_id` SET NULL | **ridimensionata**, poi irrigidita a RESTRICT (`fbb5310`) |
+> | 2.3 | Il seme rompe il percorso di demo | corretta — 4 verifiche di coerenza a 0 (`aa5c596`) |
+> | 2.4 | Righe morte nei permessi | `users` rimossa; **`'pdf'` era una mia svista**, resta |
+> | 2.5 | `social_posts` senza sorveglianza | corretta + test di non-regressione (`2481c6f`) |
+> | 2.6 | Tabelle GDPR senza FK verso `agencies` | corretta (`fbb5310`) |
+> | 2.7 | Worktree abbandonato | rimosso |
+> | 2.8 | CLAUDE.md §1 descrive un problema risolto | aggiornati CLAUDE.md e DEPLOYMENT_PLAN.md |
+>
+> In piu': `automations`, tabella vuota e nominata da zero query, rimossa in
+> `phase101` — stessa trappola del «modello doppio» di phase100.
+
 Ricerca sistematica di lacune, disallineamenti e problemi di collegamento fra
 tabelle. Ogni riga qui sotto e' stata **eseguita**, non dedotta: dove c'e' un
 numero, quel numero viene da un comando che ha girato.
@@ -69,7 +89,25 @@ in linea in una costante `PAYMENT_METHODS`.
 > di 12 righe in `api/communications.php:30-43` che spiega perche' aggiungerlo
 > sarebbe un difetto nuovo. Lasciare com'e'.
 
-### 2.2 — `contracts.client_id` si stacca in silenzio · MEDIA
+### 2.2 — `contracts.client_id` si stacca in silenzio · MEDIA → **RIDIMENSIONATA, poi chiusa**
+
+> **Correzione, scritta dopo aver guardato il codice di cancellazione.** Questa
+> segnalazione era **sopravvalutata**. Sostenevo che «un proprietario senza
+> immobili ma con contratti si puo' cancellare»: vero a livello di database,
+> **irraggiungibile dall'applicazione**. `deleteClient()` in `api/clients.php` e'
+> una archiviazione (`status='archived'`), non una DELETE, e la cancellazione
+> GDPR ANONIMIZZA la riga sul posto tenendola apposta perche' la storia
+> contrattuale resti coerente (`config/gdpr.php`). L'unico `DELETE FROM clients`
+> del repository sta nello script che ripulisce le proprie fixture.
+>
+> Quindi: pericolo LATENTE, non difetto attivo. Nessun dato e' mai stato a
+> rischio per questa via. La differenza fra le due cose e' esattamente quella che
+> questo file chiede di non confondere, e l'avevo confusa io.
+>
+> Corretta comunque in `phase101` — RESTRICT su `contracts.client_id` e
+> `invoices.client_id` — perche' «non succede» e «non puo' succedere» non sono la
+> stessa garanzia, e verso lo stesso padre `properties.client_id` era gia'
+> RESTRICT. Ma va letta come irrigidimento, non come falla chiusa.
 
 Le regole `ON DELETE` verso `clients` non sono coerenti:
 
@@ -125,12 +163,30 @@ il PDF segnaposto (o togliere le righe documento), e seminare almeno un
   il codice**. Le automazioni sono righe di `reminders` (phase66); la tabella e'
   un residuo del disegno abbandonato.
 - **`VIEW_MIN_ROLE['users']`** (`config/roles.php:61`) — non esiste una vista
-  `users`: la gestione utenti e' una scheda dentro `settings.html`. La riga non
-  protegge niente.
-- **`'pdf'`** in `ROLE_PERMISSIONS` per `admin` e `agent` — nessuna vista `pdf`.
+  `users`: la gestione utenti e' una scheda dentro `settings.html`, e il suo
+  cancello vero e' `requireRole('super_admin')` in `api/admin_users.php`. La riga
+  non protegge niente. **Rimossa.**
+- ~~**`'pdf'`** in `ROLE_PERMISSIONS` per `admin` e `agent` — nessuna vista
+  `pdf`.~~ **SBAGLIATO — questa segnalazione era un errore.**
+
+> **Correzione.** `'pdf'` NON e' una riga morta: e' una **capacita'**, letta da
+> `canAccessView('pdf')` in `api/generate_pdf.php:12`. Sembra morta solo se si
+> cercano le viste in `views/` e le rotte in `view.php`, che e' esattamente cio'
+> che avevo fatto. Toglierla non avrebbe pulito niente — avrebbe spento la
+> generazione dei PDF per `admin` e `agent`, e l'errore si sarebbe visto solo
+> quando qualcuno prova a stampare un contratto.
+>
+> Provato invece di dedotto, prima di toccare qualcosa: `readonly` -> 403,
+> `agent` e `admin` -> superano il controllo. Lasciata dov'era, con un commento
+> in `config/roles.php` che avverte il prossimo che verra' a fare pulizia.
+>
+> La lezione e' quella che questo file gia' insegna al §1, applicata a me stesso:
+> «riga morta» era una **claim**, non una prova, e cercare `canAccessView('<voce>')`
+> costava dieci secondi.
 
 Il file stesso mette in guardia da questo: *"Elencare una vista qui e anche la'
-crea una riga morta che racconta un permesso che non esiste"*.
+crea una riga morta che racconta un permesso che non esiste"* — vero per
+`users`, non per `pdf`.
 
 Verificato invece **allineato**: `ENTITY_FORM_VIEWS` (PHP), `REGISTRY`
 (`assets/js/entity_edit/schemas/index.js`) e `App.entityFormTitles`

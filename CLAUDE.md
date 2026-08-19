@@ -20,7 +20,20 @@ If you cannot run a check (no credentials, no server access, missing tool), say 
 
 **Rule: a "✅ Fixed" in any doc means nothing until you reproduce it.** When a doc says X is fixed, your job is to try to break X and report what actually happened. If your test contradicts the doc, the test wins — flag the discrepancy.
 
-A second discrepancy to resolve, not paper over: `ARCHITECTURE.md` calls the admin session cookie `gestionale_session`; `DEPLOY.md` sets `SESSION_NAME=gi_session`. Determine the real cookie name from a live login before scripting auth tests.
+**Resolved (2026-08-19) — the admin session cookie is `gestionale_session`.** This
+was an open discrepancy here for months (`DEPLOY.md` used to say `gi_session`).
+Confirmed against a live login, which is the only thing that settles it:
+
+```
+Set-Cookie: gestionale_session=...; path=/; HttpOnly; SameSite=Lax
+```
+
+`config/bootstrap.php` defaults `SESSION_NAME` to it, and `.env`, `.env.docker`,
+`render.yaml`, `DEPLOY.md`, `ARCHITECTURE.md` and `CODEMAP.md` now all agree.
+The tenant portal uses `gestionale_tenant_session` (`config/auth.php`).
+
+Kept here as a worked example of the rule above, not as an open task: the docs
+disagreed, a two-second live login decided it, and the doc lost.
 
 ---
 
