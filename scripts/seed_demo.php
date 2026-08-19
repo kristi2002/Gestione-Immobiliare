@@ -27,6 +27,17 @@ require_once dirname(__DIR__) . '/config/db.php';
 $opts  = getopt('', ['fresh', 'scale::', 'help']);
 $scale = max(1, min(5, (int) ($opts['scale'] ?? 1)));
 
+/**
+ * Password degli accessi dimostrativi al portale inquilino.
+ *
+ * E' volutamente uguale per tutti e stampata a fine esecuzione: sono dati finti
+ * su un'installazione di prova, e una password diversa per ognuno dei quindici
+ * inquilini renderebbe il portale impossibile da mostrare senza un foglietto.
+ * Vale solo per le righe seminate da questo script, che gira da CLI e che in
+ * produzione non si esegue.
+ */
+const DEMO_TENANT_PASSWORD = 'DemoInquilino2026!';
+
 if (isset($opts['help'])) {
     echo "Usage: php scripts/seed_demo.php [--fresh] [--scale=1..5]\n";
     echo "  --fresh   Clear business data before seeding (keeps admin users & settings)\n";
@@ -380,6 +391,10 @@ for ($i = 0; $i < $nAppts; $i++) {
 
 // ── Contracts & payments ────────────────────────────────────────────────────
 
+// Inquilino -> contratto. Serve FUORI da questo blocco: le rate sono figlie del
+// contratto, non dell'inquilino, e senza questa mappa nascevano scollegate.
+$tenantContract = [];
+
 if (tableExists($db, 'contracts')) {
     say('Seeding contracts…');
     $insContract = $db->prepare(
@@ -393,35 +408,134 @@ if (tableExists($db, 'contracts')) {
         $prop = $db->prepare('SELECT client_id FROM properties WHERE id = :id');
         $prop->execute(['id' => $lease['property_id']]);
         $cid = $prop->fetchColumn();
-        $start = randDate(400, -60);
+        $start  = randDate(400, -60);
+        $end    = (new DateTimeImmutable($start))->modify('+3 years')->format('Y-m-d');
+        $status = pick(['draft', 'sent', 'signed', 'signed', 'expired']);
         $insContract->execute([
             'pid'    => $lease['property_id'],
             'tid'    => $tid,
             'cid'    => $cid,
             'title'  => 'Contratto locazione demo',
             'type'   => 'locazione',
-            'status' => pick(['draft', 'sent', 'signed', 'signed', 'expired']),
+            'status' => $status,
             'start'  => $start,
-            'end'    => (new DateTimeImmutable($start))->modify('+3 years')->format('Y-m-d'),
+            'end'    => $end,
             'rent'   => $lease['rent'],
             'dep'    => ($lease['rent'] ?? 800) * 3,
             'by'     => $adminId,
         ]);
-        $contractIds[] = (int) $db->lastInsertId();
+        $newContractId = (int) $db->lastInsertId();
+        $contractIds[] = $newContractId;
+        $tenantContract[$tid] = [
+            'id'          => $newContractId,
+            'property_id' => $lease['property_id'],
+            'status'      => $status,
+            'end'         => $end,
+        ];
     }
     say('  ' . count($contractIds) . ' contracts');
+
+    // ── Lo stato dell'immobile deve DERIVARE dal contratto ───────────────────
+    //
+    // Le proprieta' ricevono uno stato a caso molto prima che i contratti
+    // esistano, e gli inquilini si fermano ai primi 20: risultato, 16 immobili
+    // «Affittato» senza uno straccio di locazione dietro. In demo si vede
+    // subito — si apre la scheda di un immobile affittato e la sezione
+    // Contratti e' vuota — ed e' la stessa incoerenza che l'applicazione vera
+    // evita da phase69, dove una locazione in vigore MARCA l'immobile.
+    //
+    // Qui si riallinea nella stessa direzione: affittato se e solo se c'e' una
+    // locazione firmata e non ancora scaduta.
+    $db->exec(
+        "UPDATE properties p
+            SET p.status = 'available'
+          WHERE p.status = 'rented'
+            AND NOT EXISTS (
+                SELECT 1 FROM contracts c
+                 WHERE c.property_id = p.id
+                   AND c.contract_type = 'locazione'
+                   AND c.status = 'signed'
+                   AND (c.end_date IS NULL OR c.end_date >= CURDATE())
+            )"
+    );
+    $db->exec(
+        "UPDATE properties p
+            SET p.status = 'rented'
+          WHERE p.status <> 'sold'
+            AND EXISTS (
+                SELECT 1 FROM contracts c
+                 WHERE c.property_id = p.id
+                   AND c.contract_type = 'locazione'
+                   AND c.status = 'signed'
+                   AND (c.end_date IS NULL OR c.end_date >= CURDATE())
+            )"
+    );
+    say('  stato immobili riallineato ai contratti in vigore');
+}
+
+// ── Accessi al portale inquilino ────────────────────────────────────────────
+//
+// `tenant_users` restava VUOTA: il portale inquilino — tre fasi di lavoro, con
+// contratto, contatori, verbali, firme e messaggi — non era mostrabile, perche'
+// non esisteva un solo account con cui entrare. Chi voleva provarlo doveva
+// prima creare a mano un inquilino e una password.
+//
+// Ne riceve uno ogni inquilino con una locazione FIRMATA: sono quelli che nella
+// realta' avrebbero le credenziali, ed e' anche l'unico caso in cui il portale
+// ha qualcosa da mostrare (senza contratto in vigore le sue schermate sono
+// vuote per costruzione).
+if (tableExists($db, 'tenant_users') && $tenantContract) {
+    require_once dirname(__DIR__) . '/config/password.php';
+    say('Seeding tenant portal accounts…');
+
+    $insTU = $db->prepare(
+        'INSERT INTO tenant_users (tenant_id, password_hash) VALUES (:tid, :hash)
+         ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)'
+    );
+    $portalCount = 0;
+    $firstLogin  = null;
+    foreach ($tenantContract as $tid => $contract) {
+        if ($contract['status'] !== 'signed') continue;
+        $insTU->execute(['tid' => $tid, 'hash' => appPasswordHash(DEMO_TENANT_PASSWORD)]);
+        $portalCount++;
+        if ($firstLogin === null) {
+            $stmt = $db->prepare('SELECT email FROM tenants WHERE id = :id');
+            $stmt->execute(['id' => $tid]);
+            $firstLogin = (string) $stmt->fetchColumn();
+        }
+    }
+    say("  $portalCount accessi (password: " . DEMO_TENANT_PASSWORD . ')');
+    if ($firstLogin) {
+        say("  esempio: $firstLogin");
+    }
 }
 
 if (tableExists($db, 'payments') && $tenantIds) {
     say('Seeding payments…');
+    // `contract_id` NON e' facoltativo qui.
+    //
+    // Senza, ogni rata nasce scollegata: l'elenco Pagamenti ne mostrava 270
+    // mentre la scheda Contratto -> Scadenzario era VUOTA per tutti e quindici i
+    // contratti, perche' api/payments.php filtra su contract_id. In demo e' la
+    // prima cosa che si apre dopo un contratto, e non c'era niente da vedere.
+    //
+    // Il codice vero non ha mai avuto questo problema: insertPaymentSchedule()
+    // in lib/contract_lifecycle.php valorizza contract_id da sempre. Era solo il
+    // seme a raccontare un mondo in cui gli affitti non appartengono a nessun
+    // contratto.
     $insPay = $db->prepare(
-        'INSERT INTO payments (tenant_id, property_id, amount, due_date, paid_date, status, notes)
-         VALUES (:tid, :pid, :amt, :due, :paid, :status, :notes)'
+        'INSERT INTO payments (contract_id, tenant_id, property_id, amount, due_date, paid_date, status, notes)
+         VALUES (:cid, :tid, :pid, :amt, :due, :paid, :status, :notes)'
     );
     $payCount = 0;
+    $skipped  = 0;
     foreach ($tenantIds as $tid) {
         $t = $tenantLease[$tid] ?? null;
         if (!$t) continue;
+        // Un canone senza contratto non esiste: l'inquilino che non ha ricevuto
+        // un contratto (i contratti si fermano ai primi 15) non ha rate.
+        $contract = $tenantContract[$tid] ?? null;
+        if (!$contract) { $skipped++; continue; }
         // Window from 8 months back to 6 months ahead so the revenue forecast
         // (which is forward-looking) has upcoming, not-yet-due payments to chart.
         for ($m = -8; $m <= 6; $m++) {
@@ -438,6 +552,7 @@ if (tableExists($db, 'payments') && $tenantIds) {
             }
 
             $insPay->execute([
+                'cid'    => $contract['id'],
                 'tid'    => $tid,
                 'pid'    => $t['property_id'],
                 'amt'    => $t['rent'] ?? random_int(600, 1200),
@@ -449,7 +564,7 @@ if (tableExists($db, 'payments') && $tenantIds) {
             $payCount++;
         }
     }
-    say("  $payCount payments");
+    say("  $payCount payments" . ($skipped ? " ($skipped inquilini senza contratto: nessuna rata)" : ''));
 }
 
 // ── Expenses & invoices ─────────────────────────────────────────────────────
@@ -498,26 +613,77 @@ if (tableExists($db, 'invoices')) {
     }
 }
 
-// ── Documents (metadata only) ───────────────────────────────────────────────
+// ── Documents ───────────────────────────────────────────────────────────────
+//
+// Le righe puntavano tutte a `uploads/demo/placeholder.pdf`, un file che
+// nessuno creava: la cartella `uploads/demo/` non e' mai esistita. Ogni
+// «Scarica» della sezione Documenti rispondeva 404 — venti bottoni rotti su
+// venti, in una sezione che in demo si apre di sicuro.
+//
+// Adesso il file si scrive davvero, e si scrive DOVE vanno i documenti veri
+// (`uploads/documents/AAAA/MM/`, come fa api/documents.php): cosi' il percorso
+// esercita lo stesso albero protetto, la stessa `safeUploadRealPath()` e lo
+// stesso api/download_document.php della produzione. Un segnaposto messo in una
+// cartella inventata avrebbe nascosto proprio il pezzo che vale la pena provare.
+
+$docRelDir  = 'uploads/documents/' . date('Y/m');
+$docAbsDir  = dirname(__DIR__) . '/' . $docRelDir;
+if (!is_dir($docAbsDir)) {
+    mkdir($docAbsDir, 0775, true);
+}
+$docRelPath = $docRelDir . '/documento_demo.pdf';
+$docAbsPath = dirname(__DIR__) . '/' . $docRelPath;
+
+if (!is_file($docAbsPath)) {
+    // PDF minimo ma VALIDO: un lettore lo apre e mostra una pagina con una
+    // scritta. Bastano poche centinaia di byte e non serve una libreria.
+    $content = "BT /F1 18 Tf 60 760 Td (Documento dimostrativo) Tj ET\n"
+             . "BT /F1 11 Tf 60 735 Td (Gestionale Immobiliare - dato di esempio, nessun valore legale.) Tj ET";
+    $objs = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+        "<< /Length " . strlen($content) . " >>\nstream\n" . $content . "\nendstream",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ];
+    $pdf = "%PDF-1.4\n";
+    $offsets = [];
+    foreach ($objs as $i => $obj) {
+        $offsets[$i] = strlen($pdf);
+        $pdf .= ($i + 1) . " 0 obj\n" . $obj . "\nendobj\n";
+    }
+    $xref = strlen($pdf);
+    $pdf .= "xref\n0 " . (count($objs) + 1) . "\n0000000000 65535 f \n";
+    foreach ($offsets as $off) {
+        $pdf .= sprintf("%010d 00000 n \n", $off);
+    }
+    $pdf .= "trailer\n<< /Size " . (count($objs) + 1) . " /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n";
+    file_put_contents($docAbsPath, $pdf);
+}
 
 say('Seeding document records…');
 $insDoc = $db->prepare(
     'INSERT INTO documents (doc_type, title, client_id, property_id, file_path, original_name, mime_type, file_size, notes)
      VALUES (:type, :title, :cid, :pid, :path, :orig, :mime, :size, :notes)'
 );
+$docSize = (int) filesize($docAbsPath);
 for ($i = 0; $i < 20 * $scale; $i++) {
     $insDoc->execute([
         'type'  => pick(['contract', 'invoice', 'id', 'other']),
         'title' => pick(['Contratto locazione', 'Documento identità', 'Fattura riparazione', 'Planimetria']),
         'cid'   => pick($clientIds),
         'pid'   => pick($propertyIds),
-        'path'  => 'uploads/demo/placeholder.pdf',
+        'path'  => $docRelPath,
         'orig'  => 'documento_demo.pdf',
+        // La dimensione dichiarata e' quella VERA del file: un numero inventato
+        // fra 50 KB e 900 KB accanto a un download da 500 byte e' la stessa
+        // bugia in piccolo.
+        'size'  => $docSize,
         'mime'  => 'application/pdf',
-        'size'  => random_int(50000, 900000),
         'notes' => '[DEMO]',
     ]);
 }
+say("  20 documenti -> $docRelPath ($docSize byte)");
 
 // ── Phase 12+ features ──────────────────────────────────────────────────────
 
@@ -860,7 +1026,8 @@ $counts = [
     'clients' => 'clients', 'properties' => 'properties', 'tenants' => 'tenants',
     'leads' => 'leads', 'reminders' => 'reminders', 'communications' => 'communications',
     'appointments' => 'appointments', 'payments' => 'payments', 'expenses' => 'expenses',
-    'invoices' => 'invoices', 'documents' => 'documents',
+    'invoices' => 'invoices', 'documents' => 'documents', 'contracts' => 'contracts',
+    'tenant_users' => 'tenant_users',
 ];
 foreach ($counts as $label => $table) {
     if (tableExists($db, $table)) {
@@ -869,6 +1036,32 @@ foreach ($counts as $label => $table) {
     }
 }
 
+// Coerenza del percorso di demo: le tre cose che, quando erano rotte, si
+// vedevano SOLO aprendo l'applicazione davanti a qualcuno. Meglio saperlo qui.
+say('');
+say('Coerenza (0 = a posto):');
+$checks = [
+    'rate senza contratto'          => 'SELECT COUNT(*) FROM payments WHERE contract_id IS NULL',
+    'immobili affittati senza contratto'
+        => "SELECT COUNT(*) FROM properties p WHERE p.status='rented' AND NOT EXISTS (
+              SELECT 1 FROM contracts c WHERE c.property_id=p.id AND c.contract_type='locazione'
+                AND c.status='signed' AND (c.end_date IS NULL OR c.end_date>=CURDATE()))",
+    'contratti in vigore senza scadenzario'
+        => "SELECT COUNT(*) FROM contracts c WHERE c.contract_type='locazione' AND c.status='signed'
+              AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.contract_id=c.id)",
+];
+foreach ($checks as $label => $sql) {
+    say(sprintf('  %-38s %d', $label . ':', (int) $db->query($sql)->fetchColumn()));
+}
+$missingFiles = 0;
+foreach ($db->query('SELECT file_path FROM documents')->fetchAll(PDO::FETCH_COLUMN) as $fp) {
+    if ($fp === null || $fp === '' || !is_file(dirname(__DIR__) . '/' . ltrim((string) $fp, '/'))) {
+        $missingFiles++;
+    }
+}
+say(sprintf('  %-38s %d', 'documenti senza file su disco:', $missingFiles));
+
 say('');
 say('Open http://localhost:8090/ and browse all sections.');
+say('Portale inquilino: /tenant/login.php — password ' . DEMO_TENANT_PASSWORD);
 say('Re-run with --fresh to reset business data and seed again.');
