@@ -5,6 +5,19 @@
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'agent', 'readonly'];
 
+/**
+ * Attenzione, per chi verrà a fare pulizia: non tutte queste voci sono viste.
+ *
+ * `pdf` non ha un file in views/ e non è instradato da view.php, quindi a una
+ * ricerca superficiale sembra una riga morta da togliere. Non lo è: è una
+ * CAPACITÀ, e il suo cancello è `canAccessView('pdf')` in api/generate_pdf.php.
+ * Toglierla da `admin` e `agent` non pulisce niente — spegne la generazione dei
+ * PDF per due ruoli su quattro, e l'errore si vedrebbe solo quando qualcuno
+ * prova a stampare un contratto.
+ *
+ * Prima di rimuovere una voce da qui, cercare `canAccessView('<voce>')` in tutto
+ * il codice, non solo in views/.
+ */
 const ROLE_PERMISSIONS = [
     'super_admin' => ['*'],
     'admin'       => ['dashboard','clients','client_profile','client_edit','leads','lead_edit','properties','property_profile','property_edit','contracts','contract_edit','documents','payments','payment_edit','expenses','expense_edit','invoices','invoice_edit','communications','appointments','appointment_edit','appointment_profile','calendar','map','reminders','automations','tenants','tenant_edit','tenant_profile','keys','key_profile','agents','reports','social','pdf','buildings','building_profile','insurance','meters','suppliers','inventory','commissions','surveys','forecast','maintenance_workflow','whatsapp_inbox','property_applications','aml','aml_profile','scadenzario','portal_sync','valuation','esign'],
@@ -58,7 +71,11 @@ const VIEW_MIN_ROLE = [
     // lasciare quel ruolo senza secondo fattore.
     'account'      => 'readonly',
     'settings'     => 'super_admin',
-    'users'        => 'super_admin',
+    // 'users' non sta qui: non esiste una vista `users`. La gestione utenti è
+    // una scheda dentro settings.html, e il suo unico vero cancello è
+    // requireRole('super_admin') in api/admin_users.php — la scheda si mostra
+    // solo se quella chiamata risponde OK (assets/js/settings/index.js). Una
+    // riga qui non proteggeva niente e raccontava un permesso inesistente.
     'activity_log' => 'super_admin',
     'reports'      => 'admin',
     'agents'       => 'admin',

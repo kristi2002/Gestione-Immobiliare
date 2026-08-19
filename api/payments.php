@@ -15,6 +15,19 @@ apiHandleOptions();
 
 const PAYMENT_STATUSES = ['pending', 'paid', 'late', 'cancelled'];
 
+// Deve stare QUI, in cima e come costante, per due motivi indipendenti.
+//
+// Il primo e' che `scripts/check_enum_drift.php` cerca proprio questo nome: era
+// un array dentro createPayment(), quindi il controllo non lo trovava e SALTAVA
+// il confronto con l'ENUM `payments.method` — mentre lo script continuava a
+// stampare "OK — nessuna divergenza". Una whitelist che nessuno confronta con la
+// colonna e' la prossima deriva, ed e' il difetto ricorrente di questo
+// repository (phase62, phase76, phase78).
+//
+// Il secondo e' che un `const` in fondo al file non esiste ancora quando lo
+// switch in cima smista la richiesta: vale solo se dichiarato prima dell'uso.
+const PAYMENT_METHODS = ['bonifico', 'sdd', 'mav', 'contanti', 'assegno', 'pos', 'stripe', 'altro'];
+
 /**
  * "In ritardo" is a DERIVED state, not just a column value.
  *
@@ -277,7 +290,6 @@ function validatePaymentInput(array $data): array
     $paidDate   = trim($data['paid_date'] ?? '') ?: null;
     $status     = trim($data['status'] ?? 'pending');
     $notes      = trim($data['notes'] ?? '') ?: null;
-    $methods    = ['bonifico', 'sdd', 'mav', 'contanti', 'assegno', 'pos', 'stripe', 'altro'];
     $method     = trim($data['method'] ?? 'bonifico');
     // Si RIFIUTA, non si corregge d'ufficio. Il metodo di pagamento e' il campo
     // con cui si riconcilia l'estratto conto, e riscriverlo di nascosto e' un
@@ -286,8 +298,8 @@ function validatePaymentInput(array $data): array
     // SDD, contanti, assegno, POS o Stripe. Coercere qui e' la stessa cosa da
     // un'altra porta — un incasso che risulta arrivato per bonifico quando non
     // e' vero, e nessuno che lo sappia.
-    if (!in_array($method, $methods, true)) {
-        apiError('Metodo di pagamento non valido: ' . implode(', ', $methods) . '.');
+    if (!in_array($method, PAYMENT_METHODS, true)) {
+        apiError('Metodo di pagamento non valido: ' . implode(', ', PAYMENT_METHODS) . '.');
     }
 
     if ($tenantId <= 0) {

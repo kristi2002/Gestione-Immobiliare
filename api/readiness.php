@@ -243,12 +243,19 @@ $add('webhooks', empty($whMsg) ? 'ok' : 'warn',
 
 // ── Cron freshness ──────────────────────────────────────────────────────────
 $now = time();
+// Un job che scrive un battito e non compare qui e' peggio di un job senza
+// battito: scrive una prova che nessuno legge. `social_posts` e' rimasto fuori
+// da questa lista pur chiamando cronHeartbeat() come gli altri sei, quindi
+// poteva restare fermo per mesi senza che Stato sistema dicesse niente — che e'
+// esattamente il guasto per cui il battito era stato introdotto.
+// Regola: una riga qui per OGNI cronHeartbeat() in cron/.
 $cronJobs = [
     'reminders'            => 2 * 3600,   // expected at least every ~2h
     'payment_reminders'    => 26 * 3600,  // daily
     'contract_expirations' => 26 * 3600,  // daily
     'key_returns'          => 26 * 3600,  // daily
     'backup'               => 26 * 3600,  // daily
+    'social_posts'         => 26 * 3600,  // daily
     'gdpr_retention'       => 8 * 86400,  // weekly-ish
 ];
 $stale = [];
